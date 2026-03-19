@@ -1,7 +1,20 @@
-// lib/supabase.ts
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+let cached: SupabaseClient | null = null;
 
-export const supabase = createClient(supabaseUrl, supabaseKey)
+export function getSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) throw new Error('Missing Supabase env');
+  if (!cached) cached = createClient(url, key);
+  return cached;
+}
+
+export const supabase = new Proxy(
+  {},
+  {
+    get(_target, prop) {
+      return (getSupabase() as any)[prop as any];
+    },
+  }
+) as unknown as SupabaseClient;

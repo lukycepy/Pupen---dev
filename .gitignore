@@ -35,6 +35,9 @@ yarn-error.log*
 .env.local
 .env.*.local
 
+# local secrets file
+pupen.env
+
 # vercel
 .vercel
 

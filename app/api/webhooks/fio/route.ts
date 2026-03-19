@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
-import { logAdminAction } from '@/lib/admin-logger';
 
 type NormalizedTx = {
   id: string | null;
@@ -114,8 +113,8 @@ export async function POST(req: Request) {
         const now = new Date();
         const rsvpRes = await supabase
           .from('rsvp')
-          .select('id, status, expires_at, email, name, attendees, payment_method, event_id, qr_code')
-          .eq('qr_code', token)
+          .select('id, status, expires_at, email, name, attendees, payment_method, event_id, qr_token')
+          .eq('qr_token', token)
           .limit(1)
           .maybeSingle();
 
@@ -132,13 +131,15 @@ export async function POST(req: Request) {
         updated = true;
 
         try {
-          await logAdminAction(
-            'fio-webhook',
-            `Potvrzena platba pro RSVP: ${r.id}`,
-            r.id,
-            { tx },
-            'Fio'
-          );
+          await supabase.from('admin_logs').insert([
+            {
+              admin_email: 'fio-webhook',
+              admin_name: 'Fio',
+              action: 'fio-webhook',
+              target_id: r.id,
+              details: { message: `Potvrzena platba pro RSVP: ${r.id}`, tx },
+            },
+          ]);
         } catch {}
 
         break;
@@ -152,4 +153,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
   }
 }
-
