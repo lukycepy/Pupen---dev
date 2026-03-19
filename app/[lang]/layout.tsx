@@ -1,0 +1,110 @@
+// app/[lang]/layout.tsx
+import '../globals.css'
+import type { Metadata, Viewport } from 'next'
+import { getDictionary } from '@/lib/get-dictionary';
+import Providers from '../providers'
+
+// Import komponent
+import Navbar from './components/Navbar' 
+import Footer from './components/Footer' 
+import CookieBanner from './components/CookieBanner'
+import Banner from './components/Banner'
+import FAQWidget from './components/FAQWidget'
+import ErrorReporter from '../components/ErrorReporter'
+
+export const metadata: Metadata = {
+  title: {
+    default: 'Studentský spolek Pupen, z.s.',
+    template: '%s | Studentský spolek Pupen, z.s.'
+  },
+  description: 'Oficiální web Studentského spolku Pupen, z.s. na FAPPZ ČZU.',
+  metadataBase: new URL('https://pupen.org'),
+  keywords: ['Pupen', 'FAPPZ', 'ČZU', 'spolek', 'studenti', 'Suchdol'],
+  authors: [{ name: 'Studentský spolek Pupen, z.s.' }],
+  creator: 'Studentský spolek Pupen, z.s.',
+  publisher: 'Studentský spolek Pupen, z.s.',
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  alternates: {
+    canonical: '/',
+    languages: {
+      'cs-CZ': '/cs',
+      'en-US': '/en',
+    },
+  },
+  openGraph: {
+    title: 'Studentský spolek Pupen | FAPPZ ČZU',
+    description: 'Přidej se k nám a zažij nejlepší studentská léta na ČZU.',
+    url: 'https://pupen.org',
+    siteName: 'Studentský spolek Pupen, z.s.',
+    locale: 'cs_CZ',
+    type: 'website',
+    images: [
+      {
+        url: '/img/og-image.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'Studentský spolek Pupen',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Studentský spolek Pupen | FAPPZ ČZU',
+    description: 'Přidej se k nám a zažij nejlepší studentská léta na ČZU.',
+    images: ['/img/og-image.jpg'],
+  },
+  robots: 'index, follow',
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/apple-icon.png',
+  },
+  manifest: '/manifest.json',
+}
+
+export const viewport: Viewport = {
+  themeColor: '#16a34a',
+  width: 'device-width',
+  initialScale: 1,
+}
+
+export async function generateStaticParams() {
+  return [{ lang: 'cs' }, { lang: 'en' }]
+}
+
+export default async function RootLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode
+  params: Promise<{ lang: string }>
+}) {
+  // 1. Rozbalení parametrů (Next.js 15)
+  const { lang } = await params;
+  
+  // 2. Načtení slovníku podle aktuálního jazyka
+  const dict = await getDictionary(lang);
+
+  return (
+    <Providers>
+      <ErrorReporter />
+      <Banner lang={lang} dict={dict.homePage} />
+      {/* 3. Předání slovníku do komponenty Navbar - oprava předávání celého dict.nav */}
+      <Navbar lang={lang} dict={dict.nav || {}} />
+
+      <div className="flex flex-col min-h-screen">
+        <main className="flex-grow">
+          {children}
+        </main>
+
+        <Footer lang={lang} dict={dict.footer} />
+      </div>
+      
+      <CookieBanner lang={lang} dict={dict} />
+      <FAQWidget lang={lang} />
+    </Providers>
+  )
+}

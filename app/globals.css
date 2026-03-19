@@ -1,0 +1,205 @@
+@import "tailwindcss";
+
+/* Leaflet Styles */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+:root {
+  --foreground-rgb: 28, 25, 23;
+  --background-start-rgb: 250, 250, 249;
+  --background-end-rgb: 255, 255, 255;
+  --font-scale: 1;
+}
+
+html {
+  font-size: calc(16px * var(--font-scale));
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-montserrat), sans-serif;
+  letter-spacing: -0.02em;
+}
+
+body {
+  font-family: var(--font-inter), sans-serif;
+  color: rgb(var(--foreground-rgb));
+  background: white;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+:where(a, button, input, textarea, select, summary, [role="button"], [tabindex]):focus-visible {
+  outline: 3px solid #16a34a;
+  outline-offset: 3px;
+}
+
+:where(input, textarea, select)[aria-invalid="true"] {
+  outline: 3px solid #dc2626;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:focus-within {
+    scroll-behavior: auto;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@layer utilities {
+  .font-black {
+    font-weight: 900;
+  }
+  .tracking-tighter {
+    letter-spacing: -0.05em;
+  }
+  .tracking-tight {
+    letter-spacing: -0.025em;
+  }
+}
+
+@layer utilities {
+  .animate-in {
+    animation-duration: 0.5s;
+    animation-fill-mode: both;
+  }
+
+  .fade-in {
+    animation-name: fadeIn;
+  }
+
+  .slide-in-from-bottom {
+    animation-name: slideInFromBottom;
+  }
+
+  .slide-in-from-bottom-4 {
+    animation-name: slideInFromBottom4;
+  }
+
+  .slide-in-from-top {
+    animation-name: slideInFromTop;
+  }
+
+  .slide-in-from-top-10 {
+    animation-name: slideInFromTop10;
+  }
+
+  .slide-in-from-right {
+    animation-name: slideInFromRight;
+  }
+
+  .zoom-in {
+    animation-name: zoomIn;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInFromBottom {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideInFromBottom4 {
+  from { transform: translateY(1rem); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideInFromTop {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideInFromTop10 {
+  from { transform: translateY(-2.5rem); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes zoomIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: #16a34a;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #15803d;
+}
+
+/* Dark scrollbar utility */
+.custom-scrollbar-dark::-webkit-scrollbar-track {
+  background: #1c1917; /* stone-900 */
+}
+.custom-scrollbar-dark::-webkit-scrollbar-thumb {
+  background: #44403c; /* stone-700 */
+}
+.custom-scrollbar-dark::-webkit-scrollbar-thumb:hover {
+  background: #57534e; /* stone-600 */
+}
+
+/* Rich Text Styling */
+.rich-text-content {
+  line-height: 1.8;
+}
+.rich-text-content p {
+  margin-bottom: 1.25rem;
+}
+.rich-text-content strong, .rich-text-content b {
+  font-weight: 900;
+  color: inherit;
+}
+.rich-text-content h1, .rich-text-content h2, .rich-text-content h3 {
+  font-weight: 900;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  line-height: 1.2;
+}
+.rich-text-content ul, .rich-text-content ol {
+  margin-bottom: 1.25rem;
+  padding-left: 1.5rem;
+}
+.rich-text-content ul {
+  list-style-type: disc;
+}
+.rich-text-content ol {
+  list-style-type: decimal;
+}
+.rich-text-content li {
+  margin-bottom: 0.5rem;
+}
+.rich-text-content a {
+  color: #16a34a;
+  text-decoration: underline;
+  font-weight: 700;
+}
+
+/* Rich Text Styling for Banner */
+.banner-rich-text strong, .banner-rich-text b {
+  font-weight: 900;
+  color: white;
+}
+.banner-rich-text p {
+  display: inline;
+}
+.banner-rich-text em, .banner-rich-text i {
+  font-style: italic;
+  opacity: 0.9;
+}
