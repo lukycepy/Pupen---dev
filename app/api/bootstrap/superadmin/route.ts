@@ -71,6 +71,19 @@ function buildFullAdminPermissions(email: string) {
   };
 }
 
+async function findUserIdByEmail(supabase: any, email: string) {
+  const perPage = 200;
+  for (let page = 1; page <= 10; page += 1) {
+    const res = await supabase.auth.admin.listUsers({ page, perPage });
+    if (res.error) throw res.error;
+    const users = res.data?.users || [];
+    const u = users.find((x: any) => String(x?.email || '').toLowerCase() === email.toLowerCase());
+    if (u?.id) return String(u.id);
+    if (users.length < perPage) return null;
+  }
+  return null;
+}
+
 export async function POST(req: Request) {
   try {
     requireBootstrap(req);
@@ -89,6 +102,8 @@ export async function POST(req: Request) {
     }
 
     const supabase = getServerSupabase();
+
+    let userId: string | null = null;
     const created = await supabase.auth.admin.createUser({
       email,
       password,
@@ -98,9 +113,24 @@ export async function POST(req: Request) {
         last_name: lastName,
       },
     });
-    if (created.error) throw created.error;
-    const userId = created.data?.user?.id;
-    if (!userId) throw new Error('User not created');
+
+    if (created.error) {
+      userId = await findUserIdByEmail(supabase, email);
+      if (!userId) throw created.error;
+      const upd = await supabase.auth.admin.updateUserById(userId, {
+        password,
+        email_confirm: true,
+        user_metadata: {
+          first_name: firstName,
+          last_name: lastName,
+        },
+      });
+      if (upd.error) throw upd.error;
+    } else {
+      userId = created.data?.user?.id || null;
+    }
+
+    if (!userId) throw new Error('User not resolved');
 
     const profilePatch = {
       first_name: firstName || null,
@@ -117,4 +147,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: e?.message || 'Error' }, { status });
   }
 }
-
