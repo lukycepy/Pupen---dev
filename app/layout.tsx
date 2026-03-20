@@ -1,5 +1,6 @@
 import './globals.css'
 import { Inter, Montserrat } from 'next/font/google'
+import type { Viewport } from 'next'
 import Providers from './providers'
 import ServiceWorker from './components/ServiceWorker'
 
@@ -17,6 +18,9 @@ const montserrat = Montserrat({
 
 export const metadata = {
   manifest: '/manifest.json',
+};
+
+export const viewport: Viewport = {
   themeColor: '#16a34a',
 };
 
