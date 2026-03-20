@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 import { getMailer } from '@/lib/email/mailer';
 import { renderEmailTemplate } from '@/lib/email/templates';
+import { requireAdmin } from '@/lib/server-auth';
 
 export async function POST(req: Request) {
   try {
+    await requireAdmin(req);
     const { email, password, firstName } = await req.json();
 
     if (!email || !password) {
