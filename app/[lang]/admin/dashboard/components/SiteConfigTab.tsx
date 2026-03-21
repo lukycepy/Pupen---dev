@@ -9,6 +9,8 @@ import { Globe, Save, ShieldAlert } from 'lucide-react';
 type PageCfg = { enabled?: boolean; navbar?: boolean; tools?: boolean };
 type SiteCfg = {
   maintenance_enabled: boolean;
+  maintenance_start_at?: string | null;
+  maintenance_end_at?: string | null;
   maintenance_title_cs: string | null;
   maintenance_body_cs: string | null;
   maintenance_title_en: string | null;
@@ -42,12 +44,22 @@ export default function SiteConfigTab({ dict }: { dict: any }) {
   const [saving, setSaving] = useState(false);
   const [config, setConfig] = useState<SiteCfg>({
     maintenance_enabled: false,
+    maintenance_start_at: null,
+    maintenance_end_at: null,
     maintenance_title_cs: null,
     maintenance_body_cs: null,
     maintenance_title_en: null,
     maintenance_body_en: null,
     pages: {},
   });
+
+  const toLocalInput = (iso: string | null | undefined) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
 
   const pageLabel = useMemo(() => {
     const nav = dict?.nav || {};
@@ -74,6 +86,8 @@ export default function SiteConfigTab({ dict }: { dict: any }) {
         const row = json?.config || {};
         const next: SiteCfg = {
           maintenance_enabled: !!row.maintenance_enabled,
+          maintenance_start_at: row.maintenance_start_at || null,
+          maintenance_end_at: row.maintenance_end_at || null,
           maintenance_title_cs: row.maintenance_title_cs || null,
           maintenance_body_cs: row.maintenance_body_cs || null,
           maintenance_title_en: row.maintenance_title_en || null,
@@ -169,6 +183,42 @@ export default function SiteConfigTab({ dict }: { dict: any }) {
           >
             {config.maintenance_enabled ? 'Zapnuto' : 'Vypnuto'}
           </button>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-4">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Začátek</div>
+            <input
+              type="datetime-local"
+              value={toLocalInput(config.maintenance_start_at)}
+              onChange={(e) => {
+                const v = e.target.value;
+                setConfig((p) => ({ ...p, maintenance_start_at: v ? new Date(v).toISOString() : null }));
+              }}
+              className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
+            />
+          </div>
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Konec</div>
+            <input
+              type="datetime-local"
+              value={toLocalInput(config.maintenance_end_at)}
+              onChange={(e) => {
+                const v = e.target.value;
+                setConfig((p) => ({ ...p, maintenance_end_at: v ? new Date(v).toISOString() : null }));
+              }}
+              className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
+            />
+          </div>
+          <div className="flex items-end">
+            <button
+              type="button"
+              onClick={() => setConfig((p) => ({ ...p, maintenance_start_at: null, maintenance_end_at: null }))}
+              className="w-full px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition bg-white text-stone-700 border-stone-200 hover:bg-stone-50"
+            >
+              Vyčistit čas
+            </button>
+          </div>
         </div>
 
         <div className="grid md:grid-cols-2 gap-6">

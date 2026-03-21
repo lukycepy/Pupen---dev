@@ -7,6 +7,9 @@ const COOKIE_NAME = 'NEXT_LOCALE';
 
 type SiteConfig = {
   maintenance_enabled: boolean;
+  maintenance_start_at?: string | null;
+  maintenance_end_at?: string | null;
+  maintenance_active?: boolean;
   pages: Record<string, { enabled?: boolean; navbar?: boolean; tools?: boolean }>;
 };
 
@@ -27,7 +30,7 @@ async function loadConfig(): Promise<SiteConfig> {
     return fallback;
   }
 
-  const res = await fetch(`${url}/rest/v1/site_public_config?id=eq.1&select=maintenance_enabled,pages`, {
+  const res = await fetch(`${url}/rest/v1/site_public_config?id=eq.1&select=maintenance_enabled,maintenance_start_at,maintenance_end_at,pages`, {
     headers: {
       apikey: anon,
       Authorization: `Bearer ${anon}`,
@@ -44,8 +47,16 @@ async function loadConfig(): Promise<SiteConfig> {
 
   const data = (await res.json().catch(() => [])) as any[];
   const row = Array.isArray(data) ? data[0] : null;
+  const startAt = row?.maintenance_start_at ? String(row.maintenance_start_at) : null;
+  const endAt = row?.maintenance_end_at ? String(row.maintenance_end_at) : null;
+  const startMs = startAt ? Date.parse(startAt) : null;
+  const endMs = endAt ? Date.parse(endAt) : null;
+  const inWindow = !!startMs && now >= startMs && (!endMs || now < endMs);
   const value: SiteConfig = {
     maintenance_enabled: !!row?.maintenance_enabled,
+    maintenance_start_at: startAt,
+    maintenance_end_at: endAt,
+    maintenance_active: !!row?.maintenance_enabled || inWindow,
     pages: (row?.pages && typeof row.pages === 'object' ? row.pages : {}) as any,
   };
   siteCache.value = value;
@@ -84,7 +95,7 @@ export function proxy(request: NextRequest) {
       ]);
       const isAllowed = Array.from(allowDuringMaintenance).some((p) => normalized === p || normalized.startsWith(`${p}/`));
 
-      if (cfg.maintenance_enabled && !isAllowed) {
+      if ((cfg.maintenance_active || cfg.maintenance_enabled) && !isAllowed) {
         return NextResponse.redirect(new URL(`/${currentLocale}/odstavka`, request.url));
       }
 

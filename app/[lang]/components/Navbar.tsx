@@ -23,6 +23,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
   const [searchResults, setSearchResults] = useState<{events: any[], posts: any[]}>({events: [], posts: []});
   const [isSearching, setIsSearching] = useState(false);
   const [isToolsOpen, setIsToolsOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [sitePages, setSitePages] = useState<Record<string, any> | null>(null);
 
@@ -64,6 +65,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
 
   const pathname = usePathname();
   const searchRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   // Close search on click outside
   useEffect(() => {
@@ -71,10 +73,20 @@ export default function Navbar({ lang, dict }: NavbarProps) {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setIsSearchOpen(false);
       }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    setIsMenuOpen(false);
+    setIsSearchOpen(false);
+    setIsToolsOpen(false);
+    setIsUserMenuOpen(false);
+  }, [pathname]);
 
   // Search logic
   useEffect(() => {
@@ -162,13 +174,13 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                 className="object-cover"
               />
             </div>
-            <span className="font-bold text-base sm:text-lg lg:text-xl tracking-tight text-stone-900 group-hover:text-green-600 transition truncate max-w-[150px] sm:max-w-none">
+            <span className="hidden sm:inline font-bold text-base sm:text-lg lg:text-xl tracking-tight text-stone-900 group-hover:text-green-600 transition truncate max-w-[150px] sm:max-w-none">
               Studentský spolek Pupen, z.s.
             </span>
           </Link>
 
           {/* DESKTOP MENU */}
-          <div className="hidden lg:flex items-center gap-6 xl:gap-8 font-medium text-[13px] tracking-normal text-stone-600">
+          <div className="hidden xl:flex items-center gap-6 font-medium text-[13px] tracking-normal text-stone-600">
             {[ 
               { slug: 'home', href: `/${lang}`, label: dict?.home || (lang === 'en' ? 'HOME' : 'DOMŮ'), active: pathname === `/${lang}` },
               { slug: 'akce', href: `/${lang}/akce`, label: dict?.events || (lang === 'en' ? 'EVENTS' : 'AKCE'), active: pathname.includes('/akce') },
@@ -352,46 +364,78 @@ export default function Navbar({ lang, dict }: NavbarProps) {
               </Link>
             </div>
 
-            {/* PORTÁL ODKAZY */}
-            {(userProfile?.is_member || userProfile?.email === 'cepelak@pupen.org') && (
-              <Link href={`/${lang}/clen`} className="p-3 bg-stone-50 text-stone-400 rounded-2xl hover:bg-stone-100 hover:text-blue-600 transition-all border border-stone-100 shadow-sm" title={lang === 'cs' ? 'Členský portál' : 'Member Portal'}>
-                <ShieldCheck size={20} />
-              </Link>
-            )}
-            
-            {userProfile?.is_admin && (
-              <Link href={`/${lang}/admin/dashboard`} className="p-3 bg-stone-50 text-stone-400 rounded-2xl hover:bg-stone-100 hover:text-stone-900 transition-all border border-stone-100 shadow-sm" title="Admin">
-                <LockIcon size={20} />
-              </Link>
-            )}
-
-            {userProfile && (
-              <button 
-                onClick={async () => {
-                  await supabase.auth.signOut();
-                  window.location.href = `/${lang}/login`;
-                }} 
-                className="p-3 bg-stone-50 text-stone-400 rounded-2xl hover:bg-red-50 hover:text-red-600 transition-all border border-stone-100 shadow-sm"
-                title={lang === 'cs' ? 'Odhlásit se' : 'Log out'}
+            <div className="relative" ref={userMenuRef}>
+              <button
+                type="button"
+                onClick={() => setIsUserMenuOpen((v) => !v)}
+                className="p-3 bg-stone-50 text-stone-500 rounded-2xl hover:bg-stone-100 hover:text-stone-900 transition-all border border-stone-100 shadow-sm"
+                title={userProfile ? (lang === 'cs' ? 'Účet' : 'Account') : (dict?.memberLogin || 'Login')}
               >
-                <LogOut size={20} />
+                {userProfile ? (
+                  <span className="w-5 h-5 flex items-center justify-center font-black text-xs uppercase">
+                    {(userProfile?.first_name?.[0] || userProfile?.email?.[0] || 'U') as string}
+                  </span>
+                ) : (
+                  <LockIcon size={20} />
+                )}
               </button>
-            )}
 
-            {!userProfile && (
-              <Link 
-                href={`/${lang}/login`} 
-                className="p-3 bg-stone-50 text-stone-400 rounded-2xl hover:bg-stone-100 hover:text-stone-900 transition-all border border-stone-100 shadow-sm"
-                title={dict?.memberLogin}
-              >
-                <LockIcon size={20} />
-              </Link>
-            )}
+              {isUserMenuOpen && (
+                <div className="absolute right-0 top-full mt-3 w-64 bg-white border border-stone-100 shadow-2xl rounded-3xl p-2 z-[10001]">
+                  {(userProfile?.is_member || userProfile?.email === 'cepelak@pupen.org') && (
+                    <Link
+                      href={`/${lang}/clen`}
+                      className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-stone-50 transition text-stone-700 font-bold"
+                      onClick={() => setIsUserMenuOpen(false)}
+                    >
+                      <ShieldCheck size={18} className="text-blue-600" />
+                      <span>{lang === 'cs' ? 'Členský portál' : 'Member Portal'}</span>
+                    </Link>
+                  )}
+
+                  {userProfile?.is_admin && (
+                    <Link
+                      href={`/${lang}/admin/dashboard`}
+                      className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-stone-50 transition text-stone-700 font-bold"
+                      onClick={() => setIsUserMenuOpen(false)}
+                    >
+                      <LockIcon size={18} className="text-stone-900" />
+                      <span>Admin</span>
+                    </Link>
+                  )}
+
+                  {!userProfile && (
+                    <Link
+                      href={`/${lang}/login`}
+                      className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-stone-50 transition text-stone-700 font-bold"
+                      onClick={() => setIsUserMenuOpen(false)}
+                    >
+                      <LockIcon size={18} className="text-stone-900" />
+                      <span>{dict?.memberLogin || (lang === 'cs' ? 'Přihlášení' : 'Login')}</span>
+                    </Link>
+                  )}
+
+                  {userProfile && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await supabase.auth.signOut();
+                        window.location.href = `/${lang}/login`;
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-red-50 transition text-red-700 font-bold"
+                    >
+                      <LogOut size={18} className="text-red-600" />
+                      <span>{lang === 'cs' ? 'Odhlásit se' : 'Log out'}</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
 
             {isPageEnabled('prihlaska') && (
               <Link 
                 href={`/${lang}/prihlaska`} 
-                className="inline-flex items-center justify-center whitespace-nowrap bg-green-600 text-white px-6 py-3 rounded-2xl text-[11px] font-black uppercase tracking-[0.15em] hover:bg-green-500 transition-all shadow-lg shadow-green-600/20 hover:shadow-green-600/30"
+                className="inline-flex items-center justify-center whitespace-nowrap bg-green-600 text-white px-5 py-3 rounded-2xl text-[11px] font-black uppercase tracking-[0.12em] hover:bg-green-500 transition-all shadow-lg shadow-green-600/20 hover:shadow-green-600/30"
               >
                 {lang === 'cs' ? 'Přidej se' : 'Join us'}
               </Link>
