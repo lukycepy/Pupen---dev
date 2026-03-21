@@ -12,9 +12,12 @@ import InlinePulse from '@/app/components/InlinePulse';
 export default function FeedbackPage() {
   const params = useParams();
   const router = useRouter();
-  const id = params?.id as string;
+  const rawId = params?.id;
+  const id = typeof rawId === 'string' ? rawId : '';
   const lang = (params?.lang as string) || 'cs';
   const { showToast } = useToast();
+
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
   
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
@@ -22,8 +25,10 @@ export default function FeedbackPage() {
 
   const { data: event, isLoading } = useQuery({
     queryKey: ['public_event_feedback', id],
+    enabled: isUuid,
     queryFn: async () => {
-      const { data } = await supabase.from('events').select('*').eq('id', id).single();
+      const { data, error } = await supabase.from('events').select('*').eq('id', id).single();
+      if (error) throw error;
       return data;
     }
   });
@@ -41,6 +46,7 @@ export default function FeedbackPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isUuid) return;
     mutation.mutate({ event_id: id, rating, comment });
   };
 
@@ -77,6 +83,7 @@ export default function FeedbackPage() {
       </div>
     );
   }
+  if (!isUuid) return <div className="min-h-screen flex items-center justify-center text-stone-400 font-bold">Akce nenalezena.</div>;
   if (!event) return <div className="min-h-screen flex items-center justify-center text-stone-400 font-bold">Akce nenalezena.</div>;
 
   return (

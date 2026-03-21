@@ -10,9 +10,12 @@ import Skeleton from '../../components/Skeleton';
 
 export default function BojovkaPage() {
   const params = useParams();
-  const id = params?.id as string;
+  const rawId = params?.id;
+  const id = typeof rawId === 'string' ? rawId : '';
   const lang = (params?.lang as string) || 'cs';
   const { showToast } = useToast();
+
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
   
   const [currentStep, setCurrentStep] = useState(0);
   const [answer, setAnswer] = useState('');
@@ -21,8 +24,10 @@ export default function BojovkaPage() {
 
   const { data: hunt, isLoading } = useQuery({
     queryKey: ['public_hunt', id],
+    enabled: isUuid,
     queryFn: async () => {
-      const { data } = await supabase.from('scavenger_hunts').select('*').eq('id', id).single();
+      const { data, error } = await supabase.from('scavenger_hunts').select('*').eq('id', id).single();
+      if (error) throw error;
       return data;
     }
   });
@@ -78,6 +83,7 @@ export default function BojovkaPage() {
       </div>
     );
   }
+  if (!isUuid) return <div className="min-h-screen flex items-center justify-center text-stone-400 font-bold">Bojovka nenalezena.</div>;
   if (!hunt) return <div className="min-h-screen flex items-center justify-center text-stone-400 font-bold">Bojovka nenalezena.</div>;
 
   return (
