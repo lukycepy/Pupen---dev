@@ -69,12 +69,17 @@ export default function EmailTemplatesTab() {
     }
     setSending(true);
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-      if (!token) throw new Error('Unauthorized');
+      let { data: sessionData } = await supabase.auth.getSession();
+      let token = sessionData.session?.access_token || '';
+      if (!token) {
+        await supabase.auth.refreshSession();
+        sessionData = (await supabase.auth.getSession()).data;
+        token = sessionData.session?.access_token || '';
+      }
+      if (!token) throw new Error('Přihlášení vypršelo. Obnovte stránku nebo se přihlaste znovu.');
       const res = await fetch('/api/admin/email/send-test', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'x-supabase-token': token },
         body: JSON.stringify({
           to: to.trim(),
           templateKey,

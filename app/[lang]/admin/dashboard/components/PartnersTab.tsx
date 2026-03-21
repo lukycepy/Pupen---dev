@@ -54,7 +54,7 @@ export default function PartnersTab({ dict, uploadImage }: { dict: any, uploadIm
       
       const payload = { ...data, logo_url: logoUrl };
 
-      if (editingPartner) {
+      if (editingPartner?.id) {
         const { error } = await supabase.from('partners').update(payload).eq('id', editingPartner.id);
         if (error) throw error;
       } else {

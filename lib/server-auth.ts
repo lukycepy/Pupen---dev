@@ -1,9 +1,15 @@
 import { getServerSupabase } from '@/lib/supabase-server';
 
 export function getBearerToken(req: Request) {
-  const h = req.headers.get('authorization') || '';
-  const m = h.match(/^Bearer\s+(.+)$/i);
-  return m?.[1] || null;
+  const auth = req.headers.get('authorization') || req.headers.get('Authorization') || '';
+  const m = String(auth).match(/^Bearer\s+(.+)$/i);
+  if (m?.[1]) return m[1];
+
+  const alt = req.headers.get('x-supabase-token') || '';
+  const mm = String(alt).match(/^Bearer\s+(.+)$/i);
+  if (mm?.[1]) return mm[1];
+  if (alt && !alt.toLowerCase().startsWith('bearer ')) return alt;
+  return null;
 }
 
 export async function requireUser(req: Request) {
