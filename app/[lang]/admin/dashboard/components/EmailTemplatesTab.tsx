@@ -5,6 +5,7 @@ import { Mail, Send, Eye } from 'lucide-react';
 import InlinePulse from '@/app/components/InlinePulse';
 import { useToast } from '@/app/context/ToastContext';
 import { listEmailTemplates, renderEmailTemplate, type EmailTemplateKey } from '@/lib/email/templates';
+import { supabase } from '@/lib/supabase';
 
 export default function EmailTemplatesTab() {
   const { showToast } = useToast();
@@ -68,9 +69,12 @@ export default function EmailTemplatesTab() {
     }
     setSending(true);
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
       const res = await fetch('/api/admin/email/send-test', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           to: to.trim(),
           templateKey,
