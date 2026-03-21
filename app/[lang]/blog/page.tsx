@@ -48,16 +48,12 @@ export default function BlogPage() {
 
   const addMutation = useMutation({
     mutationFn: async (newData: any) => {
-      // Find profile by email to link user_id
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', newData.author_email)
-        .maybeSingle();
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData.session?.user?.id || null;
 
       const { error } = await supabase.from('student_blog').insert([{ 
         ...newData, 
-        user_id: profile?.id || null,
+        user_id: userId,
         is_approved: false 
       }]);
       if (error) throw error;
