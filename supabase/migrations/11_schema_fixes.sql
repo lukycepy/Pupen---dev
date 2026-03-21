@@ -3,12 +3,14 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE OR REPLACE FUNCTION public.is_superadmin()
 RETURNS boolean
 LANGUAGE sql
+STABLE
 SECURITY DEFINER
 SET search_path = public
+SET row_security = off
 AS $$
   SELECT COALESCE(
     (
-      SELECT (p.is_admin OR p.can_manage_admins)
+      SELECT (p.can_manage_admins = true)
       FROM public.profiles p
       WHERE p.id = auth.uid()
     ),
@@ -112,4 +114,3 @@ SET
   full_name = COALESCE(full_name, name),
   chairwoman_signature = COALESCE(chairwoman_signature, signature_data_url),
   rejection_reason = COALESCE(rejection_reason, decision_reason);
-
