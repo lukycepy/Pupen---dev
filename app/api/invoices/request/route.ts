@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
-import { getMailer } from '@/lib/email/mailer';
+import { getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer';
 import { renderEmailTemplate } from '@/lib/email/templates';
 import { isEmailBlacklisted } from '@/lib/tickets/blacklist';
 import { getClientIp, rateLimit } from '@/lib/rate-limit';
@@ -66,7 +66,8 @@ export async function POST(req: Request) {
       .single();
 
     const toEmail = settings?.notification_email || process.env.INVOICE_EMAIL || process.env.SMTP_USER || 'info@pupen.org';
-    const transporter = getMailer();
+    const transporter = await getMailerWithSettings();
+    const from = await getSenderFromSettings();
     const { subject, html } = renderEmailTemplate('invoice_request', {
       toEmail,
       replyTo: email,
@@ -83,7 +84,7 @@ export async function POST(req: Request) {
     });
 
     await transporter.sendMail({
-      from: '"Pupen.org" <info@pupen.org>',
+      from,
       to: toEmail,
       replyTo: email,
       subject,

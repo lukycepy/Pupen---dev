@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
-import { getMailer } from '@/lib/email/mailer';
+import { getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer';
 import { renderEmailTemplate } from '@/lib/email/templates';
 
 export async function POST(req: Request) {
@@ -14,7 +14,8 @@ export async function POST(req: Request) {
       if (data?.bank_account) bankAccount = String(data.bank_account);
     } catch {}
 
-    const transporter = getMailer();
+    const transporter = await getMailerWithSettings();
+    const from = await getSenderFromSettings();
 
     const { subject, html } = renderEmailTemplate('ticket', {
       email,
@@ -28,7 +29,7 @@ export async function POST(req: Request) {
     });
 
     await transporter.sendMail({
-      from: '"Pupen.org" <info@pupen.org>',
+      from,
       to: email,
       subject,
       html,

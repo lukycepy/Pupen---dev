@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
-import { getMailer } from '@/lib/email/mailer';
+import { getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer';
 import { buildWeeklyDigest } from '@/lib/email/digest';
 
 function weekdayToNum(w: string) {
@@ -80,16 +80,8 @@ export async function GET(req: Request) {
       if (Date.now() - lastMs < minIntervalMs) return NextResponse.json({ ok: true, skipped: 'min_interval' });
     }
 
-    const { data: emailSettings } = await supabase.from('email_settings').select('*').maybeSingle();
-    const host = emailSettings?.smtp_host || process.env.SMTP_HOST;
-    const smtpUser = emailSettings?.smtp_user || process.env.SMTP_USER;
-    const pass = emailSettings?.smtp_pass || process.env.SMTP_PASS;
-    const port = Number(emailSettings?.smtp_port || process.env.SMTP_PORT) || 587;
-    const secure = (emailSettings?.smtp_secure ?? null) === true || port === 465;
-
-    const transporter = getMailer({ host, user: smtpUser, pass, port, secure });
-    const fromName = emailSettings?.sender_name || 'Pupen.org';
-    const fromEmail = emailSettings?.sender_email || 'info@pupen.org';
+    const transporter = await getMailerWithSettings();
+    const from = await getSenderFromSettings();
 
     const digest = await buildWeeklyDigest(supabase);
 
@@ -124,7 +116,7 @@ export async function GET(req: Request) {
     for (const r of recipients) {
       try {
         await transporter.sendMail({
-          from: `"${fromName}" <${fromEmail}>`,
+          from,
           to: r.email,
           subject: digest.subject,
           html: digest.html,

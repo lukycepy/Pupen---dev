@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
-import { getMailer } from '@/lib/email/mailer';
+import { getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer';
 import { renderEmailTemplate } from '@/lib/email/templates';
+import { requireAdmin } from '@/lib/server-auth';
 
 export async function POST(req: Request) {
   try {
+    const { profile } = await requireAdmin(req);
+    if (!profile?.can_manage_admins) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     const body = await req.json().catch(() => ({}));
     const { to, templateKey, variables } = body || {};
     if (!to || !templateKey) {
@@ -11,10 +14,11 @@ export async function POST(req: Request) {
     }
 
     const { subject, html } = renderEmailTemplate(templateKey, variables || {});
-    const transporter = getMailer();
+    const transporter = await getMailerWithSettings();
+    const from = await getSenderFromSettings();
 
     await transporter.sendMail({
-      from: '"Pupen.org" <info@pupen.org>',
+      from,
       to,
       subject: `[TEST] ${subject}`,
       html,
@@ -25,4 +29,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
   }
 }
-

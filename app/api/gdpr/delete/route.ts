@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { requireUser } from '@/lib/server-auth';
-import { getMailer } from '@/lib/email/mailer';
+import { getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer';
 import { getClientIp, rateLimit } from '@/lib/rate-limit';
 
 export async function POST(req: Request) {
@@ -21,7 +21,6 @@ export async function POST(req: Request) {
 
     const supabase = getServerSupabase();
 
-    const { data: emailSettings } = await supabase.from('email_settings').select('*').maybeSingle();
     const { data: paymentSettings } = await supabase.from('payment_settings').select('notification_email').maybeSingle();
 
     const toEmail = paymentSettings?.notification_email || process.env.INVOICE_EMAIL || process.env.SMTP_USER || 'info@pupen.org';
@@ -50,15 +49,8 @@ export async function POST(req: Request) {
       .single();
     if (ins.error) throw ins.error;
 
-    const host = emailSettings?.smtp_host || process.env.SMTP_HOST;
-    const smtpUser = emailSettings?.smtp_user || process.env.SMTP_USER;
-    const pass = emailSettings?.smtp_pass || process.env.SMTP_PASS;
-    const port = Number(emailSettings?.smtp_port || process.env.SMTP_PORT) || 587;
-    const secure = (emailSettings?.smtp_secure ?? null) === true || port === 465;
-
-    const transporter = getMailer({ host, user: smtpUser, pass, port, secure });
-    const fromName = emailSettings?.sender_name || 'Pupen.org';
-    const fromEmail = emailSettings?.sender_email || 'info@pupen.org';
+    const transporter = await getMailerWithSettings();
+    const from = await getSenderFromSettings();
 
     const subject = `GDPR žádost o smazání: ${user.email || user.id}`;
     const html = `
@@ -76,7 +68,7 @@ export async function POST(req: Request) {
     `;
 
     await transporter.sendMail({
-      from: `"${fromName}" <${fromEmail}>`,
+      from,
       to: toEmail,
       replyTo: user.email || undefined,
       subject,
@@ -89,4 +81,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: e?.message || 'Error' }, { status });
   }
 }
-

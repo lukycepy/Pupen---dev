@@ -1,22 +1,24 @@
 import { NextResponse } from 'next/server';
-import { getMailer } from '@/lib/email/mailer';
+import { getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer';
 import { renderEmailTemplate } from '@/lib/email/templates';
 import { requireAdmin } from '@/lib/server-auth';
 
 export async function POST(req: Request) {
   try {
-    await requireAdmin(req);
+    const { profile } = await requireAdmin(req);
+    if (!profile?.can_manage_admins) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     const { email, password, firstName } = await req.json();
 
     if (!email || !password) {
       return NextResponse.json({ error: 'Missing email or password' }, { status: 400 });
     }
 
-    const transporter = getMailer();
+    const transporter = await getMailerWithSettings();
+    const from = await getSenderFromSettings();
     const { subject, html } = renderEmailTemplate('admin_password', { email, password, firstName });
 
     await transporter.sendMail({
-      from: '"Pupen Control" <info@pupen.org>',
+      from,
       to: email,
       subject,
       html,
@@ -24,7 +26,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error('Failed to send email:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error?.message || 'Error' }, { status: 500 });
   }
 }

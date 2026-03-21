@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { requireAdmin } from '@/lib/server-auth';
-import { getMailer } from '@/lib/email/mailer';
+import { getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer';
 import { renderEmailTemplate } from '@/lib/email/templates';
 
 function generatePassword(length = 14) {
@@ -105,10 +105,11 @@ async function findUserIdByEmail(supabase: any, email: string) {
 }
 
 async function sendPasswordEmail(email: string, password: string, firstName?: string) {
-  const transporter = getMailer();
+  const transporter = await getMailerWithSettings();
   const { subject, html } = renderEmailTemplate('admin_password', { email, password, firstName });
+  const from = await getSenderFromSettings();
   await transporter.sendMail({
-    from: '"Pupen Control" <info@pupen.org>',
+    from,
     to: email,
     subject,
     html,
@@ -186,16 +187,29 @@ export async function POST(req: Request) {
       } catch {}
 
       let passwordSent = false;
+      let passwordError: string | null = null;
       if (shouldSend) {
         try {
           await sendPasswordEmail(email, password, first_name || undefined);
           passwordSent = true;
-        } catch {
+        } catch (e: any) {
           passwordSent = false;
+          passwordError = e?.message || 'Email send failed';
+          try {
+            await supabase.from('admin_logs').insert([
+              {
+                admin_email: adminUser.email || 'admin',
+                admin_name: 'Uživatelé',
+                action: 'USER_PASSWORD_SEND_FAILED',
+                target_id: userId,
+                details: { email, error: passwordError },
+              },
+            ]);
+          } catch {}
         }
       }
 
-      return { ok: true, id: userId, email, created, passwordSent };
+      return { ok: true, id: userId, email, created, passwordSent, passwordError };
     }
 
     if (usersInput) {

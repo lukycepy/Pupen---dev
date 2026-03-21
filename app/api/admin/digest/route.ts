@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { requireAdmin } from '@/lib/server-auth';
-import { getMailer } from '@/lib/email/mailer';
+import { getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer';
 import { buildWeeklyDigest } from '@/lib/email/digest';
 
 export async function GET(req: Request) {
@@ -21,7 +21,6 @@ export async function POST(req: Request) {
     const { user } = await requireAdmin(req);
     const supabase = getServerSupabase();
 
-    const { data: emailSettings } = await supabase.from('email_settings').select('*').maybeSingle();
     const { data: paymentSettings } = await supabase.from('payment_settings').select('notification_email').maybeSingle();
 
     const to = paymentSettings?.notification_email || user.email || process.env.SMTP_USER;
@@ -29,24 +28,11 @@ export async function POST(req: Request) {
 
     const digest = await buildWeeklyDigest(supabase);
 
-    const host = emailSettings?.smtp_host || process.env.SMTP_HOST;
-    const smtpUser = emailSettings?.smtp_user || process.env.SMTP_USER;
-    const pass = emailSettings?.smtp_pass || process.env.SMTP_PASS;
-    const port = Number(emailSettings?.smtp_port || process.env.SMTP_PORT) || 587;
-
-    const transporter = getMailer({
-      host,
-      user: smtpUser,
-      pass,
-      port,
-      secure: port === 465,
-    });
-
-    const fromName = emailSettings?.sender_name || 'Pupen.org';
-    const fromEmail = emailSettings?.sender_email || 'info@pupen.org';
+    const transporter = await getMailerWithSettings();
+    const from = await getSenderFromSettings();
 
     await transporter.sendMail({
-      from: `"${fromName}" <${fromEmail}>`,
+      from,
       to,
       subject: digest.subject,
       html: digest.html,
