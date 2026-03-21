@@ -7,6 +7,7 @@ export type MailerConfig = {
   pass: string;
   port?: number;
   secure?: boolean;
+  tlsRejectUnauthorized?: boolean;
 };
 
 export function getMailer(config?: MailerConfig) {
@@ -15,6 +16,12 @@ export function getMailer(config?: MailerConfig) {
   const pass = config?.pass || process.env.SMTP_PASS;
   const port = Number(config?.port ?? process.env.SMTP_PORT) || 587;
   const secure = typeof config?.secure === 'boolean' ? config.secure : process.env.SMTP_SECURE === 'true';
+  const tlsRejectUnauthorized =
+    typeof config?.tlsRejectUnauthorized === 'boolean'
+      ? config.tlsRejectUnauthorized
+      : process.env.SMTP_TLS_REJECT_UNAUTHORIZED
+        ? process.env.SMTP_TLS_REJECT_UNAUTHORIZED !== 'false'
+        : true;
 
   if (!host || !user || !pass) {
     throw new Error('Email not configured');
@@ -25,6 +32,7 @@ export function getMailer(config?: MailerConfig) {
     port,
     secure,
     auth: { user, pass },
+    tls: { rejectUnauthorized: tlsRejectUnauthorized },
   });
 }
 

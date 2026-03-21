@@ -162,11 +162,11 @@ export default function Navbar({ lang, dict }: NavbarProps) {
   return (
     <nav className="sticky top-0 z-[10001] w-full bg-white/90 backdrop-blur-xl border-b border-stone-100 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="flex justify-between items-center h-20">
+        <div className="flex justify-between items-center h-16">
           
           {/* LOGO */}
           <Link href={`/${lang}`} className="flex items-center gap-2 sm:gap-3 group shrink-0 mr-4">
-            <div className="relative h-8 w-8 sm:h-10 sm:w-10 overflow-hidden rounded-full shadow-sm group-hover:scale-105 transition duration-300">
+            <div className="relative h-8 w-8 sm:h-9 sm:w-9 overflow-hidden rounded-full shadow-sm group-hover:scale-105 transition duration-300">
               <Image 
                 src="/logo.png" 
                 alt="Logo Spolek Pupen" 
@@ -174,7 +174,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                 className="object-cover"
               />
             </div>
-            <span className="hidden sm:inline font-bold text-base sm:text-lg lg:text-xl tracking-tight text-stone-900 group-hover:text-green-600 transition truncate max-w-[150px] sm:max-w-none">
+            <span className="hidden sm:inline font-bold text-base sm:text-lg tracking-tight text-stone-900 group-hover:text-green-600 transition truncate max-w-[150px] sm:max-w-none">
               Studentský spolek Pupen, z.s.
             </span>
           </Link>
@@ -211,7 +211,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
             >
               <button 
                 onMouseEnter={() => setIsToolsOpen(true)}
-                className={`flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.2em] transition-all duration-300 py-8 whitespace-nowrap ${
+                className={`flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.2em] transition-all duration-300 py-6 whitespace-nowrap ${
                   isToolsOpen ? 'text-green-600' : 'text-stone-500 hover:text-stone-900'
                 }`}
               >
@@ -349,16 +349,16 @@ export default function Navbar({ lang, dict }: NavbarProps) {
             </div>
 
             {/* PŘEPÍNAČ JAZYKA */}
-            <div className="flex items-center gap-1 bg-stone-50 p-1 rounded-2xl border border-stone-100">
+            <div className="flex items-center gap-1 bg-stone-50 p-1 rounded-xl border border-stone-100">
               <Link 
                 href={getTransliteratedPath('cs')}
-                className={`px-3 py-1.5 rounded-xl text-[10px] font-black transition-all ${lang === 'cs' ? 'bg-white text-green-600 shadow-sm' : 'text-stone-300 hover:text-stone-500'}`}
+                className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black transition-all ${lang === 'cs' ? 'bg-white text-green-600 shadow-sm' : 'text-stone-300 hover:text-stone-500'}`}
               >
                 CZ
               </Link>
               <Link 
                 href={getTransliteratedPath('en')}
-                className={`px-3 py-1.5 rounded-xl text-[10px] font-black transition-all ${lang === 'en' ? 'bg-white text-green-600 shadow-sm' : 'text-stone-300 hover:text-stone-500'}`}
+                className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black transition-all ${lang === 'en' ? 'bg-white text-green-600 shadow-sm' : 'text-stone-300 hover:text-stone-500'}`}
               >
                 EN
               </Link>
@@ -368,7 +368,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
               <button
                 type="button"
                 onClick={() => setIsUserMenuOpen((v) => !v)}
-                className="p-3 bg-stone-50 text-stone-500 rounded-2xl hover:bg-stone-100 hover:text-stone-900 transition-all border border-stone-100 shadow-sm"
+                className="p-2.5 bg-stone-50 text-stone-500 rounded-xl hover:bg-stone-100 hover:text-stone-900 transition-all border border-stone-100 shadow-sm"
                 title={userProfile ? (lang === 'cs' ? 'Účet' : 'Account') : (dict?.memberLogin || 'Login')}
               >
                 {userProfile ? (
@@ -435,7 +435,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
             {isPageEnabled('prihlaska') && (
               <Link 
                 href={`/${lang}/prihlaska`} 
-                className="inline-flex items-center justify-center whitespace-nowrap bg-green-600 text-white px-5 py-3 rounded-2xl text-[11px] font-black uppercase tracking-[0.12em] hover:bg-green-500 transition-all shadow-lg shadow-green-600/20 hover:shadow-green-600/30"
+                className="inline-flex items-center justify-center whitespace-nowrap bg-green-600 text-white px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-[0.12em] hover:bg-green-500 transition-all shadow-lg shadow-green-600/20 hover:shadow-green-600/30"
               >
                 {lang === 'cs' ? 'Přidej se' : 'Join us'}
               </Link>
@@ -461,7 +461,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
 
       {/* MOBILNÍ MENU */}
       {isMenuOpen && (
-        <div className="lg:hidden fixed inset-0 top-20 bg-white z-[9998] animate-in slide-in-from-top-10 duration-500 overflow-y-auto">
+        <div className="lg:hidden fixed inset-0 top-16 bg-white z-[9998] animate-in slide-in-from-top-10 duration-500 overflow-y-auto">
           <div className="flex flex-col p-8 space-y-6 font-black uppercase tracking-[0.2em] text-stone-700">
             {/* MOBILNÍ SEARCH */}
             <div className="relative mb-4">
