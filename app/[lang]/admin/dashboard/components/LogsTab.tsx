@@ -21,7 +21,7 @@ export default function LogsTab() {
     <div className="bg-white p-8 rounded-[2.5rem] border shadow-sm">
       <h2 className="text-xl font-bold mb-8 flex items-center gap-3">
         <History className="text-green-600" />
-        Historie aktivit adminů
+        Historie aktivit (admini i členové)
       </h2>
 
       <div className="space-y-4">

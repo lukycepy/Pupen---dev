@@ -27,16 +27,11 @@ export default function UsersTab({ dict }: UsersTabProps) {
   const modules = [
     { id: 'events', label: dict.admin?.navEvents || 'Akce' },
     { id: 'news', label: dict.admin?.navNews || 'Novinky' },
-    { id: 'opening_hours', label: dict.admin?.navHours || 'Otevírací doba' },
     { id: 'messages', label: dict.admin?.tabMessages || 'Zprávy' },
-    { id: 'banners', label: dict.admin?.navBanners || 'Bannery' },
     { id: 'partners', label: dict.admin?.navPartners || 'Partneři' },
     { id: 'faq', label: dict.admin?.navFaq || 'FAQ' },
     { id: 'feedback', label: dict.admin?.tabFeedback || 'Feedback' },
     { id: 'apps', label: dict.admin?.tabApplications || 'Přihlášky' },
-    { id: 'payment_settings', label: dict.admin?.paymentSettings?.title || 'Platební nastavení' },
-    { id: 'email_settings', label: dict.admin?.navEmail || 'E-mail Nastavení' },
-    { id: 'newsletter', label: dict.admin?.navNewsletter || 'Newsletter' },
     { id: 'budget', label: dict.admin?.tabBudget || 'Účetnictví' },
     { id: 'assets', label: dict.admin?.navAssets || 'Majetek' },
     { id: 'documents', label: dict.admin?.navDocs || 'Dokumenty' },
@@ -46,6 +41,7 @@ export default function UsersTab({ dict }: UsersTabProps) {
     { id: 'meetings', label: dict.admin?.navMeetings || 'Schůze' },
     { id: 'quizzes', label: dict.admin?.navQuizzes || 'Kvízy' },
     { id: 'jobs', label: dict.admin?.navJobs || 'Práce' },
+    { id: 'hours', label: dict.admin?.navHours || 'Otevírací doba' },
     { id: 'archive', label: dict.admin?.navArchive || 'Archiv' },
     { id: 'gallery', label: dict.admin?.tabGallery || 'Galerie' },
     { id: 'logs', label: dict.admin?.navLogs || 'Logy' },
@@ -53,7 +49,6 @@ export default function UsersTab({ dict }: UsersTabProps) {
     { id: 'blog_mod', label: dict.admin?.tabBlog || 'Moderace blogu' },
     { id: 'member_portal', label: dict.nav?.memberPortal || 'Členský portál' },
     { id: 'reviews', label: dict.admin?.tabReviews || 'Recenze' },
-    { id: 'users', label: dict.admin?.navAdmins || 'Admini' },
   ];
   const permsSchema: any = {};
   modules.forEach(m => {
@@ -104,7 +99,28 @@ export default function UsersTab({ dict }: UsersTabProps) {
     getNextPageParam: (lastPage) => lastPage.nextFrom,
   });
 
+  const membersQuery = useInfiniteQuery({
+    queryKey: ['members_paged'],
+    queryFn: async ({ pageParam }) => {
+      const from = typeof pageParam === 'number' ? pageParam : 0;
+      const to = from + PAGE_SIZE - 1;
+      const res = await supabase
+        .from('profiles')
+        .select('id,email,first_name,last_name,is_admin,is_member,can_manage_admins')
+        .eq('is_member', true)
+        .eq('is_admin', false)
+        .order('last_name', { ascending: true })
+        .range(from, to);
+      if (res.error) throw res.error;
+      const items = res.data || [];
+      return { items, nextFrom: items.length === PAGE_SIZE ? to + 1 : null };
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => lastPage.nextFrom,
+  });
+
   const admins = (adminsQuery.data?.pages || []).flatMap((p) => p.items);
+  const members = (membersQuery.data?.pages || []).flatMap((p) => p.items);
 
   const defaultPerms: any = {};
   modules.forEach(m => {
@@ -144,81 +160,37 @@ export default function UsersTab({ dict }: UsersTabProps) {
         }), {}),
       };
 
-      // Backward compatibility fields
-      profilePayload.can_manage_events = !!data.can_edit_events;
-      profilePayload.can_manage_news = !!data.can_edit_news;
-      profilePayload.can_manage_messages = !!data.can_edit_messages;
-      profilePayload.can_view_member_portal = !!data.can_view_member_portal;
-      profilePayload.can_edit_member_portal = !!data.can_edit_member_portal;
-      profilePayload.can_view_blog_mod = !!data.can_view_blog_mod;
-      profilePayload.can_edit_blog_mod = !!data.can_edit_blog_mod;
-      profilePayload.can_view_reviews = !!data.can_view_reviews;
-      profilePayload.can_edit_reviews = !!data.can_edit_reviews;
-      profilePayload.can_view_newsletter = !!data.can_view_newsletter;
-      profilePayload.can_edit_newsletter = !!data.can_edit_newsletter;
-      profilePayload.can_view_email_settings = !!data.can_view_email_settings;
-      profilePayload.can_edit_email_settings = !!data.can_edit_email_settings;
-
-      let generatedPassword = '';
-      const finalPassword = data.password || (generatedPassword = generatePassword(10));
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
 
       if (editingAdmin) {
-        // 2. Aktualizace profilu v DB
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update(profilePayload)
-          .eq('id', editingAdmin.id);
-        
-        if (profileError) throw profileError;
-
-        // 3. Změna hesla (pokud je zadáno nebo vygenerováno)
-        if (data.password || generatedPassword) {
-          const { error: pwdError } = await supabase.auth.admin.updateUserById(
-            editingAdmin.id,
-            { password: finalPassword }
-          );
-          if (pwdError) throw pwdError;
-
-          // Send email if generated
-          if (generatedPassword) {
-            await fetch('/api/admin/send-password', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: data.email, password: generatedPassword, firstName: data.first_name }),
-            });
-          }
-        }
-      } else {
-        // Create auth user first
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email: data.email,
-          password: finalPassword,
+        const res = await fetch(`/api/admin/users/${editingAdmin.id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ ...profilePayload, password: data.password || '' }),
         });
-        
-        if (authError) throw authError;
-        if (!authData.user) throw new Error('Nepodařilo se vytvořit uživatele');
-
-        // Update profile (it's usually created by trigger, but we ensure data)
-        const { error: profError } = await supabase
-          .from('profiles')
-          .update(profilePayload)
-          .eq('id', authData.user.id);
-        
-        if (profError) throw profError;
-
-        // Send email if no password was provided (so it was generated)
-        if (generatedPassword || !data.password) {
-          await fetch('/api/admin/send-password', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: data.email, password: finalPassword, firstName: data.first_name }),
-          });
-        }
+        const json = await res.json();
+        if (!res.ok) throw new Error(json?.error || 'Chyba');
+      } else {
+        const res = await fetch('/api/admin/users', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ ...profilePayload, email: data.email, password: data.password || '', send_password: true }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json?.error || 'Chyba');
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admins_paged'] });
-      queryClient.invalidateQueries({ queryKey: ['admins'] });
+      queryClient.invalidateQueries({ queryKey: ['members_paged'] });
       handleCancel();
       showToast(dict.admin.alertAdminSuccess, 'success');
     },
@@ -229,12 +201,21 @@ export default function UsersTab({ dict }: UsersTabProps) {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('profiles').delete().eq('id', id);
-      if (error) throw error;
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
+      const res = await fetch(`/api/admin/users/${id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || 'Chyba');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admins_paged'] });
-      queryClient.invalidateQueries({ queryKey: ['admins'] });
+      queryClient.invalidateQueries({ queryKey: ['members_paged'] });
       showToast(dict.admin.confirmDeleteSuccess || 'Smazáno', 'success');
     },
     onError: (err: any) => {
@@ -302,7 +283,7 @@ export default function UsersTab({ dict }: UsersTabProps) {
           <div className="flex items-center gap-2 px-4 py-2 bg-stone-50 rounded-xl border border-stone-100">
             <ShieldCheck size={16} className="text-green-600" />
             <span className="text-[10px] font-black uppercase tracking-widest text-stone-500">
-              {admins.length}{adminsQuery.hasNextPage ? '+' : ''} uživatelů
+              {admins.length + members.length}{adminsQuery.hasNextPage || membersQuery.hasNextPage ? '+' : ''} uživatelů
             </span>
           </div>
         }
@@ -439,7 +420,7 @@ export default function UsersTab({ dict }: UsersTabProps) {
 
         {/* LIST SECTION */}
         <div className="lg:col-span-7 xl:col-span-8 bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-sm overflow-hidden">
-          <h2 className="text-xl font-black text-stone-900 mb-8">{dict.admin.manageAdmins}</h2>
+          <h2 className="text-xl font-black text-stone-900 mb-8">Admini</h2>
           <div className="grid sm:grid-cols-2 gap-4">
             {adminsQuery.isLoading ? (
               <div className="sm:col-span-2 p-10 text-center text-stone-400 font-bold uppercase tracking-widest text-xs bg-stone-50 rounded-[2rem] border border-dashed border-stone-200">
@@ -483,6 +464,58 @@ export default function UsersTab({ dict }: UsersTabProps) {
               </button>
             </div>
           )}
+
+          <div className="mt-10 pt-10 border-t border-stone-100">
+            <h2 className="text-xl font-black text-stone-900 mb-8">Členové</h2>
+            <div className="grid sm:grid-cols-2 gap-4">
+              {membersQuery.isLoading ? (
+                <div className="sm:col-span-2 p-10 text-center text-stone-400 font-bold uppercase tracking-widest text-xs bg-stone-50 rounded-[2rem] border border-dashed border-stone-200">
+                  {dict.admin.btnLoading || 'Načítám...'}
+                </div>
+              ) : (
+                members.map((adm) => (
+                  <div key={adm.id} className="flex gap-4 items-center p-5 bg-stone-50/50 rounded-[2rem] border border-transparent hover:border-stone-100 hover:bg-white transition-all group">
+                    <div className="w-14 h-14 bg-stone-900 text-white rounded-2xl flex items-center justify-center font-black text-lg uppercase shrink-0 shadow-lg shadow-stone-900/20 group-hover:bg-blue-600 transition-colors">
+                      {((adm.first_name?.[0] || '') as string)}
+                      {((adm.last_name?.[0] || '') as string)}
+                    </div>
+                    <div className="flex-grow min-w-0">
+                      <h3 className="font-black text-stone-900 truncate">
+                        {adm.first_name} {adm.last_name}
+                      </h3>
+                      <p className="text-xs text-stone-400 font-bold truncate mb-3">{adm.email}</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        <span className="text-[8px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-black uppercase tracking-widest">Člen</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => handleEdit(adm)} className="p-2 text-stone-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
+                        <Edit3 size={18} />
+                      </button>
+                      {adm.email !== 'cepelak@pupen.org' && (
+                        <button onClick={() => deleteAdmin(adm.id)} className="p-2 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all">
+                          <Trash2 size={18} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {membersQuery.hasNextPage && (
+              <div className="flex justify-center pt-6">
+                <button
+                  type="button"
+                  onClick={() => membersQuery.fetchNextPage()}
+                  disabled={membersQuery.isFetchingNextPage}
+                  className="px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
+                >
+                  {membersQuery.isFetchingNextPage ? (dict.admin.btnLoading || 'Načítám...') : (dict.admin.btnMore || 'Načíst další')}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
