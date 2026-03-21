@@ -117,75 +117,105 @@ async function sendPasswordEmail(email: string, password: string, firstName?: st
 
 export async function POST(req: Request) {
   try {
-    const { user: adminUser } = await requireAdmin(req);
+    const { user: adminUser, profile: adminProfile } = await requireAdmin(req);
+    if (!adminProfile?.can_manage_admins) throw new Error('Forbidden');
     const supabase = getServerSupabase();
 
     const body = await req.json().catch(() => ({}));
-    const email = String(body?.email || '').trim().toLowerCase();
-    const first_name = String(body?.first_name || '').trim();
-    const last_name = String(body?.last_name || '').trim();
-    const providedPassword = typeof body?.password === 'string' ? body.password : '';
-    const shouldSend = body?.send_password !== false;
+    const usersInput = Array.isArray(body?.users) ? body.users : null;
 
-    if (!email || !email.includes('@')) return NextResponse.json({ error: 'Missing email' }, { status: 400 });
-    if (!first_name || !last_name) return NextResponse.json({ error: 'Missing name' }, { status: 400 });
+    async function upsertOne(input: any) {
+      const email = String(input?.email || '').trim().toLowerCase();
+      const first_name = String(input?.first_name || '').trim();
+      const last_name = String(input?.last_name || '').trim();
+      const providedPassword = typeof input?.password === 'string' ? input.password : '';
+      const shouldSend = input?.send_password === true || (!providedPassword && input?.send_password !== false);
 
-    const password = providedPassword || generatePassword(14);
+      if (!email || !email.includes('@')) return { ok: false, email, error: 'Missing email' };
 
-    let userId = await findUserIdByEmail(supabase, email);
-    let created = false;
+      const password = providedPassword || generatePassword(14);
 
-    if (!userId) {
-      const res = await supabase.auth.admin.createUser({
+      let userId = await findUserIdByEmail(supabase, email);
+      let created = false;
+
+      const userMeta: any = {};
+      if (first_name) userMeta.first_name = first_name;
+      if (last_name) userMeta.last_name = last_name;
+
+      if (!userId) {
+        const res = await supabase.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true,
+          user_metadata: userMeta,
+        });
+        if (res.error) throw res.error;
+        userId = res.data?.user?.id || null;
+        created = true;
+      } else {
+        const upd = await supabase.auth.admin.updateUserById(userId, {
+          password,
+          email_confirm: true,
+          user_metadata: userMeta,
+        });
+        if (upd.error) throw upd.error;
+      }
+
+      if (!userId) throw new Error('User not resolved');
+
+      const profilePatch = pickProfilePatch({
+        ...input,
         email,
-        password,
-        email_confirm: true,
-        user_metadata: { first_name, last_name },
+        first_name: first_name || null,
+        last_name: last_name || null,
       });
-      if (res.error) throw res.error;
-      userId = res.data?.user?.id || null;
-      created = true;
-    } else {
-      const upd = await supabase.auth.admin.updateUserById(userId, {
-        password,
-        email_confirm: true,
-        user_metadata: { first_name, last_name },
-      });
-      if (upd.error) throw upd.error;
+
+      const { error: profErr } = await supabase.from('profiles').update(profilePatch).eq('id', userId);
+      if (profErr) throw profErr;
+
+      try {
+        await supabase.from('admin_logs').insert([
+          {
+            admin_email: adminUser.email || 'admin',
+            admin_name: 'Uživatelé',
+            action: created ? 'USER_CREATE' : 'USER_MERGE_UPDATE',
+            target_id: userId,
+            details: { email, is_admin: !!profilePatch.is_admin, is_member: !!profilePatch.is_member },
+          },
+        ]);
+      } catch {}
+
+      let passwordSent = false;
+      if (shouldSend) {
+        try {
+          await sendPasswordEmail(email, password, first_name || undefined);
+          passwordSent = true;
+        } catch {
+          passwordSent = false;
+        }
+      }
+
+      return { ok: true, id: userId, email, created, passwordSent };
     }
 
-    if (!userId) throw new Error('User not resolved');
-
-    const profilePatch = pickProfilePatch({
-      ...body,
-      email,
-      first_name,
-      last_name,
-    });
-
-    const { error: profErr } = await supabase.from('profiles').update(profilePatch).eq('id', userId);
-    if (profErr) throw profErr;
-
-    try {
-      await supabase.from('admin_logs').insert([
-        {
-          admin_email: adminUser.email || 'admin',
-          admin_name: 'Uživatelé',
-          action: created ? 'USER_CREATE' : 'USER_MERGE_UPDATE',
-          target_id: userId,
-          details: { email, is_admin: !!profilePatch.is_admin, is_member: !!profilePatch.is_member },
-        },
-      ]);
-    } catch {}
-
-    if (shouldSend) {
-      await sendPasswordEmail(email, password, first_name);
+    if (usersInput) {
+      const results: any[] = [];
+      for (const u of usersInput.slice(0, 500)) {
+        try {
+          results.push(await upsertOne(u));
+        } catch (e: any) {
+          const email = String(u?.email || '').trim().toLowerCase();
+          results.push({ ok: false, email, error: e?.message || 'Error' });
+        }
+      }
+      return NextResponse.json({ ok: true, results });
     }
 
-    return NextResponse.json({ ok: true, id: userId, email, created });
+    const res = await upsertOne(body);
+    if (!res.ok) return NextResponse.json({ error: res.error || 'Error' }, { status: 400 });
+    return NextResponse.json(res);
   } catch (e: any) {
     const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
     return NextResponse.json({ error: e?.message || 'Error' }, { status });
   }
 }
-

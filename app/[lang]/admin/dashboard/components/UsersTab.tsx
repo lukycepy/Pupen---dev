@@ -79,6 +79,36 @@ export default function UsersTab({ dict }: UsersTabProps) {
     message: '',
     onConfirm: () => {}
   });
+  const [bulkText, setBulkText] = useState('');
+  const [bulkDefaultRole, setBulkDefaultRole] = useState<'member' | 'admin'>('member');
+
+  const parseBulkUsers = (text: string) => {
+    const lines = String(text || '')
+      .split(/\r?\n/g)
+      .map(l => l.trim())
+      .filter(Boolean);
+
+    const out: any[] = [];
+    for (const line of lines) {
+      const parts = line.includes(';') ? line.split(';') : line.includes(',') ? line.split(',') : line.split(/\s+/g);
+      const email = String(parts[0] || '').trim().toLowerCase();
+      if (!email || !email.includes('@')) continue;
+      const first_name = String(parts[1] || '').trim();
+      const last_name = String(parts[2] || '').trim();
+      const roleRaw = String(parts[3] || '').trim().toLowerCase();
+      const role = roleRaw === 'admin' || roleRaw === 'a' ? 'admin' : roleRaw === 'member' || roleRaw === 'm' ? 'member' : bulkDefaultRole;
+
+      out.push({
+        email,
+        first_name: first_name || null,
+        last_name: last_name || null,
+        is_admin: role === 'admin',
+        is_member: role === 'member' ? true : false,
+        send_password: true,
+      });
+    }
+    return out;
+  };
 
   const adminsQuery = useInfiniteQuery({
     queryKey: ['admins_paged'],
@@ -221,6 +251,37 @@ export default function UsersTab({ dict }: UsersTabProps) {
     onError: (err: any) => {
       showToast(err.message, 'error');
     }
+  });
+
+  const bulkMutation = useMutation({
+    mutationFn: async (payload: { users: any[] }) => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || 'Chyba');
+      return json;
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['admins_paged'] });
+      queryClient.invalidateQueries({ queryKey: ['members_paged'] });
+      const results = Array.isArray(data?.results) ? data.results : [];
+      const okCount = results.filter((r: any) => r?.ok).length;
+      const errCount = results.length - okCount;
+      showToast(`Hromadně přidáno/aktualizováno: ${okCount}${errCount ? `, chyby: ${errCount}` : ''}`, errCount ? 'info' : 'success');
+      setBulkText('');
+    },
+    onError: (err: any) => {
+      showToast(err?.message || 'Chyba', 'error');
+    },
   });
 
   const onSubmit = (data: any) => {
@@ -420,6 +481,60 @@ export default function UsersTab({ dict }: UsersTabProps) {
 
         {/* LIST SECTION */}
         <div className="lg:col-span-7 xl:col-span-8 bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-sm overflow-hidden">
+          <div className="mb-10 p-6 rounded-[2rem] bg-stone-50 border border-stone-100">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">Hromadné přidání</div>
+                <div className="text-lg font-black text-stone-900">Vlož e-maily a systém pošle náhodná hesla</div>
+                <div className="text-xs text-stone-500 font-medium mt-1">
+                  Formát: <span className="font-black">email</span> nebo <span className="font-black">email;Jméno;Příjmení;role</span> (role: admin/member).
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setBulkDefaultRole('member')}
+                  className={`px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition ${bulkDefaultRole === 'member' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50'}`}
+                >
+                  Default: člen
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBulkDefaultRole('admin')}
+                  className={`px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition ${bulkDefaultRole === 'admin' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50'}`}
+                >
+                  Default: admin
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-5 grid md:grid-cols-12 gap-4 items-start">
+              <div className="md:col-span-9">
+                <textarea
+                  value={bulkText}
+                  onChange={(e) => setBulkText(e.target.value)}
+                  placeholder={"email@domena.cz\nemail2@domena.cz;Jméno;Příjmení;member\nemail3@domena.cz;;;admin"}
+                  className="w-full min-h-[140px] bg-white rounded-[1.5rem] border border-stone-200 p-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 outline-none"
+                />
+              </div>
+              <div className="md:col-span-3 space-y-3">
+                <div className="bg-white rounded-[1.5rem] border border-stone-200 p-4">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">Nalezeno</div>
+                  <div className="text-3xl font-black text-stone-900 mt-1">{parseBulkUsers(bulkText).length}</div>
+                  <div className="text-[10px] text-stone-500 font-medium mt-1">platných řádků</div>
+                </div>
+                <button
+                  type="button"
+                  disabled={bulkMutation.isPending || parseBulkUsers(bulkText).length === 0}
+                  onClick={() => bulkMutation.mutate({ users: parseBulkUsers(bulkText) })}
+                  className="w-full bg-stone-900 text-white py-4 rounded-[1.5rem] font-black uppercase tracking-widest text-[10px] hover:bg-green-600 transition disabled:opacity-50"
+                >
+                  {bulkMutation.isPending ? (dict.admin?.btnLoading || 'Načítám...') : 'Hromadně přidat'}
+                </button>
+              </div>
+            </div>
+          </div>
+
           <h2 className="text-xl font-black text-stone-900 mb-8">Admini</h2>
           <div className="grid sm:grid-cols-2 gap-4">
             {adminsQuery.isLoading ? (

@@ -84,7 +84,8 @@ function pickProfilePatch(input: any) {
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const { user: adminUser } = await requireAdmin(req);
+    const { user: adminUser, profile: adminProfile } = await requireAdmin(req);
+    if (!adminProfile?.can_manage_admins) throw new Error('Forbidden');
     const { id } = await ctx.params;
     const supabase = getServerSupabase();
 
@@ -123,7 +124,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
 export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const { user: adminUser } = await requireAdmin(req);
+    const { user: adminUser, profile: adminProfile } = await requireAdmin(req);
+    if (!adminProfile?.can_manage_admins) throw new Error('Forbidden');
     const { id } = await ctx.params;
     const supabase = getServerSupabase();
 
@@ -152,4 +154,3 @@ export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }
     return NextResponse.json({ error: e?.message || 'Error' }, { status });
   }
 }
-
