@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Mail, ShieldCheck, Save, Loader2, Server, Key, User } from 'lucide-react';
+import { Mail, Save, Loader2, Server, User } from 'lucide-react';
 import { useToast } from '@/app/context/ToastContext';
 import { SkeletonTabContent } from '@/app/[lang]/components/Skeleton';
+import AdminModuleHeader from './ui/AdminModuleHeader';
+import AdminPanel from './ui/AdminPanel';
 
 export default function EmailSettingsTab({ dict }: { dict: any }) {
   const { showToast } = useToast();
@@ -63,20 +65,21 @@ export default function EmailSettingsTab({ dict }: { dict: any }) {
   if (loading) return <SkeletonTabContent />;
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded-[2rem] border shadow-sm flex items-center justify-between">
-        <h2 className="text-xl font-bold flex items-center gap-3">
-          <Mail className="text-green-600" />
-          Nastavení E-mailu (SuperAdmin)
-        </h2>
-        <span className="text-[10px] font-black uppercase tracking-widest text-stone-400 bg-stone-50 px-3 py-1 rounded-full border">
-          Systémový e-mail
-        </span>
-      </div>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <AdminModuleHeader
+        title="Nastavení e-mailu"
+        description="Konfigurace SMTP/IMAP a identity odesílatele pro Pupen Control."
+        actions={
+          <div className="flex items-center gap-2 px-4 py-2 bg-stone-50 rounded-xl border border-stone-100">
+            <Mail size={16} className="text-green-600" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-stone-500">SuperAdmin</span>
+          </div>
+        }
+      />
 
       <form onSubmit={handleSave} className="grid md:grid-cols-2 gap-6">
         {/* SMTP SETTINGS */}
-        <div className="bg-white p-8 rounded-[2.5rem] border shadow-sm space-y-6">
+        <AdminPanel className="p-8 space-y-6">
           <h3 className="text-lg font-bold flex items-center gap-2 text-stone-900">
             <Server className="text-green-600" size={20} />
             SMTP Server (Odesílání)
@@ -121,10 +124,10 @@ export default function EmailSettingsTab({ dict }: { dict: any }) {
               />
             </div>
           </div>
-        </div>
+        </AdminPanel>
 
         {/* IMAP SETTINGS */}
-        <div className="bg-white p-8 rounded-[2.5rem] border shadow-sm space-y-6">
+        <AdminPanel className="p-8 space-y-6">
           <h3 className="text-lg font-bold flex items-center gap-2 text-stone-900">
             <Server className="text-green-600" size={20} />
             IMAP Server (Příjem)
@@ -169,10 +172,10 @@ export default function EmailSettingsTab({ dict }: { dict: any }) {
               />
             </div>
           </div>
-        </div>
+        </AdminPanel>
 
         {/* SENDER INFO */}
-        <div className="bg-white p-8 rounded-[2.5rem] border shadow-sm space-y-6 md:col-span-2">
+        <AdminPanel className="p-8 space-y-6 md:col-span-2">
           <h3 className="text-lg font-bold flex items-center gap-2 text-stone-900">
             <User className="text-green-600" size={20} />
             Identita Odesílatele
@@ -197,7 +200,7 @@ export default function EmailSettingsTab({ dict }: { dict: any }) {
               />
             </div>
           </div>
-        </div>
+        </AdminPanel>
 
         <div className="md:col-span-2">
           <button 

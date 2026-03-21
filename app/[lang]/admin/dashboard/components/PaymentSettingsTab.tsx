@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabase';
 import { Wallet, ShieldCheck, Save, Loader2, Landmark, Mail, Key, Globe, CreditCard, Hash } from 'lucide-react';
 import { useToast } from '@/app/context/ToastContext';
 import { SkeletonTabContent } from '@/app/[lang]/components/Skeleton';
+import AdminModuleHeader from './ui/AdminModuleHeader';
+import AdminPanel from './ui/AdminPanel';
 
 export default function PaymentSettingsTab({ dict }: { dict: any }) {
   const { showToast } = useToast();
@@ -66,24 +68,20 @@ export default function PaymentSettingsTab({ dict }: { dict: any }) {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* HEADER */}
-      <div className="bg-white p-6 rounded-[2rem] border shadow-sm flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-black text-stone-900 tracking-tight flex items-center gap-3">
-            <Wallet className="text-green-600" />
-            {t?.title || 'Platební nastavení'}
-          </h2>
-          <p className="text-stone-400 text-xs font-medium mt-1">{t?.subtitle || 'Správa bankovního účtu a automatizace plateb'}</p>
-        </div>
-        <div className="flex items-center gap-2 px-4 py-2 bg-stone-50 rounded-xl border border-stone-100">
-          <ShieldCheck size={16} className="text-green-600" />
-          <span className="text-[10px] font-black uppercase tracking-widest text-stone-500">{t?.superAdminAccess || 'SuperAdmin přístup'}</span>
-        </div>
-      </div>
+      <AdminModuleHeader
+        title={t?.title || 'Platební nastavení'}
+        description={t?.subtitle || 'Správa bankovního účtu a automatizace plateb'}
+        actions={
+          <div className="flex items-center gap-2 px-4 py-2 bg-stone-50 rounded-xl border border-stone-100">
+            <ShieldCheck size={16} className="text-green-600" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-stone-500">{t?.superAdminAccess || 'SuperAdmin přístup'}</span>
+          </div>
+        }
+      />
 
       <form onSubmit={handleSave} className="space-y-6">
         {/* BANK ACCOUNT */}
-        <div className="bg-white p-8 rounded-[2.5rem] border shadow-sm space-y-6">
+        <AdminPanel className="p-8 space-y-6">
           <h3 className="text-lg font-bold flex items-center gap-2 text-stone-900">
             <Landmark className="text-green-600" size={20} />
             {t?.bankAccountTitle || 'Bankovní účet spolku'}
@@ -102,10 +100,10 @@ export default function PaymentSettingsTab({ dict }: { dict: any }) {
             </div>
             <p className="text-[10px] text-stone-400 mt-2 px-1">{t?.bankAccountHelp || 'Tento účet se bude zobrazovat členům v přihlášce a na výzvách k platbě.'}</p>
           </div>
-        </div>
+        </AdminPanel>
 
         {/* INTEGRATION TYPE */}
-        <div className="bg-white p-8 rounded-[2.5rem] border shadow-sm space-y-6">
+        <AdminPanel className="p-8 space-y-6">
           <h3 className="text-lg font-bold flex items-center gap-2 text-stone-900">
             <Globe className="text-green-600" size={20} />
             {t?.pairingTitle || 'Způsob párování plateb'}
@@ -227,7 +225,7 @@ export default function PaymentSettingsTab({ dict }: { dict: any }) {
               </div>
             )}
           </div>
-        </div>
+        </AdminPanel>
 
         {/* SAVE BUTTON */}
         <div className="flex justify-end pt-4">
