@@ -22,7 +22,7 @@ const Editor = dynamic(() => import('../../../components/Editor'), {
 
 interface NewsTabProps {
   dict: any;
-  uploadImage: (file: File, bucket: string) => Promise<string>;
+  uploadImage: (file: File, bucket: string, pathPrefix?: string) => Promise<string>;
   currentUser?: any;
   userProfile?: any;
   readOnly?: boolean;
@@ -126,7 +126,7 @@ export default function NewsTab({ dict, uploadImage, currentUser, userProfile, r
         published_at: data.published_at && data.published_at !== "" ? new Date(data.published_at).toISOString() : null
       };
 
-      if (editingPost) {
+      if (editingPost?.id) {
         // Save current version for Audit Log 2.0
         try {
           const { data: currentPost } = await supabase.from('posts').select('*').eq('id', editingPost.id).single();
@@ -235,7 +235,7 @@ export default function NewsTab({ dict, uploadImage, currentUser, userProfile, r
         actions={
           !readOnly && !editingPost ? (
             <button 
-              onClick={() => setEditingPost({})} 
+              onClick={() => setEditingPost({ id: null })} 
               className="bg-green-600 text-white px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-green-700 transition-all shadow-lg shadow-green-600/20"
             >
               <Plus size={16} /> {dict.admin.newPost}
@@ -246,7 +246,7 @@ export default function NewsTab({ dict, uploadImage, currentUser, userProfile, r
 
       <div className="grid lg:grid-cols-12 gap-8 items-start">
         {/* FORM SECTION */}
-        {(editingPost || (!readOnly && !postsQuery.isLoading && posts.length === 0)) && (
+        {editingPost && (
           <div className="lg:col-span-6 bg-white p-8 rounded-[2.5rem] shadow-sm border border-stone-100 animate-in slide-in-from-left duration-500">
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-xl font-black text-stone-900 flex items-center gap-3">

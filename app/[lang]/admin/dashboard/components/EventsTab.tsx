@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { supabase } from '@/lib/supabase';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { Plus, Trash2, Edit3, Image as ImageIcon, Calendar as CalendarIcon, MapPin, Clock, Download, Loader2, Save, X, Eye, EyeOff, CalendarClock } from 'lucide-react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
@@ -23,7 +23,7 @@ const Editor = dynamic(() => import('../../../components/Editor'), {
 interface EventsTabProps {
   dict: any;
   events: any[];
-  uploadImage: (file: File, bucket: string) => Promise<string>;
+  uploadImage: (file: File, bucket: string, pathPrefix?: string) => Promise<string>;
   currentUser: any;
   userProfile: any;
   readOnly?: boolean;
@@ -53,6 +53,7 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
   const { showToast } = useToast();
   const [editingEvent, setEditingEvent] = useState<any>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [eventPhotoFiles, setEventPhotoFiles] = useState<File[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [localSearch, setLocalSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
@@ -60,6 +61,49 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
     title: '',
     message: '',
     onConfirm: () => {}
+  });
+
+  const { data: eventPhotos = [] } = useQuery({
+    queryKey: ['event_photos', editingEvent?.id],
+    enabled: !!editingEvent?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('event_photos')
+        .select('*')
+        .eq('event_id', editingEvent.id)
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const uploadEventPhotosMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingEvent?.id) throw new Error('Nejdřív ulož akci.');
+      if (eventPhotoFiles.length === 0) throw new Error('Vyber fotky.');
+
+      for (const f of eventPhotoFiles) {
+        const url = await uploadImage(f, 'gallery', `events/${editingEvent.id}`);
+        const { error } = await supabase.from('event_photos').insert([{ event_id: editingEvent.id, image_url: url }]);
+        if (error) throw error;
+      }
+    },
+    onSuccess: async () => {
+      setEventPhotoFiles([]);
+      await queryClient.invalidateQueries({ queryKey: ['event_photos', editingEvent?.id] });
+      showToast('Fotky k události nahrány', 'success');
+    },
+    onError: (err: any) => showToast(err?.message || 'Chyba', 'error'),
+  });
+
+  const deleteEventPhotoMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('event_photos').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['event_photos', editingEvent?.id] }),
+    onError: (err: any) => showToast(err?.message || 'Chyba', 'error'),
   });
 
   const publishMutation = useMutation({
@@ -186,7 +230,7 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
         is_member_only: !!data.is_member_only
       };
 
-      if (editingEvent) {
+      if (editingEvent?.id) {
         // Save current version for Audit Log 2.0
         try {
           const { data: currentEv } = await supabase.from('events').select('*').eq('id', editingEvent.id).single();
@@ -347,7 +391,7 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
             )}
             {!readOnly && !editingEvent && (
               <button 
-                onClick={() => setEditingEvent({})} 
+                onClick={() => setEditingEvent({ id: null })} 
                 className="bg-green-600 text-white px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-green-700 transition-all shadow-lg shadow-green-600/20"
               >
                 <Plus size={16} /> {dict.admin.newEvent}
@@ -359,7 +403,7 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
 
       <div className="grid lg:grid-cols-12 gap-8 items-start">
         {/* FORM SECTION - ONLY SHOW WHEN ADDING/EDITING */}
-        {(editingEvent || !readOnly && events.length === 0) && (
+        {editingEvent && (
           <div className="lg:col-span-5 xl:col-span-4 bg-white p-8 rounded-[2.5rem] shadow-sm border border-stone-100 animate-in slide-in-from-left duration-500 sticky top-8">
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-xl font-black text-stone-900 flex items-center gap-3">
@@ -520,6 +564,59 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
                       )}
                     </div>
                 </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Fotky k události</label>
+                {!editingEvent?.id ? (
+                  <div className="p-6 bg-stone-50 rounded-[2rem] border border-stone-100 text-stone-500 font-medium text-sm">
+                    Nejdřív ulož akci, potom lze nahrávat fotky.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="border-2 border-dashed border-stone-200 rounded-[2rem] p-6 text-center relative hover:border-green-400 hover:bg-green-50/30 transition-all">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={(e) => setEventPhotoFiles(Array.from(e.target.files || []))}
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                      />
+                      <div className="text-stone-600 font-bold">
+                        {eventPhotoFiles.length > 0 ? `${eventPhotoFiles.length} souborů vybráno` : 'Klikni pro výběr více fotek'}
+                      </div>
+                      <div className="text-[10px] text-stone-400 font-medium mt-1">PNG, JPG nebo WEBP</div>
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={uploadEventPhotosMutation.isPending || eventPhotoFiles.length === 0}
+                      onClick={() => uploadEventPhotosMutation.mutate()}
+                      className="w-full bg-stone-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-600 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {uploadEventPhotosMutation.isPending ? <Loader2 className="animate-spin" size={16} /> : <ImageIcon size={16} />}
+                      Nahrát fotky
+                    </button>
+
+                    {eventPhotos.length > 0 && (
+                      <div className="grid grid-cols-3 gap-3">
+                        {eventPhotos.slice(0, 12).map((p: any) => (
+                          <div key={p.id} className="relative aspect-square rounded-2xl overflow-hidden border border-stone-100 bg-stone-50 group">
+                            <Image src={p.image_url} alt="" fill className="object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => deleteEventPhotoMutation.mutate(p.id)}
+                              className="absolute top-2 right-2 p-2 rounded-xl bg-white/90 border border-stone-100 text-stone-600 hover:text-red-600 hover:bg-red-50 transition opacity-0 group-hover:opacity-100"
+                              disabled={deleteEventPhotoMutation.isPending}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {seo.length > 0 && (

@@ -295,10 +295,11 @@ export default function AdminDashboard() {
     router.replace(`/${lang}/admin`);
   };
 
-  const uploadImage = async (file: File, bucket: string) => {
+  const uploadImage = async (file: File, bucket: string, pathPrefix = '') => {
     const fileExt = file.name.split('.').pop();
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}.${fileExt}`;
-    const filePath = `${fileName}`;
+    const prefix = String(pathPrefix || '').replace(/^\/+/, '').replace(/\/+$/, '');
+    const filePath = prefix ? `${prefix}/${fileName}` : `${fileName}`;
 
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
