@@ -208,7 +208,10 @@ export default function UsersTab({ dict }: UsersTabProps) {
   const sendNewPasswordNow = handleSubmit(async (data: any) => {
     if (!editingAdmin) return;
     const pwd = String(data?.password || '');
-    if (!pwd) throw new Error('Zadejte nové heslo');
+    if (!pwd) {
+      showToast('Zadejte nové heslo', 'error');
+      return;
+    }
     setSendingPassword(true);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -233,6 +236,8 @@ export default function UsersTab({ dict }: UsersTabProps) {
 
       showToast('Odesláno', 'success');
       setValue('password', '');
+    } catch (e: any) {
+      showToast(e?.message || 'Chyba', 'error');
     } finally {
       setSendingPassword(false);
     }

@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server';
 import { createHash } from 'crypto';
 import { getServerSupabase } from '@/lib/supabase-server';
 
+function isSchemaCacheMissingTable(e: any) {
+  const msg = String(e?.message || '');
+  return msg.includes("Could not find the table") && msg.includes("in the schema cache");
+}
+
 function sha256Hex(input: string) {
   return createHash('sha256').update(input).digest('hex');
 }
@@ -40,7 +45,15 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (e: any) {
+    if (isSchemaCacheMissingTable(e)) {
+      return NextResponse.json(
+        {
+          error:
+            "Reset hesla přes token není v databázi nakonfigurovaný (chybí tabulka). Použijte odkaz z e-mailu pro reset hesla, nebo aplikujte DB migrace.",
+        },
+        { status: 501 },
+      );
+    }
     return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
   }
 }
-

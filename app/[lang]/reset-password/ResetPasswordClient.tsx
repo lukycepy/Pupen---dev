@@ -7,6 +7,7 @@ import InlinePulse from '@/app/components/InlinePulse';
 import PasswordField from '@/app/components/PasswordField';
 import Link from 'next/link';
 import { getDictionary } from '@/lib/get-dictionary';
+import { supabase } from '@/lib/supabase';
 
 export default function ResetPasswordClient({ lang }: { lang: string }) {
   const search = useSearchParams();
@@ -14,33 +15,69 @@ export default function ResetPasswordClient({ lang }: { lang: string }) {
   const [dict, setDict] = useState<any>(null);
 
   const token = useMemo(() => String(search.get('token') || ''), [search]);
+  const code = useMemo(() => String(search.get('code') || ''), [search]);
+  const accessToken = useMemo(() => String(search.get('access_token') || ''), [search]);
+  const refreshToken = useMemo(() => String(search.get('refresh_token') || ''), [search]);
+  const type = useMemo(() => String(search.get('type') || ''), [search]);
   const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
+  const [recoveryReady, setRecoveryReady] = useState(false);
 
   useEffect(() => {
     getDictionary(lang).then(setDict);
   }, [lang]);
 
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        if (token) return;
+        if (code) {
+          const res: any = await (supabase.auth as any).exchangeCodeForSession?.(code);
+          if (res?.error) throw res.error;
+          if (mounted) setRecoveryReady(true);
+          return;
+        }
+        if ((type === 'recovery' || type === 'signup' || type === 'magiclink') && accessToken) {
+          const res: any = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken || '' });
+          if (res?.error) throw res.error;
+          if (mounted) setRecoveryReady(true);
+          return;
+        }
+      } catch {
+        if (mounted) setRecoveryReady(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [accessToken, code, refreshToken, token, type]);
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     const t = dict?.auth?.reset || {};
-    if (!token) return setError((t.errorMissingToken as string) || (lang === 'en' ? 'Missing token.' : 'Chybí token.'));
+    if (!token && !recoveryReady) return setError((t.errorMissingToken as string) || (lang === 'en' ? 'Missing token.' : 'Chybí token.'));
     if (password.length < 8) return setError((t.errorTooShort as string) || (lang === 'en' ? 'Password must be at least 8 characters.' : 'Heslo musí mít alespoň 8 znaků.'));
     if (password !== password2) return setError((t.errorMismatch as string) || (lang === 'en' ? 'Passwords do not match.' : 'Hesla se neshodují.'));
 
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, password }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error || 'Error');
+      if (token) {
+        const res = await fetch('/api/auth/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, password }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json?.error || 'Error');
+      } else {
+        const res = await supabase.auth.updateUser({ password });
+        if (res.error) throw res.error;
+      }
       setDone(true);
       setTimeout(() => router.replace(`/${lang}/login`), 800);
     } catch (e: any) {
@@ -136,4 +173,3 @@ export default function ResetPasswordClient({ lang }: { lang: string }) {
     </div>
   );
 }
-

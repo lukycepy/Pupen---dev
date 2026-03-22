@@ -36,21 +36,16 @@ export async function POST(req: Request) {
     if (!email || !email.includes('@')) return NextResponse.json({ error: 'Missing email' }, { status: 400 });
 
     const supabase = getServerSupabase();
-    const userId = await findUserIdByEmail(supabase, email);
-    if (!userId) return NextResponse.json({ ok: true });
-
-    const token = randomToken();
-    const tokenHash = sha256Hex(token);
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-
-    await supabase.from('password_resets').delete().eq('user_id', userId);
-    await supabase
-      .from('password_resets')
-      .insert([{ token_hash: tokenHash, user_id: userId, email, expires_at: expiresAt }])
-      .throwOnError();
-
     const origin = new URL(req.url).origin;
-    const resetUrl = `${origin}/${lang}/reset-password?token=${encodeURIComponent(token)}`;
+    const redirectTo = `${origin}/${lang}/reset-password`;
+    const gen = await supabase.auth.admin.generateLink({
+      type: 'recovery',
+      email,
+      options: { redirectTo },
+    });
+    if (gen.error) return NextResponse.json({ ok: true });
+    const resetUrl = String((gen.data as any)?.properties?.action_link || '');
+    if (!resetUrl) return NextResponse.json({ ok: true });
 
     const { subject, html } = renderEmailTemplate('password_reset', { email, resetUrl, lang });
     const transporter = await getMailerWithSettings();
@@ -64,7 +59,7 @@ export async function POST(req: Request) {
           admin_email: user.email || 'admin',
           admin_name: user.user_metadata?.full_name || user.email || 'admin',
           action: 'USER_PASSWORD_RESET_SENT',
-          target_id: userId,
+          target_id: String((gen.data as any)?.user?.id || email),
           details: { email },
         },
       ])
@@ -76,4 +71,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: e?.message || 'Error' }, { status });
   }
 }
-
