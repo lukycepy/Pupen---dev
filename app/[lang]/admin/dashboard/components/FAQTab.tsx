@@ -61,7 +61,7 @@ export default function FAQTab({ dict, readOnly = false }: { dict: any, readOnly
         sort_order: data.sort_order || 0
       };
 
-      if (editingFaq) {
+      if (editingFaq?.id) {
         const { error } = await supabase.from('faqs').update(cleanedData).eq('id', editingFaq.id);
         if (error) throw error;
       } else {
@@ -128,7 +128,7 @@ export default function FAQTab({ dict, readOnly = false }: { dict: any, readOnly
         </div>
         {!readOnly && !editingFaq && (
           <button 
-            onClick={() => setEditingFaq({})} 
+            onClick={() => setEditingFaq({ id: null })} 
             className="bg-green-600 text-white px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-green-700 transition-all shadow-lg shadow-green-600/20"
           >
             <Plus size={16} /> {dict.admin.newFaq || 'Přidat FAQ'}
