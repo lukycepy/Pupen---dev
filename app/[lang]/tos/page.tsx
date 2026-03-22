@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Shield, ArrowLeft, CheckCircle, Gavel, Copyright, AlertTriangle } from 'lucide-react';
+import { Shield, ArrowLeft, CheckCircle, Gavel, Copyright, AlertTriangle, KeyRound } from 'lucide-react';
 import { getDictionary } from '@/lib/get-dictionary';
 
 export default async function ToSPage({ params }: { params: { lang: string } }) {
@@ -76,6 +76,18 @@ export default async function ToSPage({ params }: { params: { lang: string } }) 
               <p className="text-amber-900 leading-relaxed text-lg font-bold italic">{dict.disclaimerText}</p>
             </div>
           </section>
+
+          {dict.oauthTitle && (
+            <section className="space-y-6 mt-16">
+              <h2 className="text-2xl font-black flex items-center gap-3 tracking-tight border-b pb-4 border-stone-100">
+                <KeyRound size={24} className="text-amber-600" />
+                {dict.oauthTitle}
+              </h2>
+              <div className="text-stone-600 leading-relaxed text-lg">
+                {dict.oauthText}
+              </div>
+            </section>
+          )}
         </div>
 
         {/* Patička */}

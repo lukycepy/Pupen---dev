@@ -91,20 +91,30 @@ export default async function RootLayout({
   return (
     <Providers>
       <ErrorReporter />
-      <Banner lang={lang} dict={dict.homePage} />
+      <div data-pupen-banner>
+        <Banner lang={lang} dict={dict.homePage} />
+      </div>
       {/* 3. Předání slovníku do komponenty Navbar - oprava předávání celého dict.nav */}
-      <Navbar lang={lang} dict={dict.nav || {}} />
+      <div data-pupen-navbar>
+        <Navbar lang={lang} dict={dict.nav || {}} />
+      </div>
 
       <div className="flex flex-col min-h-screen">
         <main className="flex-grow">
           {children}
         </main>
 
-        <Footer lang={lang} dict={dict.footer} />
+        <div data-pupen-footer>
+          <Footer lang={lang} dict={dict.footer} />
+        </div>
       </div>
       
-      <CookieBanner lang={lang} dict={dict} />
-      <FAQWidget lang={lang} />
+      <div data-pupen-cookie>
+        <CookieBanner lang={lang} dict={dict} />
+      </div>
+      <div data-pupen-faq>
+        <FAQWidget lang={lang} />
+      </div>
     </Providers>
   )
 }

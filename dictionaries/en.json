@@ -810,8 +810,11 @@
     "recipientsList": [
       "Czech University of Life Sciences Prague (e.g., for scholarship payments)",
       "Public administration authorities (for subsidy purposes)",
-      "Technology partners (Supabase for database, Vercel for hosting)"
+      "Technology partners (Supabase for database, Vercel for hosting)",
+      "Google LLC (only if you use Google sign-in)"
     ],
+    "oauthTitle": "Google sign-in",
+    "oauthText": "If you choose Google sign-in, we share the necessary technical data with the provider (Google) to verify your identity and receive an account identifier and basic profile information according to your account settings. We use this data only for sign-in and account security.",
     "marketingTitle": "Marketing and Media",
     "marketingText": "You agree to the processing of your name, photos, and videos for marketing purposes on the website and social networks. This consent can be withdrawn at any time by email to",
     "marketingEmail": "gdpr@pupen.org",
@@ -840,6 +843,8 @@
     "contentText": "All content on the website (texts, photos, logos) is the property of the Association or its partners. Any distribution without prior consent is prohibited.",
     "disclaimerTitle": "4. Liability",
     "disclaimerText": "The Association is not liable for any damages resulting from the use of the website or for the content of external links (partners, ISIC discounts).",
+    "oauthTitle": "Google sign-in",
+    "oauthText": "The website may allow Google sign-in (OAuth). If you use it, identity verification happens with the provider (Google) and we process the necessary data to create and manage your account. Using Google sign-in is optional.",
     "lastUpdated": "Last updated: March 2026"
   },
   "cookiesPage": {

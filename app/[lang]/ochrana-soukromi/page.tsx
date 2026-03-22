@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Shield, Lock, ArrowLeft, UserCheck, Eye, CheckCircle, Mail, Clock } from 'lucide-react';
+import { Shield, Lock, ArrowLeft, UserCheck, Eye, CheckCircle, Mail, Clock, KeyRound } from 'lucide-react';
 import { getDictionary } from '@/lib/get-dictionary';
 
 export default async function PrivacyPage({ params }: { params: { lang: string } }) {
@@ -87,6 +87,18 @@ export default async function PrivacyPage({ params }: { params: { lang: string }
               </div>
             </div>
           </section>
+
+          {dict.oauthTitle && (
+            <section className="space-y-6 mt-16">
+              <h2 className="text-2xl font-black flex items-center gap-3 tracking-tight border-b pb-4 border-stone-100">
+                <KeyRound size={24} className="text-green-600" />
+                {dict.oauthTitle}
+              </h2>
+              <div className="text-stone-600 leading-relaxed text-lg">
+                <p>{dict.oauthText}</p>
+              </div>
+            </section>
+          )}
 
           {/* 4. PRÁVA UŽIVATELE */}
           {dict.rightsTitle && (

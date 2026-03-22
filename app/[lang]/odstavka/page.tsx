@@ -23,7 +23,7 @@ export default function MaintenancePage() {
   const lang = (params?.lang as string) || 'cs';
   const router = useRouter();
   const [cfg, setCfg] = useState<SiteConfig | null>(null);
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState(0);
 
   useEffect(() => {
     let mounted = true;
@@ -39,6 +39,7 @@ export default function MaintenancePage() {
   }, []);
 
   useEffect(() => {
+    setNow(Date.now());
     const id = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(id);
   }, []);
@@ -62,6 +63,7 @@ export default function MaintenancePage() {
 
   useEffect(() => {
     if (!cfg) return;
+    if (!now) return;
     if (!isActive) router.replace(`/${lang}`);
   }, [cfg, isActive, lang, router]);
 
@@ -169,6 +171,16 @@ export default function MaintenancePage() {
   const bodyHtml = isProbablyHtml(body) ? sanitizeAndLinkifyHtml(body) : linkifyPlain(body);
 
   return (
+    <>
+      <style jsx global>{`
+        [data-pupen-banner],
+        [data-pupen-navbar],
+        [data-pupen-footer],
+        [data-pupen-cookie],
+        [data-pupen-faq] {
+          display: none !important;
+        }
+      `}</style>
     <div className="min-h-screen bg-gradient-to-b from-white via-stone-50 to-white flex items-center justify-center px-6 py-20">
       <div className="w-full max-w-3xl">
         <div className="flex flex-col items-center text-center mb-10">
@@ -240,5 +252,6 @@ export default function MaintenancePage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

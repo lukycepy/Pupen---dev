@@ -847,8 +847,11 @@
     "recipientsList": [
       "Česká zemědělská univerzita v Praze (např. pro výplatu stipendií)",
       "Orgány státní správy (pro účely dotací)",
-      "Technologičtí partneři (Supabase pro databázi, Vercel pro hosting)"
+      "Technologičtí partneři (Supabase pro databázi, Vercel pro hosting)",
+      "Google LLC (pouze pokud využijete přihlášení přes Google)"
     ],
+    "oauthTitle": "Přihlášení přes Google",
+    "oauthText": "Pokud zvolíte přihlášení přes Google, předáváme nezbytné technické údaje k ověření identity poskytovateli (Google) a zpět obdržíme identifikátor účtu a základní profilové informace dle nastavení vašeho účtu. Tyto údaje používáme pouze k přihlášení a zabezpečení účtu.",
     "marketingTitle": "Marketing a média",
     "marketingText": "Souhlasíte se zpracováním jména, fotografií a videí pro účely marketingu na webu a sociálních sítích. Tento souhlas můžete kdykoliv odvolat e-mailem na",
     "marketingEmail": "gdpr@pupen.org",
@@ -877,6 +880,8 @@
     "contentText": "Veškerý obsah na webu (texty, fotografie, loga) je majetkem Spolku nebo jeho partnerů. Jakékoliv šíření bez předchozího souhlasu je zakázáno.",
     "disclaimerTitle": "4. Odpovědnost",
     "disclaimerText": "Spolek nenese odpovědnost za případné škody vzniklé používáním webu nebo za obsah externích odkazů (partneři, ISIC slevy).",
+    "oauthTitle": "Přihlášení přes Google",
+    "oauthText": "Web může umožnit přihlášení přes Google (OAuth). Pokud tuto možnost použijete, probíhá ověření identity u poskytovatele (Google) a my zpracováváme nezbytné údaje pro vytvoření a správu účtu. Použití Google přihlášení je volitelné.",
     "lastUpdated": "Naposledy aktualizováno: Březen 2026"
   },
   "member": {
