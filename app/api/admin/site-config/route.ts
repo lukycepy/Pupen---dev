@@ -9,7 +9,7 @@ export async function GET(req: Request) {
     const res = await supabase
       .from('site_public_config')
       .select(
-        'maintenance_enabled, maintenance_start_at, maintenance_end_at, maintenance_title_cs, maintenance_body_cs, maintenance_title_en, maintenance_body_en, pages, updated_at',
+        'maintenance_enabled, maintenance_start_at, maintenance_end_at, maintenance_title_cs, maintenance_body_cs, maintenance_title_en, maintenance_body_en, pages, home, member_portal, updated_at',
       )
       .eq('id', 1)
       .maybeSingle();
@@ -44,6 +44,8 @@ export async function POST(req: Request) {
     const maintenance_title_en = patch.maintenance_title_en ? String(patch.maintenance_title_en).slice(0, 200) : null;
     const maintenance_body_en = patch.maintenance_body_en ? String(patch.maintenance_body_en).slice(0, 4000) : null;
     const pages = patch.pages && typeof patch.pages === 'object' ? patch.pages : {};
+    const home = patch.home && typeof patch.home === 'object' ? patch.home : {};
+    const member_portal = patch.member_portal && typeof patch.member_portal === 'object' ? patch.member_portal : {};
 
     const supabase = getServerSupabase();
 
@@ -62,6 +64,8 @@ export async function POST(req: Request) {
             maintenance_title_en,
             maintenance_body_en,
             pages,
+            home,
+            member_portal,
           },
         ],
         { onConflict: 'id' },

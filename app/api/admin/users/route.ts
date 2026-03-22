@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { requireAdmin } from '@/lib/server-auth';
-import { getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer';
+import { getMailerDebugInfoWithSettings, getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer';
 import { renderEmailTemplate } from '@/lib/email/templates';
 
 function generatePassword(length = 14) {
@@ -195,6 +195,7 @@ export async function POST(req: Request) {
         } catch (e: any) {
           passwordSent = false;
           passwordError = e?.message || 'Email send failed';
+          const smtp = await getMailerDebugInfoWithSettings().catch(() => null);
           try {
             await supabase.from('admin_logs').insert([
               {
@@ -202,7 +203,20 @@ export async function POST(req: Request) {
                 admin_name: 'Uživatelé',
                 action: 'USER_PASSWORD_SEND_FAILED',
                 target_id: userId,
-                details: { email, error: passwordError },
+                details: {
+                  email,
+                  error: passwordError,
+                  smtp,
+                  details: {
+                    code: e?.code,
+                    errno: e?.errno,
+                    syscall: e?.syscall,
+                    address: e?.address,
+                    port: e?.port,
+                    command: e?.command,
+                    responseCode: e?.responseCode,
+                  },
+                },
               },
             ]);
           } catch {}

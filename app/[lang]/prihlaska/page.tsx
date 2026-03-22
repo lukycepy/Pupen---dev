@@ -19,13 +19,17 @@ export default function PrihlaskaPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [formData, setFormData] = useState({
-    full_name: '',
-    birth_date: '',
+    membership_type: 'regular' as 'regular' | 'external',
+    first_name: '',
+    last_name: '',
     email: '',
     phone: '',
-    faculty_info: '',
-    motivation: '',
-    applicant_signature: ''
+    university_email: '',
+    field_of_study: '',
+    study_year: '',
+    signed_on: '',
+    gdpr_consent: false,
+    applicant_signature: '',
   });
 
   useEffect(() => {
@@ -34,13 +38,40 @@ export default function PrihlaskaPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.gdpr_consent) {
+      return showToast(dict.errorConsentRequired, 'error');
+    }
     if (!formData.applicant_signature) {
-      return showToast(lang === 'cs' ? 'Prosím připojte svůj podpis.' : 'Please provide your signature.', 'error');
+      return showToast(dict.errorSignatureRequired, 'error');
+    }
+    if (formData.membership_type === 'regular') {
+      if (!formData.university_email || !formData.field_of_study || !formData.study_year) {
+        return showToast(dict.errorRegularFieldsRequired, 'error');
+      }
     }
 
     setLoading(true);
     try {
-      const { error } = await supabase.from('applications').insert([formData]);
+      const full_name = `${formData.first_name} ${formData.last_name}`.trim();
+      const payload: any = {
+        full_name,
+        name: full_name,
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        email: formData.email,
+        phone: formData.phone,
+        membership_type: formData.membership_type,
+        university_email: formData.membership_type === 'regular' ? formData.university_email : null,
+        field_of_study: formData.membership_type === 'regular' ? formData.field_of_study : null,
+        study_year: formData.membership_type === 'regular' ? formData.study_year : null,
+        signed_on: formData.signed_on || null,
+        gdpr_consent: true,
+        signature_data_url: formData.applicant_signature,
+        applicant_signature: formData.applicant_signature,
+        faculty: formData.membership_type === 'regular' ? `${formData.field_of_study}, ${formData.study_year}` : null,
+        status: 'pending',
+      };
+      const { error } = await supabase.from('applications').insert([payload]);
       if (error) throw error;
       setSuccess(true);
       showToast(dict.successTitle, 'success');
@@ -82,24 +113,58 @@ export default function PrihlaskaPage() {
         </header>
 
         <form onSubmit={handleSubmit} className="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-xl border border-stone-100 space-y-8">
+          <div className="space-y-3">
+            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.membershipTypeLabel}</div>
+            <div className="grid md:grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, membership_type: 'regular' })}
+                className={`px-6 py-5 rounded-2xl border text-left transition ${
+                  formData.membership_type === 'regular'
+                    ? 'bg-green-600 text-white border-green-600 shadow-lg shadow-green-600/20'
+                    : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-50'
+                }`}
+              >
+                <div className="text-xs font-black uppercase tracking-widest">{dict.membershipRegularTitle}</div>
+                <div className={`mt-2 text-sm font-bold ${formData.membership_type === 'regular' ? 'text-white/90' : 'text-stone-500'}`}>
+                  {dict.membershipRegularDesc}
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, membership_type: 'external' })}
+                className={`px-6 py-5 rounded-2xl border text-left transition ${
+                  formData.membership_type === 'external'
+                    ? 'bg-green-600 text-white border-green-600 shadow-lg shadow-green-600/20'
+                    : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-50'
+                }`}
+              >
+                <div className="text-xs font-black uppercase tracking-widest">{dict.membershipExternalTitle}</div>
+                <div className={`mt-2 text-sm font-bold ${formData.membership_type === 'external' ? 'text-white/90' : 'text-stone-500'}`}>
+                  {dict.membershipExternalDesc}
+                </div>
+              </button>
+            </div>
+          </div>
+
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.labelFullName}</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.labelFirstName}</label>
               <input 
                 required
-                type="text" 
-                value={formData.full_name}
-                onChange={e => setFormData({...formData, full_name: e.target.value})}
+                type="text"
+                value={formData.first_name}
+                onChange={e => setFormData({...formData, first_name: e.target.value})}
                 className="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 focus:ring-2 focus:ring-green-500 transition font-bold"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.labelBirthDate}</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.labelLastName}</label>
               <input 
                 required
-                type="date" 
-                value={formData.birth_date}
-                onChange={e => setFormData({...formData, birth_date: e.target.value})}
+                type="text"
+                value={formData.last_name}
+                onChange={e => setFormData({...formData, last_name: e.target.value})}
                 className="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 focus:ring-2 focus:ring-green-500 transition font-bold"
               />
             </div>
@@ -127,27 +192,64 @@ export default function PrihlaskaPage() {
             </div>
           </div>
 
+          {formData.membership_type === 'regular' && (
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.labelUniversityEmail}</label>
+                <input 
+                  required
+                  type="email"
+                  value={formData.university_email}
+                  onChange={e => setFormData({...formData, university_email: e.target.value})}
+                  className="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 focus:ring-2 focus:ring-green-500 transition font-bold"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.labelStudyYear}</label>
+                <input 
+                  required
+                  type="text"
+                  value={formData.study_year}
+                  onChange={e => setFormData({...formData, study_year: e.target.value})}
+                  className="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 focus:ring-2 focus:ring-green-500 transition font-bold"
+                />
+              </div>
+              <div className="md:col-span-2 space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.labelFieldOfStudy}</label>
+                <input 
+                  required
+                  type="text"
+                  value={formData.field_of_study}
+                  onChange={e => setFormData({...formData, field_of_study: e.target.value})}
+                  className="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 focus:ring-2 focus:ring-green-500 transition font-bold"
+                />
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.labelFaculty}</label>
-            <input 
-              required
-              type="text" 
-              placeholder={dict.placeholderFaculty}
-              value={formData.faculty_info}
-              onChange={e => setFormData({...formData, faculty_info: e.target.value})}
+            <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.labelSignedOn}</label>
+            <input
+              type="date"
+              value={formData.signed_on}
+              onChange={e => setFormData({ ...formData, signed_on: e.target.value })}
               className="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 focus:ring-2 focus:ring-green-500 transition font-bold"
             />
           </div>
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.labelMotivation}</label>
-            <textarea 
-              required
-              rows={4}
-              value={formData.motivation}
-              onChange={e => setFormData({...formData, motivation: e.target.value})}
-              className="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 focus:ring-2 focus:ring-green-500 transition font-bold"
-            />
+          <div className="bg-stone-50 border border-stone-100 rounded-[2rem] p-6">
+            <label className="flex items-start gap-4 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.gdpr_consent}
+                onChange={(e) => setFormData({ ...formData, gdpr_consent: e.target.checked })}
+                className="mt-1 w-5 h-5 accent-green-600"
+              />
+              <div className="min-w-0">
+                <div className="font-bold text-stone-800">{dict.consentLabel}</div>
+                <div className="text-sm text-stone-500 font-medium mt-1 leading-relaxed">{dict.consentHelp}</div>
+              </div>
+            </label>
           </div>
 
           <div className="space-y-2">
@@ -155,6 +257,7 @@ export default function PrihlaskaPage() {
             <SignaturePad 
               onSave={dataUrl => setFormData({...formData, applicant_signature: dataUrl})}
               onClear={() => setFormData({...formData, applicant_signature: ''})}
+              clearLabel={dict.btnClear}
             />
           </div>
 

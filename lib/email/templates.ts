@@ -1,4 +1,4 @@
-export type EmailTemplateKey = 'ticket' | 'admin_password' | 'invoice_request' | 'refund_request' | 'refund_status';
+export type EmailTemplateKey = 'ticket' | 'admin_password' | 'password_reset' | 'invoice_request' | 'refund_request' | 'refund_status';
 
 export function listEmailTemplates() {
   return [
@@ -20,6 +20,11 @@ export function listEmailTemplates() {
       key: 'admin_password' as const,
       label: 'Admin přístup (heslo)',
       variables: ['email', 'firstName', 'password'],
+    },
+    {
+      key: 'password_reset' as const,
+      label: 'Reset hesla',
+      variables: ['email', 'resetUrl', 'lang'],
     },
     {
       key: 'invoice_request' as const,
@@ -67,6 +72,36 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
           <p style="font-size: 12px; color: #78716c; margin-top: 16px;">Heslo si po přihlášení změňte.</p>
         </div>
         <p style="font-size: 12px; color: #78716c; text-align: center;">Tento e-mail byl odeslán automaticky systémem Pupen.</p>
+      </div>
+    `;
+    return { subject, html };
+  }
+
+  if (key === 'password_reset') {
+    const lang = vars?.lang === 'en' ? 'en' : 'cs';
+    const resetUrl = String(vars?.resetUrl || '');
+    const subject = lang === 'en' ? 'Pupen — Password reset' : 'Pupen — Obnova hesla';
+    const title = lang === 'en' ? 'Password reset' : 'Obnova hesla';
+    const intro =
+      lang === 'en'
+        ? 'We received a request to reset your password.'
+        : 'Obdrželi jsme žádost o obnovu vašeho hesla.';
+    const cta = lang === 'en' ? 'Set a new password' : 'Nastavit nové heslo';
+    const note =
+      lang === 'en'
+        ? 'If you did not request this, you can ignore this email.'
+        : 'Pokud jste o obnovu nepožádali, tento e‑mail ignorujte.';
+    const html = `
+      <div style="font-family: sans-serif; padding: 20px; color: #1c1917; max-width: 700px; margin: auto; border: 1px solid #e7e5e4; border-radius: 20px;">
+        <h2 style="color: #16a34a; text-align: center;">${escapeHtml(title)}</h2>
+        <p style="text-align: center; font-weight: 700; font-size: 16px;">${escapeHtml(intro)}</p>
+        <div style="background-color: #f5f5f4; padding: 20px; border-radius: 15px; margin: 20px 0; text-align: center;">
+          <a href="${escapeHtml(resetUrl)}" style="display: inline-block; background: #16a34a; color: #fff; padding: 14px 18px; border-radius: 14px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none; font-size: 12px;">
+            ${escapeHtml(cta)}
+          </a>
+          <p style="margin-top: 16px; font-size: 12px; color: #78716c;">${escapeHtml(resetUrl)}</p>
+        </div>
+        <p style="font-size: 12px; color: #78716c; text-align: center;">${escapeHtml(note)}</p>
       </div>
     `;
     return { subject, html };

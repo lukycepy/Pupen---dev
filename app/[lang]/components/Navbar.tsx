@@ -156,7 +156,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
   };
 
   // Hide navbar in admin and member portal
-  const isAppSection = pathname?.includes('/admin') || pathname?.includes('/clen');
+  const isAppSection = pathname?.includes('/admin') || pathname?.includes('/clen') || pathname?.includes('/odstavka');
   if (isAppSection) return null;
 
   return (
@@ -182,9 +182,9 @@ export default function Navbar({ lang, dict }: NavbarProps) {
           {/* DESKTOP MENU */}
           <div className="hidden xl:flex items-center gap-6 font-medium text-[13px] tracking-normal text-stone-600">
             {[ 
-              { slug: 'home', href: `/${lang}`, label: dict?.home || (lang === 'en' ? 'HOME' : 'DOMŮ'), active: pathname === `/${lang}` },
-              { slug: 'akce', href: `/${lang}/akce`, label: dict?.events || (lang === 'en' ? 'EVENTS' : 'AKCE'), active: pathname.includes('/akce') },
-              { slug: 'novinky', href: `/${lang}/novinky`, label: dict?.news || (lang === 'en' ? 'NEWS' : 'NOVINKY'), active: pathname.includes('/novinky') },
+              { slug: 'home', href: `/${lang}`, label: dict.home, active: pathname === `/${lang}` },
+              { slug: 'akce', href: `/${lang}/akce`, label: dict.events, active: pathname.includes('/akce') },
+              { slug: 'novinky', href: `/${lang}/novinky`, label: dict.news, active: pathname.includes('/novinky') },
             ]
               .filter((item) => item.slug === 'home' || (isPageEnabled(item.slug) && showInNavbar(item.slug)))
               .map((item) => (
@@ -215,7 +215,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                   isToolsOpen ? 'text-green-600' : 'text-stone-500 hover:text-stone-900'
                 }`}
               >
-                {dict?.tools?.dropdownTitle || (lang === 'en' ? 'TOOLS' : 'NÁSTROJE')}
+                {dict.tools.dropdownTitle}
                 <ChevronDown size={14} className={`transition-transform duration-300 ${isToolsOpen ? 'rotate-180' : ''}`} />
               </button>
               

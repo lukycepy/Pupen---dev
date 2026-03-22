@@ -28,6 +28,7 @@ export default function PupenWeb() {
 
   const [openFaq, setOpenFaq] = useState<string | null>(null);
   const [dict, setDict] = useState<any>(null);
+  const [homeCfg, setHomeCfg] = useState<any>(null);
   const [faqs, setFaqs] = useState<any[]>([]);
   const [partners, setPartners] = useState<any[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
@@ -40,12 +41,14 @@ export default function PupenWeb() {
       const d = await getDictionary(lang);
       setDict(d.homePage);
 
-      const [faqRes, partnerRes, postsRes, nextEventRes] = await Promise.all([
+      const [cfgRes, faqRes, partnerRes, postsRes, nextEventRes] = await Promise.all([
+        fetch('/api/site-config', { cache: 'no-store' }).then((r) => r.json()).catch(() => null),
         supabase.from('faqs').select('*').order('sort_order', { ascending: true }),
         supabase.from('partners').select('*').order('sort_order', { ascending: true }),
         supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(2),
         supabase.from('events').select('*').gte('date', new Date().toISOString().split('T')[0]).order('date', { ascending: true }).limit(1).single()
       ]);
+      setHomeCfg(cfgRes?.config?.home || null);
       setFaqs(faqRes.data || []);
       setPartners(partnerRes.data || []);
       setPosts(postsRes.data || []);
@@ -61,15 +64,22 @@ export default function PupenWeb() {
 
   if (!dict) return null;
 
+  const widgets = (homeCfg?.widgets && typeof homeCfg.widgets === 'object' ? homeCfg.widgets : {}) as any;
+  const heroBgUrl =
+    Array.isArray(homeCfg?.hero?.backgrounds) && homeCfg.hero.backgrounds.length > 0
+      ? String(homeCfg.hero.backgrounds[0])
+      : 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=2400&q=80';
+
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900 font-sans selection:bg-green-100 selection:text-green-900">
       
       {/* --- 1. HERO SECTION --- */}
+      {widgets.hero !== false && (
       <header className="relative min-h-[70vh] sm:min-h-[85vh] lg:min-h-[90vh] flex items-center justify-center text-center px-4 overflow-visible bg-stone-900">
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/20 to-stone-900/40 z-10" />
           <Image 
-            src="https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=2400&q=80" 
+            src={heroBgUrl} 
             alt="Students" 
             fill
             priority
@@ -87,10 +97,11 @@ export default function PupenWeb() {
           </p>
         </div>
       </header>
+      )}
 
       {/* --- 2. RYCHLÝ PŘEHLED --- */}
       <section className="relative z-40 px-4 sm:px-6 max-w-6xl mx-auto -mt-24 sm:-mt-34">
-        {nextEvent && (
+        {widgets.countdown !== false && nextEvent && (
           <div className="mb-8">
             <CountdownWidget 
               targetDate={`${nextEvent.date}T${nextEvent.time}`} 
@@ -284,44 +295,99 @@ export default function PupenWeb() {
         </section>
       )}
 
-      <TestimonialsSlider lang={lang} />
-      <InstagramFeedGrid />
+      {widgets.testimonials !== false && <TestimonialsSlider lang={lang} />}
+      {widgets.instagram !== false && (
+        <InstagramFeedGrid url={homeCfg?.instagram?.url} handle={homeCfg?.instagram?.handle} />
+      )}
 
       {/* --- 5.5 PARTNEŘI --- */}
-      {partners.length > 0 && (
+      {widgets.partners !== false && partners.length > 0 && (
         <section className="py-20 bg-white border-y border-stone-100">
           <div className="max-w-6xl mx-auto px-6">
             <h2 className="text-center text-[10px] font-black uppercase tracking-[0.3em] text-stone-400 mb-12">Spolupracujeme s</h2>
-            <div className="flex flex-wrap justify-center items-center gap-12 md:gap-20 opacity-60 hover:opacity-100 transition duration-500">
-              {partners.map((p) => (
-                <a 
-                  key={p.id} 
-                  href={p.link_url || "#"} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="grayscale hover:grayscale-0 transition duration-500 group relative"
-                >
-                  {p.logo_url ? (
-                    <div className="relative w-32 h-16">
-                      <Image src={p.logo_url} alt={p.name} fill className="object-contain" />
-                    </div>
-                  ) : (
-                    <span className="font-black text-xl text-stone-300 group-hover:text-green-600 transition">{p.name}</span>
-                  )}
-                  {p.link_url && <ExternalLink size={10} className="absolute -top-2 -right-4 text-stone-300 opacity-0 group-hover:opacity-100 transition" />}
-                </a>
-              ))}
-            </div>
+            {partners.length > 5 ? (
+              <div className="relative overflow-hidden">
+                <div className="pointer-events-none absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-white to-transparent z-10" />
+                <div className="pointer-events-none absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-white to-transparent z-10" />
+                <div className="partner-marquee flex items-center gap-16 md:gap-24 w-max">
+                  {[...partners, ...partners].map((p, i) => (
+                    <a
+                      key={`${p.id}-${i}`}
+                      href={p.link_url || '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group relative grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition duration-500 hover:brightness-110"
+                    >
+                      {p.logo_url ? (
+                        <div className="relative w-32 h-16">
+                          <Image src={p.logo_url} alt={p.name} fill className="object-contain" />
+                        </div>
+                      ) : (
+                        <span className="font-black text-xl text-stone-300 group-hover:text-green-600 transition">{p.name}</span>
+                      )}
+                      {p.link_url && (
+                        <ExternalLink
+                          size={10}
+                          className="absolute -top-2 -right-4 text-stone-300 opacity-0 group-hover:opacity-100 transition"
+                        />
+                      )}
+                    </a>
+                  ))}
+                </div>
+                <style jsx>{`
+                  .partner-marquee {
+                    animation: partner-marquee 26s linear infinite;
+                  }
+                  @keyframes partner-marquee {
+                    0% {
+                      transform: translateX(0);
+                    }
+                    100% {
+                      transform: translateX(-50%);
+                    }
+                  }
+                `}</style>
+              </div>
+            ) : (
+              <div className="flex flex-wrap justify-center items-center gap-12 md:gap-20">
+                {partners.map((p) => (
+                  <a
+                    key={p.id}
+                    href={p.link_url || '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group relative grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition duration-500 hover:brightness-110"
+                  >
+                    {p.logo_url ? (
+                      <div className="relative w-32 h-16">
+                        <Image src={p.logo_url} alt={p.name} fill className="object-contain" />
+                      </div>
+                    ) : (
+                      <span className="font-black text-xl text-stone-300 group-hover:text-green-600 transition">{p.name}</span>
+                    )}
+                    {p.link_url && (
+                      <ExternalLink
+                        size={10}
+                        className="absolute -top-2 -right-4 text-stone-300 opacity-0 group-hover:opacity-100 transition"
+                      />
+                    )}
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
         </section>
       )}
 
       {/* --- 5.6 NEWSLETTER --- */}
-      <section className="py-20 px-6 max-w-4xl mx-auto">
-        <NewsletterForm lang={lang} />
-      </section>
+      {widgets.newsletter !== false && (
+        <section className="py-20 px-6 max-w-4xl mx-auto">
+          <NewsletterForm lang={lang} />
+        </section>
+      )}
 
       {/* --- 6. CTA --- */}
+      {widgets.cta !== false && (
       <section className="py-24 sm:py-32 px-6 text-center bg-stone-50 relative overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-[radial-gradient(circle_at_center,rgba(22,163,74,0.08)_0%,transparent_70%)] pointer-events-none" />
         <div className="relative z-10 max-w-4xl mx-auto">
@@ -350,6 +416,7 @@ export default function PupenWeb() {
           </div>
         </div>
       </section>
+      )}
     </div>
   );
 }

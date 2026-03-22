@@ -2,14 +2,25 @@
 
 import React from 'react';
 import { supabase } from '@/lib/supabase';
-import { useQuery } from '@tanstack/react-query';
-import { History, Clock, Search, ChevronDown, ChevronUp } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Clock, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import { SkeletonTabContent } from '@/app/[lang]/components/Skeleton';
+import ConfirmModal from '@/app/components/ConfirmModal';
+import { useToast } from '@/app/context/ToastContext';
+import AdminModuleHeader from './ui/AdminModuleHeader';
+import AdminPanel from './ui/AdminPanel';
 
 export default function LogsTab() {
+  const { showToast } = useToast();
+  const queryClient = useQueryClient();
   const [q, setQ] = React.useState('');
   const [type, setType] = React.useState<'all' | 'admin' | 'member' | 'system'>('all');
   const [openId, setOpenId] = React.useState<string | null>(null);
+  const [isSuperadmin, setIsSuperadmin] = React.useState(false);
+  const [purgeDays, setPurgeDays] = React.useState(90);
+  const [purgeModalOpen, setPurgeModalOpen] = React.useState(false);
+  const [purgeMessage, setPurgeMessage] = React.useState('');
+  const [purgePending, setPurgePending] = React.useState(false);
 
   const { data: logs = [], isLoading } = useQuery({
     queryKey: ['admin_logs'],
@@ -18,6 +29,49 @@ export default function LogsTab() {
       return data || [];
     }
   });
+
+  React.useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      const userId = data.session?.user?.id;
+      if (!userId) return;
+      const prof = await supabase.from('profiles').select('can_manage_admins').eq('id', userId).maybeSingle();
+      if (!mounted) return;
+      setIsSuperadmin(!!prof.data?.can_manage_admins);
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const runPurgeDry = async () => {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) throw new Error('Unauthorized');
+    const res = await fetch('/api/admin/logs/purge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ olderThanDays: purgeDays, dryRun: true }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json?.error || 'Chyba');
+    return json as any;
+  };
+
+  const runPurge = async () => {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) throw new Error('Unauthorized');
+    const res = await fetch('/api/admin/logs/purge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ olderThanDays: purgeDays, dryRun: false }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json?.error || 'Chyba');
+    return json as any;
+  };
 
   if (isLoading) return <SkeletonTabContent />;
 
@@ -62,17 +116,49 @@ export default function LogsTab() {
   });
 
   return (
-    <div className="bg-white p-8 rounded-[2.5rem] border shadow-sm">
-      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-8">
-        <div>
-          <h2 className="text-xl font-bold flex items-center gap-3">
-        <History className="text-green-600" />
-        Historie aktivit (admini i členové)
-      </h2>
-          <p className="text-xs text-stone-400 font-medium mt-1">Filtruj podle e-mailu, akce nebo target_id. Zobrazuji {filtered.length} / {logs.length}.</p>
-        </div>
+    <div className="space-y-6">
+      <AdminModuleHeader
+        title="Logy"
+        description={`Filtruj podle e-mailu, akce nebo target_id. Zobrazuji ${filtered.length} / ${logs.length}.`}
+      />
 
-        <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+      <AdminPanel className="p-8">
+        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-end gap-6 mb-8">
+          <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+          {isSuperadmin && (
+            <div className="flex items-center gap-2 bg-white border border-stone-200 rounded-2xl px-3 py-2">
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">Purge</div>
+              <input
+                type="number"
+                min={7}
+                max={3650}
+                value={purgeDays}
+                onChange={(e) => setPurgeDays(Number(e.target.value) || 90)}
+                className="w-20 bg-stone-50 border border-stone-100 rounded-xl px-3 py-2 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500"
+              />
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">dní</div>
+              <button
+                type="button"
+                disabled={purgePending}
+                onClick={async () => {
+                  try {
+                    setPurgePending(true);
+                    const dry = await runPurgeDry();
+                    const wouldDelete = Number(dry?.wouldDelete || 0);
+                    setPurgeMessage(`Smažou se logy starší než ${dry?.olderThanDays} dní. Záznamů ke smazání: ${wouldDelete}. Pokračovat?`);
+                    setPurgeModalOpen(true);
+                  } catch (e: any) {
+                    showToast(e?.message || 'Chyba', 'error');
+                  } finally {
+                    setPurgePending(false);
+                  }
+                }}
+                className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition bg-white text-stone-700 border-stone-200 hover:bg-stone-50 disabled:opacity-50"
+              >
+                Pročistit
+              </button>
+            </div>
+          )}
           <div className="relative">
             <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400" />
             <input
@@ -160,6 +246,29 @@ export default function LogsTab() {
           );})
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={purgeModalOpen}
+        onClose={() => setPurgeModalOpen(false)}
+        title="Pročistit logy?"
+        message={purgeMessage}
+        confirmLabel="Smazat"
+        cancelLabel="Zrušit"
+        variant="danger"
+        onConfirm={async () => {
+          try {
+            setPurgePending(true);
+            const res = await runPurge();
+            showToast(`Smazáno: ${Number(res?.deletedCount || 0)}`, 'success');
+            queryClient.invalidateQueries({ queryKey: ['admin_logs'] });
+          } catch (e: any) {
+            showToast(e?.message || 'Chyba', 'error');
+          } finally {
+            setPurgePending(false);
+          }
+        }}
+      />
+      </AdminPanel>
     </div>
   );
 }

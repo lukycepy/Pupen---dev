@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { 
   Lock, ShieldCheck, FileText, Download, Users, 
   ArrowLeft, FileCheck, BookOpen, Clock, 
-  Mail, X, Calendar, Settings, LayoutDashboard, Save
+  Mail, X, Calendar, Settings, LayoutDashboard, Save, KeyRound
 } from 'lucide-react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
@@ -17,6 +17,8 @@ import MemberSidebar from './components/MemberSidebar';
 import Skeleton, { SkeletonTabContent } from '../components/Skeleton';
 import InlinePulse from '@/app/components/InlinePulse';
 import OnboardingCard from './components/OnboardingCard';
+import MemberPanel from './components/ui/MemberPanel';
+import PasswordField from '@/app/components/PasswordField';
 
 const MemberCard = dynamic<any>(() => import('./components/MemberCard'), { loading: () => <SkeletonTabContent /> });
 const MyEventsTab = dynamic<any>(() => import('./components/MyEventsTab'), { loading: () => <SkeletonTabContent /> });
@@ -37,6 +39,20 @@ export default function ClenskaSekcePage() {
   const { showToast } = useToast();
   
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [memberPortalCfg, setMemberPortalCfg] = useState<{
+    hiddenTabs: string[];
+    showOnboarding: boolean;
+    defaultTab?: string;
+    supportEmail?: string;
+    supportPhone?: string;
+    quickLinks?: Array<{ label_cs?: string; label_en?: string; url?: string }>;
+  }>({
+    hiddenTabs: [],
+    showOnboarding: true,
+  });
+  const [didInitTab, setDidInitTab] = useState(false);
+  const [memberDefaultTab, setMemberDefaultTab] = useState('dashboard');
+  const [uiPrefsSaving, setUiPrefsSaving] = useState(false);
   const [reportOpen, setReportOpen] = useState<null | { type: 'user' | 'content'; id: string; label: string }>(null);
   const [blocked, setBlocked] = useState<Record<string, boolean>>({});
   const [showBlocked, setShowBlocked] = useState(false);
@@ -61,6 +77,33 @@ export default function ClenskaSekcePage() {
     }
   }, []);
 
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const res = await fetch('/api/site-config');
+      const json = await res.json().catch(() => ({}));
+      const mp = json?.config?.member_portal && typeof json.config.member_portal === 'object' ? json.config.member_portal : {};
+      const hiddenTabs = Array.isArray(mp.hidden_tabs) ? mp.hidden_tabs.map((x: any) => String(x)) : [];
+      const showOnboarding = mp.show_onboarding !== false;
+      const defaultTab = typeof mp.default_tab === 'string' ? mp.default_tab : undefined;
+      const supportEmail = typeof mp.support_email === 'string' ? mp.support_email : undefined;
+      const supportPhone = typeof mp.support_phone === 'string' ? mp.support_phone : undefined;
+      const quickLinks = Array.isArray(mp.quick_links) ? mp.quick_links : [];
+      if (mounted) setMemberPortalCfg({ hiddenTabs, showOnboarding, defaultTab, supportEmail, supportPhone, quickLinks });
+    })().catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const hidden = new Set(memberPortalCfg.hiddenTabs.map(String));
+    if (!hidden.size) return;
+    if (!hidden.has(activeTab)) return;
+    const preferred = memberPortalCfg.defaultTab && !hidden.has(memberPortalCfg.defaultTab) ? memberPortalCfg.defaultTab : 'dashboard';
+    setActiveTab(preferred);
+  }, [memberPortalCfg.hiddenTabs, memberPortalCfg.defaultTab]);
+
   const toggleBlocked = (email: string) => {
     const key = String(email || '').toLowerCase();
     const next = { ...blocked, [key]: !blocked[key] };
@@ -72,6 +115,28 @@ export default function ClenskaSekcePage() {
   };
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [editProfile, setEditProfile] = useState({ first_name: '', last_name: '' });
+  const [pw1, setPw1] = useState('');
+  const [pw2, setPw2] = useState('');
+  const [pwSaving, setPwSaving] = useState(false);
+  const [mfaLoading, setMfaLoading] = useState(false);
+  const [mfaEnabled, setMfaEnabled] = useState(false);
+  const [mfaFactorId, setMfaFactorId] = useState<string>('');
+  const [mfaEnrollUri, setMfaEnrollUri] = useState<string>('');
+  const [mfaEnrollQr, setMfaEnrollQr] = useState<string>('');
+  const [mfaVerifyCode, setMfaVerifyCode] = useState('');
+  const [googleBusy, setGoogleBusy] = useState(false);
+  const logSecurityEvent = async (event: string, details?: any) => {
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) return;
+      await fetch('/api/auth/security-log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ event, details: details && typeof details === 'object' ? details : {} }),
+      });
+    } catch {}
+  };
 
   useEffect(() => {
     async function init() {
@@ -97,6 +162,12 @@ export default function ClenskaSekcePage() {
       
       const userProf = prof || (isSuperAdmin ? { first_name: 'Super', last_name: 'Admin', is_admin: true, is_member: true } : null);
       setProfile(userProf);
+      const prefTab = (userProf as any)?.ui_prefs?.member?.defaultTab ? String((userProf as any).ui_prefs.member.defaultTab) : '';
+      if (prefTab) setMemberDefaultTab(prefTab);
+      if (prefTab && !didInitTab) {
+        setActiveTab(prefTab);
+        setDidInitTab(true);
+      }
       setEditProfile({ 
         first_name: userProf?.first_name || '', 
         last_name: userProf?.last_name || '' 
@@ -142,6 +213,28 @@ export default function ClenskaSekcePage() {
       showToast(e?.message || 'Chyba', 'error');
     } finally {
       setPrefsSaving(false);
+    }
+  };
+
+  const saveMemberPrefs = async () => {
+    if (!user) return;
+    setUiPrefsSaving(true);
+    try {
+      const next = {
+        ...(profile?.ui_prefs && typeof profile.ui_prefs === 'object' ? profile.ui_prefs : {}),
+        member: {
+          ...((profile?.ui_prefs?.member && typeof profile.ui_prefs.member === 'object') ? profile.ui_prefs.member : {}),
+          defaultTab: memberDefaultTab,
+        },
+      };
+      const { error } = await supabase.from('profiles').update({ ui_prefs: next }).eq('id', user.id);
+      if (error) throw error;
+      setProfile((p: any) => ({ ...(p || {}), ui_prefs: next }));
+      showToast(lang === 'en' ? 'Saved' : 'Uloženo', 'success');
+    } catch (e: any) {
+      showToast(e?.message || 'Chyba', 'error');
+    } finally {
+      setUiPrefsSaving(false);
     }
   };
 
@@ -219,6 +312,146 @@ export default function ClenskaSekcePage() {
       showToast(err.message, 'error');
     } finally {
       setIsSavingProfile(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!pw1 || pw1.length < 8) {
+      showToast(lang === 'en' ? 'Password must be at least 8 characters.' : 'Heslo musí mít alespoň 8 znaků.', 'error');
+      return;
+    }
+    if (pw1 !== pw2) {
+      showToast(lang === 'en' ? 'Passwords do not match.' : 'Hesla se neshodují.', 'error');
+      return;
+    }
+    setPwSaving(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: pw1 });
+      if (error) throw error;
+      setPw1('');
+      setPw2('');
+      showToast(lang === 'en' ? 'Password updated.' : 'Heslo změněno.', 'success');
+    } catch (e: any) {
+      showToast(e?.message || 'Chyba', 'error');
+    } finally {
+      setPwSaving(false);
+    }
+  };
+
+  const refreshMfa = async () => {
+    const authAny: any = supabase.auth as any;
+    if (!authAny?.mfa?.listFactors) return;
+    setMfaLoading(true);
+    try {
+      const res = await authAny.mfa.listFactors();
+      if (res?.error) throw res.error;
+      const factors = res?.data?.totp || res?.data?.all || [];
+      const factor = Array.isArray(factors) ? factors.find((f: any) => f?.status === 'verified') || factors[0] : null;
+      const enabled = !!factor && (factor.status === 'verified' || factor.status === 'unverified');
+      setMfaEnabled(enabled);
+      setMfaFactorId(String(factor?.id || ''));
+    } catch {
+      setMfaEnabled(false);
+      setMfaFactorId('');
+    } finally {
+      setMfaLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshMfa();
+  }, []);
+
+  const startMfaEnroll = async () => {
+    const authAny: any = supabase.auth as any;
+    if (!authAny?.mfa?.enroll) {
+      showToast(lang === 'en' ? '2FA not supported.' : '2FA není podporováno.', 'error');
+      await logSecurityEvent('MFA_ENROLL_START', { supported: false });
+      return;
+    }
+    setMfaLoading(true);
+    try {
+      await logSecurityEvent('MFA_ENROLL_START', { supported: true });
+      const res = await authAny.mfa.enroll({ factorType: 'totp' });
+      if (res?.error) throw res.error;
+      const factorId = String(res?.data?.id || '');
+      const uri = String(res?.data?.totp?.uri || res?.data?.totp?.qr_code || '');
+      if (!factorId || !uri) throw new Error('Enroll failed');
+      setMfaFactorId(factorId);
+      setMfaEnrollUri(uri);
+      const QRCode: any = await import('qrcode');
+      const qr = await QRCode.toDataURL(uri, { margin: 1, width: 320 });
+      setMfaEnrollQr(qr);
+      setMfaVerifyCode('');
+    } catch (e: any) {
+      showToast(e?.message || 'Chyba', 'error');
+    } finally {
+      setMfaLoading(false);
+    }
+  };
+
+  const verifyMfaEnroll = async () => {
+    const authAny: any = supabase.auth as any;
+    if (!mfaFactorId) return;
+    setMfaLoading(true);
+    try {
+      const ch = await authAny?.mfa?.challenge?.({ factorId: mfaFactorId });
+      const challengeId = String(ch?.data?.id || ch?.data?.challengeId || '');
+      if (!challengeId) throw new Error('Challenge failed');
+      const res = await authAny?.mfa?.verify?.({ factorId: mfaFactorId, challengeId, code: mfaVerifyCode });
+      if (res?.error) throw res.error;
+      setMfaEnrollUri('');
+      setMfaEnrollQr('');
+      setMfaVerifyCode('');
+      await refreshMfa();
+      showToast(lang === 'en' ? '2FA enabled.' : '2FA zapnuto.', 'success');
+      await logSecurityEvent('MFA_ENABLED', {});
+    } catch (e: any) {
+      showToast(e?.message || 'Chyba', 'error');
+    } finally {
+      setMfaLoading(false);
+    }
+  };
+
+  const disableMfa = async () => {
+    const authAny: any = supabase.auth as any;
+    if (!authAny?.mfa?.unenroll || !mfaFactorId) return;
+    setMfaLoading(true);
+    try {
+      const res = await authAny.mfa.unenroll({ factorId: mfaFactorId });
+      if (res?.error) throw res.error;
+      setMfaEnrollUri('');
+      setMfaEnrollQr('');
+      setMfaVerifyCode('');
+      await refreshMfa();
+      showToast(lang === 'en' ? '2FA disabled.' : '2FA vypnuto.', 'success');
+      await logSecurityEvent('MFA_DISABLED', {});
+    } catch (e: any) {
+      showToast(e?.message || 'Chyba', 'error');
+    } finally {
+      setMfaLoading(false);
+    }
+  };
+
+  const linkGoogle = async () => {
+    setGoogleBusy(true);
+    try {
+      const origin = window.location.origin;
+      const authAny: any = supabase.auth as any;
+      if (typeof authAny?.linkIdentity === 'function') {
+        await logSecurityEvent('GOOGLE_LINK_START', {});
+        const res = await authAny.linkIdentity({ provider: 'google', options: { redirectTo: `${origin}/${lang}/clen` } });
+        if (res?.error) throw res.error;
+      } else {
+        await logSecurityEvent('GOOGLE_LINK_UNSUPPORTED', {});
+        showToast(ms.googleLinkUnsupported || (lang === 'en' ? 'Google linking is not available in this installation.' : 'Propojení Google není v této instalaci dostupné.'), 'error');
+        setGoogleBusy(false);
+        return;
+      }
+    } catch (e: any) {
+      await logSecurityEvent('GOOGLE_LINK_ERROR', { message: String(e?.message || ''), code: e?.code ? String(e.code) : undefined });
+      showToast(e?.message || 'Chyba', 'error');
+      setGoogleBusy(false);
     }
   };
 
@@ -327,6 +560,20 @@ export default function ClenskaSekcePage() {
 
   if (!user) return null;
 
+  const ms = dict?.memberSettings || {};
+  const safeHref = (raw: string) => {
+    const v = String(raw || '').trim();
+    if (!v) return null;
+    if (v.startsWith('/')) return v;
+    if (v.startsWith('mailto:') || v.startsWith('tel:')) return v;
+    try {
+      const u = new URL(v);
+      if (u.protocol === 'http:' || u.protocol === 'https:') return u.toString();
+      return null;
+    } catch {
+      return null;
+    }
+  };
   const hasAccessToMemberPortal = profile?.is_member || user.email === 'cepelak@pupen.org' || profile?.is_admin;
 
   if (!hasAccessToMemberPortal) {
@@ -369,6 +616,7 @@ export default function ClenskaSekcePage() {
         onTabChange={setActiveTab}
         userProfile={profile}
         onLogout={handleLogout}
+        hiddenTabs={memberPortalCfg.hiddenTabs}
       />
 
       <main className="p-4 lg:p-8 mt-16 lg:mt-0">
@@ -379,7 +627,7 @@ export default function ClenskaSekcePage() {
               {dict.member.welcome}, <span className="text-green-600">{profile?.first_name || user?.email?.split('@')[0]}</span>!
             </h1>
             <p className="text-stone-500 font-medium mt-2 flex items-center gap-2">
-              Status:{' '}
+              {ms.statusLabel || (lang === 'en' ? 'Status' : 'Status')}:{' '}
               <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest">
                 {profile?.is_member ? dict.member.activeStatus : (dict.member.pendingStatus || 'Čeká na schválení')}
               </span>
@@ -432,7 +680,7 @@ export default function ClenskaSekcePage() {
                 <div className="bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-sm">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xl font-black flex items-center gap-3"><Calendar className="text-amber-600" /> {dict.member.memberEvents}</h2>
-                    <button onClick={() => setActiveTab('events')} className="text-xs font-bold text-stone-400 hover:text-amber-600 transition">Zobrazit vše</button>
+                    <button onClick={() => setActiveTab('events')} className="text-xs font-bold text-stone-400 hover:text-amber-600 transition">{ms.showAll || (lang === 'en' ? 'Show all' : 'Zobrazit vše')}</button>
                   </div>
                   {memberEvents.length > 0 ? (
                     <div className="grid md:grid-cols-2 gap-4">
@@ -474,11 +722,37 @@ export default function ClenskaSekcePage() {
                     )}
                   </div>
                   {internalDocs.length > 5 && (
-                    <button onClick={() => setActiveTab('documents')} className="w-full mt-4 text-center text-xs font-bold text-stone-400 hover:text-green-600 transition">Všechny dokumenty</button>
+                    <button onClick={() => setActiveTab('documents')} className="w-full mt-4 text-center text-xs font-bold text-stone-400 hover:text-green-600 transition">{ms.allDocuments || (lang === 'en' ? 'All documents' : 'Všechny dokumenty')}</button>
                   )}
                 </div>
 
-                <OnboardingCard lang={lang} userId={user.id} profile={profile} onNavigate={setActiveTab} />
+                {memberPortalCfg.showOnboarding && <OnboardingCard lang={lang} userId={user.id} profile={profile} onNavigate={setActiveTab} />}
+
+                {Array.isArray(memberPortalCfg.quickLinks) && memberPortalCfg.quickLinks.length > 0 && (
+                  <div className="bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-sm">
+                    <h3 className="text-xl font-black mb-6">{dict.memberPortalConfig?.quickLinksTitle || (lang === 'en' ? 'Quick links' : 'Rychlé odkazy')}</h3>
+                    <div className="space-y-3">
+                      {memberPortalCfg.quickLinks
+                        .map((x) => ({
+                          label: String((lang === 'en' ? x?.label_en : x?.label_cs) || x?.label_cs || x?.label_en || '').trim(),
+                          href: safeHref(String(x?.url || '')),
+                        }))
+                        .filter((x) => x.label && x.href)
+                        .map((x) => (
+                          <a
+                            key={`${x.href}-${x.label}`}
+                            href={String(x.href)}
+                            target={String(x.href).startsWith('/') ? undefined : '_blank'}
+                            rel={String(x.href).startsWith('/') ? undefined : 'noopener noreferrer'}
+                            className="w-full flex items-center justify-between p-4 bg-stone-50 rounded-2xl hover:bg-green-50 transition group text-left border border-transparent hover:border-green-100"
+                          >
+                            <span className="text-sm font-bold text-stone-700">{x.label}</span>
+                            <ArrowLeft size={16} className="text-stone-300 group-hover:text-green-600 transition rotate-180 shrink-0" />
+                          </a>
+                        ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* HELP CARD */}
                 <div className="bg-green-600 p-8 rounded-[2.5rem] text-white shadow-xl shadow-green-600/20">
@@ -486,9 +760,22 @@ export default function ClenskaSekcePage() {
                   <p className="text-green-100 text-sm font-medium mb-6 leading-relaxed">
                     {dict.member.helpDesc}
                   </p>
-                  <a href="mailto:cepelak@pupen.org" className="block w-full py-4 bg-white text-green-600 rounded-2xl font-black uppercase tracking-widest text-xs text-center hover:bg-green-50 transition">
-                    {dict.member.writeSupport}
-                  </a>
+                  <div className="grid gap-3">
+                    <a
+                      href={`mailto:${String(memberPortalCfg.supportEmail || 'cepelak@pupen.org').trim()}`}
+                      className="block w-full py-4 bg-white text-green-600 rounded-2xl font-black uppercase tracking-widest text-xs text-center hover:bg-green-50 transition"
+                    >
+                      {dict.member.writeSupport}
+                    </a>
+                    {memberPortalCfg.supportPhone && (
+                      <a
+                        href={`tel:${String(memberPortalCfg.supportPhone).replace(/\s+/g, '')}`}
+                        className="block w-full py-4 bg-white text-green-600 rounded-2xl font-black uppercase tracking-widest text-xs text-center hover:bg-green-50 transition"
+                      >
+                        {ms.callSupport || (lang === 'en' ? 'Call support' : 'Zavolat podpoře')}
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -573,7 +860,7 @@ export default function ClenskaSekcePage() {
                       <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-amber-600 shadow-sm group-hover:bg-amber-600 group-hover:text-white transition-all">
                         <Calendar size={28} />
                       </div>
-                      <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Akce pro členy</span>
+                    <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">{ms.memberEventsBadge || (lang === 'en' ? 'Members only' : 'Akce pro členy')}</span>
                     </div>
                     <h3 className="text-xl font-black text-stone-900 mb-2">{lang === 'en' && event.title_en ? event.title_en : event.title}</h3>
                     <div className="space-y-2 mb-6">
@@ -581,7 +868,7 @@ export default function ClenskaSekcePage() {
                       <p className="text-stone-400 text-sm font-medium flex items-center gap-2"><Users size={16} /> {event.location}</p>
                     </div>
                     <Link href={`/${lang}/akce`} className="inline-flex items-center gap-2 text-stone-900 font-black uppercase tracking-widest text-[10px] hover:text-amber-600 transition">
-                      Více informací <ArrowLeft size={14} className="rotate-180" />
+                      {(ms.moreInfo || (lang === 'en' ? 'More info' : 'Více informací'))} <ArrowLeft size={14} className="rotate-180" />
                     </Link>
                   </div>
                 )) : (
@@ -601,7 +888,9 @@ export default function ClenskaSekcePage() {
                   onClick={() => setShowBlocked((v) => !v)}
                   className="inline-flex items-center justify-center rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
                 >
-                  {showBlocked ? (lang === 'en' ? 'Hide blocked' : 'Skrýt blokované') : (lang === 'en' ? 'Show blocked' : 'Zobrazit blokované')}
+                  {showBlocked
+                    ? (ms.directoryHideBlocked || (lang === 'en' ? 'Hide blocked' : 'Skrýt blokované'))
+                    : (ms.directoryShowBlocked || (lang === 'en' ? 'Show blocked' : 'Zobrazit blokované'))}
                 </button>
               </div>
               <div className="overflow-hidden rounded-[2rem] border border-stone-100">
@@ -634,12 +923,8 @@ export default function ClenskaSekcePage() {
                               className="inline-flex items-center justify-center rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
                             >
                               {blocked[String(m.email || '').toLowerCase()]
-                                ? lang === 'en'
-                                  ? 'Unblock'
-                                  : 'Odblokovat'
-                                : lang === 'en'
-                                  ? 'Block'
-                                  : 'Blokovat'}
+                                ? (ms.directoryUnblock || (lang === 'en' ? 'Unblock' : 'Odblokovat'))
+                                : (ms.directoryBlock || (lang === 'en' ? 'Block' : 'Blokovat'))}
                             </button>
                             <button
                               type="button"
@@ -652,7 +937,7 @@ export default function ClenskaSekcePage() {
                               }
                               className="inline-flex items-center justify-center rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
                             >
-                              {lang === 'en' ? 'Report' : 'Nahlásit'}
+                              {ms.directoryReport || (lang === 'en' ? 'Report' : 'Nahlásit')}
                             </button>
                           </div>
                         </td>
@@ -666,10 +951,10 @@ export default function ClenskaSekcePage() {
 
           {/* ARTICLES TAB */}
           {activeTab === 'articles' && (
-            <div className="bg-white p-8 rounded-[3rem] border border-stone-100 shadow-sm">
+            <MemberPanel className="p-8">
               <div className="flex items-center justify-between mb-8">
                 <h2 className="text-2xl font-black flex items-center gap-3"><BookOpen className="text-stone-900" /> {dict.member.myArticles}</h2>
-                <Link href={`/${lang}/blog`} className="bg-stone-900 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-stone-800 transition">Napsat nový článek</Link>
+                  <Link href={`/${lang}/blog`} className="bg-stone-900 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-stone-800 transition">{ms.writeArticle || (lang === 'en' ? 'Write new article' : 'Napsat nový článek')}</Link>
               </div>
               <div className="grid md:grid-cols-2 gap-4">
                 {myBlogs.length > 0 ? myBlogs.map((blog: any) => (
@@ -691,13 +976,13 @@ export default function ClenskaSekcePage() {
                   <div className="col-span-full py-12 text-center text-stone-400 italic font-medium">{dict.member.noArticles}</div>
                 )}
               </div>
-            </div>
+            </MemberPanel>
           )}
 
           {/* SETTINGS TAB */}
           {activeTab === 'settings' && (
             <div className="max-w-2xl">
-              <div className="bg-white p-10 rounded-[3rem] border border-stone-100 shadow-sm">
+              <MemberPanel className="p-10">
                 <h2 className="text-2xl font-black mb-8 flex items-center gap-3"><Settings className="text-stone-900" /> {dict.member.profileSettings}</h2>
                 <form onSubmit={handleUpdateProfile} className="space-y-6">
                   <div className="grid md:grid-cols-2 gap-6">
@@ -750,20 +1035,196 @@ export default function ClenskaSekcePage() {
                     </button>
                   </div>
                 </form>
-              </div>
-              <div className="bg-white p-10 mt-8 rounded-[3rem] border border-stone-100 shadow-sm">
+              </MemberPanel>
+              <MemberPanel className="p-10 mt-8">
                 <h2 className="text-2xl font-black mb-6 flex items-center gap-3">
-                  <Mail className="text-stone-900" /> {lang === 'en' ? 'Email preferences' : 'E-mail preference'}
+                  <Settings className="text-stone-900" /> {ms.preferencesTitle || (lang === 'en' ? 'Preferences' : 'Preference')}
+                </h2>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">
+                      {ms.defaultTabLabel || (lang === 'en' ? 'Default tab' : 'Výchozí záložka')}
+                    </div>
+                    <select
+                      value={memberDefaultTab}
+                      onChange={(e) => setMemberDefaultTab(e.target.value)}
+                      className="w-full bg-stone-50 border-stone-100 border rounded-2xl px-5 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 outline-none transition"
+                    >
+                      {[
+                        ['dashboard', dict.member.tabDashboard],
+                        ['events', dict.member.tabEvents],
+                        ['documents', dict.member.tabDocuments],
+                        ['card', lang === 'en' ? 'Member card' : 'Členská karta'],
+                        ['messages', lang === 'en' ? 'Messages' : 'Zprávy'],
+                        ['settings', dict.member.tabSettings],
+                      ]
+                        .filter(([id]) => !memberPortalCfg.hiddenTabs.includes(id))
+                        .map(([id, label]) => (
+                          <option key={id} value={id}>
+                            {label}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={saveMemberPrefs}
+                    disabled={uiPrefsSaving}
+                    className="w-full py-4 bg-stone-900 text-white rounded-2xl font-bold hover:bg-green-600 transition shadow-lg shadow-stone-900/10 flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {uiPrefsSaving ? <InlinePulse className="bg-white/80" size={14} /> : <Save size={18} />}
+                    {ms.savePreferences || (lang === 'en' ? 'Save preferences' : 'Uložit preference')}
+                  </button>
+                </div>
+              </MemberPanel>
+              <MemberPanel className="p-10 mt-8">
+                <h2 className="text-2xl font-black mb-6 flex items-center gap-3">
+                  <KeyRound className="text-stone-900" /> {ms.passwordTitle || (lang === 'en' ? 'Password' : 'Heslo')}
+                </h2>
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">
+                      {ms.newPassword || (lang === 'en' ? 'New password' : 'Nové heslo')}
+                    </label>
+                    <PasswordField
+                      value={pw1}
+                      onChange={setPw1}
+                      placeholder="••••••••"
+                      inputClassName="w-full bg-stone-50 border-stone-100 border rounded-2xl px-5 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 outline-none transition"
+                      buttonClassName="absolute right-5 top-1/2 -translate-y-1/2 text-stone-300 hover:text-stone-700 transition"
+                      autoComplete="new-password"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">
+                      {ms.confirmPassword || (lang === 'en' ? 'Confirm password' : 'Potvrzení hesla')}
+                    </label>
+                    <PasswordField
+                      value={pw2}
+                      onChange={setPw2}
+                      placeholder="••••••••"
+                      inputClassName="w-full bg-stone-50 border-stone-100 border rounded-2xl px-5 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 outline-none transition"
+                      buttonClassName="absolute right-5 top-1/2 -translate-y-1/2 text-stone-300 hover:text-stone-700 transition"
+                      autoComplete="new-password"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleChangePassword}
+                    disabled={pwSaving}
+                    className="w-full py-4 bg-green-600 text-white rounded-2xl font-bold hover:bg-green-700 transition shadow-lg shadow-green-600/20 flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {pwSaving ? <InlinePulse className="bg-white/80" size={14} /> : <ShieldCheck size={20} />}
+                    {ms.savePassword || (lang === 'en' ? 'Save password' : 'Uložit heslo')}
+                  </button>
+                </div>
+              </MemberPanel>
+              <MemberPanel className="p-10 mt-8">
+                <h2 className="text-2xl font-black mb-6 flex items-center gap-3">
+                  <ShieldCheck className="text-stone-900" /> {ms.securityTitle || (lang === 'en' ? 'Security' : 'Zabezpečení')}
+                </h2>
+
+                <div className="space-y-6">
+                  <div className="bg-stone-50 border border-stone-100 rounded-[2rem] p-6">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">
+                      {ms.twoFactorTitle || (lang === 'en' ? 'Two-factor authentication (2FA)' : 'Dvoufaktorové ověření (2FA)')}
+                    </div>
+                    <div className="mt-2 font-bold text-stone-700">
+                      {mfaEnabled
+                        ? (ms.enabled || (lang === 'en' ? 'Enabled' : 'Zapnuto'))
+                        : (ms.disabled || (lang === 'en' ? 'Disabled' : 'Vypnuto'))}
+                    </div>
+
+                    {mfaEnrollQr ? (
+                      <div className="mt-6 grid md:grid-cols-2 gap-6 items-start">
+                        <div className="bg-white border border-stone-100 rounded-2xl p-4 flex items-center justify-center">
+                          <img src={mfaEnrollQr} alt="2FA QR" className="w-full max-w-[260px]" />
+                        </div>
+                        <div className="space-y-4">
+                          <div className="text-sm text-stone-600 font-medium">
+                            {ms.twoFactorScanHint ||
+                              (lang === 'en'
+                                ? 'Scan the QR code in your authenticator app and enter the 6-digit code.'
+                                : 'Naskenujte QR kód v autentizační aplikaci a zadejte 6místný kód.')}
+                          </div>
+                          <input
+                            value={mfaVerifyCode}
+                            onChange={(e) => setMfaVerifyCode(e.target.value)}
+                            inputMode="numeric"
+                            className="w-full bg-white border border-stone-200 rounded-2xl px-5 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 outline-none transition"
+                            placeholder="123456"
+                          />
+                          <button
+                            type="button"
+                            onClick={verifyMfaEnroll}
+                            disabled={mfaLoading || !mfaVerifyCode}
+                            className="w-full py-4 bg-green-600 text-white rounded-2xl font-bold hover:bg-green-700 transition shadow-lg shadow-green-600/20 flex items-center justify-center gap-2 disabled:opacity-50"
+                          >
+                            {mfaLoading ? <InlinePulse className="bg-white/80" size={14} /> : <ShieldCheck size={18} />}
+                            {ms.verify || (lang === 'en' ? 'Verify' : 'Ověřit')}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-4 grid sm:grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={startMfaEnroll}
+                          disabled={mfaLoading || mfaEnabled}
+                          className="w-full py-4 bg-stone-900 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-600 transition disabled:opacity-50"
+                        >
+                          {mfaLoading
+                            ? (ms.loading || (lang === 'en' ? 'Loading...' : 'Načítám...'))
+                            : (ms.enable2fa || (lang === 'en' ? 'Enable 2FA' : 'Zapnout 2FA'))}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={disableMfa}
+                          disabled={mfaLoading || !mfaEnabled}
+                          className="w-full py-4 bg-white text-stone-700 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-stone-200 hover:bg-stone-50 transition disabled:opacity-50"
+                        >
+                          {ms.disable2fa || (lang === 'en' ? 'Disable 2FA' : 'Vypnout 2FA')}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-stone-50 border border-stone-100 rounded-[2rem] p-6">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">
+                      {ms.googleTitle || (lang === 'en' ? 'Google account' : 'Google účet')}
+                    </div>
+                    <div className="mt-2 text-sm text-stone-600 font-medium">
+                      {ms.googleSubtitle ||
+                        (lang === 'en'
+                          ? 'Link your Google account to sign in with Google.'
+                          : 'Propojte Google účet pro přihlašování přes Google.')}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={linkGoogle}
+                      disabled={googleBusy}
+                      className="mt-4 w-full py-4 bg-white text-stone-700 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-stone-200 hover:bg-stone-50 transition disabled:opacity-50"
+                    >
+                      {googleBusy
+                        ? (ms.redirecting || (lang === 'en' ? 'Redirecting...' : 'Přesměrovávám...'))
+                        : (ms.googleLink || (lang === 'en' ? 'Link Google' : 'Propojit Google'))}
+                    </button>
+                  </div>
+                </div>
+              </MemberPanel>
+              <MemberPanel className="p-10 mt-8">
+                <h2 className="text-2xl font-black mb-6 flex items-center gap-3">
+                  <Mail className="text-stone-900" /> {ms.emailPrefsTitle || (lang === 'en' ? 'Email preferences' : 'E-mail preference')}
                 </h2>
                 <div className="space-y-6">
                   <div className="bg-stone-50 border border-stone-100 rounded-[2rem] p-6">
                     <div className="flex items-center justify-between gap-4">
                       <div className="min-w-0">
                         <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">
-                          {lang === 'en' ? 'Weekly digest' : 'Týdenní digest'}
+                          {ms.weeklyDigestTitle || (lang === 'en' ? 'Weekly digest' : 'Týdenní digest')}
                         </div>
                         <div className="font-bold text-stone-700">
-                          {lang === 'en' ? 'Receive weekly summary emails.' : 'Dostávat týdenní souhrn e-mailem.'}
+                          {ms.weeklyDigestDesc || (lang === 'en' ? 'Receive weekly summary emails.' : 'Dostávat týdenní souhrn e-mailem.')}
                         </div>
                       </div>
                       {prefsLoading ? (
@@ -776,7 +1237,9 @@ export default function ClenskaSekcePage() {
                             emailPrefs.digestWeekly ? 'bg-green-600 text-white border-green-600 shadow-lg' : 'bg-white text-stone-500 border-stone-200 hover:bg-stone-50'
                           }`}
                         >
-                          {emailPrefs.digestWeekly ? (lang === 'en' ? 'On' : 'Zapnuto') : lang === 'en' ? 'Off' : 'Vypnuto'}
+                          {emailPrefs.digestWeekly
+                            ? (ms.on || (lang === 'en' ? 'On' : 'Zapnuto'))
+                            : (ms.off || (lang === 'en' ? 'Off' : 'Vypnuto'))}
                         </button>
                       )}
                     </div>
@@ -784,14 +1247,14 @@ export default function ClenskaSekcePage() {
 
                   <div className="bg-stone-50 border border-stone-100 rounded-[2rem] p-6">
                     <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-4">
-                      {lang === 'en' ? 'Categories' : 'Kategorie'}
+                      {ms.categoriesTitle || (lang === 'en' ? 'Categories' : 'Kategorie')}
                     </div>
                     <div className="grid md:grid-cols-2 gap-3">
                       {[
-                        { k: 'events', label: lang === 'en' ? 'Events' : 'Akce' },
-                        { k: 'community', label: lang === 'en' ? 'Community' : 'Komunita' },
-                        { k: 'finance', label: lang === 'en' ? 'Finance' : 'Finance' },
-                        { k: 'news', label: lang === 'en' ? 'News' : 'Novinky' },
+                        { k: 'events', label: ms.categoryEvents || (lang === 'en' ? 'Events' : 'Akce') },
+                        { k: 'community', label: ms.categoryCommunity || (lang === 'en' ? 'Community' : 'Komunita') },
+                        { k: 'finance', label: ms.categoryFinance || (lang === 'en' ? 'Finance' : 'Finance') },
+                        { k: 'news', label: ms.categoryNews || (lang === 'en' ? 'News' : 'Novinky') },
                       ].map((x) => (
                         <button
                           key={x.k}
@@ -821,20 +1284,21 @@ export default function ClenskaSekcePage() {
                     className="w-full py-4 bg-green-600 text-white rounded-2xl font-bold hover:bg-green-700 transition shadow-lg shadow-green-600/20 flex items-center justify-center gap-2 disabled:opacity-50"
                   >
                     {prefsSaving ? <InlinePulse className="bg-white/80" size={14} /> : <Save size={18} />}
-                    {lang === 'en' ? 'Save preferences' : 'Uložit preference'}
+                    {ms.savePreferences || (lang === 'en' ? 'Save preferences' : 'Uložit preference')}
                   </button>
                 </div>
-              </div>
+              </MemberPanel>
 
-              <div className="bg-white p-10 mt-8 rounded-[3rem] border border-stone-100 shadow-sm">
+              <MemberPanel className="p-10 mt-8">
                 <h2 className="text-2xl font-black mb-6 flex items-center gap-3">
-                  <FileCheck className="text-stone-900" /> GDPR
+                  <FileCheck className="text-stone-900" /> {ms.gdprTitle || 'GDPR'}
                 </h2>
                 <div className="space-y-4">
                   <div className="text-stone-600 font-medium">
-                    {lang === 'en'
-                      ? 'You can download your personal data export or request deletion.'
-                      : 'Můžete si stáhnout export osobních údajů nebo požádat o smazání.'}
+                    {ms.gdprDesc ||
+                      (lang === 'en'
+                        ? 'You can download your personal data export or request deletion.'
+                        : 'Můžete si stáhnout export osobních údajů nebo požádat o smazání.')}
                   </div>
                   <div className="grid md:grid-cols-2 gap-3">
                     <button
@@ -843,7 +1307,7 @@ export default function ClenskaSekcePage() {
                       className="w-full py-4 bg-white text-stone-700 rounded-2xl font-bold hover:bg-stone-50 transition border border-stone-200 flex items-center justify-center gap-2"
                     >
                       <Download size={18} />
-                      {lang === 'en' ? 'Download export' : 'Stáhnout export'}
+                      {ms.gdprDownload || (lang === 'en' ? 'Download export' : 'Stáhnout export')}
                     </button>
                     <button
                       type="button"
@@ -851,16 +1315,17 @@ export default function ClenskaSekcePage() {
                       className="w-full py-4 bg-red-50 text-red-700 rounded-2xl font-bold hover:bg-red-100 transition border border-red-200 flex items-center justify-center gap-2"
                     >
                       <X size={18} />
-                      {lang === 'en' ? 'Request deletion' : 'Požádat o smazání'}
+                      {ms.gdprRequestDelete || (lang === 'en' ? 'Request deletion' : 'Požádat o smazání')}
                     </button>
                   </div>
                   <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">
-                    {lang === 'en'
-                      ? 'Deletion is handled manually by admins.'
-                      : 'Smazání je řešeno manuálně administrátory.'}
+                    {ms.gdprDeleteNote ||
+                      (lang === 'en'
+                        ? 'Deletion is handled manually by admins.'
+                        : 'Smazání je řešeno manuálně administrátory.')}
                   </div>
                 </div>
-              </div>
+            </MemberPanel>
             </div>
           )}
         </div>

@@ -94,6 +94,8 @@ export default function OnboardingCard({
   const total = items.length;
   const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
 
+  if (total > 0 && doneCount >= total) return null;
+
   const toggleManual = (id: string) => {
     const next = { ...manual, [id]: !manual[id] };
     setManual(next);
@@ -163,4 +165,3 @@ export default function OnboardingCard({
     </div>
   );
 }
-

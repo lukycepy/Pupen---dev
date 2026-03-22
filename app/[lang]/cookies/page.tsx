@@ -1,25 +1,10 @@
-'use client';
-
-import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
 import { Cookie, ArrowLeft, Info, Settings, ShieldCheck, BarChart3 } from 'lucide-react';
 import { getDictionary } from '@/lib/get-dictionary';
 
-export default function CookiesPage() {
-  const params = useParams();
-  const lang = (params?.lang as string) || 'cs';
-  const [dict, setDict] = useState<any>(null);
-
-  useEffect(() => {
-    async function loadData() {
-      const d = await getDictionary(lang);
-      setDict(d.cookiesPage);
-    }
-    loadData();
-  }, [lang]);
-
-  if (!dict) return null;
+export default async function CookiesPage({ params }: { params: { lang: string } }) {
+  const lang = params?.lang === 'en' ? 'en' : 'cs';
+  const dict = (await getDictionary(lang)).cookiesPage;
 
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900 font-sans pb-32">
@@ -35,7 +20,7 @@ export default function CookiesPage() {
         <div className="max-w-4xl mx-auto relative z-20 text-center">
           <Link href={`/${lang}`} className="inline-flex items-center gap-2 text-white/60 hover:text-white mb-10 transition font-black uppercase tracking-[0.2em] text-[10px]">
             <ArrowLeft size={16} />
-            {lang === 'cs' ? 'Zpět na domů' : 'Back to home'}
+            {dict.backToHome}
           </Link>
           
           <div className="flex flex-col items-center">

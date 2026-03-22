@@ -17,10 +17,12 @@ export default function EmailSettingsTab({ dict }: { dict: any }) {
     smtp_port: 587,
     smtp_user: 'info@pupen.org',
     smtp_pass: '',
+    smtp_secure: false,
     imap_host: 'imap.pupen.org',
     imap_port: 993,
     imap_user: 'info@pupen.org',
     imap_pass: '',
+    imap_secure: true,
     sender_name: 'Pupen Control',
     sender_email: 'info@pupen.org'
   });
@@ -114,6 +116,28 @@ export default function EmailSettingsTab({ dict }: { dict: any }) {
                 />
               </div>
             </div>
+            <div className="flex items-center justify-between bg-stone-50 rounded-2xl border border-stone-100 px-5 py-4">
+              <div className="min-w-0">
+                <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">Secure (TLS)</div>
+                <div className="text-xs font-bold text-stone-600 mt-1 truncate">
+                  {settings.smtp_port === 465 ? 'Doporučeno zapnout pro port 465.' : settings.smtp_port === 587 ? 'Typicky vypnuto pro STARTTLS na 587.' : 'Záleží na poskytovateli.'}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSettings({ ...settings, smtp_secure: !settings.smtp_secure })}
+                className={`shrink-0 rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-widest border transition ${
+                  settings.smtp_secure ? 'bg-green-600 text-white border-green-600' : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-100'
+                }`}
+              >
+                {settings.smtp_secure ? 'Zapnuto' : 'Vypnuto'}
+              </button>
+            </div>
+            {settings.smtp_port === 586 && (
+              <div className="text-xs font-bold text-amber-600 bg-amber-50 border border-amber-100 rounded-2xl px-5 py-4">
+                Port 586 je neobvyklý. Pokud posílání padá na timeout, často pomůže 587 (STARTTLS).
+              </div>
+            )}
             <div>
               <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Heslo</label>
               <input 
@@ -161,6 +185,23 @@ export default function EmailSettingsTab({ dict }: { dict: any }) {
                   className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
                 />
               </div>
+            </div>
+            <div className="flex items-center justify-between bg-stone-50 rounded-2xl border border-stone-100 px-5 py-4">
+              <div className="min-w-0">
+                <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">Secure (TLS)</div>
+                <div className="text-xs font-bold text-stone-600 mt-1 truncate">
+                  {settings.imap_port === 993 ? 'Typicky zapnuto pro port 993.' : 'Záleží na poskytovateli.'}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSettings({ ...settings, imap_secure: !settings.imap_secure })}
+                className={`shrink-0 rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-widest border transition ${
+                  settings.imap_secure ? 'bg-green-600 text-white border-green-600' : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-100'
+                }`}
+              >
+                {settings.imap_secure ? 'Zapnuto' : 'Vypnuto'}
+              </button>
             </div>
             <div>
               <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Heslo</label>

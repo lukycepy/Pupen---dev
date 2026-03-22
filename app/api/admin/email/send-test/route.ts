@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer';
+import { getMailerDebugInfoWithSettings, getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer';
 import { renderEmailTemplate } from '@/lib/email/templates';
 import { requireAdmin } from '@/lib/server-auth';
 
@@ -17,6 +17,13 @@ export async function POST(req: Request) {
     const transporter = await getMailerWithSettings();
     const from = await getSenderFromSettings();
 
+    let verified: boolean | null = null;
+    try {
+      verified = await transporter.verify();
+    } catch {
+      verified = false;
+    }
+
     await transporter.sendMail({
       from,
       to,
@@ -24,8 +31,24 @@ export async function POST(req: Request) {
       html,
     });
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, verified });
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+    const debug = await getMailerDebugInfoWithSettings();
+    return NextResponse.json(
+      {
+        error: e?.message || 'Error',
+        debug,
+        details: {
+          code: e?.code,
+          errno: e?.errno,
+          syscall: e?.syscall,
+          address: e?.address,
+          port: e?.port,
+          command: e?.command,
+          responseCode: e?.responseCode,
+        },
+      },
+      { status: 500 },
+    );
   }
 }

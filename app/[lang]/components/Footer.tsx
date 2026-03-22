@@ -136,7 +136,7 @@ export default function Footer({ lang, dict }: FooterProps) {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder={lang === 'cs' ? 'Tvůj e-mail' : 'Your email'} 
+                  placeholder={dict.emailPlaceholder} 
                   className="bg-stone-800 text-white text-sm px-4 py-3 rounded-xl w-full focus:outline-none focus:ring-2 focus:ring-green-600 border border-stone-700 placeholder-stone-500 transition-all"
                 />
                 <button 
@@ -150,12 +150,12 @@ export default function Footer({ lang, dict }: FooterProps) {
 
               {status === 'success' && (
                 <div className="absolute top-full left-0 mt-2 flex items-center gap-2 text-green-500 text-xs font-bold animate-in fade-in slide-in-from-top-1">
-                  <CheckCircle size={14} /> {lang === 'cs' ? 'Přihlášeno! Díky.' : 'Subscribed! Thanks.'}
+                  <CheckCircle size={14} /> {dict.subscribeSuccess}
                 </div>
               )}
               {status === 'error' && (
                 <div className="absolute top-full left-0 mt-2 text-red-500 text-xs font-bold animate-in fade-in slide-in-from-top-1">
-                  {lang === 'cs' ? 'Chyba. Zkus to později.' : 'Error. Try again later.'}
+                  {dict.subscribeError}
                 </div>
               )}
             </form>

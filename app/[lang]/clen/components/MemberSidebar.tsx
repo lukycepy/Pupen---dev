@@ -16,6 +16,7 @@ interface MemberSidebarProps {
   onTabChange: (tab: string) => void;
   userProfile: any;
   onLogout: () => void;
+  hiddenTabs?: string[];
 }
 
 interface SidebarContentProps {
@@ -26,11 +27,13 @@ interface SidebarContentProps {
   userProfile: any;
   onLogout: () => void;
   setIsMobileOpen: (val: boolean) => void;
+  hiddenTabs?: string[];
 }
 
 const SidebarContent = ({ 
-  lang, dict, activeTab, onTabChange, userProfile, onLogout, setIsMobileOpen 
+  lang, dict, activeTab, onTabChange, userProfile, onLogout, setIsMobileOpen, hiddenTabs
 }: SidebarContentProps) => {
+  const hidden = new Set((hiddenTabs || []).map(String));
   const menuGroups = [
     {
       title: 'Přehled',
@@ -66,6 +69,9 @@ const SidebarContent = ({
       items: [{ id: 'settings', label: dict.member?.tabSettings || 'Můj profil', icon: Settings }],
     },
   ];
+  const filteredGroups = menuGroups
+    .map((g) => ({ ...g, items: g.items.filter((it) => !hidden.has(it.id)) }))
+    .filter((g) => g.items.length > 0);
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
     try {
@@ -74,7 +80,7 @@ const SidebarContent = ({
       if (parsed && typeof parsed === 'object') return parsed;
     } catch {}
     const next: Record<string, boolean> = {};
-    for (const g of menuGroups) next[g.title] = true;
+    for (const g of filteredGroups) next[g.title] = true;
     return next;
   });
 
@@ -125,7 +131,7 @@ const SidebarContent = ({
 
       {/* NAVIGATION */}
       <nav className="flex-grow overflow-y-auto custom-scrollbar p-4 space-y-1">
-        {menuGroups.map((group) => {
+        {filteredGroups.map((group) => {
           const isOpen = openGroups[group.title] !== false;
           return (
             <div key={group.title} className="space-y-1">
@@ -191,12 +197,12 @@ const SidebarContent = ({
 };
 
 export default function MemberSidebar({ 
-  lang, dict, activeTab, onTabChange, userProfile, onLogout 
+  lang, dict, activeTab, onTabChange, userProfile, onLogout, hiddenTabs
 }: MemberSidebarProps) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   const commonProps = {
-    lang, dict, activeTab, onTabChange, userProfile, onLogout, setIsMobileOpen
+    lang, dict, activeTab, onTabChange, userProfile, onLogout, setIsMobileOpen, hiddenTabs
   };
 
   return (

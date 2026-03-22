@@ -12,6 +12,7 @@ import dynamic from 'next/dynamic';
 const EventsTab = dynamic<any>(() => import('./components/EventsTab'), { loading: () => <SkeletonTabContent /> });
 const NewsTab = dynamic<any>(() => import('./components/NewsTab'), { loading: () => <SkeletonTabContent /> });
 const UsersTab = dynamic<any>(() => import('./components/UsersTab'), { loading: () => <SkeletonTabContent /> });
+const RolesTab = dynamic<any>(() => import('./components/RolesTab'), { loading: () => <SkeletonTabContent /> });
 const MessagesTab = dynamic<any>(() => import('./components/MessagesTab'), { loading: () => <SkeletonTabContent /> });
 const FAQTab = dynamic<any>(() => import('./components/FAQTab'), { loading: () => <SkeletonTabContent /> });
 const PartnersTab = dynamic<any>(() => import('./components/PartnersTab'), { loading: () => <SkeletonTabContent /> });
@@ -500,6 +501,10 @@ export default function AdminDashboard() {
 
             {activeTab === 'users' && permissions.can_manage_admins && (
               <UsersTab dict={dict} />
+            )}
+
+            {activeTab === 'roles' && permissions.can_manage_admins && (
+              <RolesTab dict={dict} />
             )}
 
             {activeTab === 'site_pages' && permissions.can_manage_admins && (

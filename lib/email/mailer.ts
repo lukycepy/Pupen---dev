@@ -10,12 +10,51 @@ export type MailerConfig = {
   tlsRejectUnauthorized?: boolean;
 };
 
+export function getMailerDebugInfo(config?: MailerConfig) {
+  const host = config?.host || process.env.SMTP_HOST || '';
+  const user = config?.user || process.env.SMTP_USER || '';
+  const port = Number(config?.port ?? process.env.SMTP_PORT) || 587;
+  const secure =
+    typeof config?.secure === 'boolean'
+      ? config.secure
+      : process.env.SMTP_SECURE
+        ? process.env.SMTP_SECURE === 'true'
+        : port === 465;
+  const tlsRejectUnauthorized =
+    typeof config?.tlsRejectUnauthorized === 'boolean'
+      ? config.tlsRejectUnauthorized
+      : process.env.SMTP_TLS_REJECT_UNAUTHORIZED
+        ? process.env.SMTP_TLS_REJECT_UNAUTHORIZED !== 'false'
+        : true;
+
+  return {
+    host,
+    port,
+    secure,
+    tlsRejectUnauthorized,
+    userHint: user ? `${user.split('@')[0]}@…` : '',
+    portHint:
+      port === 586
+        ? 'Port 586 je neobvyklý (často se používá 587 pro STARTTLS).'
+        : port === 465
+          ? 'Port 465 obvykle vyžaduje secure=true (implicitní TLS).'
+          : port === 587
+            ? 'Port 587 obvykle používá STARTTLS (secure=false).'
+            : '',
+  };
+}
+
 export function getMailer(config?: MailerConfig) {
   const host = config?.host || process.env.SMTP_HOST;
   const user = config?.user || process.env.SMTP_USER;
   const pass = config?.pass || process.env.SMTP_PASS;
   const port = Number(config?.port ?? process.env.SMTP_PORT) || 587;
-  const secure = typeof config?.secure === 'boolean' ? config.secure : process.env.SMTP_SECURE === 'true';
+  const secure =
+    typeof config?.secure === 'boolean'
+      ? config.secure
+      : process.env.SMTP_SECURE
+        ? process.env.SMTP_SECURE === 'true'
+        : port === 465;
   const tlsRejectUnauthorized =
     typeof config?.tlsRejectUnauthorized === 'boolean'
       ? config.tlsRejectUnauthorized
@@ -32,7 +71,10 @@ export function getMailer(config?: MailerConfig) {
     port,
     secure,
     auth: { user, pass },
-    tls: { rejectUnauthorized: tlsRejectUnauthorized },
+    tls: { rejectUnauthorized: tlsRejectUnauthorized, servername: host },
+    connectionTimeout: 12_000,
+    greetingTimeout: 12_000,
+    socketTimeout: 18_000,
   });
 }
 
@@ -51,7 +93,12 @@ async function getEmailSettingsCached() {
   const smtp_user = data?.smtp_user ? String(data.smtp_user) : '';
   const smtp_pass = data?.smtp_pass ? String(data.smtp_pass) : '';
   const smtp_port = typeof data?.smtp_port === 'number' ? data.smtp_port : Number(data?.smtp_port) || 587;
-  const smtp_secure = typeof data?.smtp_secure === 'boolean' ? data.smtp_secure : String(data?.smtp_secure || '') === 'true';
+  const smtp_secure =
+    typeof data?.smtp_secure === 'boolean'
+      ? data.smtp_secure
+      : data?.smtp_secure == null
+        ? undefined
+        : String(data?.smtp_secure || '') === 'true';
 
   const smtp =
     smtp_host && smtp_user && smtp_pass
@@ -71,6 +118,12 @@ export async function getMailerWithSettings() {
   const settings = await getEmailSettingsCached().catch(() => null);
   if (settings?.smtp) return getMailer(settings.smtp);
   return getMailer();
+}
+
+export async function getMailerDebugInfoWithSettings() {
+  const settings = await getEmailSettingsCached().catch(() => null);
+  if (settings?.smtp) return getMailerDebugInfo(settings.smtp);
+  return getMailerDebugInfo();
 }
 
 export async function getSenderFromSettings() {

@@ -1,0 +1,12 @@
+- [ ] Admin test e‑mailu a běžné e‑maily se odesílají; chyby jsou diagnostikovatelné bez úniku secretů.
+- [ ] Chyba typu `connect ETIMEDOUT …:586` je buď odstraněná, nebo je jasně vysvětlena (síť/port/TLS) a řešitelná z UI.
+- [ ] Během aktivní odstávky se zobrazuje pouze stránka odstávky (bez navbaru); obsahuje klikatelné `mailto:`/`tel:` odkazy.
+- [ ] Po `maintenance_end_at` se odstávka automaticky deaktivuje a web je opět dostupný.
+- [ ] Admin má rich editor pro obsah odstávky (CZ/EN) a obsah je bezpečně renderovaný.
+- [ ] Login obsahuje „Zapomenuté heslo“ a uživatel umí nastavit nové heslo.
+- [ ] Admin umí poslat reset a/nebo nastavit nové heslo uživateli; všechny akce jsou auditované.
+- [ ] Admin umí vytvářet pojmenované role a přiřazovat jim oprávnění; role lze přiřadit uživatelům.
+- [ ] Uživatel může po prvotním přihlášení zapnout 2FA a/nebo propojit Google účet; login to respektuje.
+- [ ] Admin umí měnit konfiguraci členského portálu z admin controlu a změny se projeví.
+- [ ] Personalizace UI (admin + člen) funguje per‑uživatel a je persistovaná.
+- [ ] Dotčené části mají CZ/EN lokalizaci bez hardcoded textů.

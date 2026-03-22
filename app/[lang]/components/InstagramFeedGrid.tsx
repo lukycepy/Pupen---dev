@@ -1,7 +1,9 @@
 import React from 'react';
 import { Instagram } from 'lucide-react';
 
-export default function InstagramFeedGrid() {
+export default function InstagramFeedGrid({ url, handle }: { url?: string; handle?: string }) {
+  const href = url || 'https://instagram.com/pupenfappz/';
+  const label = handle || '@pupenfappz';
   const tiles = Array.from({ length: 6 }, (_, i) => i);
   return (
     <section className="py-20 px-6 max-w-6xl mx-auto">
@@ -11,13 +13,13 @@ export default function InstagramFeedGrid() {
           <h2 className="text-3xl md:text-5xl font-black text-stone-900 tracking-tight">Pupen v obrazech</h2>
         </div>
         <a
-          href="https://instagram.com/pupenfappz/"
+          href={href}
           target="_blank"
           rel="noopener noreferrer"
           className="hidden sm:inline-flex items-center gap-2 bg-stone-900 text-white px-6 py-3 rounded-xl font-bold hover:bg-stone-800 transition shadow-lg"
         >
           <Instagram size={18} />
-          @pupenfappz
+          {label}
         </a>
       </div>
 
@@ -25,7 +27,7 @@ export default function InstagramFeedGrid() {
         {tiles.map((i) => (
           <a
             key={i}
-            href="https://instagram.com/pupenfappz/"
+            href={href}
             target="_blank"
             rel="noopener noreferrer"
             className="group relative aspect-square rounded-[2rem] bg-white border border-stone-100 shadow-sm overflow-hidden hover:shadow-xl transition"
@@ -42,13 +44,13 @@ export default function InstagramFeedGrid() {
 
       <div className="mt-8 sm:hidden">
         <a
-          href="https://instagram.com/pupenfappz/"
+          href={href}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 bg-stone-900 text-white px-6 py-3 rounded-xl font-bold hover:bg-stone-800 transition shadow-lg"
         >
           <Instagram size={18} />
-          @pupenfappz
+          {label}
         </a>
       </div>
     </section>

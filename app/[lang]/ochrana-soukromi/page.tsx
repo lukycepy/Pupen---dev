@@ -1,25 +1,10 @@
-'use client';
-
-import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
 import { Shield, Lock, ArrowLeft, UserCheck, Eye, CheckCircle, Mail, Clock } from 'lucide-react';
 import { getDictionary } from '@/lib/get-dictionary';
 
-export default function PrivacyPage() {
-  const params = useParams();
-  const lang = (params?.lang as string) || 'cs';
-  const [dict, setDict] = useState<any>(null);
-
-  useEffect(() => {
-    async function loadData() {
-      const d = await getDictionary(lang);
-      setDict(d.privacyPage);
-    }
-    loadData();
-  }, [lang]);
-
-  if (!dict) return null;
+export default async function PrivacyPage({ params }: { params: { lang: string } }) {
+  const lang = params?.lang === 'en' ? 'en' : 'cs';
+  const dict = (await getDictionary(lang)).privacyPage;
 
   return (
     <div className="min-h-screen bg-white text-stone-900 font-sans pb-32">
@@ -34,7 +19,7 @@ export default function PrivacyPage() {
           
           <div className="space-y-4">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-50 text-green-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-green-100">
-              <Shield size={12} /> Ochrana soukromí
+              <Shield size={12} /> {dict.badgeLabel}
             </div>
             <h1 className="text-4xl md:text-6xl font-black tracking-tight text-stone-900">
               {dict.title}
@@ -119,7 +104,7 @@ export default function PrivacyPage() {
 
         {/* Patička */}
         <div className="text-center text-stone-400 text-[10px] font-black uppercase tracking-[0.3em] mt-24 pt-12 border-t border-stone-100">
-          <p>{dict.lastUpdated || (lang === 'cs' ? 'Poslední aktualizace: Březen 2026' : 'Last updated: March 2026')}</p>
+          <p>{dict.lastUpdated}</p>
         </div>
       </main>
     </div>

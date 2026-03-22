@@ -7,11 +7,53 @@ interface SignaturePadProps {
   onClear: () => void;
   width?: number;
   height?: number;
+  clearLabel?: string;
 }
 
-export default function SignaturePad({ onSave, onClear, width = 400, height = 200 }: SignaturePadProps) {
+function exportTrimmedDataUrl(canvas: HTMLCanvasElement) {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return canvas.toDataURL('image/png');
+
+  const w = canvas.width;
+  const h = canvas.height;
+  const data = ctx.getImageData(0, 0, w, h).data;
+
+  let minX = w, minY = h, maxX = 0, maxY = 0;
+  let found = false;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const a = data[(y * w + x) * 4 + 3];
+      if (a !== 0) {
+        found = true;
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+
+  if (!found) return '';
+
+  const padding = Math.round(Math.min(w, h) * 0.06);
+  const sx = Math.max(0, minX - padding);
+  const sy = Math.max(0, minY - padding);
+  const sw = Math.min(w - sx, maxX - minX + padding * 2);
+  const sh = Math.min(h - sy, maxY - minY + padding * 2);
+
+  const out = document.createElement('canvas');
+  out.width = sw;
+  out.height = sh;
+  const octx = out.getContext('2d');
+  if (!octx) return canvas.toDataURL('image/png');
+  octx.drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
+  return out.toDataURL('image/png');
+}
+
+export default function SignaturePad({ onSave, onClear, width = 560, height = 220, clearLabel = 'Smazat podpis' }: SignaturePadProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
+  const lastRef = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -20,44 +62,62 @@ export default function SignaturePad({ onSave, onClear, width = 400, height = 20
     if (!ctx) return;
 
     ctx.strokeStyle = '#000';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 3;
     ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
   }, []);
 
-  const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
-    setIsDrawing(true);
-    draw(e);
-  };
-
-  const stopDrawing = () => {
-    setIsDrawing(false);
+  const getPoint = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
-    if (canvas) {
-      onSave(canvas.toDataURL());
-    }
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+    return { x, y };
   };
 
-  const draw = (e: React.MouseEvent | React.TouchEvent) => {
+  const startDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx) return;
+    canvas.setPointerCapture(e.pointerId);
+    const p = getPoint(e);
+    if (!p) return;
+    setIsDrawing(true);
+    lastRef.current = p;
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+  };
+
+  const stopDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    try {
+      canvas.releasePointerCapture(e.pointerId);
+    } catch {}
+    setIsDrawing(false);
+    lastRef.current = null;
+    const dataUrl = exportTrimmedDataUrl(canvas);
+    if (dataUrl) onSave(dataUrl);
+  };
+
+  const draw = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!isDrawing) return;
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx) return;
-
-    const rect = canvas.getBoundingClientRect();
-    let x, y;
-
-    if ('touches' in e) {
-      x = e.touches[0].clientX - rect.left;
-      y = e.touches[0].clientY - rect.top;
-    } else {
-      x = e.clientX - rect.left;
-      y = e.clientY - rect.top;
+    const p = getPoint(e);
+    if (!p) return;
+    const last = lastRef.current;
+    if (!last) {
+      lastRef.current = p;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      return;
     }
-
-    ctx.lineTo(x, y);
+    ctx.lineTo(p.x, p.y);
     ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(x, y);
+    lastRef.current = p;
   };
 
   const clear = () => {
@@ -77,14 +137,12 @@ export default function SignaturePad({ onSave, onClear, width = 400, height = 20
           ref={canvasRef}
           width={width}
           height={height}
-          onMouseDown={startDrawing}
-          onMouseUp={stopDrawing}
-          onMouseMove={draw}
-          onMouseOut={stopDrawing}
-          onTouchStart={startDrawing}
-          onTouchEnd={stopDrawing}
-          onTouchMove={draw}
+          onPointerDown={startDrawing}
+          onPointerUp={stopDrawing}
+          onPointerCancel={stopDrawing}
+          onPointerMove={draw}
           className="cursor-crosshair w-full h-auto"
+          style={{ touchAction: 'none' }}
         />
       </div>
       <button 
@@ -92,7 +150,7 @@ export default function SignaturePad({ onSave, onClear, width = 400, height = 20
         onClick={clear}
         className="text-xs font-bold text-stone-400 hover:text-red-500 transition uppercase tracking-widest"
       >
-        Smazat podpis
+        {clearLabel}
       </button>
     </div>
   );

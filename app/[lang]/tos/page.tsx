@@ -1,25 +1,10 @@
-'use client';
-
-import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { FileText, Shield, ArrowLeft, CheckCircle, Info, Gavel, Copyright, AlertTriangle } from 'lucide-react';
+import { Shield, ArrowLeft, CheckCircle, Gavel, Copyright, AlertTriangle } from 'lucide-react';
 import { getDictionary } from '@/lib/get-dictionary';
 
-export default function ToSPage() {
-  const params = useParams();
-  const lang = (params?.lang as string) || 'cs';
-  const [dict, setDict] = useState<any>(null);
-
-  useEffect(() => {
-    async function loadData() {
-      const d = await getDictionary(lang);
-      setDict(d.tosPage);
-    }
-    loadData();
-  }, [lang]);
-
-  if (!dict) return null;
+export default async function ToSPage({ params }: { params: { lang: string } }) {
+  const lang = params?.lang === 'en' ? 'en' : 'cs';
+  const dict = (await getDictionary(lang)).tosPage;
 
   return (
     <div className="min-h-screen bg-white text-stone-900 font-sans pb-32">
@@ -29,12 +14,12 @@ export default function ToSPage() {
         <div className="max-w-4xl mx-auto">
           <Link href={`/${lang}`} className="inline-flex items-center gap-2 text-stone-400 hover:text-amber-600 mb-8 transition font-bold text-sm">
             <ArrowLeft size={18} />
-            {lang === 'cs' ? 'Zpět na domů' : 'Back to home'}
+            {dict.backToHome}
           </Link>
           
           <div className="space-y-4">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-amber-100">
-              <Gavel size={12} /> Právní informace
+              <Gavel size={12} /> {dict.badgeLabel}
             </div>
             <h1 className="text-4xl md:text-6xl font-black tracking-tight text-stone-900">
               {dict.title}

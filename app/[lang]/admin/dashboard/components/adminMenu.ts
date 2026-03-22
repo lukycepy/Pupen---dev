@@ -129,6 +129,7 @@ export function buildAdminMenuGroups(dict: any, permissions: any): AdminMenuGrou
         { id: 'automation', label: dict.admin?.tabAutomation || 'Automatizace', icon: Bot, visible: canView('email_settings') },
         { id: 'payment_settings', label: 'Platební nastavení', icon: Wallet, visible: permissions.can_manage_admins },
         { id: 'users', label: dict.admin.tabUsers || 'Uživatelé', icon: Users, visible: permissions.can_manage_admins },
+        { id: 'roles', label: dict.admin?.tabRoles || 'Role', icon: ShieldCheck, visible: permissions.can_manage_admins },
       ],
     },
   ];

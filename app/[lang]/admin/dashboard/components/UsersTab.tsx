@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { supabase } from '@/lib/supabase';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { UserPlus, Edit3, Trash2, ShieldCheck, X } from 'lucide-react';
+import { UserPlus, Edit3, Trash2, ShieldCheck, X, FileText, ExternalLink } from 'lucide-react';
 import { useToast } from '../../../../context/ToastContext';
 import ConfirmModal from '@/app/components/ConfirmModal';
 import AdminModuleHeader from './ui/AdminModuleHeader';
@@ -65,6 +65,11 @@ export default function UsersTab({ dict }: UsersTabProps) {
     is_member: z.boolean().default(false),
     member_since: z.string().optional(),
     application_scan_url: z.string().optional(),
+    phone: z.string().optional(),
+    address: z.string().optional(),
+    date_of_birth: z.string().optional(),
+    application_received_at: z.string().optional(),
+    notes_internal: z.string().optional(),
     ...permsSchema,
     // Zpětná kompatibilita
     can_manage_admins: z.boolean().optional(),
@@ -81,6 +86,32 @@ export default function UsersTab({ dict }: UsersTabProps) {
   });
   const [bulkText, setBulkText] = useState('');
   const [bulkDefaultRole, setBulkDefaultRole] = useState<'member' | 'admin'>('member');
+  const [scanFile, setScanFile] = useState<File | null>(null);
+  const [scanDoc, setScanDoc] = useState<any>(null);
+  const [scanBusy, setScanBusy] = useState(false);
+  const [sendingReset, setSendingReset] = useState(false);
+  const [sendingPassword, setSendingPassword] = useState(false);
+
+  const sendResetLink = async (email: string) => {
+    setSendingReset(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
+      const res = await fetch('/api/admin/users/send-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ email }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Chyba');
+      showToast('Odesláno', 'success');
+    } catch (e: any) {
+      showToast(e?.message || 'Chyba', 'error');
+    } finally {
+      setSendingReset(false);
+    }
+  };
 
   const parseBulkUsers = (text: string) => {
     const lines = String(text || '')
@@ -158,7 +189,7 @@ export default function UsersTab({ dict }: UsersTabProps) {
     defaultPerms[`can_edit_${m.id}`] = false;
   });
 
-  const { register, handleSubmit, reset, formState: { errors }, setValue } = useForm<any>({
+  const { register, handleSubmit, reset, formState: { errors }, setValue, watch } = useForm<any>({
     resolver: zodResolver(userSchema),
     defaultValues: {
       first_name: '',
@@ -172,6 +203,41 @@ export default function UsersTab({ dict }: UsersTabProps) {
     }
   });
 
+  const passwordValue = watch('password');
+
+  const sendNewPasswordNow = handleSubmit(async (data: any) => {
+    if (!editingAdmin) return;
+    const pwd = String(data?.password || '');
+    if (!pwd) throw new Error('Zadejte nové heslo');
+    setSendingPassword(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
+
+      const patchRes = await fetch(`/api/admin/users/${editingAdmin.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ password: pwd }),
+      });
+      const patchJson = await patchRes.json().catch(() => ({}));
+      if (!patchRes.ok) throw new Error(patchJson?.error || 'Chyba');
+
+      const sendRes = await fetch('/api/admin/send-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ email: String(editingAdmin.email || ''), password: pwd, firstName: String(data?.first_name || '') }),
+      });
+      const sendJson = await sendRes.json().catch(() => ({}));
+      if (!sendRes.ok) throw new Error(sendJson?.error || 'Chyba');
+
+      showToast('Odesláno', 'success');
+      setValue('password', '');
+    } finally {
+      setSendingPassword(false);
+    }
+  });
+
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
       // 1. Příprava payloadu pro tabulku 'profiles'
@@ -181,7 +247,6 @@ export default function UsersTab({ dict }: UsersTabProps) {
         is_admin: !!data.is_admin,
         is_member: !!data.is_member,
         member_since: data.member_since || null,
-        application_scan_url: data.application_scan_url || null,
         can_manage_admins: !!data.can_manage_admins,
         ...modules.reduce((acc: any, mod) => ({
           ...acc,
@@ -205,6 +270,18 @@ export default function UsersTab({ dict }: UsersTabProps) {
         });
         const json = await res.json();
         if (!res.ok) throw new Error(json?.error || 'Chyba');
+
+        const adminProfilePayload: any = {
+          member_id: editingAdmin.id,
+          updated_at: new Date().toISOString(),
+          phone: data.phone?.trim() || null,
+          address: data.address?.trim() || null,
+          date_of_birth: data.date_of_birth ? String(data.date_of_birth) : null,
+          application_received_at: data.application_received_at ? new Date(String(data.application_received_at)).toISOString() : null,
+          notes_internal: data.notes_internal?.trim() || null,
+        };
+        const { error: apErr } = await supabase.from('member_admin_profile').upsert([adminProfilePayload], { onConflict: 'member_id' });
+        if (apErr) throw apErr;
       } else {
         const res = await fetch('/api/admin/users', {
           method: 'POST',
@@ -288,6 +365,70 @@ export default function UsersTab({ dict }: UsersTabProps) {
     saveMutation.mutate(data);
   };
 
+  const uploadScan = async () => {
+    if (!editingAdmin?.id) throw new Error('Nejdřív vyber člena.');
+    if (!scanFile) throw new Error('Vyber soubor.');
+    setScanBusy(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      const userId = sessionData.session?.user?.id || null;
+      if (!token) throw new Error('Unauthorized');
+
+      const safeName = scanFile.name.replace(/[^\w.\-]+/g, '_');
+      const path = `applications/${editingAdmin.id}/${Date.now()}-${safeName}`;
+      const form = new FormData();
+      form.set('file', scanFile);
+      form.set('bucket', 'member_applications');
+      form.set('path', path);
+
+      const res = await fetch('/api/admin/upload', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Chyba');
+
+      const docRow: any = {
+        member_id: editingAdmin.id,
+        kind: 'application_scan',
+        bucket: String(json.bucket || 'member_applications'),
+        path: String(json.path || path),
+        original_name: scanFile.name,
+        mime: scanFile.type || null,
+        size_bytes: typeof scanFile.size === 'number' ? scanFile.size : null,
+        uploaded_by: userId,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { data: up, error } = await supabase.from('member_documents').upsert([docRow], { onConflict: 'member_id,kind' }).select('*').maybeSingle();
+      if (error) throw error;
+      setScanDoc(up || docRow);
+      setScanFile(null);
+      showToast('Sken uložen', 'success');
+    } finally {
+      setScanBusy(false);
+    }
+  };
+
+  const openScan = async () => {
+    if (!scanDoc?.bucket || !scanDoc?.path) return;
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) throw new Error('Unauthorized');
+    const res = await fetch('/api/admin/storage/signed-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ bucket: scanDoc.bucket, path: scanDoc.path, expiresIn: 300 }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json?.error || 'Chyba');
+    const url = String(json?.signedUrl || '');
+    if (!url) throw new Error('Chybí URL');
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
   const handleEdit = async (adm: any) => {
     let full = adm;
     try {
@@ -310,6 +451,11 @@ export default function UsersTab({ dict }: UsersTabProps) {
       is_member: full.is_member || false,
       member_since: full.member_since || '',
       application_scan_url: full.application_scan_url || '',
+      phone: '',
+      address: '',
+      date_of_birth: '',
+      application_received_at: '',
+      notes_internal: '',
       can_manage_admins: full.can_manage_admins || false,
     };
     
@@ -319,10 +465,41 @@ export default function UsersTab({ dict }: UsersTabProps) {
     });
 
     reset(resetData);
+
+    try {
+      const ap = await supabase.from('member_admin_profile').select('*').eq('member_id', full.id).maybeSingle();
+      if (ap.data) {
+        const toLocalDateTime = (iso: string) => {
+          const d = new Date(iso);
+          if (Number.isNaN(d.getTime())) return '';
+          const pad = (n: number) => String(n).padStart(2, '0');
+          return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        };
+        setValue('phone', ap.data.phone || '', { shouldDirty: false });
+        setValue('address', ap.data.address || '', { shouldDirty: false });
+        setValue('date_of_birth', ap.data.date_of_birth || '', { shouldDirty: false });
+        setValue('application_received_at', ap.data.application_received_at ? toLocalDateTime(ap.data.application_received_at) : '', { shouldDirty: false });
+        setValue('notes_internal', ap.data.notes_internal || '', { shouldDirty: false });
+      }
+
+      const doc = await supabase
+        .from('member_documents')
+        .select('*')
+        .eq('member_id', full.id)
+        .eq('kind', 'application_scan')
+        .maybeSingle();
+      setScanDoc(doc.data || null);
+      setScanFile(null);
+    } catch {
+      setScanDoc(null);
+      setScanFile(null);
+    }
   };
 
   const handleCancel = () => {
     setEditingAdmin(null);
+    setScanDoc(null);
+    setScanFile(null);
     reset();
   };
 
@@ -387,8 +564,106 @@ export default function UsersTab({ dict }: UsersTabProps) {
             <div className="space-y-1.5">
               <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.admin.labelPassword || 'Heslo'}</label>
               <input {...register('password')} type="password" placeholder="••••••••" className="w-full border-none p-4 rounded-2xl outline-none ring-1 ring-stone-100 focus:ring-2 focus:ring-green-500 bg-stone-50/50 font-bold text-stone-700 transition" />
-              <p className="text-[9px] text-stone-400 italic px-1">Nechte prázdné pro automatické vygenerování.</p>
+              <p className="text-[9px] text-stone-400 italic px-1">{editingAdmin ? 'Nechte prázdné pro zachování stávajícího hesla.' : 'Nechte prázdné pro automatické vygenerování.'}</p>
+              {editingAdmin && (
+                <div className="grid sm:grid-cols-2 gap-3 mt-3">
+                  <button
+                    type="button"
+                    disabled={sendingReset}
+                    onClick={() => sendResetLink(String(editingAdmin?.email || ''))}
+                    className="w-full bg-white text-stone-700 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-stone-200 hover:bg-stone-50 transition disabled:opacity-50"
+                  >
+                    {sendingReset ? 'Odesílám...' : 'Poslat reset odkaz'}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={sendingPassword || !passwordValue}
+                    onClick={sendNewPasswordNow}
+                    className="w-full bg-stone-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-600 transition disabled:opacity-50"
+                  >
+                    {sendingPassword ? 'Odesílám...' : 'Poslat nové heslo'}
+                  </button>
+                </div>
+              )}
             </div>
+
+            {editingAdmin && (
+              <div className="pt-6 border-t border-stone-100 space-y-6">
+                <div className="flex items-center gap-3 text-stone-900">
+                  <FileText size={20} className="text-green-600" />
+                  <h3 className="text-sm font-black uppercase tracking-widest">Přihláška (scan) + doplnění</h3>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="border-2 border-dashed border-stone-200 rounded-[2rem] p-6 text-center relative hover:border-green-400 hover:bg-green-50/30 transition-all">
+                    <input
+                      type="file"
+                      accept="application/pdf,image/*"
+                      onChange={(e) => setScanFile(e.target.files?.[0] || null)}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                    />
+                    <div className="text-stone-600 font-bold">
+                      {scanFile ? scanFile.name : 'Klikni pro výběr PDF/JPG/PNG'}
+                    </div>
+                    <div className="text-[10px] text-stone-400 font-medium mt-1">Soubor se uloží jen pro superadminy</div>
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      disabled={!scanFile || scanBusy}
+                      onClick={async () => {
+                        try {
+                          await uploadScan();
+                        } catch (e: any) {
+                          showToast(e?.message || 'Chyba', 'error');
+                        }
+                      }}
+                      className="bg-stone-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-600 transition disabled:opacity-50"
+                    >
+                      {scanBusy ? 'Nahrávám...' : 'Nahrát scan'}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!scanDoc || scanBusy}
+                      onClick={async () => {
+                        try {
+                          await openScan();
+                        } catch (e: any) {
+                          showToast(e?.message || 'Chyba', 'error');
+                        }
+                      }}
+                      className="bg-white text-stone-700 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-stone-200 hover:bg-stone-50 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      <ExternalLink size={16} /> Otevřít
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Telefon</label>
+                    <input {...register('phone')} type="text" className="w-full border-none p-4 rounded-2xl outline-none ring-1 ring-stone-100 focus:ring-2 focus:ring-green-500 bg-stone-50/50 font-bold text-stone-700 transition" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Datum narození</label>
+                    <input {...register('date_of_birth')} type="date" className="w-full border-none p-4 rounded-2xl outline-none ring-1 ring-stone-100 focus:ring-2 focus:ring-green-500 bg-stone-50/50 font-bold text-stone-700 transition" />
+                  </div>
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Adresa</label>
+                    <input {...register('address')} type="text" className="w-full border-none p-4 rounded-2xl outline-none ring-1 ring-stone-100 focus:ring-2 focus:ring-green-500 bg-stone-50/50 font-bold text-stone-700 transition" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Přihláška doručena</label>
+                    <input {...register('application_received_at')} type="datetime-local" className="w-full border-none p-4 rounded-2xl outline-none ring-1 ring-stone-100 focus:ring-2 focus:ring-green-500 bg-stone-50/50 font-bold text-stone-700 transition" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Interní poznámka</label>
+                    <input {...register('notes_internal')} type="text" className="w-full border-none p-4 rounded-2xl outline-none ring-1 ring-stone-100 focus:ring-2 focus:ring-green-500 bg-stone-50/50 font-bold text-stone-700 transition" />
+                  </div>
+                </div>
+              </div>
+            )}
             
             <div className="pt-6 border-t border-stone-100 space-y-6">
               <div className="flex items-center gap-3 text-stone-900">

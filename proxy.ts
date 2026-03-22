@@ -51,12 +51,13 @@ async function loadConfig(): Promise<SiteConfig> {
   const endAt = row?.maintenance_end_at ? String(row.maintenance_end_at) : null;
   const startMs = startAt ? Date.parse(startAt) : null;
   const endMs = endAt ? Date.parse(endAt) : null;
-  const inWindow = !!startMs && now >= startMs && (!endMs || now < endMs);
+  const windowAllows = (!startMs || now >= startMs) && (!endMs || now < endMs);
+  const ended = !!endMs && now >= endMs;
   const value: SiteConfig = {
-    maintenance_enabled: !!row?.maintenance_enabled,
+    maintenance_enabled: !!row?.maintenance_enabled && !ended,
     maintenance_start_at: startAt,
     maintenance_end_at: endAt,
-    maintenance_active: !!row?.maintenance_enabled || inWindow,
+    maintenance_active: !!row?.maintenance_enabled && !ended && windowAllows,
     pages: (row?.pages && typeof row.pages === 'object' ? row.pages : {}) as any,
   };
   siteCache.value = value;
@@ -75,7 +76,11 @@ export function proxy(request: NextRequest) {
     }
 
     const cookieLocale = request.cookies.get(COOKIE_NAME)?.value;
-    const locale = cookieLocale && locales.includes(cookieLocale) ? cookieLocale : defaultLocale;
+    const accept = request.headers.get('accept-language') || '';
+    const prefersEn = /\ben\b/i.test(accept) && !/\bcs\b/i.test(accept);
+    const prefersCs = /\bcs\b/i.test(accept) || /\bsk\b/i.test(accept);
+    const inferredLocale = prefersCs ? 'cs' : prefersEn ? 'en' : defaultLocale;
+    const locale = cookieLocale && locales.includes(cookieLocale) ? cookieLocale : inferredLocale;
 
     return NextResponse.redirect(new URL(`/${locale}${pathname === '/' ? '' : pathname}`, request.url));
   }
@@ -89,14 +94,24 @@ export function proxy(request: NextRequest) {
       const allowDuringMaintenance = new Set([
         `${currentLocale}/odstavka`,
         `${currentLocale}/login`,
+        `${currentLocale}/forgot`,
+        `${currentLocale}/reset-password`,
         `${currentLocale}/admin`,
         `${currentLocale}/admin/dashboard`,
         `${currentLocale}/clen`,
       ]);
       const isAllowed = Array.from(allowDuringMaintenance).some((p) => normalized === p || normalized.startsWith(`${p}/`));
 
-      if ((cfg.maintenance_active || cfg.maintenance_enabled) && !isAllowed) {
-        return NextResponse.redirect(new URL(`/${currentLocale}/odstavka`, request.url));
+      if (cfg.maintenance_active && !isAllowed) {
+        const url = request.nextUrl.clone();
+        url.pathname = `/${currentLocale}/odstavka`;
+        const res = NextResponse.rewrite(url);
+        res.headers.set('Cache-Control', 'no-store');
+        return res;
+      }
+
+      if (normalized === `${currentLocale}/odstavka` && !cfg.maintenance_active) {
+        return NextResponse.redirect(new URL(`/${currentLocale}`, request.url));
       }
 
       const parts = pathname.split('/').filter(Boolean);

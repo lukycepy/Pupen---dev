@@ -4,7 +4,7 @@ import { getServerSupabase } from '@/lib/supabase-server';
 
 export async function POST(req: Request) {
   try {
-    await requireAdmin(req);
+    const { profile } = await requireAdmin(req);
 
     const form = await req.formData();
     const file = form.get('file');
@@ -16,6 +16,9 @@ export async function POST(req: Request) {
     }
     if (!path) {
       return NextResponse.json({ error: 'Missing path' }, { status: 400 });
+    }
+    if (bucket === 'member_applications' && !profile?.can_manage_admins) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const supabase = getServerSupabase();
@@ -34,4 +37,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: e?.message || 'Error' }, { status });
   }
 }
-
