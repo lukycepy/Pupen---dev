@@ -62,7 +62,39 @@ export default function PupenWeb() {
     setOpenFaq(openFaq === id ? null : id);
   };
 
-  if (!dict) return null;
+  if (!dict) {
+    return (
+      <div className="min-h-screen bg-stone-50 text-stone-900 font-sans selection:bg-green-100 selection:text-green-900">
+        <div className="max-w-5xl mx-auto px-6 pt-16 pb-28">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-white text-stone-700 rounded-full text-[10px] font-black uppercase tracking-widest border border-stone-100">
+            <Leaf size={12} className="text-green-600" /> Pupen
+          </div>
+          <h1 className="mt-6 text-4xl md:text-6xl font-black tracking-tight">
+            {lang === 'en' ? 'Studentský spolek Pupen, z.s.' : 'Studentský spolek Pupen, z.s.'}
+          </h1>
+          <p className="mt-4 text-stone-600 font-medium leading-relaxed max-w-3xl">
+            {lang === 'en'
+              ? 'We connect students, science and fun at our faculty. This website provides public information and member features.'
+              : 'Propojujeme studenty, vědu a zábavu na naší fakultě. Web obsahuje veřejné informace a členské funkce.'}
+          </p>
+          <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm font-bold text-stone-600">
+            <Link href={`/${lang}/ochrana-soukromi`} className="hover:text-green-700 underline underline-offset-4 decoration-green-200">
+              {lang === 'en' ? 'Privacy policy' : 'Ochrana soukromí'}
+            </Link>
+            <span className="text-stone-300">•</span>
+            <Link href={`/${lang}/tos`} className="hover:text-green-700 underline underline-offset-4 decoration-green-200">
+              {lang === 'en' ? 'Terms of service' : 'Obchodní podmínky'}
+            </Link>
+            <span className="text-stone-300">•</span>
+            <Link href={`/${lang}/login`} className="hover:text-green-700 underline underline-offset-4 decoration-green-200">
+              {lang === 'en' ? 'Member login' : 'Přihlášení členů'}
+            </Link>
+          </div>
+          <div className="mt-10 h-10 w-64 bg-white rounded-2xl border border-stone-100 animate-pulse" />
+        </div>
+      </div>
+    );
+  }
 
   const widgets = (homeCfg?.widgets && typeof homeCfg.widgets === 'object' ? homeCfg.widgets : {}) as any;
   const heroBgUrl =
