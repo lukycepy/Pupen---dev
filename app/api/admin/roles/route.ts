@@ -136,11 +136,19 @@ export async function POST(req: Request) {
     if (!name || name.length < 2) return NextResponse.json({ error: 'Missing name' }, { status: 400 });
 
     const supabase = getServerSupabase();
-    const up = await supabase
-      .from('app_roles')
-      .upsert([{ id: roleId || undefined, name, permissions, updated_at: new Date().toISOString() }], { onConflict: 'id' })
-      .select('id,name,permissions,updated_at,created_at')
-      .single();
+    const now = new Date().toISOString();
+    const up = roleId
+      ? await supabase
+          .from('app_roles')
+          .update({ name, permissions, updated_at: now })
+          .eq('id', roleId)
+          .select('id,name,permissions,updated_at,created_at')
+          .single()
+      : await supabase
+          .from('app_roles')
+          .insert([{ name, permissions, updated_at: now }])
+          .select('id,name,permissions,updated_at,created_at')
+          .single();
     if (up.error) throw up.error;
 
     await supabase
