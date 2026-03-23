@@ -100,7 +100,7 @@ export default function PupenWeb() {
   const heroBgUrl =
     Array.isArray(homeCfg?.hero?.backgrounds) && homeCfg.hero.backgrounds.length > 0
       ? String(homeCfg.hero.backgrounds[0])
-      : 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=2400&q=80';
+      : '/img/prezentace_pupen.jpg';
 
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900 font-sans selection:bg-green-100 selection:text-green-900">
@@ -187,11 +187,12 @@ export default function PupenWeb() {
           <div className="relative order-1 lg:order-2 px-4 sm:px-0">
             <div className="absolute -inset-4 bg-green-100 rounded-3xl rotate-2 -z-10 hidden sm:block"></div>
             <Image 
-              src="https://scontent-prg1-1.xx.fbcdn.net/v/t39.30808-6/432044909_437332662161552_4635075991745349830_n.jpg?stp=c724.0.1448.1448a_dst-jpg_s565x565_tt6&_nc_cat=101&ccb=1-7&_nc_sid=1d70fc&_nc_ohc=g24UybXTekEQ7kNvwFt3oW6&_nc_oc=AdkftYPBzuO40uAFGGB-oF9vrr21_fgSu4rJQVG1Qn965CYy8c38OaCfT7aeq1VvzzI&_nc_zt=23&_nc_ht=scontent-prg1-1.xx&_nc_gid=RdTLA5Y95Z18glq2nZCQMg&_nc_ss=8&oh=00_AfzU55E6fv5kbhOvH0eeSXPf9GN04syJTxd4PFz07UXidg&oe=69BB5129" 
-              alt="Pupen students" 
+              src="/img/listopad_pupen.jpg" 
+              alt="Pupen" 
               width={800}
               height={550}
               className="rounded-2xl shadow-2xl w-full aspect-[4/3] lg:aspect-auto object-cover h-auto lg:h-[550px]"
+              style={{ objectPosition: '50% 25%' }}
             />
           </div>
         </div>
