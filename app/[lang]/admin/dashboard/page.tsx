@@ -243,7 +243,7 @@ export default function AdminDashboard() {
 
       if (profile && isMounted) {
         // CHECK IF IS ADMIN
-        if (!profile.is_admin && user.email !== 'cepelak@pupen.org') {
+        if (!profile.is_admin && !profile.can_manage_admins && user.email !== 'cepelak@pupen.org') {
           // If not admin but member, redirect to member portal
           if (profile.is_member) {
             router.replace(`/${lang}/clen`);

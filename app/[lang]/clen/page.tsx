@@ -156,7 +156,8 @@ export default function ClenskaSekcePage() {
       const { data: prof } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
       
       const isSuperAdmin = session.user.email === 'cepelak@pupen.org';
-      if (!prof?.is_member && !isSuperAdmin && !prof?.is_admin) {
+      const hasMemberPortal = !!(prof?.is_member || prof?.is_admin || prof?.can_view_member_portal || prof?.can_edit_member_portal);
+      if (!hasMemberPortal && !isSuperAdmin) {
         router.replace(`/${lang}/login`);
         return;
       }
@@ -577,7 +578,8 @@ export default function ClenskaSekcePage() {
       return null;
     }
   };
-  const hasAccessToMemberPortal = profile?.is_member || user.email === 'cepelak@pupen.org' || profile?.is_admin;
+  const hasAccessToMemberPortal =
+    !!(profile?.is_member || profile?.is_admin || profile?.can_view_member_portal || profile?.can_edit_member_portal) || user.email === 'cepelak@pupen.org';
 
   if (!hasAccessToMemberPortal) {
     return (

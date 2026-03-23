@@ -8,7 +8,7 @@ import InlinePulse from '@/app/components/InlinePulse';
 import AdminModuleHeader from './ui/AdminModuleHeader';
 import AdminPanel from './ui/AdminPanel';
 
-type Role = { id: string; name: string; permissions: any };
+type Role = { id: string; name: string; permissions: any; color_hex?: string };
 type Assignment = { user_id: string; role_id: string; assigned_at: string; assigned_by_email?: string | null; profiles?: any };
 
 export default function RolesTab({ dict }: { dict: any }) {
@@ -22,6 +22,7 @@ export default function RolesTab({ dict }: { dict: any }) {
 
   const [editing, setEditing] = useState<Role | null>(null);
   const [roleName, setRoleName] = useState('');
+  const [roleColorHex, setRoleColorHex] = useState('#16a34a');
   const [rolePerms, setRolePerms] = useState<any>({});
 
   const [assignEmail, setAssignEmail] = useState('');
@@ -65,13 +66,27 @@ export default function RolesTab({ dict }: { dict: any }) {
   const startCreate = () => {
     setEditing(null);
     setRoleName('');
+    setRoleColorHex('#16a34a');
     setRolePerms({});
   };
 
   const startEdit = (r: Role) => {
     setEditing(r);
     setRoleName(r.name || '');
+    setRoleColorHex(String(r.color_hex || '#16a34a'));
     setRolePerms(r.permissions && typeof r.permissions === 'object' ? r.permissions : {});
+  };
+
+  const textColorForBg = (hex: string) => {
+    const h = String(hex || '').trim();
+    const m = h.match(/^#([0-9a-f]{6})$/i);
+    if (!m) return '#ffffff';
+    const v = m[1];
+    const r = parseInt(v.slice(0, 2), 16);
+    const g = parseInt(v.slice(2, 4), 16);
+    const b = parseInt(v.slice(4, 6), 16);
+    const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+    return lum > 0.6 ? '#111827' : '#ffffff';
   };
 
   const saveRole = async () => {
@@ -83,7 +98,7 @@ export default function RolesTab({ dict }: { dict: any }) {
       const res = await fetch('/api/admin/roles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ id: editing?.id || null, name: roleName, permissions: rolePerms }),
+        body: JSON.stringify({ id: editing?.id || null, name: roleName, color_hex: roleColorHex, permissions: rolePerms }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error || 'Error');
@@ -91,6 +106,7 @@ export default function RolesTab({ dict }: { dict: any }) {
       await load();
       setEditing(null);
       setRoleName('');
+      setRoleColorHex('#16a34a');
       setRolePerms({});
     } catch (e: any) {
       showToast(e?.message || (t?.error || 'Chyba'), 'error');
@@ -173,7 +189,13 @@ export default function RolesTab({ dict }: { dict: any }) {
               {roles.map((r) => (
                 <div key={r.id} className="flex items-center justify-between gap-3 bg-stone-50 border border-stone-100 rounded-[2rem] px-6 py-5">
                   <div className="min-w-0">
-                    <div className="font-black text-stone-900 truncate">{r.name}</div>
+                    <div className="font-black text-stone-900 truncate flex items-center gap-2">
+                      <span
+                        className="inline-flex h-3 w-3 rounded-full border"
+                        style={{ backgroundColor: String(r.color_hex || '#64748b'), borderColor: String(r.color_hex || '#64748b') }}
+                      />
+                      <span className="truncate">{r.name}</span>
+                    </div>
                     <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mt-1">
                       {(() => {
                         const count = Object.keys(r.permissions || {}).filter((k) => (r.permissions || {})[k]).length;
@@ -217,6 +239,31 @@ export default function RolesTab({ dict }: { dict: any }) {
                 onChange={(e) => setRoleName(e.target.value)}
                 className="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
               />
+            </div>
+
+            <div className="space-y-2">
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{t.colorLabel || 'Barva role'}</div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  value={roleColorHex}
+                  onChange={(e) => setRoleColorHex(e.target.value)}
+                  className="h-12 w-12 rounded-xl border border-stone-200 bg-white"
+                  aria-label={t.colorLabel || 'Barva role'}
+                />
+                <input
+                  value={roleColorHex}
+                  onChange={(e) => setRoleColorHex(e.target.value)}
+                  className="flex-1 bg-stone-50 border-none rounded-2xl px-5 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
+                  placeholder="#16a34a"
+                />
+                <span
+                  className="px-3 py-2 rounded-full text-[9px] font-black uppercase tracking-widest border"
+                  style={{ backgroundColor: roleColorHex, borderColor: roleColorHex, color: textColorForBg(roleColorHex) }}
+                >
+                  {roleName?.trim() ? roleName.trim() : 'Role'}
+                </span>
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -303,9 +350,24 @@ export default function RolesTab({ dict }: { dict: any }) {
                       {a.profiles?.first_name || ''} {a.profiles?.last_name || ''}{' '}
                       <span className="text-stone-400 font-bold">{a.profiles?.email ? `(${a.profiles.email})` : ''}</span>
                     </div>
-                    <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mt-1">
-                      {roles.find((r) => r.id === a.role_id)?.name || a.role_id}
-                    </div>
+                    {(() => {
+                      const role = roles.find((r) => r.id === a.role_id);
+                      const colorHex = String(role?.color_hex || '#64748b');
+                      const label = String(role?.name || a.role_id || '').trim();
+                      return (
+                        <div className="mt-2 flex items-center gap-2">
+                          <span
+                            className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border"
+                            style={{ backgroundColor: colorHex, borderColor: colorHex, color: textColorForBg(colorHex) }}
+                          >
+                            {label}
+                          </span>
+                          {a.assigned_by_email ? (
+                            <span className="text-[10px] font-bold text-stone-400 truncate">{a.assigned_by_email}</span>
+                          ) : null}
+                        </div>
+                      );
+                    })()}
                   </div>
                   <button
                     type="button"

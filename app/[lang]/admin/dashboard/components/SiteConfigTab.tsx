@@ -440,6 +440,23 @@ export default function SiteConfigTab({ dict }: { dict: any }) {
               placeholder="+420 123 456 789"
             />
           </div>
+
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Provider adres</div>
+            <select
+              value={String((config as any).member_portal?.address_provider || 'nominatim')}
+              onChange={(e) =>
+                setConfig((p) => ({
+                  ...p,
+                  member_portal: { ...(p as any).member_portal, address_provider: e.target.value },
+                }))
+              }
+              className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
+            >
+              <option value="nominatim">OpenStreetMap (Nominatim)</option>
+              <option value="ruian">RÚIAN (ČÚZK)</option>
+            </select>
+          </div>
         </div>
 
         <div className="flex items-center justify-between bg-stone-50 rounded-2xl border border-stone-100 px-5 py-4">

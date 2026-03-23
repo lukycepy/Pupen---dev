@@ -85,7 +85,7 @@ export async function GET(req: Request) {
     const { profile } = await requireAdmin(req);
     if (!profile?.can_manage_admins) throw new Error('Forbidden');
     const supabase = getServerSupabase();
-    const roles = await supabase.from('app_roles').select('id,name,permissions,updated_at,created_at').order('name', { ascending: true });
+    const roles = await supabase.from('app_roles').select('id,name,permissions,color_hex,updated_at,created_at').order('name', { ascending: true });
     if (roles.error) throw roles.error;
 
     const assignmentsRes = await supabase
@@ -132,6 +132,7 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const roleId = body?.id ? String(body.id) : null;
     const name = String(body?.name || '').trim();
+    const colorHex = String(body?.color_hex || body?.colorHex || '').trim() || '#16a34a';
     const permissions = pickPermissions(body?.permissions || {});
     if (!name || name.length < 2) return NextResponse.json({ error: 'Missing name' }, { status: 400 });
 
@@ -140,14 +141,14 @@ export async function POST(req: Request) {
     const up = roleId
       ? await supabase
           .from('app_roles')
-          .update({ name, permissions, updated_at: now })
+          .update({ name, permissions, color_hex: colorHex, updated_at: now })
           .eq('id', roleId)
-          .select('id,name,permissions,updated_at,created_at')
+          .select('id,name,permissions,color_hex,updated_at,created_at')
           .single()
       : await supabase
           .from('app_roles')
-          .insert([{ name, permissions, updated_at: now }])
-          .select('id,name,permissions,updated_at,created_at')
+          .insert([{ name, permissions, color_hex: colorHex, updated_at: now }])
+          .select('id,name,permissions,color_hex,updated_at,created_at')
           .single();
     if (up.error) throw up.error;
 
@@ -159,7 +160,7 @@ export async function POST(req: Request) {
           admin_name: user.user_metadata?.full_name || user.email || 'admin',
           action: roleId ? 'ROLE_UPDATE' : 'ROLE_CREATE',
           target_id: String(up.data.id),
-          details: { name, permissionKeys: Object.keys(permissions) },
+          details: { name, color_hex: colorHex, permissionKeys: Object.keys(permissions) },
         },
       ])
       .throwOnError();

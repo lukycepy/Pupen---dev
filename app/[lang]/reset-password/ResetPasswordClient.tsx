@@ -41,7 +41,7 @@ export default function ResetPasswordClient({ lang }: { lang: string }) {
           if (mounted) setRecoveryReady(true);
           return;
         }
-        if ((type === 'recovery' || type === 'signup' || type === 'magiclink') && accessToken) {
+        if ((type === 'recovery' || type === 'signup' || type === 'magiclink' || type === 'invite') && accessToken) {
           const res: any = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken || '' });
           if (res?.error) throw res.error;
           if (mounted) setRecoveryReady(true);

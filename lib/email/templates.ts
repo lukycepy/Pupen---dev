@@ -1,4 +1,4 @@
-export type EmailTemplateKey = 'ticket' | 'admin_password' | 'password_reset' | 'invoice_request' | 'refund_request' | 'refund_status';
+export type EmailTemplateKey = 'ticket' | 'admin_password' | 'password_reset' | 'member_access' | 'invoice_request' | 'refund_request' | 'refund_status';
 
 export function listEmailTemplates() {
   return [
@@ -25,6 +25,11 @@ export function listEmailTemplates() {
       key: 'password_reset' as const,
       label: 'Reset hesla',
       variables: ['email', 'resetUrl', 'lang'],
+    },
+    {
+      key: 'member_access' as const,
+      label: 'Člen – aktivace přístupu',
+      variables: ['toEmail', 'firstName', 'actionUrl', 'lang'],
     },
     {
       key: 'invoice_request' as const,
@@ -102,6 +107,41 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
           <p style="margin-top: 16px; font-size: 12px; color: #78716c;">${escapeHtml(resetUrl)}</p>
         </div>
         <p style="font-size: 12px; color: #78716c; text-align: center;">${escapeHtml(note)}</p>
+      </div>
+    `;
+    return { subject, html };
+  }
+
+  if (key === 'member_access') {
+    const lang = vars?.lang === 'en' ? 'en' : 'cs';
+    const firstName = vars?.firstName ? String(vars.firstName) : '';
+    const toEmail = String(vars?.toEmail || vars?.email || '');
+    const actionUrl = String(vars?.actionUrl || '');
+
+    const subject = lang === 'en' ? 'Pupen — Access approved' : 'Pupen — Přístup schválen';
+    const title = lang === 'en' ? 'Your access is approved' : 'Váš přístup je schválen';
+    const intro =
+      lang === 'en'
+        ? `Hello${firstName ? ` ${escapeHtml(firstName)}` : ''}, your access to Pupen has been approved.`
+        : `Ahoj${firstName ? ` ${escapeHtml(firstName)}` : ''}, tvůj přístup do systému Pupen byl schválen.`;
+    const cta = lang === 'en' ? 'Set password and sign in' : 'Nastavit heslo a přihlásit se';
+    const note =
+      lang === 'en'
+        ? 'If you already have a password, you can still use this link to set a new one.'
+        : 'Pokud už heslo máš, tímto odkazem si ho můžeš případně znovu nastavit.';
+
+    const html = `
+      <div style="font-family: sans-serif; padding: 20px; color: #1c1917; max-width: 700px; margin: auto; border: 1px solid #e7e5e4; border-radius: 20px;">
+        <h2 style="color: #16a34a; text-align: center;">${escapeHtml(title)}</h2>
+        <p style="text-align: center; font-weight: 700; font-size: 16px;">${intro}</p>
+        <div style="background-color: #f5f5f4; padding: 20px; border-radius: 15px; margin: 20px 0; text-align: center;">
+          <a href="${escapeHtml(actionUrl)}" style="display: inline-block; background: #16a34a; color: #fff; padding: 14px 18px; border-radius: 14px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none; font-size: 12px;">
+            ${escapeHtml(cta)}
+          </a>
+          <p style="margin-top: 16px; font-size: 12px; color: #78716c;">${escapeHtml(actionUrl)}</p>
+        </div>
+        <p style="font-size: 12px; color: #78716c; text-align: center;">${escapeHtml(note)}</p>
+        ${toEmail ? `<p style="font-size: 12px; color: #78716c; text-align: center;">${escapeHtml(toEmail)}</p>` : ''}
       </div>
     `;
     return { subject, html };

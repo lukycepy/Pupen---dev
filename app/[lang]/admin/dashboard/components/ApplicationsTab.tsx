@@ -63,6 +63,7 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
     mutationFn: async ({ id, status, signature, reason, decisionType }: any) => {
       const { data } = await supabase.auth.getSession();
       const decidedByEmail = data.session?.user?.email || null;
+      const token = data.session?.access_token || null;
       if (saveAsDefaultSignature && signature && !storedSignature) {
         const userId = data.session?.user?.id;
         if (userId) {
@@ -80,11 +81,18 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
       }).eq('id', id);
       if (error) throw error;
 
-      // Pokud schváleno, označíme uživatele v profiles jako člena (pokud tam je)
       if (status === 'approved') {
-        const app = applications.find((a: any) => a.id === id);
-        if (app) {
-          await supabase.from('profiles').update({ is_member: true, member_since: new Date().toISOString() }).eq('email', app.email);
+        const prev = applications.find((a: any) => a.id === id);
+        const wasApproved = prev?.status === 'approved';
+        if (!wasApproved) {
+          if (!token) throw new Error('Unauthorized');
+          const res = await fetch('/api/admin/applications/approve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ applicationId: id, lang: isEn ? 'en' : 'cs' }),
+          });
+          const json = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(json?.error || 'Chyba');
         }
       }
     },
@@ -188,12 +196,13 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
             <div className="flex-grow overflow-y-auto p-8 lg:p-12 custom-scrollbar">
               <div className="grid lg:grid-cols-12 gap-12">
                 <div className="lg:col-span-7 space-y-10">
-                  <section className="space-y-6">
-                    <div className="flex items-center gap-3 text-stone-900 border-b border-stone-100 pb-2">
-                      <User size={20} className="text-green-600" /> 
+                  <section className="rounded-[2.5rem] border border-stone-100 bg-white shadow-sm p-8">
+                    <div className="flex items-center gap-3 text-stone-900 mb-6">
+                      <User size={20} className="text-green-600" />
                       <h3 className="text-sm font-black uppercase tracking-widest">{dict.admin.personalData || 'Osobní údaje'}</h3>
                     </div>
-                    <div className="grid sm:grid-cols-2 gap-8 bg-stone-50/50 p-6 rounded-[2rem] border border-stone-100">
+
+                    <div className="grid sm:grid-cols-2 gap-8">
                       <div className="space-y-1">
                         <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest">{dict.admin.labelFirstName || 'Jméno'}</p>
                         <p className="text-xl font-black text-stone-900">{selectedApp.first_name || String(selectedApp.full_name || selectedApp.name || '').split(' ')[0] || '—'}</p>
@@ -202,14 +211,32 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
                         <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest">{dict.admin.labelLastName || 'Příjmení'}</p>
                         <p className="text-xl font-black text-stone-900">{selectedApp.last_name || String(selectedApp.full_name || selectedApp.name || '').split(' ').slice(1).join(' ') || '—'}</p>
                       </div>
+
                       <div className="space-y-1">
                         <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest">Email</p>
-                        <p className="text-sm font-bold text-stone-700 flex items-center gap-2"><Mail size={14} className="text-stone-400" /> {selectedApp.email}</p>
+                        <p className="text-sm font-bold text-stone-700 flex items-center gap-2 break-all">
+                          <Mail size={14} className="text-stone-400" /> {selectedApp.email}
+                        </p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest">Telefon</p>
-                        <p className="text-sm font-bold text-stone-700 flex items-center gap-2"><Phone size={14} className="text-stone-400" /> {selectedApp.phone || '-'}</p>
+                        <p className="text-sm font-bold text-stone-700 flex items-center gap-2">
+                          <Phone size={14} className="text-stone-400" /> {selectedApp.phone || '-'}
+                        </p>
                       </div>
+
+                      <div className="space-y-1 sm:col-span-2">
+                        <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest">{isEn ? 'Address' : 'Adresa'}</p>
+                        <p className="text-sm font-bold text-stone-700">{selectedApp.address || '-'}</p>
+                      </div>
+
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest">{isEn ? 'GDPR consent' : 'GDPR souhlas'}</p>
+                        <p className={`text-sm font-black ${selectedApp.gdpr_consent ? 'text-green-700' : 'text-red-700'}`}>
+                          {selectedApp.gdpr_consent ? (isEn ? 'Yes' : 'Ano') : (isEn ? 'No' : 'Ne')}
+                        </p>
+                      </div>
+
                       <div className="space-y-1">
                         <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest">{dict.recruitment?.membershipTypeLabel || 'Typ členství'}</p>
                         <p className="text-sm font-bold text-stone-700">{selectedApp.membership_type === 'external' ? 'Externí' : 'Řádné'}</p>
@@ -219,62 +246,62 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
                         <p className="text-sm font-bold text-stone-700">{selectedApp.signed_on || (selectedApp.created_at ? new Date(selectedApp.created_at).toLocaleDateString('cs-CZ') : '-')}</p>
                       </div>
                     </div>
-                  </section>
 
-                  <section className="space-y-6">
-                    <div className="flex items-center gap-3 text-stone-900 border-b border-stone-100 pb-2">
-                      <GraduationCap size={20} className="text-blue-600" /> 
-                      <h3 className="text-sm font-black uppercase tracking-widest">{dict.recruitment?.labelFieldOfStudy || 'Studium'}</h3>
+                    <div className="mt-10 border-t border-stone-100 pt-8">
+                      <div className="flex items-center gap-3 text-stone-900 mb-6">
+                        <GraduationCap size={20} className="text-blue-600" />
+                        <h3 className="text-sm font-black uppercase tracking-widest">{dict.recruitment?.labelFieldOfStudy || 'Studium'}</h3>
+                      </div>
+                      {selectedApp.membership_type === 'regular' ? (
+                        <div className="grid sm:grid-cols-2 gap-8">
+                          <div className="space-y-1">
+                            <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest">
+                              {dict.recruitment?.labelUniversityEmail || 'Univerzitní email (v případě žádného členství)'}
+                            </p>
+                            <p className="font-black text-blue-700 text-sm break-all">{selectedApp.university_email || '—'}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest">{dict.recruitment?.labelStudyYear || 'Ročník'}</p>
+                            <p className="font-black text-stone-900 text-sm">{selectedApp.study_year || '—'}</p>
+                          </div>
+                          <div className="sm:col-span-2 space-y-1">
+                            <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest">{dict.recruitment?.labelFieldOfStudy || 'Obor'}</p>
+                            <p className="font-black text-blue-700 text-sm">{selectedApp.field_of_study || selectedApp.faculty || '—'}</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="bg-blue-50/40 rounded-[1.75rem] border border-blue-100 p-6">
+                          <p className="font-black text-blue-900 text-sm">{dict.recruitment?.membershipExternalDesc || 'Externí členství'}</p>
+                        </div>
+                      )}
                     </div>
-                    {selectedApp.membership_type === 'regular' ? (
-                      <div className="grid sm:grid-cols-2 gap-4 bg-blue-50/30 p-6 rounded-[2rem] border border-blue-100">
-                        <div className="space-y-1">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-blue-700/60">{dict.recruitment?.labelUniversityEmail || 'Univerzitní email'}</p>
-                          <p className="font-black text-blue-900 text-sm break-all">{selectedApp.university_email || '—'}</p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-blue-700/60">{dict.recruitment?.labelStudyYear || 'Ročník'}</p>
-                          <p className="font-black text-blue-900 text-sm">{selectedApp.study_year || '—'}</p>
-                        </div>
-                        <div className="sm:col-span-2 space-y-1">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-blue-700/60">{dict.recruitment?.labelFieldOfStudy || 'Obor'}</p>
-                          <p className="font-black text-blue-900 text-sm">{selectedApp.field_of_study || selectedApp.faculty || '—'}</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="bg-blue-50/30 p-6 rounded-[2rem] border border-blue-100">
-                        <p className="font-black text-blue-900 text-sm">{dict.recruitment?.membershipExternalDesc || 'Externí členství'}</p>
-                      </div>
-                    )}
                   </section>
 
                   {selectedApp.motivation && (
-                    <section className="space-y-6">
-                      <div className="flex items-center gap-3 text-stone-900 border-b border-stone-100 pb-2">
-                        <Quote size={20} className="text-amber-600" /> 
-                        <h3 className="text-sm font-black uppercase tracking-widest">{dict.admin.motivation || 'Poznámka'}</h3>
+                    <section className="rounded-[2.5rem] border border-stone-100 bg-white shadow-sm p-8 space-y-6">
+                      <div className="flex items-center gap-3 text-stone-900">
+                        <Quote size={20} className="text-amber-600" />
+                        <h3 className="text-sm font-black uppercase tracking-widest">{dict.admin.motivation || (isEn ? 'Note' : 'Poznámka')}</h3>
                       </div>
                       <div className="bg-amber-50/30 p-8 rounded-[2rem] border border-amber-100 relative">
                         <Quote className="absolute top-4 left-4 text-amber-200" size={32} />
-                        <p className="text-stone-700 leading-relaxed italic font-medium relative z-10 pl-4 text-lg">
-                          "{selectedApp.motivation}"
-                        </p>
+                        <p className="text-stone-700 leading-relaxed italic font-medium relative z-10 pl-4 text-lg">"{selectedApp.motivation}"</p>
                       </div>
                     </section>
                   )}
 
                   <section className="space-y-6">
-                    <div className="flex items-center gap-3 text-stone-900 border-b border-stone-100 pb-2">
-                      <FileCheck size={20} className="text-stone-600" /> 
+                    <div className="flex items-center gap-3 text-stone-900">
+                      <FileCheck size={20} className="text-stone-700" />
                       <h3 className="text-sm font-black uppercase tracking-widest">{dict.admin.applicantSignature || 'Podpis žadatele'}</h3>
                     </div>
-                    <div className="border border-stone-100 rounded-[2rem] overflow-hidden bg-stone-50 shadow-inner flex items-center justify-center p-8">
-                      <Image 
-                        src={selectedApp.applicant_signature || selectedApp.signature_data_url} 
-                        alt="Podpis" 
-                        width={400} 
-                        height={150} 
-                        className="max-w-full h-auto mix-blend-multiply opacity-80" 
+                    <div className="rounded-[2.5rem] border border-stone-100 bg-white shadow-sm p-8 flex items-center justify-center">
+                      <Image
+                        src={selectedApp.applicant_signature || selectedApp.signature_data_url}
+                        alt="Podpis"
+                        width={640}
+                        height={220}
+                        className="max-w-full h-auto mix-blend-multiply"
                         unoptimized
                       />
                     </div>
@@ -282,7 +309,8 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
                 </div>
 
                 <div className="lg:col-span-5 space-y-8">
-                  <div className="bg-stone-900 text-white p-10 rounded-[3rem] shadow-xl sticky top-0">
+                  <div className="relative bg-stone-900 text-white p-10 rounded-[3rem] shadow-xl sticky top-0 overflow-hidden">
+                    <div className="absolute right-0 top-0 h-full w-2 bg-green-600/90" />
                     {selectedApp.status === 'pending' ? (
                       <div className="space-y-8">
                         <div>
@@ -296,10 +324,10 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
                             <button
                               type="button"
                               onClick={() => setDecisionMembershipType('regular')}
-                              className={`rounded-2xl px-4 py-4 text-[10px] font-black uppercase tracking-widest border transition ${
+                                    className={`rounded-2xl px-4 py-4 text-[10px] font-black uppercase tracking-widest border transition ${
                                 decisionMembershipType === 'regular'
                                   ? 'bg-green-600 text-white border-green-600 shadow-lg shadow-green-900/40'
-                                  : 'bg-stone-800 text-stone-200 border-stone-700 hover:bg-stone-750'
+                                        : 'bg-stone-800 text-stone-200 border-stone-700 hover:bg-stone-700'
                               }`}
                             >
                               {dict.admin.decisionTypeRegular || 'Řádné'}
@@ -307,10 +335,10 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
                             <button
                               type="button"
                               onClick={() => setDecisionMembershipType('external')}
-                              className={`rounded-2xl px-4 py-4 text-[10px] font-black uppercase tracking-widest border transition ${
+                                    className={`rounded-2xl px-4 py-4 text-[10px] font-black uppercase tracking-widest border transition ${
                                 decisionMembershipType === 'external'
                                   ? 'bg-green-600 text-white border-green-600 shadow-lg shadow-green-900/40'
-                                  : 'bg-stone-800 text-stone-200 border-stone-700 hover:bg-stone-750'
+                                        : 'bg-stone-800 text-stone-200 border-stone-700 hover:bg-stone-700'
                               }`}
                             >
                               {dict.admin.decisionTypeExternal || 'Externí'}
@@ -438,6 +466,35 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
                             {selectedApp.status === 'approved' ? (dict.admin.appApproved || 'Přihláška schválena') : (dict.admin.appRejected || 'Přihláška zamítnuta')}
                           </p>
                         </div>
+
+                        <div className="rounded-[2rem] border border-stone-800/70 bg-black/30 px-6 py-5 text-left">
+                          <div className="grid gap-3">
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-stone-500">{isEn ? 'Decided at' : 'Rozhodnuto dne'}</span>
+                              <span className="text-xs font-black text-white/90">
+                                {selectedApp.decided_at ? new Date(selectedApp.decided_at).toLocaleString(isEn ? 'en-GB' : 'cs-CZ') : '—'}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-stone-500">{isEn ? 'Decided by' : 'Rozhodl'}</span>
+                              <span className="text-xs font-black text-white/90 break-all text-right">{selectedApp.decided_by_email || '—'}</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-stone-500">{isEn ? 'Membership' : 'Typ členství'}</span>
+                              <span className="text-xs font-black text-white/90">
+                                {selectedApp.decision_membership_type
+                                  ? selectedApp.decision_membership_type === 'external'
+                                    ? isEn
+                                      ? 'External'
+                                      : 'Externí'
+                                    : isEn
+                                      ? 'Regular'
+                                      : 'Řádné'
+                                  : '—'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
                         
                         {selectedApp.rejection_reason && (
                           <div className="p-6 bg-red-900/30 text-red-200 rounded-[2rem] text-sm italic font-medium border border-red-800/50">
@@ -446,11 +503,11 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
                         )}
 
                         <div className="pt-8 border-t border-stone-800">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-stone-500 block mb-4">{dict.admin.chairwomanSignature || 'Podpis předsedkyně'}</span>
-                          <div className="bg-white rounded-[2rem] p-6 border-4 border-stone-800 shadow-inner">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-stone-500 block mb-4">{dict.admin.chairwomanSignature || 'Podpis předsedy'}</span>
+                          <div className="bg-white rounded-[2rem] p-6 shadow-inner">
                             <Image 
                               src={selectedApp.chairwoman_signature} 
-                              alt="Podpis předsedkyně" 
+                              alt={isEn ? 'Chair signature' : 'Podpis předsedy'} 
                               width={400} 
                               height={150} 
                               className="w-full h-auto mix-blend-multiply" 

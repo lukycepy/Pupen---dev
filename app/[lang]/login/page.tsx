@@ -51,7 +51,7 @@ export default function LoginPage() {
   const handleRedirect = (profile: any, email?: string) => {
     const isSuperAdmin = email === 'cepelak@pupen.org' || profile?.email === 'cepelak@pupen.org';
     const hasAdmin = profile?.is_admin || isSuperAdmin;
-    const hasMember = profile?.is_member || isSuperAdmin;
+    const hasMember = !!(profile?.is_member || profile?.is_admin || profile?.can_view_member_portal || profile?.can_edit_member_portal) || isSuperAdmin;
 
     if (hasAdmin && hasMember) {
       setUserProfile(profile || { email: 'cepelak@pupen.org' });
