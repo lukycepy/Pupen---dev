@@ -280,6 +280,7 @@
     "labelLastName": "Last name",
     "labelEmail": "Email",
     "labelPhone": "Phone",
+    "labelAddress": "Address",
     "labelUniversityEmail": "University email (for regular membership)",
     "labelFieldOfStudy": "Field of study",
     "labelStudyYear": "Year",
@@ -925,6 +926,8 @@
     "firstName": "First Name",
     "lastName": "Last Name",
     "emailLabel": "Email (cannot change)",
+    "addressLabel": "Address",
+    "addressPlaceholder": "Street, house number, postcode, city",
     "cancel": "Cancel",
     "saveChanges": "Save Changes",
     "profileUpdated": "Profile updated"

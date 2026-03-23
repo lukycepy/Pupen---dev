@@ -10,6 +10,7 @@ import { UserPlus, Edit3, Trash2, ShieldCheck, X, FileText, ExternalLink } from 
 import { useToast } from '../../../../context/ToastContext';
 import ConfirmModal from '@/app/components/ConfirmModal';
 import AdminModuleHeader from './ui/AdminModuleHeader';
+import AddressAutocomplete from '@/app/components/AddressAutocomplete';
 
 function generatePassword(length = 10) {
   const bytes = new Uint8Array(length);
@@ -24,6 +25,7 @@ interface UsersTabProps {
 const PAGE_SIZE = 60;
 
 export default function UsersTab({ dict }: UsersTabProps) {
+  const lang = typeof window !== 'undefined' && window.location.pathname.startsWith('/en') ? 'en' : 'cs';
   const modules = [
     { id: 'events', label: dict.admin?.navEvents || 'Akce' },
     { id: 'news', label: dict.admin?.navNews || 'Novinky' },
@@ -204,6 +206,7 @@ export default function UsersTab({ dict }: UsersTabProps) {
   });
 
   const passwordValue = watch('password');
+  const addressValue = watch('address') || '';
 
   const sendNewPasswordNow = handleSubmit(async (data: any) => {
     if (!editingAdmin) return;
@@ -656,7 +659,13 @@ export default function UsersTab({ dict }: UsersTabProps) {
                   </div>
                   <div className="space-y-1.5 sm:col-span-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Adresa</label>
-                    <input {...register('address')} type="text" className="w-full border-none p-4 rounded-2xl outline-none ring-1 ring-stone-100 focus:ring-2 focus:ring-green-500 bg-stone-50/50 font-bold text-stone-700 transition" />
+                    <input {...register('address')} type="text" className="hidden" />
+                    <AddressAutocomplete
+                      lang={lang}
+                      value={addressValue}
+                      onChange={(v) => setValue('address', v, { shouldDirty: true })}
+                      inputClassName="w-full border-none p-4 rounded-2xl outline-none ring-1 ring-stone-100 focus:ring-2 focus:ring-green-500 bg-stone-50/50 font-bold text-stone-700 transition"
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Přihláška doručena</label>

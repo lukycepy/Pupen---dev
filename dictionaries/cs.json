@@ -281,6 +281,7 @@
     "labelLastName": "Příjmení",
     "labelEmail": "Email",
     "labelPhone": "Telefon",
+    "labelAddress": "Adresa",
     "labelUniversityEmail": "Univerzitní email (v případě řádného členství)",
     "labelFieldOfStudy": "Obor",
     "labelStudyYear": "Ročník",
@@ -931,6 +932,8 @@
     "firstName": "Jméno",
     "lastName": "Příjmení",
     "emailLabel": "E-mail (nelze měnit)",
+    "addressLabel": "Adresa",
+    "addressPlaceholder": "Ulice, číslo popisné, PSČ, město",
     "cancel": "Zrušit",
     "saveChanges": "Uložit změny",
     "profileUpdated": "Profil byl aktualizován"

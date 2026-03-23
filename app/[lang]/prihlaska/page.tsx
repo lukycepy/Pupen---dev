@@ -9,6 +9,7 @@ import SignaturePad from '../components/SignaturePad';
 import { UserPlus, CheckCircle, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import InlinePulse from '@/app/components/InlinePulse';
+import AddressAutocomplete from '@/app/components/AddressAutocomplete';
 
 export default function PrihlaskaPage() {
   const params = useParams();
@@ -24,6 +25,7 @@ export default function PrihlaskaPage() {
     last_name: '',
     email: '',
     phone: '',
+    address: '',
     university_email: '',
     field_of_study: '',
     study_year: '',
@@ -60,6 +62,7 @@ export default function PrihlaskaPage() {
         last_name: formData.last_name,
         email: formData.email,
         phone: formData.phone,
+        address: formData.address || null,
         membership_type: formData.membership_type,
         university_email: formData.membership_type === 'regular' ? formData.university_email : null,
         field_of_study: formData.membership_type === 'regular' ? formData.field_of_study : null,
@@ -188,6 +191,15 @@ export default function PrihlaskaPage() {
                 value={formData.phone}
                 onChange={e => setFormData({...formData, phone: e.target.value})}
                 className="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 focus:ring-2 focus:ring-green-500 transition font-bold"
+              />
+            </div>
+            <div className="md:col-span-2 space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.labelAddress}</label>
+              <AddressAutocomplete
+                lang={lang}
+                value={formData.address}
+                onChange={(v) => setFormData({ ...formData, address: v })}
+                inputClassName="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 focus:ring-2 focus:ring-green-500 transition font-bold"
               />
             </div>
           </div>

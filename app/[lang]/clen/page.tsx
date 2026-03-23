@@ -19,6 +19,7 @@ import InlinePulse from '@/app/components/InlinePulse';
 import OnboardingCard from './components/OnboardingCard';
 import MemberPanel from './components/ui/MemberPanel';
 import PasswordField from '@/app/components/PasswordField';
+import AddressAutocomplete from '@/app/components/AddressAutocomplete';
 
 const MemberCard = dynamic<any>(() => import('./components/MemberCard'), { loading: () => <SkeletonTabContent /> });
 const MyEventsTab = dynamic<any>(() => import('./components/MyEventsTab'), { loading: () => <SkeletonTabContent /> });
@@ -114,7 +115,7 @@ export default function ClenskaSekcePage() {
     } catch {}
   };
   const [isSavingProfile, setIsSavingProfile] = useState(false);
-  const [editProfile, setEditProfile] = useState({ first_name: '', last_name: '' });
+  const [editProfile, setEditProfile] = useState({ first_name: '', last_name: '', address: '' });
   const [pw1, setPw1] = useState('');
   const [pw2, setPw2] = useState('');
   const [pwSaving, setPwSaving] = useState(false);
@@ -170,7 +171,8 @@ export default function ClenskaSekcePage() {
       }
       setEditProfile({ 
         first_name: userProf?.first_name || '', 
-        last_name: userProf?.last_name || '' 
+        last_name: userProf?.last_name || '',
+        address: (userProf as any)?.address || ''
       });
       setLoading(false);
     }
@@ -300,7 +302,8 @@ export default function ClenskaSekcePage() {
         .from('profiles')
         .update({
           first_name: editProfile.first_name,
-          last_name: editProfile.last_name
+          last_name: editProfile.last_name,
+          address: editProfile.address
         })
         .eq('id', user.id);
 
@@ -1014,6 +1017,18 @@ export default function ClenskaSekcePage() {
                       disabled
                       value={user.email}
                       className="w-full bg-stone-100 border-none rounded-2xl px-5 py-4 font-bold text-stone-400 cursor-not-allowed"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 mb-2 block">
+                      {dict.member.addressLabel}
+                    </label>
+                    <AddressAutocomplete
+                      lang={lang}
+                      value={editProfile.address}
+                      onChange={(v) => setEditProfile({ ...editProfile, address: v })}
+                      placeholder={dict.member.addressPlaceholder}
+                      inputClassName="w-full bg-stone-50 border-stone-100 border rounded-2xl px-5 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 outline-none transition"
                     />
                   </div>
 
