@@ -34,6 +34,7 @@ export default function PupenWeb() {
   const [posts, setPosts] = useState<any[]>([]);
   const [nextEvent, setNextEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [heroBg, setHeroBg] = useState<string>('');
 
   useEffect(() => {
     async function loadData() {
@@ -102,6 +103,10 @@ export default function PupenWeb() {
       ? String(homeCfg.hero.backgrounds[0])
       : '/img/prezentace_pupen.jpg';
 
+  useEffect(() => {
+    setHeroBg(heroBgUrl);
+  }, [heroBgUrl]);
+
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900 font-sans selection:bg-green-100 selection:text-green-900">
       
@@ -111,12 +116,13 @@ export default function PupenWeb() {
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/20 to-stone-900/40 z-10" />
           <Image 
-            src={heroBgUrl} 
+            src={heroBg || '/img/prezentace_pupen.jpg'} 
             alt="Students" 
             fill
             priority
             sizes="100vw"
             className="object-cover"
+            onError={() => setHeroBg('/img/prezentace_pupen.jpg')}
           />
         </div>
         
