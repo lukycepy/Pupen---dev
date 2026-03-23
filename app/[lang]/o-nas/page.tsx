@@ -39,6 +39,7 @@ export default function AboutPage() {
   const params = useParams();
   const lang = (params?.lang as string) || 'cs';
   const [dict, setDict] = useState<any>(null);
+  const [heroBg, setHeroBg] = useState('/img/listopad_pupen.jpg');
 
   useEffect(() => {
     async function loadData() {
@@ -68,11 +69,13 @@ export default function AboutPage() {
       <div className="relative h-[60vh] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0">
           <Image 
-            src="https://scontent-prg1-1.xx.fbcdn.net/v/t39.30808-6/475514724_2959387357554038_8297406865567418883_n.jpg?_nc_cat=107&ccb=1-7&_nc_sid=b895b5&_nc_ohc=2sl84p42iVkQ7kNvwH4gRM9&_nc_oc=Adk_aVL7IpcEjnA6t6NcAIGmPV-OR5oXeKnF3U099wFXbFn6ZlihONkZeDZap17ltlE&_nc_zt=23&_nc_ht=scontent-prg1-1.xx&_nc_gid=dcP5Xa9j5ZPGR7uv49QQRA&_nc_ss=8&oh=00_Afw8TRVaRjNJ04a2IKCOQzMvRO-ibOD-wso-_wNsQEKjfA&oe=69BA8586" 
+            src={heroBg}
             alt="Hero background" 
             fill
             priority
-            className="object-cover object-[center_35%]"
+            className="object-cover"
+            style={{ objectPosition: '50% 30%' }}
+            onError={() => setHeroBg('/img/listopad_pupen.jpg')}
           />
           <div className="absolute inset-0 bg-stone-900/60 mix-blend-multiply" />
         </div>
@@ -184,10 +187,11 @@ export default function AboutPage() {
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div className="relative h-[400px] rounded-2xl overflow-hidden shadow-2xl rotate-2 hover:rotate-0 transition duration-500">
              <Image 
-              src="https://scontent-prg1-1.xx.fbcdn.net/v/t39.30808-6/506459297_3103719646454141_1642987362323924515_n.jpg?_nc_cat=102&ccb=1-7&_nc_sid=13d280&_nc_ohc=Vs6pl9cRWCUQ7kNvwH_tl7N&_nc_oc=AdmQ60-Bu_98GYwIEcR-OEsQBcIPOOlKb3FShCAQnVfj6ciAfdPQNjWpnRfck2ZsWs0&_nc_zt=23&_nc_ht=scontent-prg1-1.xx&_nc_gid=c_TjRuY1yJcmIw6JcFsUlQ&_nc_ss=8&oh=00_AfyYOTElTU9IXdDuLTMXotYsWQWv1u1edRJ3K3M60_9KZQ&oe=69BA858D" 
-              alt="History" 
+              src="/img/krava.jpg" 
+              alt="Kráva" 
               fill
               className="object-cover"
+              style={{ objectPosition: '55% 35%' }}
             />
           </div>
           
