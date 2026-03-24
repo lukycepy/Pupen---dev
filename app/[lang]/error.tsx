@@ -4,7 +4,7 @@ import React, { useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
-import { RefreshCw, ArrowLeft } from 'lucide-react';
+import { RefreshCw, ArrowLeft, Trash2 } from 'lucide-react';
 
 export default function Error({
   error,
@@ -27,6 +27,30 @@ export default function Error({
       : 'Zkuste stránku znovu načíst. Pokud problém přetrvá, vraťte se později.';
   const retry = lang === 'en' ? 'Try again' : 'Zkusit znovu';
   const backHome = lang === 'en' ? 'Back home' : 'Zpět na web';
+  const showDebug =
+    typeof window !== 'undefined' &&
+    (window.location.hostname.includes('vercel.app') || window.location.hostname === 'localhost');
+
+  const clearClientCache = async () => {
+    try {
+      if (typeof window === 'undefined') return;
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+      }
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+      try {
+        localStorage.clear();
+      } catch {}
+      try {
+        sessionStorage.clear();
+      } catch {}
+      window.location.reload();
+    } catch {}
+  };
 
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900 font-sans flex items-center justify-center p-6 relative overflow-hidden">
@@ -73,6 +97,18 @@ export default function Error({
               </div>
             )}
 
+            {showDebug && (
+              <div className="mt-6 text-left mx-auto max-w-xl">
+                <div className="text-[10px] font-black uppercase tracking-[0.3em] text-stone-400">
+                  Debug
+                </div>
+                <div className="mt-2 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-xs font-bold text-stone-700 break-words">
+                  {error?.name ? `${error.name}: ` : ''}
+                  {error?.message || 'Unknown error'}
+                </div>
+              </div>
+            )}
+
             <div className="pt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
               <button
                 type="button"
@@ -82,6 +118,16 @@ export default function Error({
                 <RefreshCw size={20} />
                 {retry}
               </button>
+              {showDebug && (
+                <button
+                  type="button"
+                  onClick={clearClientCache}
+                  className="bg-white text-stone-900 px-8 py-4 rounded-xl font-bold hover:bg-stone-50 transition-all shadow-xl shadow-stone-900/5 flex items-center gap-3 hover:-translate-y-1 active:scale-95 border border-stone-200"
+                >
+                  <Trash2 size={20} />
+                  {lang === 'en' ? 'Clear cache' : 'Vymazat cache'}
+                </button>
+              )}
               <Link
                 href={`/${lang}`}
                 className="bg-green-600 text-white px-8 py-4 rounded-xl font-bold hover:bg-green-500 transition-all shadow-xl shadow-green-600/30 flex items-center gap-3 hover:-translate-y-1 active:scale-95"
