@@ -135,15 +135,26 @@ export default function PupenWeb() {
       <header className="relative min-h-[70vh] sm:min-h-[85vh] lg:min-h-[90vh] flex items-center justify-center text-center px-4 overflow-visible bg-stone-900">
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/20 to-stone-900/40 z-10" />
-          <Image 
-            src={heroBg || '/img/prezentace_pupen.jpg'} 
-            alt="Students" 
-            fill
-            priority
-            sizes="100vw"
-            className="object-cover"
-            onError={() => setHeroBg('/img/prezentace_pupen.jpg')}
-          />
+          {/^https?:\/\//.test(String(heroBg || '')) ? (
+            <img
+              src={String(heroBg)}
+              alt="Students"
+              className="absolute inset-0 w-full h-full object-cover"
+              loading="eager"
+              referrerPolicy="no-referrer"
+              onError={() => setHeroBg('/img/prezentace_pupen.jpg')}
+            />
+          ) : (
+            <Image 
+              src={heroBg || '/img/prezentace_pupen.jpg'} 
+              alt="Students" 
+              fill
+              priority
+              sizes="100vw"
+              className="object-cover"
+              onError={() => setHeroBg('/img/prezentace_pupen.jpg')}
+            />
+          )}
         </div>
         
         <div className="relative z-20 w-full max-w-5xl mx-auto -mt-10 sm:-mt-20">

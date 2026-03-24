@@ -1,5 +1,4 @@
 // app/[lang]/layout.tsx
-import '../globals.css'
 import type { Metadata, Viewport } from 'next'
 import { getDictionary } from '@/lib/get-dictionary';
 import Providers from '../providers'
@@ -86,7 +85,12 @@ export default async function RootLayout({
   const { lang } = await params;
   
   // 2. Načtení slovníku podle aktuálního jazyka
-  const dict = await getDictionary(lang);
+  let dict: any = {};
+  try {
+    dict = await getDictionary(lang);
+  } catch {
+    dict = { nav: {}, footer: {}, homePage: {} };
+  }
 
   return (
     <Providers>
