@@ -61,24 +61,25 @@ export default function MessagesTab({ dict, readOnly = false }: MessagesTabProps
   };
 
   const exportNewsletter = async () => {
-    const { data, error } = await supabase.from('newsletter').select('email, created_at');
-    if (error) return alert(error.message);
-    if (!data || data.length === 0) return alert('Žádní odběratelé');
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) return alert('Unauthorized');
 
-    const csv = [
-      ['Email', 'Datum přihlášení'],
-      ...data.map(n => [n.email, new Date(n.created_at).toLocaleString()])
-    ].map(e => e.join(',')).join('\n');
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const res = await fetch('/api/admin/newsletter/export', { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      return alert(json?.error || 'Chyba');
+    }
+    const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `newsletter-emails.csv`);
+    link.setAttribute('download', `newsletter_subscribers.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   return (

@@ -13,6 +13,10 @@ export default function NewsletterTab({ dict }: { dict: any }) {
   const [subscribers, setSubscribers] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [composeSubject, setComposeSubject] = useState('');
+  const [composeHtml, setComposeHtml] = useState('');
+  const [composeCats, setComposeCats] = useState<string[]>(['all']);
+  const [sending, setSending] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState<{ title: string; message: string; onConfirm: () => void }>({
     title: '',
@@ -25,14 +29,14 @@ export default function NewsletterTab({ dict }: { dict: any }) {
     const run = async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase
-          .from('newsletter_subscriptions')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
+        const { data } = await supabase.auth.getSession();
+        const token = data.session?.access_token;
+        if (!token) throw new Error('Unauthorized');
+        const res = await fetch('/api/admin/newsletter/subscribers', { headers: { Authorization: `Bearer ${token}` } });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json?.error || 'Chyba');
         if (!isMounted) return;
-        setSubscribers(data || []);
+        setSubscribers(Array.isArray(json?.subscribers) ? json.subscribers : []);
       } catch (err: any) {
         showToast(err.message, 'error');
       } finally {
@@ -45,16 +49,54 @@ export default function NewsletterTab({ dict }: { dict: any }) {
 
   const handleDelete = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('newsletter_subscriptions')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
+      const res = await fetch(`/api/admin/newsletter/subscribers/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Chyba');
       showToast('Odběratel smazán', 'success');
       setSubscribers(subscribers.filter(s => s.id !== id));
     } catch (err: any) {
       showToast(err.message, 'error');
+    }
+  };
+
+  const toggleComposeCat = (id: string) => {
+    if (id === 'all') {
+      setComposeCats(['all']);
+    } else {
+      const filtered = composeCats.filter((c) => c !== 'all');
+      if (filtered.includes(id)) {
+        const next = filtered.filter((c) => c !== id);
+        setComposeCats(next.length === 0 ? ['all'] : next);
+      } else {
+        setComposeCats([...filtered, id]);
+      }
+    }
+  };
+
+  const sendNewsletter = async () => {
+    setSending(true);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
+      const res = await fetch('/api/admin/newsletter/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ subject: composeSubject, html: composeHtml, categories: composeCats }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Chyba');
+      showToast(`Newsletter odeslán: ${json?.sent || 0}/${json?.recipients || 0}`, 'success');
+      setComposeSubject('');
+      setComposeHtml('');
+      setComposeCats(['all']);
+    } catch (e: any) {
+      showToast(e?.message || 'Chyba', 'error');
+    } finally {
+      setSending(false);
     }
   };
 
@@ -110,6 +152,65 @@ export default function NewsletterTab({ dict }: { dict: any }) {
             <Download size={18} />
             Exportovat CSV
           </button>
+        </div>
+      </div>
+
+      <div className="bg-white p-6 rounded-[2rem] border shadow-sm">
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <h3 className="text-lg font-bold flex items-center gap-3">
+            <Send className="text-green-600" />
+            Odeslat newsletter
+          </h3>
+          <button
+            disabled={sending || !composeSubject.trim() || !composeHtml.trim()}
+            onClick={sendNewsletter}
+            className="flex items-center gap-2 bg-green-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-green-700 transition shadow-lg text-sm disabled:opacity-50"
+          >
+            <Send size={18} />
+            Odeslat
+          </button>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">Předmět</div>
+              <input
+                value={composeSubject}
+                onChange={(e) => setComposeSubject(e.target.value)}
+                className="w-full px-4 py-3 bg-stone-50 rounded-xl border border-stone-100 focus:ring-2 focus:ring-green-500 transition font-medium"
+                placeholder="Např. Novinky týdne"
+              />
+            </div>
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">Kategorie</div>
+              <div className="flex flex-wrap gap-2">
+                {['all', 'Párty', 'Vzdělávání', 'Výlet'].map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => toggleComposeCat(cat)}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${composeCats.includes(cat) ? 'bg-green-600 text-white border-green-600' : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50'}`}
+                  >
+                    {cat === 'all' ? 'Všechny' : cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="text-xs text-stone-500 font-medium">
+              HTML se odešle tak, jak ho vložíš.
+            </div>
+          </div>
+
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">Obsah (HTML)</div>
+            <textarea
+              value={composeHtml}
+              onChange={(e) => setComposeHtml(e.target.value)}
+              className="w-full min-h-[220px] px-4 py-3 bg-stone-50 rounded-xl border border-stone-100 focus:ring-2 focus:ring-green-500 transition font-mono text-xs"
+              placeholder="<h3>Ahoj!</h3><p>…</p>"
+            />
+          </div>
         </div>
       </div>
 

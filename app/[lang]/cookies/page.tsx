@@ -2,8 +2,9 @@ import Link from 'next/link';
 import { Cookie, ArrowLeft, Info, Settings, ShieldCheck, BarChart3 } from 'lucide-react';
 import { getDictionary } from '@/lib/get-dictionary';
 
-export default async function CookiesPage({ params }: { params: { lang: string } }) {
-  const lang = params?.lang === 'en' ? 'en' : 'cs';
+export default async function CookiesPage({ params }: { params: Promise<{ lang: string }> }) {
+  const { lang: rawLang } = await params;
+  const lang = rawLang === 'en' ? 'en' : 'cs';
   const dict = (await getDictionary(lang)).cookiesPage;
 
   return (

@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { supabase } from '@/lib/supabase';
 import { Send, CheckCircle, Mail } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import InlinePulse from '@/app/components/InlinePulse';
@@ -26,20 +25,16 @@ export default function NewsletterForm({ lang }: { lang: string }) {
 
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('newsletter_subscriptions')
-        .insert([{ email, categories: selectedCats }]);
+      const res = await fetch('/api/newsletter/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), categories: selectedCats, source: 'web' }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Chyba');
 
-      if (error) {
-        if (error.code === '23505') {
-          showToast(lang === 'cs' ? 'Tento e-mail již odebírá novinky.' : 'This email is already subscribed.', 'error');
-        } else {
-          throw error;
-        }
-      } else {
-        setSuccess(true);
-        showToast(lang === 'cs' ? 'Odběr byl úspěšně nastaven!' : 'Subscription successful!', 'success');
-      }
+      setSuccess(true);
+      showToast(lang === 'cs' ? 'Odběr byl úspěšně nastaven!' : 'Subscription successful!', 'success');
     } catch (err: any) {
       showToast(err.message, 'error');
     } finally {

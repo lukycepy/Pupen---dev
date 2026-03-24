@@ -74,7 +74,7 @@ export default function AboutPage() {
             fill
             priority
             className="object-cover"
-            style={{ objectPosition: '50% 30%' }}
+            style={{ objectPosition: '50% 22%' }}
             onError={() => setHeroBg('/img/listopad_pupen.jpg')}
           />
           <div className="absolute inset-0 bg-stone-900/60 mix-blend-multiply" />

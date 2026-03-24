@@ -3,9 +3,9 @@ import type { Metadata } from 'next';
 export async function generateMetadata({
   params,
 }: {
-  params: { lang: string };
+  params: Promise<{ lang: string }>;
 }): Promise<Metadata> {
-  const { lang } = params;
+  const { lang } = await params;
   const isEn = lang === 'en';
   const title = isEn ? 'Events' : 'Akce';
   const description = isEn

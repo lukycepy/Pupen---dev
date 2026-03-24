@@ -68,7 +68,7 @@ const SidebarContent = ({
           </div>
           <div>
             <h1 className="text-lg font-black text-white leading-none">Pupen</h1>
-            <p className="text-[10px] font-black uppercase tracking-widest text-green-500 mt-1">Control 2.0</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-green-500 mt-1">Control</p>
           </div>
         </Link>
         <button onClick={() => setIsMobileOpen(false)} className="lg:hidden p-2 hover:bg-stone-800 rounded-lg">

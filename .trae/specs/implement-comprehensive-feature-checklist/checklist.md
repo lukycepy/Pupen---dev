@@ -1,0 +1,20 @@
+- [ ] Veřejný web: Homepage (hero, karty, odpočet, ankety) zobrazuje dynamická data.
+- [ ] Veřejný web: Funguje newsletter signup s validací a ochranou proti spamu.
+- [ ] Veřejný web: Fungují formuláře (Kontakt, Ztráty a nálezy, SOS) s honeypotem.
+- [ ] Veřejný web: Stránky 404, 500 a legislativa (ToS, Privacy) se renderují správně v CS/EN.
+- [ ] SEO/Infra: Sitemap.xml a Robots.txt jsou generovány dynamicky, OG metadata jsou funkční.
+- [ ] Autentizace: Login, Forgot Password a Reset Password fungují bezchybně.
+- [ ] Autentizace: Přístup na `/admin` a `/clen` je chráněn podle rolí a oprávnění.
+- [ ] Administrace: Dashboard a sidebar reagují na oprávnění přihlášeného admina.
+- [ ] Administrace: Schvalování přihlášek funguje včetně zobrazení podpisů a automatického vytvoření účtu.
+- [ ] Administrace: Adresní našeptávač v přihlášce přepíná mezi RÚIAN a Nominatim bez chyb.
+- [ ] Administrace: Lze spravovat role (barvy, oprávnění) a přiřazovat je uživatelům.
+- [ ] Administrace: Funguje správa obsahu (FAQ, Events, Documents) a zprávy v Inboxu lze číst/mazat.
+- [ ] Emailing: SMTP se načítá primárně z databáze a odesílání přes admin test funguje.
+- [ ] Emailing: HTML Newsletter lze vytvořit, filtrovat odběratele a odeslat kampaň.
+- [ ] Členský portál: Člen vidí svůj profil (badge, e-maily, obor).
+- [ ] Členský portál: Tlačítka pro GDPR export a žádost o smazání účtu volají API s rate limitem.
+- [ ] Databáze: Chybějící sloupce (např. `events.description`) jsou přidány a schema cache je opravena.
+- [ ] Databáze: RLS politiky pro veřejné i admin tabulky jsou správně nastaveny a vynucovány.
+- [ ] UI/UX: Zobrazují se toasty po akcích, skeleton loadery pro načítání a confirm modaly u mazání.
+- [ ] UI/UX: Aplikace podporuje přepínání lokalizace (CS/EN) v celé šíři.

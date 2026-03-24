@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { Mail, Instagram, MapPin, Send, CheckCircle, AlertCircle, ShieldCheck } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 import { useParams } from 'next/navigation';
 import { getDictionary } from '@/lib/get-dictionary';
 
@@ -65,16 +64,23 @@ export default function KontaktPage() {
     setLoading(true);
     setStatus('idle');
 
-    const { error } = await supabase.from('messages').insert([formData]);
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Chyba');
 
-    if (error) {
-      setStatus('error');
-    } else {
       setStatus('success');
       setFormData({ name: '', email: '', subject: '', message: '' });
       generateCaptcha();
+    } catch {
+      setStatus('error');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {

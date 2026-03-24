@@ -1,4 +1,13 @@
-export type EmailTemplateKey = 'ticket' | 'admin_password' | 'password_reset' | 'member_access' | 'invoice_request' | 'refund_request' | 'refund_status';
+export type EmailTemplateKey =
+  | 'ticket'
+  | 'admin_password'
+  | 'password_reset'
+  | 'member_access'
+  | 'invoice_request'
+  | 'refund_request'
+  | 'refund_status'
+  | 'contact_message'
+  | 'newsletter';
 
 export function listEmailTemplates() {
   return [
@@ -46,6 +55,16 @@ export function listEmailTemplates() {
       label: 'Refund – změna stavu (žadatel)',
       variables: ['toEmail', 'refundLogId', 'rsvpId', 'eventId', 'eventTitle', 'status', 'amount', 'currency', 'note'],
     },
+    {
+      key: 'contact_message' as const,
+      label: 'Kontakt – nová zpráva (interní)',
+      variables: ['name', 'email', 'subject', 'message', 'createdAt', 'messageId'],
+    },
+    {
+      key: 'newsletter' as const,
+      label: 'Newsletter',
+      variables: ['subject', 'html'],
+    },
   ];
 }
 
@@ -63,6 +82,53 @@ function section(label: string, value: any) {
 }
 
 export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject: string; html: string; text?: string } {
+  if (key === 'contact_message') {
+    const name = String(vars?.name || '');
+    const email = String(vars?.email || '');
+    const subjectLine = String(vars?.subject || '').trim();
+    const message = String(vars?.message || '');
+    const createdAt = vars?.createdAt ? new Date(String(vars.createdAt)).toLocaleString('cs-CZ') : '';
+    const messageId = String(vars?.messageId || '').trim();
+
+    const subject = `Pupen — Nová zpráva z webu${subjectLine ? `: ${subjectLine}` : ''}`;
+    const html = `
+      <div style="font-family: sans-serif; padding: 20px; color: #1c1917; max-width: 700px; margin: auto; border: 1px solid #e7e5e4; border-radius: 20px;">
+        <h2 style="color: #16a34a; text-align: center;">Nová zpráva z webu</h2>
+        <div style="background-color: #f5f5f4; padding: 20px; border-radius: 15px; margin: 20px 0;">
+          ${section('Jméno', name)}
+          ${section('E‑mail', email)}
+          ${subjectLine ? section('Předmět', subjectLine) : ''}
+          ${createdAt ? section('Čas', createdAt) : ''}
+          ${messageId ? section('ID', messageId) : ''}
+          <hr style="border: none; border-top: 1px solid #e7e5e4; margin: 16px 0;" />
+          <p style="margin: 8px 0;"><strong>Zpráva:</strong></p>
+          <div style="background: #ffffff; border: 1px solid #e7e5e4; border-radius: 14px; padding: 14px; white-space: pre-wrap;">${escapeHtml(message)}</div>
+        </div>
+        <p style="font-size: 12px; color: #78716c; text-align: center;">Odpověď pošlete na ${escapeHtml(email)}.</p>
+      </div>
+    `;
+    return { subject, html };
+  }
+
+  if (key === 'newsletter') {
+    const subjectLine = String(vars?.subject || '').trim();
+    const content = String(vars?.html || '');
+    const subject = subjectLine ? `Pupen — ${subjectLine}` : 'Pupen — Newsletter';
+    const html = `
+      <div style="font-family: sans-serif; padding: 20px; color: #1c1917; max-width: 700px; margin: auto; border: 1px solid #e7e5e4; border-radius: 20px;">
+        <div style="text-align: center; margin-bottom: 16px;">
+          <div style="display:inline-block; padding: 6px 10px; border-radius: 999px; background: #dcfce7; color:#166534; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; font-size: 10px;">Pupen</div>
+        </div>
+        ${subjectLine ? `<h2 style="text-align:center; margin: 0 0 18px;">${escapeHtml(subjectLine)}</h2>` : ''}
+        <div>${content}</div>
+        <div style="margin-top: 24px; border-top: 1px solid #e7e5e4; padding-top: 14px; font-size: 12px; color: #78716c; text-align: center;">
+          <div>Studentský spolek Pupen, z.s.</div>
+        </div>
+      </div>
+    `;
+    return { subject, html };
+  }
+
   if (key === 'admin_password') {
     const firstName = vars?.firstName ? String(vars.firstName) : '';
     const password = String(vars?.password || '');

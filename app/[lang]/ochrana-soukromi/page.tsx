@@ -2,8 +2,9 @@ import Link from 'next/link';
 import { Shield, Lock, ArrowLeft, UserCheck, Eye, CheckCircle, Mail, Clock, KeyRound } from 'lucide-react';
 import { getDictionary } from '@/lib/get-dictionary';
 
-export default async function PrivacyPage({ params }: { params: { lang: string } }) {
-  const lang = params?.lang === 'en' ? 'en' : 'cs';
+export default async function PrivacyPage({ params }: { params: Promise<{ lang: string }> }) {
+  const { lang: rawLang } = await params;
+  const lang = rawLang === 'en' ? 'en' : 'cs';
   const dict = (await getDictionary(lang)).privacyPage;
 
   return (

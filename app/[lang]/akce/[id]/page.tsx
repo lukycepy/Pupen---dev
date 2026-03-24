@@ -25,9 +25,9 @@ function parseTimeline(description: string) {
 export async function generateMetadata({
   params,
 }: {
-  params: { lang: string; id: string };
+  params: Promise<{ lang: string; id: string }>;
 }): Promise<Metadata> {
-  const { lang, id } = params;
+  const { lang, id } = await params;
   const now = new Date().toISOString();
   const { data: event } = await supabase.from('events').select('*').eq('id', id).lte('published_at', now).maybeSingle();
   if (!event) return {};
@@ -58,8 +58,8 @@ export async function generateMetadata({
   };
 }
 
-export default async function EventDetailPage({ params }: { params: { lang: string; id: string } }) {
-  const { lang, id } = params;
+export default async function EventDetailPage({ params }: { params: Promise<{ lang: string; id: string }> }) {
+  const { lang, id } = await params;
   const dict = await getDictionary(lang);
 
   const now = new Date().toISOString();
