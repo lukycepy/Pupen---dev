@@ -45,18 +45,36 @@ export default function PupenWeb() {
 
         const today = new Date().toISOString().split('T')[0];
         const nowIso = new Date().toISOString();
-        const [cfgRes, faqRes, partnerRes, postsRes, nextEventRes] = await Promise.all([
-          fetch('/api/site-config', { cache: 'no-store' }).then((r) => r.json()).catch(() => null),
-          supabase.from('faqs').select('*').order('sort_order', { ascending: true }),
-          supabase.from('partners').select('*').order('sort_order', { ascending: true }),
-          supabase
+
+        let cfgRes: any = null;
+        try {
+          cfgRes = await fetch('/api/site-config', { cache: 'no-store' }).then((r) => r.json());
+        } catch {}
+
+        let faqRes: any = { data: [] };
+        try {
+          faqRes = await supabase.from('faqs').select('*').order('sort_order', { ascending: true });
+        } catch {}
+
+        let partnerRes: any = { data: [] };
+        try {
+          partnerRes = await supabase.from('partners').select('*').order('sort_order', { ascending: true });
+        } catch {}
+
+        let postsRes: any = { data: [] };
+        try {
+          postsRes = await supabase
             .from('posts')
             .select('*')
             .not('published_at', 'is', null)
             .lte('published_at', nowIso)
             .order('published_at', { ascending: false })
-            .limit(2),
-          supabase
+            .limit(2);
+        } catch {}
+
+        let nextEventRes: any = { data: null };
+        try {
+          nextEventRes = await supabase
             .from('events')
             .select('*')
             .not('published_at', 'is', null)
@@ -64,14 +82,21 @@ export default function PupenWeb() {
             .gte('date', today)
             .order('date', { ascending: true })
             .limit(1)
-            .maybeSingle(),
-        ]);
+            .maybeSingle();
+        } catch {}
 
         setHomeCfg(cfgRes?.config?.home || null);
-        setFaqs(faqRes.data || []);
-        setPartners(partnerRes.data || []);
-        setPosts(postsRes.data || []);
-        setNextEvent(nextEventRes.data || null);
+        setFaqs(faqRes?.data || []);
+        setPartners(partnerRes?.data || []);
+        setPosts(postsRes?.data || []);
+        setNextEvent(nextEventRes?.data || null);
+      } catch (e) {
+        console.error('Homepage load failed', e);
+        setHomeCfg(null);
+        setFaqs([]);
+        setPartners([]);
+        setPosts([]);
+        setNextEvent(null);
       } finally {
         setLoading(false);
       }
