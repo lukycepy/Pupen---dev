@@ -1,7 +1,8 @@
 // app/[lang]/layout.tsx
-import type { Metadata, Viewport } from 'next'
+import type { Metadata, Viewport } from 'next';
 import { getDictionary } from '@/lib/get-dictionary';
 import Providers from '../providers'
+
 
 // Import komponent
 import Navbar from './components/Navbar' 

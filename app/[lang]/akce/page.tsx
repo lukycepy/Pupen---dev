@@ -19,6 +19,12 @@ const RSVP_DRAFT_KEY = 'pupen_rsvp_draft_v1';
 export default function AkcePage() {
   const params = useParams();
   const lang = (params?.lang as string) || 'cs';
+  const isSafeImageSrc = (value: unknown) => {
+    if (typeof value !== 'string') return false;
+    if (!value) return false;
+    if (value.startsWith('/')) return true;
+    return /^https?:\/\//.test(value);
+  };
   const { showToast } = useToast();
 
   const [events, setEvents] = useState<any[]>([]);
@@ -414,7 +420,8 @@ export default function AkcePage() {
               filteredEvents.map((event) => (
                 <div id={`event-${event.id}`} key={event.id} className="bg-white rounded-[2rem] sm:rounded-[3rem] overflow-hidden shadow-xl border border-stone-100 group hover:shadow-2xl transition-all duration-500 flex flex-col h-full">
                   <div className="aspect-video relative overflow-hidden shrink-0">
-                    {/^https?:\/\//.test(String(event.image_url)) ? (
+                    {isSafeImageSrc(String(event.image_url ?? '')) ? (
+                      String(event.image_url).startsWith('http') ? (
                       <img
                         src={String(event.image_url)}
                         alt={event.title}
@@ -422,7 +429,7 @@ export default function AkcePage() {
                         loading="lazy"
                         referrerPolicy="no-referrer"
                       />
-                    ) : (
+                      ) : (
                       <Image
                         src={event.image_url}
                         alt={event.title}
@@ -430,7 +437,8 @@ export default function AkcePage() {
                         className="object-cover group-hover:scale-105 transition duration-700"
                         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       />
-                    )}
+                      )
+                    ) : null}
                     <div className="absolute top-4 left-4 sm:top-6 sm:left-6 px-3 py-1.5 sm:px-4 sm:py-2 bg-white/90 backdrop-blur rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-green-600">
                       {dict.categories[event.category] || event.category}
                     </div>

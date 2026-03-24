@@ -140,6 +140,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const title = lang === 'en' && post.title_en ? post.title_en : post.title;
   const description = lang === 'en' && post.excerpt_en ? post.excerpt_en : post.excerpt;
+  const img = typeof post.image_url === 'string' && (post.image_url.startsWith('http') || post.image_url.startsWith('/')) ? post.image_url : '';
 
   return {
     title: `${title} | Studentský spolek Pupen, z.s.`,
@@ -147,7 +148,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       title: title,
       description: description,
-      images: post.image_url ? [post.image_url] : [],
+      images: img ? [img] : [],
       type: 'article',
     },
   };
@@ -178,16 +179,17 @@ export default async function DetailNovinky({ params }: Props) {
 
   const rawContent = lang === 'en' && post.content_en ? post.content_en : post.content;
   const { html: contentHtml, toc } = injectHeadingIdsAndToc(toHtml(rawContent || ''));
+  const headerImg = typeof post.image_url === 'string' && (post.image_url.startsWith('http') || post.image_url.startsWith('/')) ? post.image_url : '';
 
   return (
     <div className="min-h-screen bg-white font-sans">
       <ScrollProgressBar />
 {/* Zmenšili jsme min-h na 250px a vh na 15vh */}
 <header className="relative h-[15vh] min-h-[250px] w-full bg-stone-900 overflow-hidden">
-  {post.image_url ? (
-    /^https?:\/\//.test(String(post.image_url)) ? (
+  {headerImg ? (
+    headerImg.startsWith('http') ? (
       <img
-        src={String(post.image_url)}
+        src={headerImg}
         alt={post.title}
         className="absolute inset-0 w-full h-full object-cover opacity-50 transition-opacity duration-500"
         loading="eager"
@@ -195,7 +197,7 @@ export default async function DetailNovinky({ params }: Props) {
       />
     ) : (
       <Image
-        src={post.image_url}
+        src={headerImg}
         alt={post.title}
         fill
         priority

@@ -26,6 +26,13 @@ export default function PupenWeb() {
   const params = useParams();
   const lang = (params?.lang as string) || 'cs';
 
+  const isSafeImageSrc = (value: unknown) => {
+    if (typeof value !== 'string') return false;
+    if (!value) return false;
+    if (value.startsWith('/')) return true;
+    return /^https?:\/\//.test(value);
+  };
+
   const [openFaq, setOpenFaq] = useState<string | null>(null);
   const [dict, setDict] = useState<any>(null);
   const [homeCfg, setHomeCfg] = useState<any>(null);
@@ -90,6 +97,10 @@ export default function PupenWeb() {
         setPartners(partnerRes?.data || []);
         setPosts(postsRes?.data || []);
         setNextEvent(nextEventRes?.data || null);
+
+        const heroBgUrlRaw = cfgRes?.config?.home?.hero?.backgrounds?.[0];
+        const heroBgUrl = isSafeImageSrc(heroBgUrlRaw) ? String(heroBgUrlRaw) : '';
+        setHeroBg(heroBgUrl);
       } catch (e) {
         console.error('Homepage load failed', e);
         setHomeCfg(null);
@@ -97,6 +108,7 @@ export default function PupenWeb() {
         setPartners([]);
         setPosts([]);
         setNextEvent(null);
+        setHeroBg('');
       } finally {
         setLoading(false);
       }
@@ -145,8 +157,8 @@ export default function PupenWeb() {
   const widgets = (homeCfg?.widgets && typeof homeCfg.widgets === 'object' ? homeCfg.widgets : {}) as any;
   const heroBgUrl =
     Array.isArray(homeCfg?.hero?.backgrounds) && homeCfg.hero.backgrounds.length > 0
-      ? String(homeCfg.hero.backgrounds[0])
-      : '/img/prezentace_pupen.jpg';
+      ? (isSafeImageSrc(String(homeCfg.hero.backgrounds[0])) ? String(homeCfg.hero.backgrounds[0]) : '')
+      : '';
 
   useEffect(() => {
     setHeroBg(heroBgUrl);
@@ -160,7 +172,7 @@ export default function PupenWeb() {
       <header className="relative min-h-[70vh] sm:min-h-[85vh] lg:min-h-[90vh] flex items-center justify-center text-center px-4 overflow-visible bg-stone-900">
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/20 to-stone-900/40 z-10" />
-          {/^https?:\/\//.test(String(heroBg || '')) ? (
+          {String(heroBg || '').startsWith('http') ? (
             <img
               src={String(heroBg)}
               alt="Students"
@@ -171,7 +183,7 @@ export default function PupenWeb() {
             />
           ) : (
             <Image 
-              src={heroBg || '/img/prezentace_pupen.jpg'} 
+              src={heroBg && heroBg.startsWith('/') ? heroBg : '/img/prezentace_pupen.jpg'} 
               alt="Students" 
               fill
               priority
@@ -278,8 +290,8 @@ export default function PupenWeb() {
                  posts.map((post) => (
                    <article key={post.id} className="bg-white p-6 rounded-[2.5rem] border border-stone-100 shadow-sm hover:shadow-xl transition-all duration-500 group">
                       <div className="h-48 bg-stone-100 rounded-[2rem] mb-6 overflow-hidden relative">
-                         {post.image_url ? (
-                           /^https?:\/\//.test(String(post.image_url)) ? (
+                         {isSafeImageSrc(String(post.image_url ?? '')) ? (
+                           String(post.image_url).startsWith('http') ? (
                              <img
                                src={String(post.image_url)}
                                alt={post.title}

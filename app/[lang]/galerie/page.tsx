@@ -11,6 +11,12 @@ import Link from 'next/link';
 export default function GaleriePage() {
   const params = useParams();
   const lang = (params?.lang as string) || 'cs';
+  const isSafeImageSrc = (value: unknown) => {
+    if (typeof value !== 'string') return false;
+    if (!value) return false;
+    if (value.startsWith('/')) return true;
+    return /^https?:\/\//.test(value);
+  };
   
   const [galleries, setGalleries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,7 +87,8 @@ export default function GaleriePage() {
                       onClick={() => setSelectedImage(img.image_url)}
                       className="aspect-square relative rounded-[1.5rem] overflow-hidden group cursor-pointer shadow-sm hover:shadow-2xl transition-all duration-500 hover:-translate-y-1"
                     >
-                      {/^https?:\/\//.test(String(img.image_url)) ? (
+                      {isSafeImageSrc(String(img.image_url ?? '')) ? (
+                        String(img.image_url).startsWith('http') ? (
                         <img
                           src={String(img.image_url)}
                           alt=""
@@ -89,9 +96,10 @@ export default function GaleriePage() {
                           loading="lazy"
                           referrerPolicy="no-referrer"
                         />
-                      ) : (
-                        <Image src={img.image_url} alt="" fill className="object-cover transition duration-700 group-hover:scale-110" />
-                      )}
+                        ) : (
+                          <Image src={img.image_url} alt="" fill className="object-cover transition duration-700 group-hover:scale-110" />
+                        )
+                      ) : null}
                       <div className="absolute inset-0 bg-green-600/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <div className="bg-white/90 backdrop-blur-md p-3 rounded-full scale-50 group-hover:scale-100 transition-transform duration-500">
                           <Maximize2 className="text-green-600" size={20} />
@@ -116,11 +124,13 @@ export default function GaleriePage() {
             <X size={40} />
           </button>
           <div className="relative w-full max-w-6xl aspect-[3/2]">
-            {/^https?:\/\//.test(String(selectedImage)) ? (
-              <img src={String(selectedImage)} alt="" className="absolute inset-0 w-full h-full object-contain" referrerPolicy="no-referrer" />
-            ) : (
-              <Image src={selectedImage} alt="" fill className="object-contain" />
-            )}
+            {isSafeImageSrc(String(selectedImage ?? '')) ? (
+              String(selectedImage).startsWith('http') ? (
+                <img src={String(selectedImage)} alt="" className="absolute inset-0 w-full h-full object-contain" referrerPolicy="no-referrer" />
+              ) : (
+                <Image src={selectedImage} alt="" fill className="object-contain" />
+              )
+            ) : null}
           </div>
         </div>
       )}

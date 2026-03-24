@@ -12,6 +12,12 @@ import Skeleton from '../components/Skeleton';
 export default function NovinkyPage() {
   const params = useParams();
   const lang = (params?.lang as string) || 'cs';
+  const isSafeImageSrc = (value: unknown) => {
+    if (typeof value !== 'string') return false;
+    if (!value) return false;
+    if (value.startsWith('/')) return true;
+    return /^https?:\/\//.test(value);
+  };
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const [posts, setPosts] = useState<any[]>([]);
@@ -192,8 +198,8 @@ export default function NovinkyPage() {
                   className="min-w-[85vw] md:min-w-[calc(33.333%-1rem)] snap-start bg-white rounded-[2.5rem] border border-stone-100 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.05)] hover:shadow-[0_40px_100px_-30px_rgba(0,0,0,0.1)] transition-all duration-500 group flex flex-col"
                 >
                   <div className="h-52 overflow-hidden rounded-t-[2.5rem] relative">
-                    {post.image_url ? (
-                      /^https?:\/\//.test(String(post.image_url)) ? (
+                    {isSafeImageSrc(String(post.image_url ?? '')) ? (
+                      String(post.image_url).startsWith('http') ? (
                         <img
                           src={String(post.image_url)}
                           alt={post.title}
