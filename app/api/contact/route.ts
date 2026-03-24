@@ -16,6 +16,8 @@ export async function POST(req: Request) {
     if (!rl.ok) return NextResponse.json({ error: 'Příliš mnoho požadavků, zkuste to později.' }, { status: 429 });
 
     const body = await req.json().catch(() => ({}));
+    const honeypot = String(body?.website || body?.hp || '').trim();
+    if (honeypot) return NextResponse.json({ ok: true });
     const name = String(body?.name || '').trim().slice(0, 120);
     const email = String(body?.email || '').trim().toLowerCase().slice(0, 240);
     const subject = body?.subject != null ? String(body.subject).trim().slice(0, 240) : '';
@@ -56,4 +58,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
   }
 }
-

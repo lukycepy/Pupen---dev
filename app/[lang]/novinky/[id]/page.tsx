@@ -127,7 +127,14 @@ function injectHeadingIdsAndToc(html: string) {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id, lang } = await params;
-  const { data: post } = await supabase.from('posts').select('*').eq('id', id).single();
+  const nowIso = new Date().toISOString();
+  const { data: post } = await supabase
+    .from('posts')
+    .select('*')
+    .eq('id', id)
+    .not('published_at', 'is', null)
+    .lte('published_at', nowIso)
+    .maybeSingle();
   
   if (!post) return {};
 
@@ -155,11 +162,14 @@ export default async function DetailNovinky({ params }: Props) {
   const dict = await getDictionary(lang);
 
   // Dotaz do Supabase
+  const nowIso = new Date().toISOString();
   const { data: post, error } = await supabase
     .from('posts')
     .select('*')
     .eq('id', id)
-    .single();
+    .not('published_at', 'is', null)
+    .lte('published_at', nowIso)
+    .maybeSingle();
 
   // Ošetření chyb a neexistujícího ID
   if (error || !post) {
@@ -175,13 +185,23 @@ export default async function DetailNovinky({ params }: Props) {
 {/* Zmenšili jsme min-h na 250px a vh na 15vh */}
 <header className="relative h-[15vh] min-h-[250px] w-full bg-stone-900 overflow-hidden">
   {post.image_url ? (
-    <Image 
-      src={post.image_url} 
-      alt={post.title} 
-      fill
-      priority
-      className="object-cover opacity-50 transition-opacity duration-500"
-    />
+    /^https?:\/\//.test(String(post.image_url)) ? (
+      <img
+        src={String(post.image_url)}
+        alt={post.title}
+        className="absolute inset-0 w-full h-full object-cover opacity-50 transition-opacity duration-500"
+        loading="eager"
+        referrerPolicy="no-referrer"
+      />
+    ) : (
+      <Image
+        src={post.image_url}
+        alt={post.title}
+        fill
+        priority
+        className="object-cover opacity-50 transition-opacity duration-500"
+      />
+    )
   ) : (
     <div className="flex h-full w-full items-center justify-center bg-stone-100 text-stone-300">
       <Newspaper size={60} strokeWidth={1} />

@@ -12,6 +12,7 @@ interface FooterProps {
 }
 
 export default function Footer({ lang, dict }: FooterProps) {
+  const t = dict && typeof dict === 'object' ? (dict as any) : {};
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -61,32 +62,32 @@ export default function Footer({ lang, dict }: FooterProps) {
               <span className="font-black text-xl tracking-tight">Pupen</span>
             </Link>
             <p className="text-sm leading-relaxed mb-6 text-stone-400">
-              {dict.description}
+              {t.description || ''}
             </p>
           </div>
 
           {/* 2. Sloupec: Rychlé odkazy */}
           <div>
-            <h3 className="text-white font-bold mb-6 text-sm uppercase tracking-wider">{dict.menuTitle}</h3>
+            <h3 className="text-white font-bold mb-6 text-sm uppercase tracking-wider">{t.menuTitle || (lang === 'en' ? 'Menu' : 'Menu')}</h3>
             <ul className="space-y-3 text-sm">
               <li>
                 <Link href={`/${lang}`} className="hover:text-green-500 transition duration-300 flex items-center gap-2">
-                  {dict.home}
+                  {t.home || (lang === 'en' ? 'Home' : 'Domů')}
                 </Link>
               </li>
               <li>
                 <Link href={`/${lang}/akce`} className="hover:text-green-500 transition duration-300 flex items-center gap-2">
-                  {dict.events}
+                  {t.events || (lang === 'en' ? 'Events' : 'Akce')}
                 </Link>
               </li>
               <li>
                 <Link href={`/${lang}/o-nas`} className="hover:text-green-500 transition duration-300 flex items-center gap-2">
-                  {dict.about}
+                  {t.about || (lang === 'en' ? 'About' : 'O nás')}
                 </Link>
               </li>
               <li>
                 <Link href={`/${lang}/kontakt`} className="hover:text-green-500 transition duration-300 flex items-center gap-2">
-                  {dict.contact}
+                  {t.contact || (lang === 'en' ? 'Contact' : 'Kontakt')}
                 </Link>
               </li>
             </ul>
@@ -94,18 +95,18 @@ export default function Footer({ lang, dict }: FooterProps) {
 
           {/* 3. Sloupec: Kontakt */}
           <div>
-            <h3 className="text-white font-bold mb-6 text-sm uppercase tracking-wider">{dict.findUs}</h3>
+            <h3 className="text-white font-bold mb-6 text-sm uppercase tracking-wider">{t.findUs || (lang === 'en' ? 'Find us' : 'Najdeš nás')}</h3>
             <ul className="space-y-4 text-sm">
               <li className="flex items-start gap-3 text-stone-400">
                 <MapPin className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
                 <span className="text-sm whitespace-pre-line">
-                  {dict.address}
+                  {t.address || ''}
                 </span>
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="w-5 h-5 text-green-600 shrink-0" />
-                <a href={`mailto:${dict.contactEmail}`} className="hover:text-white transition text-sm">
-                  {dict.contactEmail}
+                <a href={`mailto:${t.contactEmail || 'info@pupen.org'}`} className="hover:text-white transition text-sm">
+                  {t.contactEmail || 'info@pupen.org'}
                 </a>
               </li>
             </ul>
@@ -113,8 +114,8 @@ export default function Footer({ lang, dict }: FooterProps) {
 
           {/* 4. Sloupec: Newsletter */}
           <div>
-            <h3 className="text-white font-bold mb-6 text-sm uppercase tracking-wider">{dict.newsletterTitle}</h3>
-            <p className="text-sm mb-4">{dict.newsletterText}</p>
+            <h3 className="text-white font-bold mb-6 text-sm uppercase tracking-wider">{t.newsletterTitle || 'Newsletter'}</h3>
+            <p className="text-sm mb-4">{t.newsletterText || ''}</p>
             
             <form onSubmit={handleSubscribe} className="relative mb-8">
               <div className="flex gap-2">
@@ -123,7 +124,7 @@ export default function Footer({ lang, dict }: FooterProps) {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder={dict.emailPlaceholder} 
+                  placeholder={t.emailPlaceholder || (lang === 'en' ? 'Email' : 'Email')}
                   className="bg-stone-800 text-white text-sm px-4 py-3 rounded-xl w-full focus:outline-none focus:ring-2 focus:ring-green-600 border border-stone-700 placeholder-stone-500 transition-all"
                 />
                 <button 
@@ -137,12 +138,12 @@ export default function Footer({ lang, dict }: FooterProps) {
 
               {status === 'success' && (
                 <div className="absolute top-full left-0 mt-2 flex items-center gap-2 text-green-500 text-xs font-bold animate-in fade-in slide-in-from-top-1">
-                  <CheckCircle size={14} /> {dict.subscribeSuccess}
+                  <CheckCircle size={14} /> {t.subscribeSuccess || (lang === 'en' ? 'Subscribed!' : 'Přihlášeno!')}
                 </div>
               )}
               {status === 'error' && (
                 <div className="absolute top-full left-0 mt-2 text-red-500 text-xs font-bold animate-in fade-in slide-in-from-top-1">
-                  {dict.subscribeError}
+                  {t.subscribeError || (lang === 'en' ? 'Subscription failed.' : 'Nepodařilo se přihlásit.')}
                 </div>
               )}
             </form>
@@ -160,11 +161,11 @@ export default function Footer({ lang, dict }: FooterProps) {
 
         {/* SPODNÍ ČÁST FOOTERU */}
         <div className="pt-8 border-t border-stone-800 flex flex-col md:flex-row justify-between items-center gap-4 text-xs">
-          <p>© {new Date().getFullYear()} Studentský spolek Pupen, z.s. {dict.rights}</p>
+          <p>© {new Date().getFullYear()} Studentský spolek Pupen, z.s. {t.rights || ''}</p>
           <div className="flex gap-6">
-            <Link href={`/${lang}/ochrana-soukromi`} className="hover:text-white transition">{dict.privacy}</Link>
-            <Link href={`/${lang}/tos`} className="hover:text-white transition">{dict.tos}</Link>
-            <Link href={`/${lang}/cookies`} className="hover:text-white transition">{dict.cookies}</Link>
+            <Link href={`/${lang}/ochrana-soukromi`} className="hover:text-white transition">{t.privacy || (lang === 'en' ? 'Privacy' : 'Soukromí')}</Link>
+            <Link href={`/${lang}/tos`} className="hover:text-white transition">{t.tos || (lang === 'en' ? 'Terms' : 'Podmínky')}</Link>
+            <Link href={`/${lang}/cookies`} className="hover:text-white transition">{t.cookies || (lang === 'en' ? 'Cookies' : 'Cookies')}</Link>
           </div>
         </div>
       </div>

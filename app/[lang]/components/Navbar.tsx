@@ -17,6 +17,13 @@ interface NavbarProps {
 }
 
 export default function Navbar({ lang, dict }: NavbarProps) {
+  const t = dict && typeof dict === 'object' ? (dict as any) : {};
+  const toolsTitle = t?.tools?.dropdownTitle || (lang === 'en' ? 'Tools' : 'Nástroje');
+  const searchPlaceholder = t?.eventsPage?.searchPlaceholder || (lang === 'en' ? 'Search...' : 'Hledat...');
+  const navHome = t?.home || (lang === 'en' ? 'Home' : 'Domů');
+  const navEvents = t?.events || (lang === 'en' ? 'Events' : 'Akce');
+  const navNews = t?.news || (lang === 'en' ? 'News' : 'Novinky');
+
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -182,9 +189,9 @@ export default function Navbar({ lang, dict }: NavbarProps) {
           {/* DESKTOP MENU */}
           <div className="hidden xl:flex items-center gap-6 font-medium text-[13px] tracking-normal text-stone-600">
             {[ 
-              { slug: 'home', href: `/${lang}`, label: dict.home, active: pathname === `/${lang}` },
-              { slug: 'akce', href: `/${lang}/akce`, label: dict.events, active: pathname.includes('/akce') },
-              { slug: 'novinky', href: `/${lang}/novinky`, label: dict.news, active: pathname.includes('/novinky') },
+              { slug: 'home', href: `/${lang}`, label: navHome, active: pathname === `/${lang}` },
+              { slug: 'akce', href: `/${lang}/akce`, label: navEvents, active: pathname.includes('/akce') },
+              { slug: 'novinky', href: `/${lang}/novinky`, label: navNews, active: pathname.includes('/novinky') },
             ]
               .filter((item) => item.slug === 'home' || (isPageEnabled(item.slug) && showInNavbar(item.slug)))
               .map((item) => (
@@ -215,7 +222,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                   isToolsOpen ? 'text-green-600' : 'text-stone-500 hover:text-stone-900'
                 }`}
               >
-                {dict.tools.dropdownTitle}
+                {toolsTitle}
                 <ChevronDown size={14} className={`transition-transform duration-300 ${isToolsOpen ? 'rotate-180' : ''}`} />
               </button>
               
@@ -290,7 +297,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder={dict.eventsPage?.searchPlaceholder || "Co hledáte?"}
+                      placeholder={searchPlaceholder}
                       className="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-green-500 transition"
                     />
                     {isSearching && <InlinePulse className="absolute right-5 top-5 bg-stone-200" size={14} />}
@@ -470,7 +477,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={dict.eventsPage?.searchPlaceholder || (lang === 'en' ? "Search..." : "Hledat...")}
+                placeholder={searchPlaceholder}
                 className="w-full bg-stone-100 border-none rounded-2xl pl-12 pr-4 py-4 text-sm font-bold focus:ring-2 focus:ring-green-500 transition-all outline-none"
               />
               {isSearching && <InlinePulse className="absolute right-5 top-5 bg-stone-300" size={14} />}

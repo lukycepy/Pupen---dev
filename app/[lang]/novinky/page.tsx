@@ -40,10 +40,13 @@ export default function NovinkyPage() {
         setGlobalDict(dictionary);
         setDict(dictionary.newsPage || dictionary.news); // Zkusit oba klíče pro jistotu
 
+        const nowIso = new Date().toISOString();
         const { data, error } = await supabase
           .from('posts')
           .select('*')
-          .order('created_at', { ascending: false });
+          .not('published_at', 'is', null)
+          .lte('published_at', nowIso)
+          .order('published_at', { ascending: false });
 
         if (error) throw error;
         setPosts(data || []);
@@ -190,12 +193,22 @@ export default function NovinkyPage() {
                 >
                   <div className="h-52 overflow-hidden rounded-t-[2.5rem] relative">
                     {post.image_url ? (
-                      <Image 
-                        src={post.image_url} 
-                        fill
-                        className="object-cover transition duration-700 group-hover:scale-110" 
-                        alt={post.title} 
-                      />
+                      /^https?:\/\//.test(String(post.image_url)) ? (
+                        <img
+                          src={String(post.image_url)}
+                          alt={post.title}
+                          className="absolute inset-0 w-full h-full object-cover transition duration-700 group-hover:scale-110"
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <Image
+                          src={post.image_url}
+                          fill
+                          className="object-cover transition duration-700 group-hover:scale-110"
+                          alt={post.title}
+                        />
+                      )
                     ) : (
                       <div className="w-full h-full bg-stone-100 flex items-center justify-center text-stone-300"><Newspaper size={40} /></div>
                     )}
@@ -208,7 +221,7 @@ export default function NovinkyPage() {
                   
                   <div className="p-8 flex flex-col flex-grow">
                     <div className="flex items-center gap-3 text-[9px] font-black uppercase tracking-widest text-stone-400 mb-4">
-                      <span>{new Date(post.created_at).toLocaleDateString(lang === 'cs' ? 'cs-CZ' : 'en-US')}</span>
+                      <span>{new Date(post.published_at || post.created_at).toLocaleDateString(lang === 'cs' ? 'cs-CZ' : 'en-US')}</span>
                       <span className="w-1.5 h-1.5 bg-stone-200 rounded-full" />
                       <span>{Math.ceil((post.content?.length || 0) / 1000)} {dict?.readingTime || 'min čtení'}</span>
                     </div>

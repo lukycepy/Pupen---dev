@@ -243,7 +243,22 @@ export default function PupenWeb() {
                    <article key={post.id} className="bg-white p-6 rounded-[2.5rem] border border-stone-100 shadow-sm hover:shadow-xl transition-all duration-500 group">
                       <div className="h-48 bg-stone-100 rounded-[2rem] mb-6 overflow-hidden relative">
                          {post.image_url ? (
-                           <Image src={post.image_url} alt={post.title} fill className="object-cover group-hover:scale-105 transition duration-500" />
+                           /^https?:\/\//.test(String(post.image_url)) ? (
+                             <img
+                               src={String(post.image_url)}
+                               alt={post.title}
+                               className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                               loading="lazy"
+                               referrerPolicy="no-referrer"
+                             />
+                           ) : (
+                             <Image
+                               src={post.image_url}
+                               alt={post.title}
+                               fill
+                               className="object-cover group-hover:scale-105 transition duration-500"
+                             />
+                           )
                          ) : (
                            <div className="w-full h-full flex items-center justify-center bg-stone-50 text-stone-300">
                              <ImageIcon size={48} />
