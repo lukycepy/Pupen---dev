@@ -10,10 +10,11 @@ import AdminPanel from './ui/AdminPanel';
 
 export default function GodModeTab() {
   const { showToast } = useToast();
-  const [running, setRunning] = useState(false);
+  const [clearingCache, setClearingCache] = useState(false);
+  const [reloadingSchema, setReloadingSchema] = useState(false);
 
   const clearCache = async () => {
-    setRunning(true);
+    setClearingCache(true);
     try {
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
@@ -28,7 +29,27 @@ export default function GodModeTab() {
     } catch (e: any) {
       showToast(e?.message || 'Chyba', 'error');
     } finally {
-      setRunning(false);
+      setClearingCache(false);
+    }
+  };
+
+  const reloadSchemaCache = async () => {
+    setReloadingSchema(true);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Nepřihlášen');
+      const res = await fetch('/api/admin/schema-cache/reload', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Chyba');
+      showToast('Schema cache obnovena', 'success');
+    } catch (e: any) {
+      showToast(e?.message || 'Chyba', 'error');
+    } finally {
+      setReloadingSchema(false);
     }
   };
 
@@ -38,14 +59,24 @@ export default function GodModeTab() {
         title="God Mode"
         description="Pokročilé úkony pro IT správce (bezpečně, auditovatelně)."
         actions={
-          <button
-            type="button"
-            onClick={clearCache}
-            disabled={running}
-            className="bg-red-50 text-red-700 px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-red-100 transition border border-red-200 disabled:opacity-50"
-          >
-            {running ? <InlinePulse className="bg-red-200" size={16} /> : <Trash2 size={18} />} Vyčistit cache
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={reloadSchemaCache}
+              disabled={reloadingSchema}
+              className="bg-blue-50 text-blue-700 px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-blue-100 transition border border-blue-200 disabled:opacity-50"
+            >
+              {reloadingSchema ? <InlinePulse className="bg-blue-200" size={16} /> : <ShieldCheck size={18} />} Reload schema cache
+            </button>
+            <button
+              type="button"
+              onClick={clearCache}
+              disabled={clearingCache}
+              className="bg-red-50 text-red-700 px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-red-100 transition border border-red-200 disabled:opacity-50"
+            >
+              {clearingCache ? <InlinePulse className="bg-red-200" size={16} /> : <Trash2 size={18} />} Vyčistit cache
+            </button>
+          </div>
         }
       />
 

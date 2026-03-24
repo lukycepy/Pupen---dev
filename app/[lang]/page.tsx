@@ -39,22 +39,42 @@ export default function PupenWeb() {
   useEffect(() => {
     async function loadData() {
       setLoading(true);
-      const d = await getDictionary(lang);
-      setDict(d.homePage);
+      try {
+        const d = await getDictionary(lang);
+        setDict(d.homePage);
 
-      const [cfgRes, faqRes, partnerRes, postsRes, nextEventRes] = await Promise.all([
-        fetch('/api/site-config', { cache: 'no-store' }).then((r) => r.json()).catch(() => null),
-        supabase.from('faqs').select('*').order('sort_order', { ascending: true }),
-        supabase.from('partners').select('*').order('sort_order', { ascending: true }),
-        supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(2),
-        supabase.from('events').select('*').gte('date', new Date().toISOString().split('T')[0]).order('date', { ascending: true }).limit(1).single()
-      ]);
-      setHomeCfg(cfgRes?.config?.home || null);
-      setFaqs(faqRes.data || []);
-      setPartners(partnerRes.data || []);
-      setPosts(postsRes.data || []);
-      setNextEvent(nextEventRes.data);
-      setLoading(false);
+        const today = new Date().toISOString().split('T')[0];
+        const nowIso = new Date().toISOString();
+        const [cfgRes, faqRes, partnerRes, postsRes, nextEventRes] = await Promise.all([
+          fetch('/api/site-config', { cache: 'no-store' }).then((r) => r.json()).catch(() => null),
+          supabase.from('faqs').select('*').order('sort_order', { ascending: true }),
+          supabase.from('partners').select('*').order('sort_order', { ascending: true }),
+          supabase
+            .from('posts')
+            .select('*')
+            .not('published_at', 'is', null)
+            .lte('published_at', nowIso)
+            .order('published_at', { ascending: false })
+            .limit(2),
+          supabase
+            .from('events')
+            .select('*')
+            .not('published_at', 'is', null)
+            .lte('published_at', nowIso)
+            .gte('date', today)
+            .order('date', { ascending: true })
+            .limit(1)
+            .maybeSingle(),
+        ]);
+
+        setHomeCfg(cfgRes?.config?.home || null);
+        setFaqs(faqRes.data || []);
+        setPartners(partnerRes.data || []);
+        setPosts(postsRes.data || []);
+        setNextEvent(nextEventRes.data || null);
+      } finally {
+        setLoading(false);
+      }
     }
     loadData();
   }, [lang]);

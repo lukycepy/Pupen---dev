@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
-import { requireUser } from '@/lib/server-auth';
+import { requireMember } from '@/lib/server-auth';
 
 export async function GET(req: Request) {
   try {
-    const user = await requireUser(req);
+    const { user } = await requireMember(req);
     const supabase = getServerSupabase();
 
     const pollRes = await supabase
@@ -31,8 +31,7 @@ export async function GET(req: Request) {
     const voted = !!voteRes.data;
     return NextResponse.json({ ok: true, poll, voted });
   } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : 500;
+    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
     return NextResponse.json({ error: e?.message || 'Error' }, { status });
   }
 }
-

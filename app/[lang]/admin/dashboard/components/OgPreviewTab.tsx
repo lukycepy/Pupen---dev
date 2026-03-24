@@ -5,6 +5,7 @@ import { Eye, Link as LinkIcon, Search } from 'lucide-react';
 import InlinePulse from '@/app/components/InlinePulse';
 import { useToast } from '@/app/context/ToastContext';
 import CopyButton from '@/app/components/CopyButton';
+import { supabase } from '@/lib/supabase';
 
 export default function OgPreviewTab() {
   const { showToast } = useToast();
@@ -16,7 +17,12 @@ export default function OgPreviewTab() {
     setLoading(true);
     setData(null);
     try {
-      const res = await fetch(`/api/admin/og-preview?url=${encodeURIComponent(url)}`);
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Nepřihlášen');
+      const res = await fetch(`/api/admin/og-preview?url=${encodeURIComponent(url)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error || 'Fetch failed');
       setData(json);
@@ -126,4 +132,3 @@ export default function OgPreviewTab() {
     </div>
   );
 }
-

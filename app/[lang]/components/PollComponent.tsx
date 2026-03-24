@@ -5,58 +5,71 @@ import { supabase } from '@/lib/supabase';
 import { HelpCircle, CheckCircle, ArrowRight } from 'lucide-react';
 import { useToast } from '@/app/context/ToastContext';
 import InlinePulse from '@/app/components/InlinePulse';
+import Link from 'next/link';
 
 export default function PollComponent({ lang }: { lang: string }) {
   const [poll, setPoll] = useState<any>(null);
   const [voted, setVoted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [votingId, setVotingId] = useState<string | null>(null);
+  const [authMissing, setAuthMissing] = useState(false);
   const { showToast } = useToast();
 
   useEffect(() => {
     async function loadPoll() {
-      const { data: pollData } = await supabase
-        .from('polls')
-        .select(`
-          *,
-          poll_options (*)
-        `)
-        .eq('is_active', true)
-        .limit(1)
-        .single();
-      
-      if (pollData) setPoll(pollData);
-      setLoading(false);
+      setLoading(true);
+      setAuthMissing(false);
+      try {
+        const { data } = await supabase.auth.getSession();
+        const token = data.session?.access_token;
+        if (!token) {
+          setAuthMissing(true);
+          setPoll(null);
+          setVoted(false);
+          return;
+        }
+
+        const res = await fetch('/api/polls/active', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json?.error || 'Chyba');
+
+        setPoll(json?.poll || null);
+        setVoted(!!json?.voted);
+      } catch (e: any) {
+        showToast(e?.message || 'Chyba', 'error');
+      } finally {
+        setLoading(false);
+      }
     }
     loadPoll();
-
-    // Check if already voted in this session
-    const hasVoted = localStorage.getItem(`voted_poll_${poll?.id}`);
-    if (hasVoted) setVoted(true);
-  }, [poll?.id]);
+  }, [lang, showToast]);
 
   const handleVote = async (optionId: string) => {
     setVotingId(optionId);
     try {
-      const option = poll.poll_options.find((o: any) => o.id === optionId);
-      const { error } = await supabase
-        .from('poll_options')
-        .update({ votes: (option.votes || 0) + 1 })
-        .eq('id', optionId);
-      
-      if (error) throw error;
-      
-      localStorage.setItem(`voted_poll_${poll.id}`, 'true');
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error(lang === 'cs' ? 'Nejste přihlášen/a.' : 'You are not signed in.');
+
+      const res = await fetch('/api/polls/vote', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pollId: poll.id, optionId }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Chyba');
+
+      if (json?.alreadyVoted) {
+        setVoted(true);
+        showToast(lang === 'cs' ? 'Už máte odhlasováno.' : 'You already voted.', 'success');
+        return;
+      }
+
       setVoted(true);
       showToast(lang === 'cs' ? 'Hlas započítán!' : 'Vote recorded!', 'success');
-      
-      // Refresh poll data
-      const { data: refreshed } = await supabase
-        .from('polls')
-        .select('*, poll_options(*)')
-        .eq('id', poll.id)
-        .single();
-      setPoll(refreshed);
+      if (json?.poll) setPoll(json.poll);
     } catch (err: any) {
       showToast(err.message, 'error');
     } finally {
@@ -64,7 +77,43 @@ export default function PollComponent({ lang }: { lang: string }) {
     }
   };
 
-  if (loading || !poll) return null;
+  if (loading) return null;
+
+  if (authMissing) {
+    return (
+      <div className="bg-white p-10 rounded-[2.5rem] border border-stone-100 shadow-2xl shadow-green-900/5 relative overflow-hidden group">
+        <div className="absolute top-0 right-0 p-8 text-green-100 group-hover:text-green-200 transition-colors">
+          <HelpCircle size={80} />
+        </div>
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-green-100 text-green-600 rounded-xl">
+              <CheckCircle size={18} />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-green-600">Anketa</span>
+          </div>
+          <h3 className="text-2xl font-black text-stone-900 mb-4 leading-tight">
+            {lang === 'cs' ? 'Anketa je pro přihlášené členy' : 'Poll is for signed-in members'}
+          </h3>
+          <p className="text-stone-600 font-medium leading-relaxed">
+            {lang === 'cs'
+              ? 'Přihlas se a můžeš hlasovat.'
+              : 'Sign in to vote.'}
+          </p>
+          <div className="mt-6">
+            <Link
+              href={`/${lang}/login`}
+              className="inline-flex items-center gap-2 rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-widest border border-green-200 bg-green-600 text-white hover:bg-green-700 transition"
+            >
+              {lang === 'cs' ? 'Přihlásit se' : 'Sign in'} <ArrowRight size={16} />
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!poll) return null;
 
   const totalVotes = poll.poll_options.reduce((acc: number, o: any) => acc + (o.votes || 0), 0);
 

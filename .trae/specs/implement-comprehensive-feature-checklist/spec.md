@@ -29,3 +29,7 @@ Systém MUSÍ umožnit členům správu svého profilu, přístup k výhodám, s
 ## UPRAVENÉ Požadavky (MODIFIED Requirements)
 ### Požadavek: Emailing a SMTP
 Dosavadní hardcoded nebo env-only SMTP nastavení bude přepsáno na konfiguraci primárně taženou z databáze s env fallbackem. Systém bude logovat odeslané e-maily a obsluhovat double opt-in pro newslettery.
+
+## Úplný seznam požadavků
+- Kompletní 1:1 seznam všech položek je v `tasks.md` (implementace) a `checklist.md` (verifikace).
+- Pravidlo: každý nově objevený požadavek musí být přidán jako checkbox do obou souborů.

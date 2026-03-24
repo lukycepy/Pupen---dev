@@ -30,3 +30,16 @@ export async function requireAdmin(req: Request) {
   if (!profile?.is_admin && !profile?.can_manage_admins) throw new Error('Forbidden');
   return { user, profile };
 }
+
+export async function requireMember(req: Request) {
+  const user = await requireUser(req);
+  const supabase = getServerSupabase();
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select('is_admin, is_member, can_view_member_portal, can_edit_member_portal')
+    .eq('id', user.id)
+    .maybeSingle();
+  if (error) throw error;
+  if (!profile?.is_admin && !profile?.is_member && !profile?.can_view_member_portal && !profile?.can_edit_member_portal) throw new Error('Forbidden');
+  return { user, profile };
+}

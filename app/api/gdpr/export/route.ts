@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
-import { requireUser } from '@/lib/server-auth';
+import { requireMember } from '@/lib/server-auth';
 import { getClientIp, rateLimit } from '@/lib/rate-limit';
 
 export async function GET(req: Request) {
   try {
-    const user = await requireUser(req);
+    const { user } = await requireMember(req);
     const ip = getClientIp(req) || 'unknown';
     const rl = rateLimit({ key: `gdpr_export:${user.id}:${ip}`, windowMs: 60 * 60 * 1000, max: 5 });
     if (!rl.ok) {
@@ -125,8 +125,7 @@ export async function GET(req: Request) {
       },
     });
   } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : 500;
+    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
     return NextResponse.json({ error: e?.message || 'Error' }, { status });
   }
 }
-

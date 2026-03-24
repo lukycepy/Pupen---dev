@@ -12,57 +12,57 @@ import Banner from './components/Banner'
 import FAQWidget from './components/FAQWidget'
 import ErrorReporter from '../components/ErrorReporter'
 
-export const metadata: Metadata = {
-  title: {
-    default: 'Studentský spolek Pupen, z.s.',
-    template: '%s | Studentský spolek Pupen, z.s.'
-  },
-  description: 'Oficiální web Studentského spolku Pupen, z.s. na FAPPZ ČZU.',
-  metadataBase: new URL('https://pupen.org'),
-  keywords: ['Pupen', 'FAPPZ', 'ČZU', 'spolek', 'studenti', 'Suchdol'],
-  authors: [{ name: 'Studentský spolek Pupen, z.s.' }],
-  creator: 'Studentský spolek Pupen, z.s.',
-  publisher: 'Studentský spolek Pupen, z.s.',
-  formatDetection: {
-    email: false,
-    address: false,
-    telephone: false,
-  },
-  alternates: {
-    canonical: '/',
-    languages: {
-      'cs-CZ': '/cs',
-      'en-US': '/en',
+export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
+  const { lang } = await params;
+  const locale = lang === 'en' ? 'en_US' : 'cs_CZ';
+  const canonical = `/${lang}`;
+  const ogImage = '/img/prezentace_pupen.jpg';
+
+  return {
+    title: {
+      default: 'Studentský spolek Pupen, z.s.',
+      template: '%s | Studentský spolek Pupen, z.s.',
     },
-  },
-  openGraph: {
-    title: 'Studentský spolek Pupen | FAPPZ ČZU',
-    description: 'Přidej se k nám a zažij nejlepší studentská léta na ČZU.',
-    url: 'https://pupen.org',
-    siteName: 'Studentský spolek Pupen, z.s.',
-    locale: 'cs_CZ',
-    type: 'website',
-    images: [
-      {
-        url: '/img/og-image.jpg',
-        width: 1200,
-        height: 630,
-        alt: 'Studentský spolek Pupen',
+    description: 'Oficiální web Studentského spolku Pupen, z.s. na FAPPZ ČZU.',
+    metadataBase: new URL('https://pupen.org'),
+    keywords: ['Pupen', 'FAPPZ', 'ČZU', 'spolek', 'studenti', 'Suchdol'],
+    authors: [{ name: 'Studentský spolek Pupen, z.s.' }],
+    creator: 'Studentský spolek Pupen, z.s.',
+    publisher: 'Studentský spolek Pupen, z.s.',
+    formatDetection: {
+      email: false,
+      address: false,
+      telephone: false,
+    },
+    alternates: {
+      canonical,
+      languages: {
+        'cs-CZ': '/cs',
+        'en-US': '/en',
       },
-    ],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Studentský spolek Pupen | FAPPZ ČZU',
-    description: 'Přidej se k nám a zažij nejlepší studentská léta na ČZU.',
-    images: ['/img/og-image.jpg'],
-  },
-  robots: 'index, follow',
-  icons: {
-    icon: '/favicon.ico',
-    apple: '/apple-icon.png',
-  },
-  manifest: '/manifest.json',
+    },
+    openGraph: {
+      title: 'Studentský spolek Pupen | FAPPZ ČZU',
+      description: 'Přidej se k nám a zažij nejlepší studentská léta na ČZU.',
+      url: `https://pupen.org${canonical}`,
+      siteName: 'Studentský spolek Pupen, z.s.',
+      locale,
+      type: 'website',
+      images: [{ url: ogImage }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: 'Studentský spolek Pupen | FAPPZ ČZU',
+      description: 'Přidej se k nám a zažij nejlepší studentská léta na ČZU.',
+      images: [ogImage],
+    },
+    robots: 'index, follow',
+    icons: {
+      icon: '/favicon.ico',
+      apple: '/apple-icon.png',
+    },
+    manifest: '/manifest.json',
+  };
 }
 
 export const viewport: Viewport = {

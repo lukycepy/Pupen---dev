@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     const existing = await supabase
       .from('newsletter_subscriptions')
       .select('id,email,categories,consent')
-      .ilike('email', email)
+      .eq('email', email)
       .limit(1)
       .maybeSingle();
     if (existing.error) throw existing.error;
@@ -52,10 +52,19 @@ export async function POST(req: Request) {
     }
 
     const ins = await supabase.from('newsletter_subscriptions').insert([{ email, categories, consent: true, source }]);
-    if (ins.error) throw ins.error;
+    if (ins.error) {
+      if (ins.error.code === '23505') {
+        const up = await supabase
+          .from('newsletter_subscriptions')
+          .update({ categories, consent: true, source })
+          .eq('email', email);
+        if (up.error) throw up.error;
+        return NextResponse.json({ ok: true, status: 'updated' });
+      }
+      throw ins.error;
+    }
     return NextResponse.json({ ok: true, status: 'created' });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
   }
 }
-

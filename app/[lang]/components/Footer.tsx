@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Leaf, Instagram, Facebook, Mail, MapPin, ArrowRight, CheckCircle } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 import InlinePulse from '@/app/components/InlinePulse';
 
 interface FooterProps {
@@ -26,30 +25,18 @@ export default function Footer({ lang, dict }: FooterProps) {
     setStatus('idle');
 
     try {
-      const { error } = await supabase
-        .from('newsletter_subscriptions')
-        .insert([{ email, categories: ['all'] }]);
+      const res = await fetch('/api/newsletter/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), categories: ['all'], source: 'footer' }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Chyba');
 
-      if (error) {
-        if (error.code === '23505') {
-          setStatus('success');
-          setEmail('');
-          setTimeout(() => setStatus('idle'), 5000);
-          return;
-        }
-        throw error;
-      }
-      
       setStatus('success');
       setEmail('');
       setTimeout(() => setStatus('idle'), 5000);
     } catch (err: any) {
-      console.error('Newsletter subscription error details:', {
-        message: err.message,
-        code: err.code,
-        details: err.details,
-        hint: err.hint
-      });
       setStatus('error');
     } finally {
       setLoading(false);

@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
-import { requireUser } from '@/lib/server-auth';
+import { requireMember } from '@/lib/server-auth';
 import { getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer';
 import { getClientIp, rateLimit } from '@/lib/rate-limit';
 
 export async function POST(req: Request) {
   try {
-    const user = await requireUser(req);
+    const { user } = await requireMember(req);
     const ip = getClientIp(req) || 'unknown';
     const rl = rateLimit({ key: `gdpr_delete:${user.id}:${ip}`, windowMs: 24 * 60 * 60 * 1000, max: 3 });
     if (!rl.ok) {
@@ -77,7 +77,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true, requestId: (ins.data as any)?.id || null });
   } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : 500;
+    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
     return NextResponse.json({ error: e?.message || 'Error' }, { status });
   }
 }

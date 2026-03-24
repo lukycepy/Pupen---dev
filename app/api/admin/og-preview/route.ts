@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/server-auth';
 
 function allowedHost(hostname: string) {
   if (hostname === 'pupen.org' || hostname.endsWith('.pupen.org')) return true;
@@ -23,6 +24,7 @@ function pickTitle(html: string) {
 
 export async function GET(req: Request) {
   try {
+    await requireAdmin(req);
     const { searchParams } = new URL(req.url);
     const urlParam = searchParams.get('url');
     if (!urlParam) return NextResponse.json({ error: 'Missing url' }, { status: 400 });
@@ -73,4 +75,3 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: e?.name === 'AbortError' ? 'Timeout' : e?.message || 'Error' }, { status: 500 });
   }
 }
-

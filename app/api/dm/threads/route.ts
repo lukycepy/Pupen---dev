@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
-import { requireUser } from '@/lib/server-auth';
+import { requireMember } from '@/lib/server-auth';
 
 export async function GET(req: Request) {
   try {
-    const user = await requireUser(req);
+    const { user } = await requireMember(req);
     const email = user.email || '';
     if (!email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -82,8 +82,7 @@ export async function GET(req: Request) {
     const threads = Array.from(map.values()).sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime());
     return NextResponse.json({ ok: true, threads });
   } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : 500;
+    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
     return NextResponse.json({ error: e?.message || 'Error' }, { status });
   }
 }
-
