@@ -155,14 +155,6 @@ export default function PupenWeb() {
   }
 
   const widgets = (homeCfg?.widgets && typeof homeCfg.widgets === 'object' ? homeCfg.widgets : {}) as any;
-  const heroBgUrl =
-    Array.isArray(homeCfg?.hero?.backgrounds) && homeCfg.hero.backgrounds.length > 0
-      ? (isSafeImageSrc(String(homeCfg.hero.backgrounds[0])) ? String(homeCfg.hero.backgrounds[0]) : '')
-      : '';
-
-  useEffect(() => {
-    setHeroBg(heroBgUrl);
-  }, [heroBgUrl]);
 
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900 font-sans selection:bg-green-100 selection:text-green-900">
