@@ -29,17 +29,58 @@ export default function GaleriePage() {
 
   useEffect(() => {
     async function loadGalleries() {
-      const { data } = await supabase
-        .from('galleries')
-        .select(`
+      const nowIso = new Date().toISOString();
+      const queryGalleries = async (withPublishedFilter: boolean) => {
+        let q = supabase
+          .from('galleries')
+          .select(
+            `
           *,
           gallery_images (
             image_url
           )
-        `)
-        .order('created_at', { ascending: false });
-      setGalleries(data || []);
-      setLoading(false);
+        `
+          )
+          .order('created_at', { ascending: false });
+        if (withPublishedFilter) q = (q as any).not('published_at', 'is', null).lte('published_at', nowIso);
+        return q;
+      };
+
+      try {
+        let res: any = await queryGalleries(true);
+        if (res?.error) {
+          const msg = String(res.error.message || '');
+          if (/published_at/i.test(msg)) {
+            res = await queryGalleries(false);
+          }
+        }
+        if (res?.error) {
+          const msg = String(res.error.message || '');
+          if (/relation .*galleries.*does not exist|does not exist/i.test(msg)) {
+            const alt = await supabase.from('gallery').select('*').order('created_at', { ascending: false }).limit(200);
+            if (!alt.error) {
+              const items = (alt.data || [])
+                .map((r: any) => ({ image_url: r.image_url }))
+                .filter((x: any) => x.image_url);
+              setGalleries([
+                {
+                  id: 'all',
+                  title: lang === 'en' ? 'Gallery' : 'Galerie',
+                  title_en: 'Gallery',
+                  created_at: new Date().toISOString(),
+                  gallery_images: items,
+                },
+              ]);
+              return;
+            }
+          }
+          setGalleries([]);
+          return;
+        }
+        setGalleries(res.data || []);
+      } finally {
+        setLoading(false);
+      }
     }
     loadGalleries();
   }, []);

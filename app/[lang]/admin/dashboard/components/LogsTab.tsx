@@ -3,7 +3,7 @@
 import React from 'react';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Clock, Search, ChevronDown, ChevronUp } from 'lucide-react';
+import { Clock, Search, ChevronDown, ChevronUp, Download } from 'lucide-react';
 import { SkeletonTabContent } from '@/app/[lang]/components/Skeleton';
 import ConfirmModal from '@/app/components/ConfirmModal';
 import { useToast } from '@/app/context/ToastContext';
@@ -115,6 +115,39 @@ export default function LogsTab() {
     return hay.includes(qq);
   });
 
+  const escapeCsv = (value: any) => {
+    const s = String(value ?? '');
+    if (/[\n\r",]/.test(s)) return `"${s.replaceAll('"', '""')}"`;
+    return s;
+  };
+
+  const exportCsv = () => {
+    try {
+      if (filtered.length === 0) return;
+      const rows = [
+        ['created_at', 'admin_email', 'admin_name', 'action', 'target_id', 'details'],
+        ...filtered.map((l: any) => [
+          l.created_at,
+          l.admin_email,
+          l.admin_name,
+          l.action,
+          l.target_id,
+          JSON.stringify(l.details || {}),
+        ]),
+      ];
+      const csv = rows.map((r) => r.map(escapeCsv).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `admin_logs_${new Date().toISOString().slice(0, 10)}.csv`);
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      showToast('Export selhal', 'error');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <AdminModuleHeader
@@ -182,6 +215,14 @@ export default function LogsTab() {
               </button>
             ))}
           </div>
+          <button
+            type="button"
+            disabled={filtered.length === 0}
+            onClick={exportCsv}
+            className="px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition bg-white text-stone-700 border-stone-200 hover:bg-stone-50 disabled:opacity-50 flex items-center gap-2"
+          >
+            <Download size={16} /> Export CSV
+          </button>
         </div>
       </div>
 

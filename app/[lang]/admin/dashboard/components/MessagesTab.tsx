@@ -2,9 +2,10 @@
 
 import React from 'react';
 import { supabase } from '@/lib/supabase';
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { MessageSquare, Trash2, Mail, Clock, Download } from 'lucide-react';
 import ConfirmModal from '@/app/components/ConfirmModal';
+import { useToast } from '@/app/context/ToastContext';
 
 interface MessagesTabProps {
   dict: any;
@@ -15,6 +16,7 @@ const PAGE_SIZE = 40;
 
 export default function MessagesTab({ dict, readOnly = false }: MessagesTabProps) {
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
   const [modalOpen, setModalOpen] = React.useState(false);
   const [modalConfig, setModalConfig] = React.useState<{ title: string; message: string; onConfirm: () => void }>({
     title: '',
@@ -38,6 +40,15 @@ export default function MessagesTab({ dict, readOnly = false }: MessagesTabProps
 
   const messages = (messagesQuery.data?.pages || []).flatMap((p) => p.items);
 
+  const countQuery = useQuery({
+    queryKey: ['messages_count'],
+    queryFn: async () => {
+      const res = await supabase.from('messages').select('*', { count: 'exact', head: true });
+      if (res.error) throw res.error;
+      return Number(res.count || 0);
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('messages').delete().eq('id', id);
@@ -47,7 +58,7 @@ export default function MessagesTab({ dict, readOnly = false }: MessagesTabProps
       queryClient.invalidateQueries({ queryKey: ['messages_paged'] });
     },
     onError: (err: any) => {
-      alert('Error: ' + err.message);
+      showToast(err?.message || 'Chyba', 'error');
     }
   });
 
@@ -60,26 +71,37 @@ export default function MessagesTab({ dict, readOnly = false }: MessagesTabProps
     setModalOpen(true);
   };
 
-  const exportNewsletter = async () => {
-    const { data } = await supabase.auth.getSession();
-    const token = data.session?.access_token;
-    if (!token) return alert('Unauthorized');
+  const escapeCsv = (value: any) => {
+    const s = String(value ?? '');
+    if (/[\n\r",]/.test(s)) return `"${s.replaceAll('"', '""')}"`;
+    return s;
+  };
 
-    const res = await fetch('/api/admin/newsletter/export', { headers: { Authorization: `Bearer ${token}` } });
-    if (!res.ok) {
-      const json = await res.json().catch(() => ({}));
-      return alert(json?.error || 'Chyba');
+  const exportMessages = async () => {
+    try {
+      const res = await supabase.from('messages').select('*').order('created_at', { ascending: false }).limit(1000);
+      if (res.error) throw res.error;
+      const items = res.data || [];
+      if (items.length === 0) return;
+      const rows = [
+        ['created_at', 'name', 'email', 'subject', 'message'],
+        ...items.map((m: any) => [m.created_at, m.name, m.email, m.subject, m.message]),
+      ];
+      const csv = rows.map((r) => r.map(escapeCsv).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `inbox_messages_${new Date().toISOString().slice(0, 10)}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      showToast('Export hotový', 'success');
+    } catch (e: any) {
+      showToast(e?.message || 'Chyba exportu', 'error');
     }
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `newsletter_subscribers.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
   };
 
   return (
@@ -91,15 +113,15 @@ export default function MessagesTab({ dict, readOnly = false }: MessagesTabProps
           </div>
           <div>
             <h2 className="text-xl font-bold">{dict.admin.tabMessages}</h2>
-            <p className="text-sm text-stone-500">{messages.length} {dict.admin.messagesCountText}</p>
+            <p className="text-sm text-stone-500">{(countQuery.data ?? messages.length)} {dict.admin.messagesCountText}</p>
           </div>
         </div>
         <button 
-          onClick={exportNewsletter}
+          onClick={exportMessages}
           className="flex items-center gap-2 bg-stone-900 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-stone-800 transition shadow-lg"
         >
           <Download size={18} />
-          {dict.admin.btnExportNewsletter}
+          {dict.admin?.btnExportCsv || 'Export CSV'}
         </button>
       </div>
 

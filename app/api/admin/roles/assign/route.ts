@@ -147,7 +147,7 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           error:
-            "Role nejsou v DB vytvořené. Spusť migraci `supabase/migrations/26_app_roles.sql` v Supabase (SQL editor / migrations) a případně restartuj API, aby se obnovil schema cache.",
+            "Role nejsou v DB vytvořené. Spusť migraci `migrace/26_app_roles.sql` v Supabase (SQL editor) a případně restartuj API, aby se obnovil schema cache.",
         },
         { status: 501 },
       );

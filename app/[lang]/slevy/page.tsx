@@ -16,6 +16,13 @@ export default function SlevyPage() {
   const [dict, setDict] = useState<any>(null);
 
   React.useEffect(() => {
+    try {
+      const q = new URLSearchParams(window.location.search).get('q') || '';
+      if (q) setSearchTerm(q);
+    } catch {}
+  }, []);
+
+  React.useEffect(() => {
     let isMounted = true;
     getDictionary(lang).then(d => {
       if (isMounted) setDict(d.discounts);

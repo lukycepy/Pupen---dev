@@ -1,6 +1,34 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Cookie, ArrowLeft, Info, Settings, ShieldCheck, BarChart3 } from 'lucide-react';
 import { getDictionary } from '@/lib/get-dictionary';
+
+export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
+  const { lang: rawLang } = await params;
+  const lang = rawLang === 'en' ? 'en' : 'cs';
+  const dict = (await getDictionary(lang)).cookiesPage;
+  const title = dict.title;
+  const description = dict.intro;
+  const canonical = `/${lang}/cookies`;
+  const ogImage = '/img/prezentace_pupen.jpg';
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical,
+      languages: { 'cs-CZ': '/cs/cookies', 'en-US': '/en/cookies' },
+    },
+    openGraph: {
+      title,
+      description,
+      url: `https://pupen.org${canonical}`,
+      type: 'article',
+      images: [{ url: ogImage }],
+    },
+    twitter: { card: 'summary_large_image', title, description, images: [ogImage] },
+  };
+}
 
 export default async function CookiesPage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang: rawLang } = await params;

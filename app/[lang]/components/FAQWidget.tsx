@@ -21,6 +21,7 @@ export default function FAQWidget({ lang }: { lang: string }) {
       const { data } = await supabase
         .from('faqs')
         .select('*')
+        .eq('is_public', true)
         .order('sort_order', { ascending: true });
       if (isMounted && data) setFaqs(data);
       if (isMounted) setIsLoading(false);

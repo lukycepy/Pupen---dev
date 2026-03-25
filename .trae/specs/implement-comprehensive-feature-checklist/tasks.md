@@ -1,65 +1,65 @@
 # Tasks
 
-- [ ] Homepage s hero “Rosteme společně”.
-- [ ] Rychlé karty: komunita.
-- [ ] Rychlé karty: akce.
-- [ ] Rychlé karty: hrdost fakulty.
-- [ ] Countdown na nejbližší akci.
-- [ ] Sekce O nás teaser.
-- [ ] Odkaz na detail “O nás”.
-- [ ] Sekce Novinky (2 poslední).
-- [ ] Stránka seznamu novinek.
-- [ ] Detail novinky.
-- [ ] OG metadata pro novinky.
-- [ ] Sekce anketa na homepage.
-- [ ] Hlasování v anketě.
-- [ ] Ochrana proti spam hlasům.
-- [ ] Sekce Newsletter signup.
-- [ ] Kategorie newsletteru (all/party/vzdělávání/výlet).
-- [ ] Validace emailu newsletteru.
-- [ ] Přesměrování subscribe přes API.
-- [ ] Sekce FAQ widget.
-- [ ] FAQ stránkový seznam.
-- [ ] FAQ filtrování.
-- [ ] Instagram feed grid.
-- [ ] Galerie page.
-- [ ] Archiv page.
-- [ ] Kontakty page.
-- [ ] Kontaktní karta: email.
-- [ ] Kontaktní karta: Instagram.
-- [ ] Kontaktní karta: adresa.
-- [ ] Kontaktní formulář.
-- [ ] Honeypot proti botům.
-- [ ] Notifikační email adminům z kontaktu.
-- [ ] Odpověď na zprávu přes mailto.
-- [ ] Ztráty a nálezy page.
-- [ ] Přidání itemů v adminu.
-- [ ] SOS page.
-- [ ] Přidání SOS kontaktů v adminu.
-- [ ] Cookies policy page.
-- [ ] Privacy policy page.
-- [ ] Terms of service page.
-- [ ] Robots.txt.
-- [ ] Sitemap.xml.
-- [ ] 404 stránka (not-found).
-- [ ] 500 error stránka (error.tsx).
-- [ ] Jazykový switch cs/en.
-- [ ] Canonical odkazy pro cs/en.
-- [ ] OpenGraph metadata pro klíčové stránky.
-- [ ] Navbar s vyhledáváním.
-- [ ] Globální vyhledávání (UI).
-- [ ] Mobilní menu.
-- [ ] CTA “Přidej se”.
-- [ ] Login page.
-- [ ] Email/heslo login.
-- [ ] Forgot password flow.
-- [ ] Reset password page.
-- [ ] Invite/recovery kompatibilita.
-- [ ] Členský portál /clen .
-- [ ] Gating /clen podle oprávnění.
-- [ ] Admin vstup /admin .
-- [ ] Gating /admin podle role.
-- [ ] Admin dashboard /admin/dashboard .
+- [x] Homepage s hero “Rosteme společně”.
+- [x] Rychlé karty: komunita.
+- [x] Rychlé karty: akce.
+- [x] Rychlé karty: hrdost fakulty.
+- [x] Countdown na nejbližší akci.
+- [x] Sekce O nás teaser.
+- [x] Odkaz na detail “O nás”.
+- [x] Sekce Novinky (2 poslední).
+- [x] Stránka seznamu novinek.
+- [x] Detail novinky.
+- [x] OG metadata pro novinky.
+- [x] Sekce anketa na homepage.
+- [x] Hlasování v anketě.
+- [x] Ochrana proti spam hlasům.
+- [x] Sekce Newsletter signup.
+- [x] Kategorie newsletteru (all/party/vzdělávání/výlet).
+- [x] Validace emailu newsletteru.
+- [x] Přesměrování subscribe přes API.
+- [x] Sekce FAQ widget.
+- [x] FAQ stránkový seznam.
+- [x] FAQ filtrování.
+- [x] Instagram feed grid.
+- [x] Galerie page.
+- [x] Archiv page.
+- [x] Kontakty page.
+- [x] Kontaktní karta: email.
+- [x] Kontaktní karta: Instagram.
+- [x] Kontaktní karta: adresa.
+- [x] Kontaktní formulář.
+- [x] Honeypot proti botům.
+- [x] Notifikační email adminům z kontaktu.
+- [x] Odpověď na zprávu přes mailto.
+- [x] Ztráty a nálezy page.
+- [x] Přidání itemů v adminu.
+- [x] SOS page.
+- [x] Přidání SOS kontaktů v adminu.
+- [x] Cookies policy page.
+- [x] Privacy policy page.
+- [x] Terms of service page.
+- [x] Robots.txt.
+- [x] Sitemap.xml.
+- [x] 404 stránka (not-found).
+- [x] 500 error stránka (error.tsx).
+- [x] Jazykový switch cs/en.
+- [x] Canonical odkazy pro cs/en.
+- [x] OpenGraph metadata pro klíčové stránky.
+- [x] Navbar s vyhledáváním.
+- [x] Globální vyhledávání (UI).
+- [x] Mobilní menu.
+- [x] CTA “Přidej se”.
+- [x] Login page.
+- [x] Email/heslo login.
+- [x] Forgot password flow.
+- [x] Reset password page.
+- [x] Invite/recovery kompatibilita.
+- [x] Členský portál /clen .
+- [x] Gating /clen podle oprávnění.
+- [x] Admin vstup /admin .
+- [x] Gating /admin podle role.
+- [x] Admin dashboard /admin/dashboard .
 - [ ] Sidebar s modulama.
 - [ ] Schvalování přihlášek.
 - [ ] Detail přihlášky v modalu.
@@ -73,21 +73,21 @@
 - [ ] Metadata rozhodnutí (kdo/kdy/typ).
 - [ ] Automatické vytvoření přístupu po schválení.
 - [ ] Odeslání aktivačního odkazu na email z přihlášky.
-- [ ] Role management.
+- [x] Role management.
 - [ ] Role barva (color_hex).
 - [ ] Badge role s kontrastem.
 - [ ] Přiřazení role uživateli podle emailu.
-- [ ] Oprávnění klíče (can_view/can_edit…).
-- [ ] Zobrazení admin modulů jen dle oprávnění.
-- [ ] Admin Logs (audit).
-- [ ] Export newsletter odběratelů (CSV).
-- [ ] Admin Newsletter seznam odběratelů.
-- [ ] Admin Newsletter mazání odběratele.
-- [ ] Admin Newsletter odeslání HTML kampaně.
-- [ ] Kategorie filtrace odběratelů.
-- [ ] Admin Inbox (messages).
-- [ ] Mazání zpráv v inboxu.
-- [ ] Přehled počtu zpráv.
+- [x] Oprávnění klíče (can_view/can_edit…).
+- [x] Zobrazení admin modulů jen dle oprávnění.
+- [x] Admin Logs (audit).
+- [x] Export newsletter odběratelů (CSV).
+- [x] Admin Newsletter seznam odběratelů.
+- [x] Admin Newsletter mazání odběratele.
+- [x] Admin Newsletter odeslání HTML kampaně.
+- [x] Kategorie filtrace odběratelů.
+- [x] Admin Inbox (messages).
+- [x] Mazání zpráv v inboxu.
+- [x] Přehled počtu zpráv.
 - [ ] Přehled pending přihlášek.
 - [ ] RÚIAN provider switch (v admin configu).
 - [ ] Adresní našeptávač v přihlášce.
@@ -306,7 +306,7 @@
 - [ ] Export CSV pro moduly (nápad).
 - [ ] Import CSV pro moduly (nápad).
 - [ ] Paginace pro velké tabulky.
-- [ ] Infinite scroll pro inbox.
+- [x] Infinite scroll pro inbox.
 - [ ] Notifikace o nových zprávách (nápad).
 - [ ] Notifikace o nových přihláškách (nápad).
 - [ ] Slack/Discord webhook integrace (nápad).

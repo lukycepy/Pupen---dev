@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
   Menu, X, Search, Calendar, FileText, 
-  ChevronDown, BookOpen, ShieldCheck, Users, Tag, Clock, PenTool, BrainCircuit, Briefcase, HelpCircle, Lock as LockIcon, LogOut, KeyRound, Siren 
+  ChevronDown, BookOpen, ShieldCheck, Users, Tag, Clock, PenTool, BrainCircuit, Briefcase, HelpCircle, Lock as LockIcon, LogOut, KeyRound, Siren, Archive
 } from 'lucide-react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
@@ -27,7 +27,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<{events: any[], posts: any[]}>({events: [], posts: []});
+  const [searchResults, setSearchResults] = useState<{events: any[], posts: any[], faqs: any[], books: any[], discounts: any[], guide: any[], archive: any[]}>({events: [], posts: [], faqs: [], books: [], discounts: [], guide: [], archive: []});
   const [isSearching, setIsSearching] = useState(false);
   const [isToolsOpen, setIsToolsOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -98,30 +98,31 @@ export default function Navbar({ lang, dict }: NavbarProps) {
   // Search logic
   useEffect(() => {
     if (searchQuery.length < 2) {
-      setSearchResults({events: [], posts: []});
+      setSearchResults({events: [], posts: [], faqs: [], books: [], discounts: [], guide: [], archive: []});
       return;
     }
 
     const timer = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const [evRes, poRes] = await Promise.all([
-          supabase.from('events').select('*').or(`title.ilike.%${searchQuery}%,title_en.ilike.%${searchQuery}%`).limit(3),
-          supabase.from('posts').select('*').or(`title.ilike.%${searchQuery}%,title_en.ilike.%${searchQuery}%`).limit(3)
-        ]);
-        setSearchResults({
-          events: evRes.data || [],
-          posts: poRes.data || []
-        });
+        const url = new URL('/api/search', window.location.origin);
+        url.searchParams.set('q', searchQuery);
+        url.searchParams.set('lang', lang);
+        url.searchParams.set('limit', '3');
+        const res = await fetch(url.toString());
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json?.error || 'Chyba');
+        setSearchResults(json?.results || { events: [], posts: [], faqs: [], books: [], discounts: [], guide: [], archive: [] });
       } catch (err) {
         console.error(err);
+        setSearchResults({ events: [], posts: [], faqs: [], books: [], discounts: [], guide: [], archive: [] });
       } finally {
         setIsSearching(false);
       }
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [lang, searchQuery]);
 
   const TOOLS = [
     { href: '/ztraty-a-nalezy', slug: 'ztraty-a-nalezy', icon: <KeyRound size={18} />, key: 'lostFound' },
@@ -303,7 +304,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                     {isSearching && <InlinePulse className="absolute right-5 top-5 bg-stone-200" size={14} />}
                   </div>
 
-                  {(searchResults.events.length > 0 || searchResults.posts.length > 0) ? (
+                  {(searchResults.events.length > 0 || searchResults.posts.length > 0 || searchResults.faqs.length > 0 || searchResults.guide.length > 0 || searchResults.discounts.length > 0 || searchResults.books.length > 0 || searchResults.archive.length > 0) ? (
                     <div className="space-y-6">
                       {searchResults.events.length > 0 && (
                         <div>
@@ -312,14 +313,14 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                             {searchResults.events.map(ev => (
                               <Link 
                                 key={ev.id}
-                                href={`/${lang}/akce`}
+                                href={`/${lang}/akce/${ev.id}`}
                                 onClick={() => setIsSearchOpen(false)}
                                 className="flex items-center gap-4 p-3 hover:bg-stone-50 rounded-2xl transition group/item"
                               >
                                 <div className="w-10 h-10 bg-stone-50 rounded-xl flex items-center justify-center text-stone-400 group-hover/item:bg-green-600 group-hover/item:text-white transition shadow-sm border border-stone-100">
                                   <Calendar size={16} />
                                 </div>
-                                <span className="text-sm font-bold text-stone-700 truncate">{lang === 'en' ? (ev.title_en || ev.title) : ev.title}</span>
+                                <span className="text-sm font-bold text-stone-700 truncate">{ev.title}</span>
                               </Link>
                             ))}
                           </div>
@@ -339,12 +340,121 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                                 <div className="w-10 h-10 bg-stone-50 rounded-xl flex items-center justify-center text-stone-400 group-hover/item:bg-green-600 group-hover/item:text-white transition shadow-sm border border-stone-100">
                                   <FileText size={16} />
                                 </div>
-                                <span className="text-sm font-bold text-stone-700 truncate">{lang === 'en' ? (po.title_en || po.title) : po.title}</span>
+                                <span className="text-sm font-bold text-stone-700 truncate">{po.title}</span>
                               </Link>
                             ))}
                           </div>
                         </div>
                       )}
+                      {searchResults.faqs.length > 0 && (
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-3 px-2">FAQ</p>
+                          <div className="space-y-1">
+                            {searchResults.faqs.map(f => (
+                              <Link 
+                                key={f.id}
+                                href={`/${lang}/faq?q=${encodeURIComponent(searchQuery)}`}
+                                onClick={() => setIsSearchOpen(false)}
+                                className="flex items-center gap-4 p-3 hover:bg-stone-50 rounded-2xl transition group/item"
+                              >
+                                <div className="w-10 h-10 bg-stone-50 rounded-xl flex items-center justify-center text-stone-400 group-hover/item:bg-green-600 group-hover/item:text-white transition shadow-sm border border-stone-100">
+                                  <HelpCircle size={16} />
+                                </div>
+                                <span className="text-sm font-bold text-stone-700 truncate">{f.question}</span>
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {searchResults.guide.length > 0 && (
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-3 px-2">{lang === 'en' ? 'Guide' : 'Průvodce'}</p>
+                          <div className="space-y-1">
+                            {searchResults.guide.map(a => (
+                              <Link 
+                                key={a.id}
+                                href={`/${lang}/pruvodce/${a.slug}`}
+                                onClick={() => setIsSearchOpen(false)}
+                                className="flex items-center gap-4 p-3 hover:bg-stone-50 rounded-2xl transition group/item"
+                              >
+                                <div className="w-10 h-10 bg-stone-50 rounded-xl flex items-center justify-center text-stone-400 group-hover/item:bg-green-600 group-hover/item:text-white transition shadow-sm border border-stone-100">
+                                  <BookOpen size={16} />
+                                </div>
+                                <span className="text-sm font-bold text-stone-700 truncate">{a.title}</span>
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {searchResults.discounts.length > 0 && (
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-3 px-2">{lang === 'en' ? 'Discounts' : 'Slevy'}</p>
+                          <div className="space-y-1">
+                            {searchResults.discounts.map(d => (
+                              <Link 
+                                key={d.id}
+                                href={`/${lang}/slevy?q=${encodeURIComponent(searchQuery)}`}
+                                onClick={() => setIsSearchOpen(false)}
+                                className="flex items-center gap-4 p-3 hover:bg-stone-50 rounded-2xl transition group/item"
+                              >
+                                <div className="w-10 h-10 bg-stone-50 rounded-xl flex items-center justify-center text-stone-400 group-hover/item:bg-green-600 group-hover/item:text-white transition shadow-sm border border-stone-100">
+                                  <Tag size={16} />
+                                </div>
+                                <span className="text-sm font-bold text-stone-700 truncate">{d.title}</span>
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {searchResults.books.length > 0 && (
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-3 px-2">{lang === 'en' ? 'Book exchange' : 'Burza'}</p>
+                          <div className="space-y-1">
+                            {searchResults.books.map(b => (
+                              <Link 
+                                key={b.id}
+                                href={`/${lang}/burza?q=${encodeURIComponent(searchQuery)}`}
+                                onClick={() => setIsSearchOpen(false)}
+                                className="flex items-center gap-4 p-3 hover:bg-stone-50 rounded-2xl transition group/item"
+                              >
+                                <div className="w-10 h-10 bg-stone-50 rounded-xl flex items-center justify-center text-stone-400 group-hover/item:bg-green-600 group-hover/item:text-white transition shadow-sm border border-stone-100">
+                                  <BookOpen size={16} />
+                                </div>
+                                <span className="text-sm font-bold text-stone-700 truncate">{b.title}</span>
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {searchResults.archive.length > 0 && (
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-3 px-2">{lang === 'en' ? 'Archive' : 'Archiv'}</p>
+                          <div className="space-y-1">
+                            {searchResults.archive.map(a => (
+                              <Link 
+                                key={a.id}
+                                href={`/${lang}/archiv?q=${encodeURIComponent(searchQuery)}`}
+                                onClick={() => setIsSearchOpen(false)}
+                                className="flex items-center gap-4 p-3 hover:bg-stone-50 rounded-2xl transition group/item"
+                              >
+                                <div className="w-10 h-10 bg-stone-50 rounded-xl flex items-center justify-center text-stone-400 group-hover/item:bg-green-600 group-hover/item:text-white transition shadow-sm border border-stone-100">
+                                  <Archive size={16} />
+                                </div>
+                                <span className="text-sm font-bold text-stone-700 truncate">{a.title || (lang === 'en' ? 'Entry' : 'Záznam')}</span>
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      <div className="pt-2">
+                        <Link
+                          href={`/${lang}/search?q=${encodeURIComponent(searchQuery)}`}
+                          onClick={() => setIsSearchOpen(false)}
+                          className="block text-center text-[10px] font-black uppercase tracking-widest text-green-600 hover:text-green-700 transition"
+                        >
+                          {lang === 'en' ? 'View all results' : 'Zobrazit všechny výsledky'}
+                        </Link>
+                      </div>
                     </div>
                   ) : searchQuery.length >= 2 && !isSearching && (
                     <div className="text-center py-8">

@@ -3,14 +3,14 @@
 import React from 'react';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
-import { BarChart3, TrendingUp, Users, Eye, Calendar, History, User, Activity, Clock } from 'lucide-react';
+import { BarChart3, TrendingUp, Users, Eye, Calendar, History, User, Activity, Clock, UserPlus } from 'lucide-react';
 import { SkeletonTabContent } from '@/app/[lang]/components/Skeleton';
 
 export default function AnalyticsTab() {
   const { data: stats, isLoading } = useQuery({
     queryKey: ['admin_analytics'],
     queryFn: async () => {
-      const [events, posts, rsvps, logsAll] = await Promise.all([
+      const [events, posts, rsvps, logsAll, pendingApps] = await Promise.all([
         supabase.from('events').select('id, title, views').order('views', { ascending: false }).limit(5),
         supabase.from('posts').select('id, title, views').order('views', { ascending: false }).limit(5),
         supabase.from('rsvp').select('id, created_at'),
@@ -19,6 +19,7 @@ export default function AnalyticsTab() {
           .select('id, created_at, admin_email, admin_name, action, target_id')
           .order('created_at', { ascending: false })
           .limit(200),
+        supabase.from('applications').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
       ]);
 
       const totalEventViews = events.data?.reduce((acc, curr) => acc + (curr.views || 0), 0) || 0;
@@ -33,6 +34,7 @@ export default function AnalyticsTab() {
         totalRSVPs: rsvps.data?.length || 0,
         totalViews: totalEventViews + totalPostViews,
         recentActivity: recentCount,
+        pendingApplications: Number((pendingApps as any)?.count || 0),
         recentLogs: (logsAll.data || []).slice(0, 8),
       };
     }
@@ -42,10 +44,11 @@ export default function AnalyticsTab() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="grid md:grid-cols-4 gap-6">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-6">
         {[
           { label: 'Celkem zobrazení', value: stats?.totalViews, icon: Eye, color: 'text-blue-600', bg: 'bg-blue-50' },
           { label: 'Potvrzená účast', value: stats?.totalRSVPs, icon: Users, color: 'text-green-600', bg: 'bg-green-50' },
+          { label: 'Přihlášky k vyřízení', value: stats?.pendingApplications, icon: UserPlus, color: 'text-amber-700', bg: 'bg-amber-50' },
           { label: 'Aktivita (30 dní)', value: stats?.recentActivity, icon: TrendingUp, color: 'text-purple-600', bg: 'bg-purple-50' },
           { label: 'Top Akce', value: stats?.topEvents[0]?.title || '---', icon: Calendar, color: 'text-amber-600', bg: 'bg-amber-50' },
         ].map((stat, idx) => (

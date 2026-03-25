@@ -31,6 +31,13 @@ export default function PredmetyPage() {
   }, [lang]);
 
   useEffect(() => {
+    try {
+      const q = new URLSearchParams(window.location.search).get('q') || '';
+      if (q) setSearchTerm(q);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (mainSearchRef.current && !mainSearchRef.current.contains(event.target as Node)) {
         setShowMainSuggestions(false);

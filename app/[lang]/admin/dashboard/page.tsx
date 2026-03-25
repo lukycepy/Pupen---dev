@@ -105,10 +105,13 @@ export default function AdminDashboard() {
 
   // Handle URL hash for tab persistence
   useEffect(() => {
-    const hash = window.location.hash.replace('#', '');
-    if (hash) {
-      setActiveTab(hash);
-    }
+    const syncFromHash = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash) setActiveTab(hash);
+    };
+    syncFromHash();
+    window.addEventListener('hashchange', syncFromHash);
+    return () => window.removeEventListener('hashchange', syncFromHash);
   }, []);
 
   useEffect(() => {
@@ -171,7 +174,11 @@ export default function AdminDashboard() {
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
-    window.location.hash = tab;
+    try {
+      window.history.replaceState(null, '', `#${tab}`);
+    } catch {
+      window.location.hash = tab;
+    }
   };
 
   useEffect(() => {

@@ -11,6 +11,7 @@ export async function generateMetadata({
   const description = isEn
     ? 'Articles and updates from Pupen.'
     : 'Články a novinky ze spolku Pupen.';
+  const ogImage = '/img/prezentace_pupen.jpg';
 
   return {
     title,
@@ -24,7 +25,9 @@ export async function generateMetadata({
       description,
       url: `https://pupen.org/${lang}/novinky`,
       type: 'website',
+      images: [{ url: ogImage }],
     },
+    twitter: { card: 'summary_large_image', title, description, images: [ogImage] },
   };
 }
 

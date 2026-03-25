@@ -10,8 +10,9 @@ znamená to, že v cílové Supabase databázi ještě neběžely SQL migrace (n
 
 1. Otevřít Supabase Dashboard → SQL Editor.
 2. Spustit obsah příslušných migrací z repozitáře:
-   - `supabase/migrations/26_app_roles.sql`
-   - `supabase/migrations/25_password_resets.sql` (pokud je v projektu používaná tokenová varianta resetu)
+   - `migrace/26_app_roles.sql`
+   - `migrace/25_password_resets.sql` (pokud je v projektu používaná tokenová varianta resetu)
+   - `migrace/33_admin_schema_cache_tools.sql` (volitelné: umožní reload schema cache přes admin endpoint)
 3. Po aplikaci změn obnovit schema cache:
    - Dashboard → Settings → API → Restart API
    - nebo v SQL Editoru:
@@ -21,4 +22,3 @@ znamená to, že v cílové Supabase databázi ještě neběžely SQL migrace (n
 
 - Vercel deploy sám o sobě migrace do Supabase neaplikuje.
 - Pokud nechcete používat role (`app_roles`), stačí je v adminu ignorovat nebo migraci doplnit později; ostatní části portálu mohou fungovat i bez toho.
-

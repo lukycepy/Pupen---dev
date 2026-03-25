@@ -11,6 +11,8 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { buildAdminMenuGroups } from './adminMenu';
+import { supabase } from '@/lib/supabase';
+import { useQuery } from '@tanstack/react-query';
 
 interface AdminSidebarProps {
   lang: string;
@@ -37,6 +39,17 @@ const SidebarContent = ({
   lang, dict, activeTab, onTabChange, userProfile, permissions, onLogout, setIsMobileOpen 
 }: SidebarContentProps) => {
   const menuGroups = buildAdminMenuGroups(dict, permissions);
+  const appsVisible = menuGroups.some((g) => g.items.some((it) => it.id === 'apps' && it.visible));
+  const pendingAppsQuery = useQuery({
+    queryKey: ['applications_pending_count'],
+    enabled: appsVisible,
+    queryFn: async () => {
+      const res = await supabase.from('applications').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+      if (res.error) throw res.error;
+      return Number(res.count || 0);
+    },
+  });
+  const pendingAppsCount = pendingAppsQuery.data ?? 0;
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
     try {
       const raw = window.localStorage.getItem('pupen_admin_nav_groups_v1');
@@ -126,6 +139,11 @@ const SidebarContent = ({
                   >
                     <item.icon size={18} className={activeTab === item.id ? 'text-white' : 'text-stone-500 group-hover:text-green-500'} />
                     <span className="flex-grow text-left">{item.label}</span>
+                    {item.id === 'apps' && pendingAppsCount > 0 ? (
+                      <span className="shrink-0 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border border-amber-400/30 bg-amber-400/10 text-amber-200">
+                        {pendingAppsCount}
+                      </span>
+                    ) : null}
                     {activeTab === item.id && <ChevronRight size={14} className="opacity-50" />}
                   </button>
                   ))}

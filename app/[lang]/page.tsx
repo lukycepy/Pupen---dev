@@ -60,7 +60,7 @@ export default function PupenWeb() {
 
         let faqRes: any = { data: [] };
         try {
-          faqRes = await supabase.from('faqs').select('*').order('sort_order', { ascending: true });
+          faqRes = await supabase.from('faqs').select('*').eq('is_public', true).order('sort_order', { ascending: true });
         } catch {}
 
         let partnerRes: any = { data: [] };

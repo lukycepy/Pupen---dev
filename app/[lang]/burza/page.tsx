@@ -29,6 +29,13 @@ export default function BurzaPage() {
     return () => { isMounted = false; };
   }, [lang]);
 
+  useEffect(() => {
+    try {
+      const q = new URLSearchParams(window.location.search).get('q') || '';
+      if (q) setSearchTerm(q);
+    } catch {}
+  }, []);
+
   const { data: books = [], isLoading } = useQuery({
     queryKey: ['public_books'],
     queryFn: async () => {

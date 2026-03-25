@@ -1,6 +1,34 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Shield, Lock, ArrowLeft, UserCheck, Eye, CheckCircle, Mail, Clock, KeyRound } from 'lucide-react';
 import { getDictionary } from '@/lib/get-dictionary';
+
+export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
+  const { lang: rawLang } = await params;
+  const lang = rawLang === 'en' ? 'en' : 'cs';
+  const dict = (await getDictionary(lang)).privacyPage;
+  const title = dict.title;
+  const description = dict.intro;
+  const canonical = `/${lang}/ochrana-soukromi`;
+  const ogImage = '/img/prezentace_pupen.jpg';
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical,
+      languages: { 'cs-CZ': '/cs/ochrana-soukromi', 'en-US': '/en/ochrana-soukromi' },
+    },
+    openGraph: {
+      title,
+      description,
+      url: `https://pupen.org${canonical}`,
+      type: 'article',
+      images: [{ url: ogImage }],
+    },
+    twitter: { card: 'summary_large_image', title, description, images: [ogImage] },
+  };
+}
 
 export default async function PrivacyPage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang: rawLang } = await params;
