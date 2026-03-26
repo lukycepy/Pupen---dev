@@ -166,6 +166,13 @@ export default function Footer({ lang, dict }: FooterProps) {
             <Link href={`/${lang}/ochrana-soukromi`} className="hover:text-white transition">{t.privacy || (lang === 'en' ? 'Privacy' : 'Soukromí')}</Link>
             <Link href={`/${lang}/tos`} className="hover:text-white transition">{t.tos || (lang === 'en' ? 'Terms' : 'Podmínky')}</Link>
             <Link href={`/${lang}/cookies`} className="hover:text-white transition">{t.cookies || (lang === 'en' ? 'Cookies' : 'Cookies')}</Link>
+            <Link href={`/${lang}/support`} className="hover:text-white transition">{t.support || (lang === 'en' ? 'Support' : 'Podpora')}</Link>
+            <Link href={`/${lang}/roadmap`} className="hover:text-white transition">{t.roadmap || 'Roadmap'}</Link>
+            <Link href={`/${lang}/changelog`} className="hover:text-white transition">{t.changelog || 'Changelog'}</Link>
+            <Link href={`/${lang}/prvni-pomoc`} className="hover:text-white transition">{t.firstAid || (lang === 'en' ? 'First aid' : 'První pomoc')}</Link>
+            <Link href={`/${lang}/bezpecnost`} className="hover:text-white transition">{t.safety || (lang === 'en' ? 'Safety' : 'Bezpečnost')}</Link>
+            <Link href={`/${lang}/vybor`} className="hover:text-white transition">{t.board || (lang === 'en' ? 'Board' : 'Výbor')}</Link>
+            <Link href={`/${lang}/vyrocni-zpravy`} className="hover:text-white transition">{t.annualReports || (lang === 'en' ? 'Annual reports' : 'Výroční zprávy')}</Link>
           </div>
         </div>
       </div>

@@ -6,6 +6,7 @@ import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
 import { sendMailWithQueueFallback } from '@/lib/email/queue';
 import { addUtmToEmailHtml } from '@/lib/email/utm';
 import { sanitizeEmailHtml } from '@/lib/email/sanitize';
+import crypto from 'crypto';
 
 function normalizeCategories(input: any): string[] {
   const arr = Array.isArray(input) ? input : [];
@@ -56,7 +57,14 @@ export async function POST(req: Request) {
     const roleIds = Array.isArray(body?.roleIds) ? body.roleIds.map((x: any) => String(x || '').trim()).filter(Boolean) : [];
     const attachments = Array.isArray(body?.attachments) ? body.attachments : [];
 
+    const abEnabled = !!body?.ab?.enabled;
+    const subjectA = String(body?.ab?.subjectA || '').trim().slice(0, 240);
+    const subjectB = String(body?.ab?.subjectB || '').trim().slice(0, 240);
+    const abSplitRaw = Number(body?.ab?.split);
+    const abSplit = Number.isFinite(abSplitRaw) ? Math.min(90, Math.max(10, Math.round(abSplitRaw))) : 50;
+
     if (!subject || !html) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+    if (abEnabled && (!subjectA || !subjectB)) return NextResponse.json({ error: 'Missing A/B subjects' }, { status: 400 });
 
     const draftId = body?.draftId;
 
@@ -92,7 +100,18 @@ export async function POST(req: Request) {
     const createdAt = new Date().toISOString();
     const ins = await supabase
       .from('newsletter')
-      .insert([{ subject, html, sent_at: null, target_count: recipients.length }])
+      .insert([
+        {
+          subject: abEnabled ? subjectA : subject,
+          html,
+          sent_at: null,
+          target_count: recipients.length,
+          ab_enabled: abEnabled,
+          subject_a: abEnabled ? subjectA : null,
+          subject_b: abEnabled ? subjectB : null,
+          ab_split: abEnabled ? abSplit : 50,
+        },
+      ])
       .select('id')
       .single();
     if (ins.error) throw ins.error;
@@ -104,22 +123,41 @@ export async function POST(req: Request) {
     const sendRes = await sendWithConcurrency(
       recipients,
       async (to) => {
+        const variant =
+          abEnabled
+            ? (() => {
+                const h = crypto.createHash('sha256').update(`${campaignId}|${to}`).digest();
+                const bucket = h.readUInt32BE(0) % 100;
+                return bucket < abSplit ? 'a' : 'b';
+              })()
+            : '';
+        const chosenSubject = abEnabled ? (variant === 'a' ? subjectA : subjectB) : subject;
+
         // Přidáme unsubscribe link specifický pro příjemce
         const unsubUrl = `${baseUrl}/unsubscribe?email=${encodeURIComponent(to)}`;
         const emailVars = { 
-          subject, 
+          subject: chosenSubject, 
           html, 
-          unsubLink: unsubUrl 
+          unsubLink: unsubUrl,
+          variant,
         };
         
         const { html: wrappedHtml, subject: wrappedSubject } = await renderEmailTemplateWithDbOverride('newsletter', emailVars);
-        const trackedHtml = addUtmToEmailHtml(wrappedHtml, { baseUrl, campaign: campaignId, source: 'newsletter', medium: 'email', email: to });
+        const trackedHtml = addUtmToEmailHtml(wrappedHtml, {
+          baseUrl,
+          campaign: campaignId,
+          source: 'newsletter',
+          medium: 'email',
+          email: to,
+          content: variant ? `subject_${variant}` : '',
+          variant,
+        });
         
         // Přidáme List-Unsubscribe hlavičku
         const r = await sendMailWithQueueFallback({
           transporter,
           supabase,
-          meta: { kind: 'newsletter' },
+          meta: { kind: 'newsletter', campaignId, variant },
           message: { 
             from, 
             to, 

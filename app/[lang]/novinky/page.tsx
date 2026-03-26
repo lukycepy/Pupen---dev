@@ -36,7 +36,7 @@ export default function NovinkyPage() {
     ? posts 
     : posts.filter(post => post.category === activeCategory);
 
-  const blogCategoryKeys = ["Vše", "Zprávy", "Reportáž", "Oznámení", "Ostatní"];
+  const blogCategoryKeys = ["Vše", "Zprávy", "Reportáž", "Oznámení", "Ostatní", "Changelog", "Release notes"];
 
   // Načtení dat
   useEffect(() => {

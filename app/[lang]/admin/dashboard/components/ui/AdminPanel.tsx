@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Panel from '@/app/components/ui/Panel';
 
 export default function AdminPanel({
   children,
@@ -9,6 +10,9 @@ export default function AdminPanel({
   children: React.ReactNode;
   className?: string;
 }) {
-  return <div className={`bg-white rounded-[2.5rem] border border-stone-100 shadow-sm ${className}`}>{children}</div>;
+  return (
+    <Panel radius="2xl" className={className}>
+      {children}
+    </Panel>
+  );
 }
-

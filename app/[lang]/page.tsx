@@ -98,17 +98,47 @@ export default function PupenWeb() {
         setPosts(postsRes?.data || []);
         setNextEvent(nextEventRes?.data || null);
 
-        const heroBgUrlRaw = cfgRes?.config?.home?.hero?.backgrounds;
-        
-        // Vyber náhodný background z pole, nebo použij první, případně fallback
+        const hero = cfgRes?.config?.home?.hero || {};
+        const legacyBgRaw = hero?.backgrounds;
+        const abEnabled = hero?.ab?.enabled === true;
+        const splitRaw = Number(hero?.ab?.split);
+        const split = Number.isFinite(splitRaw) ? Math.min(90, Math.max(10, Math.round(splitRaw))) : 50;
+        const backgroundsA = Array.isArray(hero?.backgroundsA) ? hero.backgroundsA : [];
+        const backgroundsB = Array.isArray(hero?.backgroundsB) ? hero.backgroundsB : [];
+
+        const chooseFromPool = (pool: any[], seed: string) => {
+          const arr = pool.filter(isSafeImageSrc).map(String);
+          if (!arr.length) return '';
+          let h = 0;
+          for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+          return arr[h % arr.length] || '';
+        };
+
         let heroBgUrl = '';
-        if (Array.isArray(heroBgUrlRaw) && heroBgUrlRaw.length > 0) {
-          const randomIndex = Math.floor(Math.random() * heroBgUrlRaw.length);
-          heroBgUrl = isSafeImageSrc(heroBgUrlRaw[randomIndex]) ? String(heroBgUrlRaw[randomIndex]) : '';
-        } else if (isSafeImageSrc(heroBgUrlRaw)) {
-          heroBgUrl = String(heroBgUrlRaw);
+        if (abEnabled && backgroundsA.length && backgroundsB.length) {
+          let v = '';
+          try {
+            v = String(window.localStorage.getItem('pupen_hero_ab') || '');
+          } catch {}
+          if (v !== 'a' && v !== 'b') {
+            v = Math.random() * 100 < split ? 'a' : 'b';
+            try {
+              window.localStorage.setItem('pupen_hero_ab', v);
+            } catch {}
+          }
+          const dateKey = new Date().toISOString().slice(0, 10);
+          heroBgUrl = chooseFromPool(v === 'a' ? backgroundsA : backgroundsB, `${v}|${dateKey}`);
         }
-        
+
+        if (!heroBgUrl) {
+          if (Array.isArray(legacyBgRaw) && legacyBgRaw.length > 0) {
+            const randomIndex = Math.floor(Math.random() * legacyBgRaw.length);
+            heroBgUrl = isSafeImageSrc(legacyBgRaw[randomIndex]) ? String(legacyBgRaw[randomIndex]) : '';
+          } else if (isSafeImageSrc(legacyBgRaw)) {
+            heroBgUrl = String(legacyBgRaw);
+          }
+        }
+
         setHeroBg(heroBgUrl);
       } catch (e) {
         console.error('Homepage load failed', e);
@@ -173,28 +203,16 @@ export default function PupenWeb() {
       <header className="relative min-h-[70vh] sm:min-h-[85vh] lg:min-h-[90vh] flex items-center justify-center text-center px-4 overflow-visible bg-stone-900">
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/20 to-stone-900/40 z-10" />
-          {String(heroBg || '').startsWith('http') ? (
-            <img
-              src={String(heroBg)}
-              alt="Students"
-              className="absolute inset-0 w-full h-full object-cover blur-sm transition-all duration-700"
-              loading="lazy"
-              referrerPolicy="no-referrer"
-              onError={() => setHeroBg('/img/prezentace_pupen.jpg')}
-              onLoad={(e) => e.currentTarget.classList.remove('blur-sm')}
-            />
-          ) : (
-            <Image 
-              src={heroBg && heroBg.startsWith('/') ? heroBg : '/img/prezentace_pupen.jpg'} 
-              alt="Students" 
-              fill
-              priority
-              sizes="100vw"
-              className="object-cover blur-sm transition-all duration-700"
-              onError={() => setHeroBg('/img/prezentace_pupen.jpg')}
-              onLoadingComplete={(target) => target.classList.remove('blur-sm')}
-            />
-          )}
+          <Image 
+            src={heroBg ? String(heroBg) : '/img/prezentace_pupen.jpg'} 
+            alt="Students" 
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover blur-sm transition-all duration-700"
+            onError={() => setHeroBg('/img/prezentace_pupen.jpg')}
+            onLoadingComplete={(target) => target.classList.remove('blur-sm')}
+          />
         </div>
         
         <div className="relative z-20 w-full max-w-5xl mx-auto -mt-10 sm:-mt-20">

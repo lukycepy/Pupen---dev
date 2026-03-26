@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FileText, Plus, Trash2, Download, Eye, EyeOff, Loader2, Save, X, Lock, Unlock, Globe, Upload, AlertTriangle, CheckCircle, Edit3 } from 'lucide-react';
@@ -15,6 +15,7 @@ export default function DocumentsTab({ dict, uploadFile }: { dict: any, uploadFi
   const queryClient = useQueryClient();
   const [isAdding, setIsAdding] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [q, setQ] = useState('');
   const [formData, setFormData] = useState({ title: '', title_en: '', file_url: '', category: 'Ostatní', access_level: 'member', is_member_only: true, share_enabled: false, share_token: '' });
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
@@ -55,6 +56,22 @@ export default function DocumentsTab({ dict, uploadFile }: { dict: any, uploadFi
       return data || [];
     }
   });
+
+  const filteredDocuments = useMemo(() => {
+    const query = String(q || '').trim().toLowerCase();
+    if (!query) return documents;
+    return documents.filter((d: any) => {
+      const hay = [
+        d?.title,
+        d?.title_en,
+        d?.category,
+        d?.access_level,
+      ]
+        .map((x) => String(x || '').toLowerCase())
+        .join(' ');
+      return hay.includes(query);
+    });
+  }, [documents, q]);
 
   const saveMutation = useMutation({
     mutationFn: async (newData: any) => {
@@ -170,13 +187,21 @@ export default function DocumentsTab({ dict, uploadFile }: { dict: any, uploadFi
         title={dict.admin.tabDocuments}
         description="Správa interních i veřejných dokumentů"
         actions={
-          <button 
-            onClick={() => setIsAdding(!isAdding)}
-            className="bg-green-600 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-green-500 transition shadow-lg shadow-green-900/20"
-          >
-            {isAdding ? <X size={20} /> : <Plus size={20} />}
-            {isAdding ? dict.admin.btnCancel : dict.admin.addDocument}
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              className="bg-white border border-stone-200 rounded-2xl px-5 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 outline-none transition w-full sm:w-[320px]"
+              placeholder={dict.admin.searchPlaceholder || 'Vyhledat…'}
+            />
+            <button 
+              onClick={() => setIsAdding(!isAdding)}
+              className="bg-green-600 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-green-500 transition shadow-lg shadow-green-900/20"
+            >
+              {isAdding ? <X size={20} /> : <Plus size={20} />}
+              {isAdding ? dict.admin.btnCancel : dict.admin.addDocument}
+            </button>
+          </div>
         }
       />
 
@@ -286,8 +311,12 @@ export default function DocumentsTab({ dict, uploadFile }: { dict: any, uploadFi
           <div className="bg-white p-20 rounded-[3rem] border border-dashed border-stone-200 text-center">
             <p className="text-stone-400 font-bold uppercase tracking-widest text-xs">Žádné dokumenty k zobrazení</p>
           </div>
+        ) : filteredDocuments.length === 0 ? (
+          <div className="bg-white p-20 rounded-[3rem] border border-dashed border-stone-200 text-center">
+            <p className="text-stone-400 font-bold uppercase tracking-widest text-xs">Žádné výsledky</p>
+          </div>
         ) : (
-          documents.map((doc: any) => (
+          filteredDocuments.map((doc: any) => (
             <div key={doc.id} className="bg-white p-6 rounded-[2rem] border shadow-sm group transition hover:shadow-xl hover:border-green-100">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div className="flex-grow">

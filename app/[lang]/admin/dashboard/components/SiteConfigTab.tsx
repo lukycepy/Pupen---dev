@@ -27,6 +27,7 @@ const DEFAULT_PAGES: { slug: string; group: 'Navbar' | 'Nástroje' | 'Ostatní';
   { slug: 'o-nas', group: 'Navbar', labelKey: 'about' },
   { slug: 'kontakt', group: 'Navbar', labelKey: 'contact' },
   { slug: 'prihlaska', group: 'Ostatní' },
+  { slug: 'roman', group: 'Ostatní' },
   { slug: 'sos', group: 'Nástroje', toolKey: 'sos' },
   { slug: 'ztraty-a-nalezy', group: 'Nástroje', toolKey: 'lostFound' },
   { slug: 'predmety', group: 'Nástroje', toolKey: 'subjects' },
@@ -39,6 +40,13 @@ const DEFAULT_PAGES: { slug: string; group: 'Navbar' | 'Nástroje' | 'Ostatní';
   { slug: 'kvizy', group: 'Nástroje', toolKey: 'quizzes' },
   { slug: 'kariera', group: 'Nástroje', toolKey: 'jobs' },
   { slug: 'faq', group: 'Nástroje', toolKey: 'faq' },
+  { slug: 'changelog', group: 'Nástroje' },
+  { slug: 'support', group: 'Nástroje' },
+  { slug: 'roadmap', group: 'Nástroje' },
+  { slug: 'prvni-pomoc', group: 'Nástroje' },
+  { slug: 'bezpecnost', group: 'Nástroje' },
+  { slug: 'vybor', group: 'Nástroje' },
+  { slug: 'vyrocni-zpravy', group: 'Nástroje' },
 ];
 
 const MEMBER_TABS: string[] = [
@@ -49,6 +57,7 @@ const MEMBER_TABS: string[] = [
   'documents',
   'card',
   'guidelines',
+  'release_notes',
   'articles',
   'messages',
   'directory',
@@ -359,20 +368,100 @@ export default function SiteConfigTab({ dict }: { dict: any }) {
 
           <div className="space-y-5">
             <div>
-              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Hero backgrounds (URL na řádek)</div>
-              <textarea
-                value={Array.isArray(config.home?.hero?.backgrounds) ? config.home.hero.backgrounds.join('\n') : ''}
-                onChange={(e) => {
-                  const urls = e.target.value
-                    .split(/\r?\n/g)
-                    .map((x) => x.trim())
-                    .filter(Boolean);
-                  setConfig((p) => ({ ...p, home: { ...(p.home || {}), hero: { ...(p.home?.hero || {}), backgrounds: urls } } }));
-                }}
-                rows={5}
-                className="w-full bg-stone-50 border-none rounded-xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none resize-none"
-                placeholder="https://images.unsplash.com/...\nhttps://.../image.jpg"
-              />
+              <div className="flex items-center justify-between gap-4 mb-3">
+                <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">A/B hero backgrounds</div>
+                <label className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-stone-600">
+                  <input
+                    type="checkbox"
+                    checked={!!config.home?.hero?.ab?.enabled}
+                    onChange={(e) =>
+                      setConfig((p) => ({
+                        ...p,
+                        home: {
+                          ...(p.home || {}),
+                          hero: {
+                            ...(p.home?.hero || {}),
+                            ab: { ...(p.home?.hero?.ab || {}), enabled: e.target.checked },
+                          },
+                        },
+                      }))
+                    }
+                    className="w-4 h-4"
+                  />
+                  Enabled
+                </label>
+              </div>
+
+              {!!config.home?.hero?.ab?.enabled ? (
+                <div className="space-y-4">
+                  <div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Split A (%)</div>
+                    <input
+                      type="number"
+                      min={10}
+                      max={90}
+                      value={Number.isFinite(Number(config.home?.hero?.ab?.split)) ? Number(config.home?.hero?.ab?.split) : 50}
+                      onChange={(e) => {
+                        const v = Math.min(90, Math.max(10, Math.round(Number(e.target.value || 50))));
+                        setConfig((p) => ({
+                          ...p,
+                          home: { ...(p.home || {}), hero: { ...(p.home?.hero || {}), ab: { ...(p.home?.hero?.ab || {}), split: v } } },
+                        }));
+                      }}
+                      className="w-full bg-stone-50 border-none rounded-xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none"
+                    />
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Backgrounds A (URL na řádek)</div>
+                    <textarea
+                      value={Array.isArray(config.home?.hero?.backgroundsA) ? config.home.hero.backgroundsA.join('\n') : ''}
+                      onChange={(e) => {
+                        const urls = e.target.value
+                          .split(/\r?\n/g)
+                          .map((x) => x.trim())
+                          .filter(Boolean);
+                        setConfig((p) => ({ ...p, home: { ...(p.home || {}), hero: { ...(p.home?.hero || {}), backgroundsA: urls } } }));
+                      }}
+                      rows={4}
+                      className="w-full bg-stone-50 border-none rounded-xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none resize-none"
+                      placeholder="https://images.unsplash.com/...\nhttps://.../image.jpg"
+                    />
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Backgrounds B (URL na řádek)</div>
+                    <textarea
+                      value={Array.isArray(config.home?.hero?.backgroundsB) ? config.home.hero.backgroundsB.join('\n') : ''}
+                      onChange={(e) => {
+                        const urls = e.target.value
+                          .split(/\r?\n/g)
+                          .map((x) => x.trim())
+                          .filter(Boolean);
+                        setConfig((p) => ({ ...p, home: { ...(p.home || {}), hero: { ...(p.home?.hero || {}), backgroundsB: urls } } }));
+                      }}
+                      rows={4}
+                      className="w-full bg-stone-50 border-none rounded-xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none resize-none"
+                      placeholder="https://images.unsplash.com/...\nhttps://.../image.jpg"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Hero backgrounds (URL na řádek)</div>
+                  <textarea
+                    value={Array.isArray(config.home?.hero?.backgrounds) ? config.home.hero.backgrounds.join('\n') : ''}
+                    onChange={(e) => {
+                      const urls = e.target.value
+                        .split(/\r?\n/g)
+                        .map((x) => x.trim())
+                        .filter(Boolean);
+                      setConfig((p) => ({ ...p, home: { ...(p.home || {}), hero: { ...(p.home?.hero || {}), backgrounds: urls } } }));
+                    }}
+                    rows={5}
+                    className="w-full bg-stone-50 border-none rounded-xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none resize-none"
+                    placeholder="https://images.unsplash.com/...\nhttps://.../image.jpg"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

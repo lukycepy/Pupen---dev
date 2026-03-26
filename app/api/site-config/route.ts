@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 
+const SITE_CONFIG_ID = Number(process.env.SITE_CONFIG_ID || 1);
+
 const defaultPages: Record<string, any> = {
   akce: { enabled: true, navbar: true },
   novinky: { enabled: true, navbar: true },
@@ -19,6 +21,14 @@ const defaultPages: Record<string, any> = {
   kvizy: { enabled: true, tools: true },
   kariera: { enabled: true, tools: true },
   faq: { enabled: true, tools: true },
+  changelog: { enabled: true, tools: true },
+  support: { enabled: true, tools: true },
+  roadmap: { enabled: true, tools: true },
+  'prvni-pomoc': { enabled: true, tools: true },
+  bezpecnost: { enabled: true, tools: true },
+  vybor: { enabled: true, tools: true },
+  'vyrocni-zpravy': { enabled: true, tools: true },
+  roman: { enabled: false },
 };
 
 const defaultHome: Record<string, any> = {
@@ -36,6 +46,9 @@ const defaultHome: Record<string, any> = {
   },
   hero: {
     backgrounds: [],
+    backgroundsA: [],
+    backgroundsB: [],
+    ab: { enabled: false, split: 50 },
   },
   instagram: {
     url: 'https://instagram.com/pupenfappz/',
@@ -55,12 +68,13 @@ const defaultMemberPortal: Record<string, any> = {
 export async function GET() {
   try {
     const supabase = getServerSupabase();
+    const configId = Number.isFinite(SITE_CONFIG_ID) && SITE_CONFIG_ID >= 1 ? SITE_CONFIG_ID : 1;
     const res = await supabase
       .from('site_public_config')
       .select(
         'maintenance_enabled, maintenance_start_at, maintenance_end_at, maintenance_title_cs, maintenance_body_cs, maintenance_title_en, maintenance_body_en, pages, home, member_portal, updated_at',
       )
-      .eq('id', 1)
+      .eq('id', configId)
       .maybeSingle();
 
     if (res.error) throw res.error;
@@ -84,7 +98,7 @@ export async function GET() {
             maintenance_end_at: null,
             updated_at: new Date().toISOString(),
           })
-          .eq('id', 1);
+          .eq('id', configId);
       } catch {}
     }
 

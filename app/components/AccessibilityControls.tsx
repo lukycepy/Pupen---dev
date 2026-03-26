@@ -6,6 +6,7 @@ import { Moon, Sun } from 'lucide-react';
 
 const SCALE_KEY = 'pupen_font_scale';
 const THEME_KEY = 'pupen_theme';
+const MOTION_KEY = 'pupen_reduce_motion';
 
 function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n));
@@ -15,6 +16,7 @@ export default function AccessibilityControls() {
   const pathname = usePathname();
   const [scale, setScale] = useState(1);
   const [isDark, setIsDark] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
 
   const roundedScale = useMemo(() => Math.round(scale * 100), [scale]);
   const hide = pathname?.includes('/admin') || pathname?.includes('/clen');
@@ -30,6 +32,18 @@ export default function AccessibilityControls() {
     if (storedTheme === 'dark') {
       setIsDark(true);
       document.documentElement.classList.add('dark');
+    }
+
+    const storedMotion = window.localStorage.getItem(MOTION_KEY);
+    if (storedMotion === '1') {
+      setReduceMotion(true);
+      document.documentElement.classList.add('reduce-motion');
+    } else if (storedMotion == null) {
+      const prefers = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (prefers) {
+        setReduceMotion(true);
+        document.documentElement.classList.add('reduce-motion');
+      }
     }
   }, [hide]);
 
@@ -47,6 +61,17 @@ export default function AccessibilityControls() {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
+    }
+  };
+
+  const toggleReduceMotion = () => {
+    const next = !reduceMotion;
+    setReduceMotion(next);
+    window.localStorage.setItem(MOTION_KEY, next ? '1' : '0');
+    if (next) {
+      document.documentElement.classList.add('reduce-motion');
+    } else {
+      document.documentElement.classList.remove('reduce-motion');
     }
   };
 
@@ -88,6 +113,19 @@ export default function AccessibilityControls() {
         aria-label="Přepnout tmavý režim"
       >
         {isDark ? <Sun size={16} /> : <Moon size={16} />}
+      </button>
+
+      <button
+        type="button"
+        onClick={toggleReduceMotion}
+        className={`h-9 rounded-xl px-3 text-[10px] font-black uppercase tracking-widest border transition ${
+          reduceMotion
+            ? 'bg-green-600 text-white border-green-600 shadow-lg shadow-green-600/20'
+            : 'bg-white dark:bg-stone-900 text-stone-700 dark:text-stone-300 border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800'
+        }`}
+        aria-label="Omezit animace"
+      >
+        RM
       </button>
     </div>
   );

@@ -1,0 +1,49 @@
+name: DB checks
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Target environment
+        required: true
+        default: staging
+        type: choice
+        options:
+          - staging
+          - prod
+
+jobs:
+  staging:
+    if: ${{ inputs.target == 'staging' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run db:drift-check
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_STAGING }}
+      - run: npm run db:rls-check
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_STAGING }}
+
+  prod:
+    if: ${{ inputs.target == 'prod' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run db:drift-check
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
+      - run: npm run db:rls-check
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
+

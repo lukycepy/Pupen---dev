@@ -6,11 +6,21 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:migrate": "node scripts/db/migrate.js",
+    "db:migrate:staging": "node scripts/db/migrate.js --env staging",
+    "db:migrate:prod": "node scripts/db/migrate.js --env prod",
+    "db:drift-check": "node scripts/db/drift-check.js",
+    "db:drift-check:staging": "node scripts/db/drift-check.js --env staging",
+    "db:drift-check:prod": "node scripts/db/drift-check.js --env prod",
+    "db:rls-check": "node scripts/db/rls-check.js",
+    "db:rls-check:staging": "node scripts/db/rls-check.js --env staging",
+    "db:rls-check:prod": "node scripts/db/rls-check.js --env prod"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^5.2.2",
+    "@sentry/nextjs": "^10.46.0",
     "@supabase/supabase-js": "^2.93.3",
     "@tanstack/react-query": "^5.90.21",
     "@tanstack/react-query-devtools": "^5.91.3",
@@ -38,6 +48,7 @@
     "react-leaflet": "^5.0.0",
     "sanitize-html": "^2.17.2",
     "sharp": "^0.34.5",
+    "pg": "^8.16.3",
     "web-vitals": "^5.2.0",
     "zod": "^4.3.6"
   },

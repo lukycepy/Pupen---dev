@@ -21,6 +21,9 @@ export default function NewsletterTab({ dict }: { dict: any }) {
   
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
   const [composeSubject, setComposeSubject] = useState('');
+  const [abEnabled, setAbEnabled] = useState(false);
+  const [abSubjectB, setAbSubjectB] = useState('');
+  const [abSplit, setAbSplit] = useState(50);
   const [composeHtml, setComposeHtml] = useState('');
   const [composeCats, setComposeCats] = useState<string[]>(['all']);
   const [composeRoleIds, setComposeRoleIds] = useState<string[]>([]);
@@ -162,7 +165,15 @@ export default function NewsletterTab({ dict }: { dict: any }) {
       const res = await fetch('/api/admin/newsletter/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ subject: composeSubject, html: composeHtml, categories: composeCats, roleIds: composeRoleIds, draftId: activeDraftId }),
+        body: JSON.stringify({
+          subject: composeSubject,
+          html: composeHtml,
+          categories: composeCats,
+          roleIds: composeRoleIds,
+          draftId: activeDraftId,
+          attachments,
+          ab: { enabled: abEnabled, subjectA: composeSubject, subjectB: abSubjectB, split: abSplit },
+        }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error || 'Chyba');
@@ -177,6 +188,9 @@ export default function NewsletterTab({ dict }: { dict: any }) {
       setSentCampaigns(Array.isArray(historyJson?.campaigns) ? historyJson.campaigns : []);
       
       setComposeSubject('');
+      setAbEnabled(false);
+      setAbSubjectB('');
+      setAbSplit(50);
       setComposeHtml('');
       setComposeCats(['all']);
       setComposeRoleIds([]);
@@ -257,6 +271,9 @@ export default function NewsletterTab({ dict }: { dict: any }) {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ 
           subject: composeSubject, 
+          subject_b: abSubjectB,
+          ab_enabled: abEnabled,
+          ab_split: abSplit,
           body_html: composeHtml, 
           target_categories: composeCats 
         }),
@@ -284,6 +301,9 @@ export default function NewsletterTab({ dict }: { dict: any }) {
 
   const loadDraft = (draft: any) => {
     setComposeSubject(draft.subject);
+    setAbEnabled(!!draft.ab_enabled);
+    setAbSubjectB(String(draft.subject_b || ''));
+    setAbSplit(Number.isFinite(Number(draft.ab_split)) ? Number(draft.ab_split) : 50);
     setComposeHtml(draft.body_html);
     setComposeCats(draft.target_categories || ['all']);
     setActiveDraftId(draft.id);
@@ -399,14 +419,14 @@ export default function NewsletterTab({ dict }: { dict: any }) {
             </h3>
             <div className="flex items-center gap-2">
               <button
-                disabled={!composeSubject.trim() || !composeHtml.trim()}
+                disabled={!composeSubject.trim() || !composeHtml.trim() || (abEnabled && !abSubjectB.trim())}
                 onClick={previewNewsletter}
                 className="flex items-center gap-2 bg-stone-100 text-stone-600 px-5 py-2.5 rounded-xl font-bold hover:bg-stone-200 transition text-sm disabled:opacity-50"
               >
                 Odeslat náhled sobě
               </button>
               <button
-                disabled={saving || !composeSubject.trim() || !composeHtml.trim()}
+                disabled={saving || !composeSubject.trim() || !composeHtml.trim() || (abEnabled && !abSubjectB.trim())}
                 onClick={saveDraft}
                 className="flex items-center gap-2 bg-stone-100 text-stone-600 px-5 py-2.5 rounded-xl font-bold hover:bg-stone-200 transition text-sm disabled:opacity-50"
               >
@@ -414,7 +434,7 @@ export default function NewsletterTab({ dict }: { dict: any }) {
                 Uložit draft
               </button>
               <button
-                disabled={sending || !composeSubject.trim() || !composeHtml.trim()}
+                disabled={sending || !composeSubject.trim() || !composeHtml.trim() || (abEnabled && !abSubjectB.trim())}
                 onClick={sendNewsletter}
                 className="flex items-center gap-2 bg-green-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-green-700 transition shadow-lg text-sm disabled:opacity-50"
               >
@@ -434,6 +454,44 @@ export default function NewsletterTab({ dict }: { dict: any }) {
                 className="w-full px-4 py-3 bg-stone-50 rounded-xl border border-stone-100 focus:ring-2 focus:ring-green-500 transition font-medium"
                 placeholder="Např. Novinky týdne"
               />
+            </div>
+            <div className="bg-stone-50 rounded-2xl border border-stone-100 p-4 space-y-3">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={abEnabled}
+                  onChange={(e) => setAbEnabled(e.target.checked)}
+                  className="w-4 h-4"
+                />
+                <span className="text-xs font-bold text-stone-700">A/B test předmětu</span>
+              </label>
+              {abEnabled && (
+                <div className="space-y-3">
+                  <div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">Varianta B</div>
+                    <input
+                      value={abSubjectB}
+                      onChange={(e) => setAbSubjectB(e.target.value)}
+                      className="w-full px-4 py-3 bg-white rounded-xl border border-stone-200 focus:ring-2 focus:ring-green-500 transition font-medium"
+                      placeholder="Např. Co je nového v Pupenu?"
+                    />
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">Split A (%)</div>
+                    <input
+                      type="number"
+                      min={10}
+                      max={90}
+                      value={abSplit}
+                      onChange={(e) => setAbSplit(Number(e.target.value))}
+                      className="w-full px-4 py-3 bg-white rounded-xl border border-stone-200 focus:ring-2 focus:ring-green-500 transition font-medium"
+                    />
+                    <div className="mt-2 text-[10px] font-black uppercase tracking-widest text-stone-400">
+                      A: {abSplit}% • B: {100 - (Number.isFinite(abSplit) ? abSplit : 50)}%
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             <div>
               <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">Kategorie</div>

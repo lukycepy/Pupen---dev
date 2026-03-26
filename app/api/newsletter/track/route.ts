@@ -8,6 +8,7 @@ export async function GET(req: Request) {
     const e = searchParams.get('e');
     const url = searchParams.get('url');
     const open = searchParams.get('open');
+    const v = searchParams.get('v');
 
     const supabase = getServerSupabase();
     
@@ -21,6 +22,7 @@ export async function GET(req: Request) {
       await supabase.from('newsletter_events').insert([{
         newsletter_id: n,
         email: e || null,
+        variant: v || null,
         event_type: eventType,
         link_url: url || null,
         ip_address,

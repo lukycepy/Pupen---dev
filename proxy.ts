@@ -4,6 +4,7 @@ import type { NextRequest } from 'next/server';
 const locales = ['cs', 'en'];
 const defaultLocale = 'cs';
 const COOKIE_NAME = 'NEXT_LOCALE';
+const SITE_CONFIG_ID = Number(process.env.SITE_CONFIG_ID || 1);
 
 type SiteConfig = {
   maintenance_enabled: boolean;
@@ -30,7 +31,8 @@ async function loadConfig(): Promise<SiteConfig> {
     return fallback;
   }
 
-  const res = await fetch(`${url}/rest/v1/site_public_config?id=eq.1&select=maintenance_enabled,maintenance_start_at,maintenance_end_at,pages`, {
+  const configId = Number.isFinite(SITE_CONFIG_ID) && SITE_CONFIG_ID >= 1 ? SITE_CONFIG_ID : 1;
+  const res = await fetch(`${url}/rest/v1/site_public_config?id=eq.${configId}&select=maintenance_enabled,maintenance_start_at,maintenance_end_at,pages`, {
     headers: {
       apikey: anon,
       Authorization: `Bearer ${anon}`,

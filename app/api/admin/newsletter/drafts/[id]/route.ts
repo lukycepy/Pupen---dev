@@ -12,11 +12,17 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     const { id } = await ctx.params;
     const body = await req.json();
     const { subject, body_html, target_categories, status } = body;
+    const ab_enabled = body?.ab_enabled;
+    const subject_b = body?.subject_b;
+    const ab_split = body?.ab_split;
 
     const supabase = getServerSupabase();
     
     const updates: any = { updated_at: new Date().toISOString() };
     if (subject !== undefined) updates.subject = subject;
+    if (subject_b !== undefined) updates.subject_b = subject_b;
+    if (ab_enabled !== undefined) updates.ab_enabled = !!ab_enabled;
+    if (ab_split !== undefined) updates.ab_split = ab_split;
     if (body_html !== undefined) updates.body_html = body_html;
     if (target_categories !== undefined) updates.target_categories = target_categories;
     if (status !== undefined) updates.status = status;

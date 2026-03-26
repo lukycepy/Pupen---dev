@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Users, Plus, Trash2, Calendar, MapPin, Loader2, Save, X, Edit3, CheckCircle, Sparkles } from 'lucide-react';
@@ -20,6 +20,7 @@ export default function MeetingsTab({ dict }: { dict: any }) {
   const queryClient = useQueryClient();
   const [isAdding, setIsAdding] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [q, setQ] = useState('');
   const [formData, setFormData] = useState({ title: '', date: '', location: '', minutes: '' });
   const [agenda, setAgenda] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
@@ -55,6 +56,17 @@ export default function MeetingsTab({ dict }: { dict: any }) {
       return data || [];
     }
   });
+
+  const filteredMeetings = useMemo(() => {
+    const query = String(q || '').trim().toLowerCase();
+    if (!query) return meetings;
+    return meetings.filter((m: any) => {
+      const hay = [m?.title, m?.location, m?.date]
+        .map((x) => String(x || '').toLowerCase())
+        .join(' ');
+      return hay.includes(query);
+    });
+  }, [meetings, q]);
 
   const ids = meetings.map((m: any) => String(m.id));
 
@@ -242,13 +254,21 @@ export default function MeetingsTab({ dict }: { dict: any }) {
           <Users className="text-green-600" />
           {dict.admin.tabMeetings}
         </h2>
-        <button 
-          onClick={() => setIsAdding(!isAdding)}
-          className="bg-green-600 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-green-500 transition shadow-lg shadow-green-900/20"
-        >
-          {isAdding ? <X size={20} /> : <Plus size={20} />}
-          {isAdding ? 'Zrušit' : 'Nový zápis'}
-        </button>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            className="bg-white border border-stone-200 rounded-2xl px-5 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 outline-none transition w-full sm:w-[320px]"
+            placeholder={dict.admin.searchPlaceholder || 'Vyhledat…'}
+          />
+          <button 
+            onClick={() => setIsAdding(!isAdding)}
+            className="bg-green-600 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-green-500 transition shadow-lg shadow-green-900/20"
+          >
+            {isAdding ? <X size={20} /> : <Plus size={20} />}
+            {isAdding ? 'Zrušit' : 'Nový zápis'}
+          </button>
+        </div>
       </div>
 
       {isAdding && (
@@ -354,8 +374,12 @@ export default function MeetingsTab({ dict }: { dict: any }) {
           <div className="bg-white p-20 rounded-[3rem] border border-dashed border-stone-200 text-center">
             <p className="text-stone-400 font-bold uppercase tracking-widest text-xs">Žádné zápisy ze schůzí</p>
           </div>
+        ) : filteredMeetings.length === 0 ? (
+          <div className="bg-white p-20 rounded-[3rem] border border-dashed border-stone-200 text-center">
+            <p className="text-stone-400 font-bold uppercase tracking-widest text-xs">Žádné výsledky</p>
+          </div>
         ) : (
-          meetings.map((meeting: any) => (
+          filteredMeetings.map((meeting: any) => (
             <div key={meeting.id} className="bg-white p-8 rounded-[2.5rem] border shadow-sm group transition hover:shadow-xl">
               <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
                 <div className="flex-grow">

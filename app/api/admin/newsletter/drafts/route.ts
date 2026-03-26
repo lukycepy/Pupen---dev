@@ -31,12 +31,19 @@ export async function POST(req: Request) {
 
     const body = await req.json();
     const { subject, body_html, target_categories } = body;
+    const ab_enabled = !!body?.ab_enabled;
+    const subject_b = String(body?.subject_b || '').trim() || null;
+    const ab_split_raw = Number(body?.ab_split);
+    const ab_split = Number.isFinite(ab_split_raw) ? Math.min(90, Math.max(10, Math.round(ab_split_raw))) : 50;
 
     const supabase = getServerSupabase();
     const { data, error } = await supabase
       .from('newsletter_drafts')
       .insert([{ 
         subject: subject || 'Bez předmětu', 
+        subject_b,
+        ab_enabled,
+        ab_split,
         body_html: body_html || '', 
         target_categories: target_categories || ['all'],
         created_by: user.id

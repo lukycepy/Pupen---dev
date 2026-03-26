@@ -48,8 +48,124 @@
     "privacy": "Ochrana soukromí",
     "tos": "Obchodní podmínky",
     "cookies": "Soubory cookies",
+    "support": "Podpora",
+    "roadmap": "Roadmap",
+    "changelog": "Changelog",
+    "firstAid": "První pomoc",
+    "safety": "Bezpečnost",
+    "board": "Výbor",
+    "annualReports": "Výroční zprávy",
     "contactEmail": "info@pupen.org",
     "address": "ČZU v Praze, FAPPZ\nKamýcká 129\n165 00 Praha - Suchdol"
+  },
+  "common": {
+    "back": "Zpět",
+    "close": "Zavřít",
+    "open": "Otevřít",
+    "send": "Odeslat",
+    "searchPlaceholder": "Vyhledat…",
+    "email": "E-mail",
+    "message": "Zpráva"
+  },
+  "supportPage": {
+    "badge": "Podpora",
+    "title": "Potřebujete pomoc?",
+    "subtitle": "Napište nám a ozveme se co nejdřív.",
+    "defaultName": "Žádost o podporu",
+    "subject": "Podpora",
+    "sent": "Zpráva odeslána.",
+    "nameOptional": "Jméno (volitelné)",
+    "sendError": "Nepodařilo se odeslat zprávu"
+  },
+  "roadmapPage": {
+    "badge": "Roadmap",
+    "title": "Co plánujeme dál",
+    "subtitle": "Lehký veřejný přehled. Priority se mohou měnit.",
+    "statuses": { "planned": "Plán", "idea": "Nápad" },
+    "items": [
+      { "title": "Členská mapka kontaktů", "desc": "Mapa členů (pouze pro členy).", "status": "planned" },
+      { "title": "Offline mode pro SOS", "desc": "QR vstup + offline fallback.", "status": "planned" },
+      { "title": "A/B test předmětů newsletteru", "desc": "Zlepšení open-rate přes experimenty.", "status": "idea" }
+    ]
+  },
+  "changelogPage": {
+    "badge": "Changelog",
+    "title": "Co je nového",
+    "subtitle": "Změny na webu a v aplikaci, seřazené podle data.",
+    "empty": "Zatím žádné záznamy"
+  },
+  "sosPage": {
+    "title": "SOS pro prváky",
+    "subtitle": "Rychlé kontakty: studijní oddělení, vrátnice kolejí, lékař v kampusu.",
+    "emergencyNote": "V akutním ohrožení volejte nejdřív tísňovou linku.",
+    "exportVcard": "Export vCard",
+    "exportCsv": "Export CSV",
+    "qr": "QR",
+    "offlineCache": "Offline cache",
+    "website": "Web",
+    "otherCategory": "Ostatní",
+    "emptyTitle": "Zatím bez kontaktů",
+    "emptySubtitle": "Admini mohou přidat kontakty v Pupen Control.",
+    "qrTitle": "SOS QR",
+    "qrSubtitle": "Rychlé otevření SOS stránky",
+    "qrCaption": "SOS"
+  },
+  "firstAidPage": {
+    "badge": "První pomoc",
+    "title": "Základy první pomoci",
+    "subtitle": "Rychlý tahák pro akce. V akutním ohrožení vždy volejte tísňovou linku.",
+    "cards": [
+      { "title": "Tísňová linka", "text": "112, 155 (záchranka), 158 (policie), 150 (hasiči)." },
+      { "title": "Bezvědomí", "text": "Zkontroluj dýchání, volej pomoc, stabilizovaná poloha pokud dýchá." },
+      { "title": "Krvácení", "text": "Tlakový obvaz, zvednout končetinu, při masivním krvácení volej pomoc." },
+      { "title": "Horko / dehydratace", "text": "Přesun do stínu, malé doušky vody, ochlazuj, sleduj stav." }
+    ],
+    "footerNote": "Pokud si nejsi jistý/á, volej tísňovou linku."
+  },
+  "safetyPage": {
+    "badge": "Bezpečnost",
+    "title": "Bezpečnostní pravidla na akcích",
+    "subtitle": "Krátký soubor pravidel pro bezpečné a příjemné akce.",
+    "rules": [
+      "Respektuj ostatní a prostor.",
+      "Nenechávej nikoho samotného, pokud mu není dobře.",
+      "Při problému kontaktuj organizátory včas.",
+      "Používej domluvené srazy a dopravu.",
+      "V akutním ohrožení volej nejdřív tísňovou linku."
+    ]
+  },
+  "annualReportsPage": {
+    "badge": "Výroční zprávy",
+    "title": "Výroční zprávy",
+    "subtitle": "Veřejné dokumenty pro členy a partnery.",
+    "empty": "Zatím žádné zprávy"
+  },
+  "boardPage": {
+    "badge": "Výbor",
+    "title": "Členové výboru",
+    "subtitle": "Kontakty na vedení spolku.",
+    "empty": "Zatím žádní členové výboru"
+  },
+  "memberDirectory": {
+    "mapTitle": "Lokace členů (po městech)",
+    "membersLabel": "členů"
+  },
+  "lostFoundDetailPage": {
+    "notFound": "Položka nenalezena",
+    "returned": "Tato věc je označena jako vrácená.",
+    "cta": "To je moje!",
+    "modalTitle": "Žádost o navrácení",
+    "modalSubtitlePrefix": "Žádáte o navrácení věci:",
+    "email": "E-mail",
+    "emailPlaceholder": "vas@email.cz",
+    "emailName": "Žádost z webu (Ztráty a nálezy)",
+    "emailSubjectPrefix": "Nárok na nalezenou věc",
+    "emailBodyTemplate": "Dobrý den,\n\ntímto žádám o navrácení položky nalezené na webu:\n- ID: {id}\n- Název: {title}\n\nMůj vzkaz:\n{message}\n\nS pozdravem,\n{email}",
+    "messageLabel": "Zpráva (jak prokážete, že je věc vaše?)",
+    "messagePlaceholder": "Popište specifické detaily věci...",
+    "sendRequest": "Odeslat žádost",
+    "sent": "Žádost odeslána! Brzy se vám ozveme.",
+    "sendError": "Chyba při odesílání žádosti"
   },
   "homePage": {
     "heroBadge": "Studentský spolek Pupen, z.s.",
@@ -253,7 +369,9 @@
     "Zprávy": "Zprávy",
     "Reportáž": "Reportáž",
     "Oznámení": "Oznámení",
-    "Ostatní": "Ostatní"
+    "Ostatní": "Ostatní",
+    "Changelog": "Changelog",
+    "Release notes": "Release notes"
   },
   "newsPage": {
     "title": "Novinky",
@@ -274,7 +392,9 @@
       "Zprávy": "Zprávy",
       "Reportáž": "Reportáž",
       "Oznámení": "Oznámení",
-      "Ostatní": "Ostatní"
+      "Ostatní": "Ostatní",
+      "Changelog": "Changelog",
+      "Release notes": "Release notes"
     }
   },
   "recruitment": {
@@ -904,11 +1024,19 @@
     "tabMyEvents": "Moje akce",
     "tabCard": "Členská karta",
     "tabGuidelines": "Pravidla",
+    "tabReleaseNotes": "Release notes",
     "tabMessages": "Zprávy",
     "tabProjects": "Projekty",
     "tabPolls": "Ankety",
     "tabBoard": "Vedení",
     "tabSettings": "Můj profil",
+    "navOverview": "Přehled",
+    "navContentBenefits": "Obsah a výhody",
+    "navCommunity": "Komunita",
+    "navProfile": "Profil",
+    "sidebarSubtitle": "Členská sekce",
+    "adminPanelLink": "Pupen Control",
+    "logoutShort": "Odhlásit se",
     "welcome": "Ahoj",
     "activeStatus": "Aktivní člen Pupenu",
     "pendingStatus": "Čeká na schválení",

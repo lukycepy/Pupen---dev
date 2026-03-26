@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
 import { KeyRound, MapPin, Phone, ShieldCheck, Search, HandHeart } from 'lucide-react';
 import InlinePulse from '@/app/components/InlinePulse';
 
@@ -147,29 +148,31 @@ export default function LostFoundPage() {
         <div className="grid md:grid-cols-2 gap-6">
           {filtered.map((i) => (
             <div key={i.id} className="bg-white rounded-[2.5rem] border border-stone-100 shadow-sm p-7">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <div className="font-black text-stone-900 text-lg truncate">{i.title}</div>
-                  <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mt-1">
-                    {new Date(i.created_at).toLocaleDateString(lang === 'en' ? 'en-US' : 'cs-CZ')}
-                    {i.category ? ` • ${i.category}` : ''}
-                    {i.status ? ` • ${i.status}` : ''}
+              <Link href={`/${lang}/ztraty-a-nalezy/${i.id}`} className="block">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="font-black text-stone-900 text-lg truncate hover:text-green-700 transition">{i.title}</div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mt-1">
+                      {new Date(i.created_at).toLocaleDateString(lang === 'en' ? 'en-US' : 'cs-CZ')}
+                      {i.category ? ` • ${i.category}` : ''}
+                      {i.status ? ` • ${i.status}` : ''}
+                    </div>
                   </div>
                 </div>
-              </div>
-              {i.description ? <div className="mt-4 text-stone-600 font-medium leading-relaxed">{i.description}</div> : null}
-              <div className="mt-6 grid gap-2">
-                {i.location ? (
-                  <div className="flex items-center gap-2 text-stone-500 font-bold">
-                    <MapPin size={16} className="text-green-600" /> {i.location}
-                  </div>
-                ) : null}
-                {i.contact ? (
-                  <div className="flex items-center gap-2 text-stone-500 font-bold">
-                    <Phone size={16} className="text-green-600" /> {i.contact}
-                  </div>
-                ) : null}
-              </div>
+                {i.description ? <div className="mt-4 text-stone-600 font-medium leading-relaxed">{i.description}</div> : null}
+                <div className="mt-6 grid gap-2">
+                  {i.location ? (
+                    <div className="flex items-center gap-2 text-stone-500 font-bold">
+                      <MapPin size={16} className="text-green-600" /> {i.location}
+                    </div>
+                  ) : null}
+                  {i.contact ? (
+                    <div className="flex items-center gap-2 text-stone-500 font-bold">
+                      <Phone size={16} className="text-green-600" /> {i.contact}
+                    </div>
+                  ) : null}
+                </div>
+              </Link>
               {i.status === 'open' && (
                 <div className="mt-6 pt-6 border-t border-stone-100">
                   <button 
@@ -241,4 +244,3 @@ export default function LostFoundPage() {
     </div>
   );
 }
-

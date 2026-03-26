@@ -5,6 +5,7 @@ import Providers from './providers'
 import ServiceWorker from './components/ServiceWorker'
 import { ErrorReporter } from '@/components/ErrorReporter';
 import { WebVitalsReporter } from '@/components/WebVitalsReporter';
+import SelfHostedAnalytics from './components/SelfHostedAnalytics';
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -37,6 +38,7 @@ export default function RootLayout({
         <Providers>
           <ErrorReporter />
           <WebVitalsReporter />
+          <SelfHostedAnalytics />
           {children}
           <ServiceWorker />
         </Providers>

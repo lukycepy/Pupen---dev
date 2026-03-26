@@ -34,6 +34,8 @@ const ProjectsTab = dynamic<any>(() => import('./components/ProjectsTab'), { loa
 const MemberPollsTab = dynamic<any>(() => import('./components/MemberPollsTab'), { loading: () => <SkeletonTabContent /> });
 const MemberBoardTab = dynamic<any>(() => import('./components/MemberBoardTab'), { loading: () => <SkeletonTabContent /> });
 const MemberGovernanceTab = dynamic<any>(() => import('./components/MemberGovernanceTab'), { loading: () => <SkeletonTabContent /> });
+const ReleaseNotesTab = dynamic<any>(() => import('./components/ReleaseNotesTab'), { loading: () => <SkeletonTabContent /> });
+const MemberDirectoryMap = dynamic<any>(() => import('./components/MemberDirectoryMap'), { loading: () => <SkeletonTabContent /> });
 
 export default function ClenskaSekcePage() {
   const params = useParams();
@@ -59,6 +61,7 @@ export default function ClenskaSekcePage() {
   const [reportOpen, setReportOpen] = useState<null | { type: 'user' | 'content'; id: string; label: string }>(null);
   const [blocked, setBlocked] = useState<Record<string, boolean>>({});
   const [showBlocked, setShowBlocked] = useState(false);
+  const [directoryQuery, setDirectoryQuery] = useState('');
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -598,15 +601,18 @@ export default function ClenskaSekcePage() {
   // Načtení dat (Queries)
   const { data: internalDocs = [] } = useQuery({
     queryKey: ['internal_docs'],
-    enabled: !!user,
+    enabled: !!user && !!profile,
     queryFn: async () => {
-      const { data } = await supabase
+      let q: any = supabase
         .from('documents')
         .select('*')
         .eq('is_member_only', true)
-        .neq('access_level', 'admin')
         .order('created_at', { ascending: false })
         .limit(200);
+      if (!(profile?.is_admin || profile?.can_manage_admins)) {
+        q = q.neq('access_level', 'admin');
+      }
+      const { data } = await q;
       return data || [];
     }
   });
@@ -647,7 +653,7 @@ export default function ClenskaSekcePage() {
     queryFn: async () => {
       const { data } = await supabase
         .from('profiles')
-        .select('first_name, last_name, email, member_since')
+        .select('first_name, last_name, email, member_since, address_meta')
         .eq('is_member', true)
         .order('last_name', { ascending: true })
         .limit(500);
@@ -983,6 +989,11 @@ export default function ClenskaSekcePage() {
             <GuidelinesTab lang={lang} />
           )}
 
+          {/* RELEASE NOTES TAB */}
+          {activeTab === 'release_notes' && (
+            <ReleaseNotesTab />
+          )}
+
           {/* GOVERNANCE TAB */}
           {activeTab === 'governance' && (
             <MemberGovernanceTab lang={lang} />
@@ -1221,17 +1232,49 @@ export default function ClenskaSekcePage() {
           {/* DIRECTORY TAB */}
           {activeTab === 'directory' && (
             <div className="bg-white p-8 rounded-[3rem] border border-stone-100 shadow-sm">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8">
                 <h2 className="text-2xl font-black flex items-center gap-3"><Users className="text-stone-900" /> {dict.member.memberDirectory}</h2>
-                <button
-                  type="button"
-                  onClick={() => setShowBlocked((v) => !v)}
-                  className="inline-flex items-center justify-center rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
-                >
-                  {showBlocked
-                    ? (ms.directoryHideBlocked || (lang === 'en' ? 'Hide blocked' : 'Skrýt blokované'))
-                    : (ms.directoryShowBlocked || (lang === 'en' ? 'Show blocked' : 'Zobrazit blokované'))}
-                </button>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <input
+                    value={directoryQuery}
+                    onChange={(e) => setDirectoryQuery(e.target.value)}
+                    className="bg-white border border-stone-200 rounded-xl px-5 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 outline-none transition w-full sm:w-[320px]"
+                    placeholder={(dict as any)?.common?.searchPlaceholder || (lang === 'en' ? 'Search…' : 'Vyhledat…')}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowBlocked((v) => !v)}
+                    className="inline-flex items-center justify-center rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
+                  >
+                    {showBlocked
+                      ? (ms.directoryHideBlocked || (lang === 'en' ? 'Hide blocked' : 'Skrýt blokované'))
+                      : (ms.directoryShowBlocked || (lang === 'en' ? 'Show blocked' : 'Zobrazit blokované'))}
+                  </button>
+                </div>
+              </div>
+
+              <div className="mb-8">
+                <MemberDirectoryMap
+                  labels={{
+                    title: (dict as any)?.memberDirectory?.mapTitle || (lang === 'en' ? 'Member locations (by city)' : 'Lokace členů (po městech)'),
+                    membersLabel: (dict as any)?.memberDirectory?.membersLabel || (lang === 'en' ? 'members' : 'členů'),
+                  }}
+                  members={directory
+                    .filter((m: any) => showBlocked || !blocked[String(m.email || '').toLowerCase()])
+                    .filter((m: any) => {
+                      const q = String(directoryQuery || '').trim().toLowerCase();
+                      if (!q) return true;
+                      const hay = [
+                        m?.first_name,
+                        m?.last_name,
+                        m?.email,
+                        m?.address_meta?.city,
+                      ]
+                        .map((x: any) => String(x || '').toLowerCase())
+                        .join(' ');
+                      return hay.includes(q);
+                    })}
+                />
               </div>
               <div className="overflow-hidden rounded-[2rem] border border-stone-100">
                 <table className="w-full text-left border-collapse">
@@ -1247,6 +1290,19 @@ export default function ClenskaSekcePage() {
                   <tbody className="divide-y divide-stone-50">
                     {directory
                       .filter((m: any) => showBlocked || !blocked[String(m.email || '').toLowerCase()])
+                      .filter((m: any) => {
+                        const q = String(directoryQuery || '').trim().toLowerCase();
+                        if (!q) return true;
+                        const hay = [
+                          m?.first_name,
+                          m?.last_name,
+                          m?.email,
+                          m?.address_meta?.city,
+                        ]
+                          .map((x: any) => String(x || '').toLowerCase())
+                          .join(' ');
+                        return hay.includes(q);
+                      })
                       .map((m: any, idx: number) => (
                       <tr key={idx} className="hover:bg-stone-50/50 transition">
                         <td className="px-6 py-4 font-bold text-stone-700">{m.first_name}</td>

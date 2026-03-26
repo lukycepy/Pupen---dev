@@ -293,6 +293,8 @@ export default function NewsTab({ dict, uploadImage, currentUser, userProfile, r
                       <option value="Reportáž">{dict.categories['Reportáž']}</option>
                       <option value="Oznámení">{dict.categories['Oznámení']}</option>
                       <option value="Ostatní">{dict.categories['Ostatní']}</option>
+                      <option value="Changelog">{dict.categories['Changelog'] || 'Changelog'}</option>
+                      <option value="Release notes">{dict.categories['Release notes'] || 'Release notes'}</option>
                     </select>
                   </div>
                   <div className="space-y-1.5">

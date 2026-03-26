@@ -36,14 +36,14 @@ const SidebarContent = ({
   const hidden = new Set((hiddenTabs || []).map(String));
   const menuGroups = [
     {
-      title: 'Přehled',
+      title: dict.member?.navOverview || (lang === 'en' ? 'Overview' : 'Přehled'),
       items: [
         { id: 'dashboard', label: dict.member?.tabDashboard || 'Nástěnka', icon: LayoutDashboard },
         { id: 'notifications', label: dict.member?.tabNotifications || 'Notifikace', icon: Bell },
       ],
     },
     {
-      title: 'Obsah a výhody',
+      title: dict.member?.navContentBenefits || (lang === 'en' ? 'Content & benefits' : 'Obsah a výhody'),
       items: [
         { id: 'events', label: dict.member?.tabEvents || 'Akce pro členy', icon: Calendar },
         { id: 'my_events', label: dict.member?.tabMyEvents || 'Moje akce', icon: Ticket },
@@ -51,10 +51,11 @@ const SidebarContent = ({
         { id: 'card', label: dict.member?.tabCard || 'Členská karta', icon: QrCode },
         { id: 'guidelines', label: dict.member?.tabGuidelines || 'Pravidla', icon: ShieldCheck },
         { id: 'articles', label: dict.member?.tabArticles || 'Moje články', icon: BookOpen },
+        { id: 'release_notes', label: (dict.member as any)?.tabReleaseNotes || 'Release notes', icon: ScrollText },
       ],
     },
     {
-      title: 'Komunita',
+      title: dict.member?.navCommunity || (lang === 'en' ? 'Community' : 'Komunita'),
       items: [
         { id: 'messages', label: dict.member?.tabMessages || 'Zprávy', icon: Mail },
         { id: 'directory', label: dict.member?.tabDirectory || 'Adresář členů', icon: Users },
@@ -66,7 +67,7 @@ const SidebarContent = ({
       ],
     },
     {
-      title: 'Profil',
+      title: dict.member?.navProfile || (lang === 'en' ? 'Profile' : 'Profil'),
       items: [{ id: 'settings', label: dict.member?.tabSettings || 'Můj profil', icon: Settings }],
     },
   ];
@@ -105,7 +106,7 @@ const SidebarContent = ({
           </div>
           <div>
             <h1 className="text-lg font-black text-stone-900 leading-none">Pupen</h1>
-            <p className="text-[10px] font-black uppercase tracking-widest text-green-600 mt-1">Členská sekce</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-green-600 mt-1">{dict.member?.sidebarSubtitle || (lang === 'en' ? 'Member area' : 'Členská sekce')}</p>
           </div>
         </Link>
         <button onClick={() => setIsMobileOpen(false)} className="lg:hidden p-2 hover:bg-stone-50 rounded-lg transition">
@@ -182,7 +183,7 @@ const SidebarContent = ({
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-stone-600 hover:bg-stone-50 transition"
           >
             <ShieldCheck size={18} className="text-stone-400" />
-            <span>Pupen Control</span>
+            <span>{dict.member?.adminPanelLink || 'Pupen Control'}</span>
           </Link>
         )}
         <button 
@@ -190,7 +191,7 @@ const SidebarContent = ({
           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-red-500 hover:bg-red-50/10 transition"
         >
           <LogOut size={18} />
-          <span>Odhlásit se</span>
+          <span>{dict.member?.logoutShort || (lang === 'en' ? 'Log out' : 'Odhlásit se')}</span>
         </button>
       </div>
     </div>

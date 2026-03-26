@@ -1,7 +1,15 @@
 /** @type {import('next').NextConfig} */
+import { withSentryConfig } from '@sentry/nextjs';
+
 const nextConfig = {
   images: {
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 86400,
     remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
       {
         protocol: 'https',
         hostname: 'scontent-prg1-1.xx.fbcdn.net',
@@ -49,4 +57,4 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, { silent: true });

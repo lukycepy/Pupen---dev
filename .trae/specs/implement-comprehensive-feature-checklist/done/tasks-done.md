@@ -452,3 +452,44 @@
 - [x] Lost & found public list (existuje).
 - [x] Lost & found claim workflow (nápad).
 - [x] Přepínač tématu (dark) (nápad).
+- [x] Error monitoring (Sentry) (nápad).
+- [x] Archiv fotek po ročnících (nápad).
+- [x] Reduced motion preference (nápad).
+- [x] Font size accessibility (nápad).
+- [x] Print-friendly policies (nápad).
+- [x] Print-friendly ToS (nápad).
+- [x] WebP/AVIF varianty (nápad).
+- [x] Vyhledávání v admin tabulkách.
+- [x] Staging vs prod config (nápad).
+- [x] Automatická komprese uploadů (nápad).
+- [x] RLS consistency checks (nápad).
+- [x] DB migrations pipeline (nápad).
+- [x] Feature toggle pro /roman (nápad).
+- [x] Internal changelog (nápad).
+- [x] Release notes pro členy (nápad).
+- [x] Support page / helpdesk (nápad).
+- [x] Roadmap page (nápad).
+- [x] A/B subject test (nápad).
+- [x] UTM tagging linků (nápad).
+- [x] Self-hosted analytics (nápad).
+- [x] A/B hero backgrounds (nápad).
+- [x] CDN optimalizace obrázků.
+- [x] Členská mapka kontaktů (nápad).
+- [x] Emergency kontakty v app (nápad).
+- [x] První pomoc info (nápad).
+- [x] Bezpečnostní pravidla na akcích (nápad).
+- [x] Výroční zprávy (nápad).
+- [x] Členové výboru (nápad).
+- [x] Přístup k zápisům admin (existuje/nápad).
+- [x] Feedback form (existuje).
+- [x] Admin feedback management (existuje/nápad).
+- [x] Lost & found detail (existuje).
+- [x] SOS contact export (nápad).
+- [x] QR pro SOS (nápad).
+- [x] Offline mode pro SOS (nápad).
+- [x] Admin behind auth (existuje).
+- [x] Member behind auth (existuje).
+- [x] Role gating na API (existuje).
+- [x] Role gating na UI (existuje).
+- [x] Schema cache admin tools (existuje).
+- [x] Internationalization pro všechny texty.

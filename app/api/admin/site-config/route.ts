@@ -2,16 +2,19 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { requireAdmin } from '@/lib/server-auth';
 
+const SITE_CONFIG_ID = Number(process.env.SITE_CONFIG_ID || 1);
+
 export async function GET(req: Request) {
   try {
     await requireAdmin(req);
     const supabase = getServerSupabase();
+    const configId = Number.isFinite(SITE_CONFIG_ID) && SITE_CONFIG_ID >= 1 ? SITE_CONFIG_ID : 1;
     const res = await supabase
       .from('site_public_config')
       .select(
         'maintenance_enabled, maintenance_start_at, maintenance_end_at, maintenance_title_cs, maintenance_body_cs, maintenance_title_en, maintenance_body_en, pages, home, member_portal, updated_at',
       )
-      .eq('id', 1)
+      .eq('id', configId)
       .maybeSingle();
     if (res.error) throw res.error;
 
@@ -48,13 +51,14 @@ export async function POST(req: Request) {
     const member_portal = patch.member_portal && typeof patch.member_portal === 'object' ? patch.member_portal : {};
 
     const supabase = getServerSupabase();
+    const configId = Number.isFinite(SITE_CONFIG_ID) && SITE_CONFIG_ID >= 1 ? SITE_CONFIG_ID : 1;
 
     const up = await supabase
       .from('site_public_config')
       .upsert(
         [
           {
-            id: 1,
+            id: configId,
             updated_at: new Date().toISOString(),
             maintenance_enabled,
             maintenance_start_at: startAt ? startAt.toISOString() : null,
@@ -81,7 +85,7 @@ export async function POST(req: Request) {
           admin_email: user.email || 'admin',
           admin_name: user.user_metadata?.full_name || user.email || 'admin',
           action: 'SITE_CONFIG_UPDATE',
-          target_id: 'site_public_config:1',
+          target_id: `site_public_config:${configId}`,
           details: { maintenance_enabled, maintenance_start_at: startAt ? startAt.toISOString() : null, maintenance_end_at: endAt ? endAt.toISOString() : null },
         },
       ])
