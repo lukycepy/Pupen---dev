@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getMailerDebugInfoWithSettings, getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer';
-import { renderEmailTemplate } from '@/lib/email/templates';
+import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
 import { requireAdmin } from '@/lib/server-auth';
 
 export async function POST(req: Request) {
@@ -13,7 +13,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
 
-    const { subject, html } = renderEmailTemplate(templateKey, variables || {});
+    const { subject, html } = await renderEmailTemplateWithDbOverride(templateKey, variables || {});
     const transporter = await getMailerWithSettings();
     const from = await getSenderFromSettings();
 

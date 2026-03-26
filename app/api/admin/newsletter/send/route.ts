@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer';
-import { renderEmailTemplate } from '@/lib/email/templates';
+import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
+import { sendMailWithQueueFallback } from '@/lib/email/queue';
 
 function normalizeCategories(input: any): string[] {
   const arr = Array.isArray(input) ? input : [];
@@ -20,7 +21,7 @@ function matchesCategories(subCats: any, targetCats: string[]) {
   return c.some((x) => targetCats.includes(x));
 }
 
-async function sendWithConcurrency<T>(items: T[], worker: (item: T) => Promise<void>, concurrency: number) {
+async function sendWithConcurrency<T>(items: T[], worker: (item: T) => Promise<void>, concurrency: number, delayMs: number = 0) {
   const queue = [...items];
   const results: { ok: number; failed: number } = { ok: 0, failed: 0 };
   const runners = Array.from({ length: Math.max(1, Math.min(concurrency, items.length || 1)) }).map(async () => {
@@ -31,6 +32,9 @@ async function sendWithConcurrency<T>(items: T[], worker: (item: T) => Promise<v
         results.ok += 1;
       } catch {
         results.failed += 1;
+      }
+      if (delayMs > 0 && queue.length > 0) {
+        await new Promise(resolve => setTimeout(resolve, delayMs));
       }
     }
   });
@@ -50,6 +54,8 @@ export async function POST(req: Request) {
 
     if (!subject || !html) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
 
+    const draftId = body?.draftId;
+
     const supabase = getServerSupabase();
     const subs = await supabase.from('newsletter_subscriptions').select('email,categories,consent').order('created_at', { ascending: false });
     if (subs.error) throw subs.error;
@@ -64,14 +70,52 @@ export async function POST(req: Request) {
 
     const transporter = await getMailerWithSettings();
     const from = await getSenderFromSettings();
-    const { html: wrappedHtml, subject: wrappedSubject } = renderEmailTemplate('newsletter', { subject, html });
+    
+    // Získáme URL pro odhlášení
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://pupen.org';
 
+    let queued = 0;
+    // Povolíme maximálně 3 paralelní požadavky a po každém e-mailu ve frontě počkáme 100ms
+    // Zabrání to rate limitingu od SMTP providera (např. SendGrid, AWS SES, Resend)
     const sendRes = await sendWithConcurrency(
       recipients,
       async (to) => {
-        await transporter.sendMail({ from, to, subject: wrappedSubject, html: wrappedHtml });
+        // Přidáme unsubscribe link specifický pro příjemce
+        const unsubUrl = `${baseUrl}/unsubscribe?email=${encodeURIComponent(to)}`;
+        const emailVars = { 
+          subject, 
+          html, 
+          unsubLink: unsubUrl 
+        };
+        
+        const { html: wrappedHtml, subject: wrappedSubject } = await renderEmailTemplateWithDbOverride('newsletter', emailVars);
+        
+        // Přidáme List-Unsubscribe hlavičku
+        const r = await sendMailWithQueueFallback({
+          transporter,
+          supabase,
+          meta: { kind: 'newsletter' },
+          message: { 
+            from, 
+            to, 
+            subject: wrappedSubject, 
+            html: wrappedHtml,
+            headers: {
+              'List-Unsubscribe': `<${unsubUrl}>`,
+              'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
+            }
+          },
+        });
+        if (!r.ok) {
+          if (r.queued) {
+            queued += 1;
+            return;
+          }
+          throw r.error;
+        }
       },
-      5,
+      3,   // concurrency
+      100  // delayMs
     );
 
     const now = new Date().toISOString();
@@ -79,6 +123,10 @@ export async function POST(req: Request) {
       .from('newsletter')
       .insert([{ subject, html, sent_at: now }])
       .throwOnError();
+
+    if (draftId) {
+      await supabase.from('newsletter_drafts').update({ status: 'sent', updated_at: now }).eq('id', draftId);
+    }
 
     await supabase
       .from('admin_logs')
@@ -88,14 +136,13 @@ export async function POST(req: Request) {
           admin_name: user.user_metadata?.full_name || user.email || 'admin',
           action: 'NEWSLETTER_SENT',
           target_id: null,
-          details: { categories, sent: sendRes.ok, failed: sendRes.failed, recipients: recipients.length },
+          details: { categories, sent: sendRes.ok, queued, failed: sendRes.failed, recipients: recipients.length },
         },
       ])
       .throwOnError();
 
-    return NextResponse.json({ ok: true, sent: sendRes.ok, failed: sendRes.failed, recipients: recipients.length });
+    return NextResponse.json({ ok: true, sent: sendRes.ok, queued, failed: sendRes.failed, recipients: recipients.length });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
   }
 }
-

@@ -67,6 +67,7 @@ async function fetchNominatim(q: string, lang: string) {
     const label = formatLabel(addr) || String(x?.display_name || '').trim();
     const full = formatFull(addr) || String(x?.display_name || '').trim();
     return {
+      provider: 'nominatim',
       id: String(x?.place_id || ''),
       label,
       full,
@@ -74,6 +75,8 @@ async function fetchNominatim(q: string, lang: string) {
       street: pickFirst(addr, ['road', 'pedestrian', 'footway', 'street']),
       house_number: pickFirst(addr, ['house_number']),
       postcode: pickFirst(addr, ['postcode']),
+      lat: x?.lat ? Number(x.lat) : null,
+      lon: x?.lon ? Number(x.lon) : null,
     };
   });
   return items;
@@ -97,9 +100,13 @@ async function fetchRuian(q: string) {
       if (!address) return null;
       const score = typeof c?.score === 'number' ? c.score : typeof c?.attributes?.Score === 'number' ? c.attributes.Score : null;
       return {
+        provider: 'ruian',
         id: `${address}:${String(score ?? '')}:${String(idx)}`,
         label: address,
         full: address,
+        score,
+        lon: typeof c?.location?.x === 'number' ? c.location.x : null,
+        lat: typeof c?.location?.y === 'number' ? c.location.y : null,
       };
     })
     .filter(Boolean);

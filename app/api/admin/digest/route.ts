@@ -3,6 +3,7 @@ import { getServerSupabase } from '@/lib/supabase-server';
 import { requireAdmin } from '@/lib/server-auth';
 import { getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer';
 import { buildWeeklyDigest } from '@/lib/email/digest';
+import { sendMailWithQueueFallback } from '@/lib/email/queue';
 
 export async function GET(req: Request) {
   try {
@@ -31,11 +32,11 @@ export async function POST(req: Request) {
     const transporter = await getMailerWithSettings();
     const from = await getSenderFromSettings();
 
-    await transporter.sendMail({
-      from,
-      to,
-      subject: digest.subject,
-      html: digest.html,
+    await sendMailWithQueueFallback({
+      transporter,
+      supabase,
+      meta: { kind: 'digest_manual' },
+      message: { from, to, subject: digest.subject, html: digest.html },
     });
 
     try {

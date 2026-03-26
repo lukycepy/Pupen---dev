@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
-import { Mail, Send, Eye } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Mail, Send, Eye, Save, Trash2, RefreshCw } from 'lucide-react';
 import InlinePulse from '@/app/components/InlinePulse';
 import { useToast } from '@/app/context/ToastContext';
-import { listEmailTemplates, renderEmailTemplate, type EmailTemplateKey } from '@/lib/email/templates';
+import { listEmailTemplates, type EmailTemplateKey } from '@/lib/email/templates';
 import { supabase } from '@/lib/supabase';
 
 export default function EmailTemplatesTab() {
@@ -40,6 +40,15 @@ export default function EmailTemplatesTab() {
   );
   const [previewOpen, setPreviewOpen] = useState(true);
   const [sending, setSending] = useState(false);
+  const [overridesLoading, setOverridesLoading] = useState(false);
+  const [overrides, setOverrides] = useState<any[]>([]);
+  const [draftSubject, setDraftSubject] = useState('');
+  const [draftHtml, setDraftHtml] = useState('');
+  const [draftEnabled, setDraftEnabled] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [preview, setPreview] = useState<{ subject: string; html: string; source?: string } | null>(null);
 
   const parsed = useMemo(() => {
     try {
@@ -49,14 +58,91 @@ export default function EmailTemplatesTab() {
     }
   }, [variablesJson]);
 
-  const preview = useMemo(() => {
-    if (!parsed.ok) return null;
-    try {
-      return renderEmailTemplate(templateKey as any, parsed.value);
-    } catch (e: any) {
-      return { subject: 'Chyba', html: `<pre>${String(e?.message || e)}</pre>` };
+  const currentOverride = useMemo(() => {
+    const key = String(templateKey || '');
+    return overrides.find((o: any) => String(o?.template_key || '') === key) || null;
+  }, [overrides, templateKey]);
+
+  const getToken = async () => {
+    let { data: sessionData } = await supabase.auth.getSession();
+    let token = sessionData.session?.access_token || '';
+    if (!token) {
+      await supabase.auth.refreshSession();
+      sessionData = (await supabase.auth.getSession()).data;
+      token = sessionData.session?.access_token || '';
     }
-  }, [parsed, templateKey]);
+    if (!token) throw new Error('Přihlášení vypršelo. Obnovte stránku nebo se přihlaste znovu.');
+    return token;
+  };
+
+  const loadOverrides = async () => {
+    setOverridesLoading(true);
+    try {
+      const token = await getToken();
+      const res = await fetch('/api/admin/email/templates', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${token}`, 'x-supabase-token': token },
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j?.error || 'Load failed');
+      setOverrides(Array.isArray(j?.overrides) ? j.overrides : []);
+    } catch (e: any) {
+      showToast(e?.message || 'Chyba', 'error');
+    } finally {
+      setOverridesLoading(false);
+    }
+  };
+
+  const refreshPreview = async (opts?: { forceDraft?: boolean }) => {
+    if (!parsed.ok) return;
+    setPreviewLoading(true);
+    try {
+      const token = await getToken();
+      const useDraft = opts?.forceDraft === true || !!draftSubject.trim() || !!draftHtml.trim();
+      const res = await fetch('/api/admin/email/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'x-supabase-token': token },
+        body: JSON.stringify({
+          templateKey,
+          variables: parsed.value,
+          draftSubject: useDraft ? draftSubject : null,
+          draftHtml: useDraft ? draftHtml : null,
+        }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j?.error || 'Preview failed');
+      setPreview({ subject: String(j.subject || ''), html: String(j.html || ''), source: j.source ? String(j.source) : undefined });
+    } catch (e: any) {
+      setPreview({ subject: 'Chyba', html: `<pre>${String(e?.message || e)}</pre>` });
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadOverrides();
+  }, []);
+
+  useEffect(() => {
+    if (currentOverride) {
+      setDraftSubject(String(currentOverride.subject || ''));
+      setDraftHtml(String(currentOverride.html || ''));
+      setDraftEnabled(currentOverride.is_enabled !== false);
+    } else {
+      setDraftSubject('');
+      setDraftHtml('');
+      setDraftEnabled(true);
+    }
+  }, [templateKey, currentOverride]);
+
+  useEffect(() => {
+    if (!previewOpen) return;
+    if (!parsed.ok) return;
+    const t = setTimeout(() => {
+      refreshPreview();
+    }, 350);
+    return () => clearTimeout(t);
+  }, [previewOpen, templateKey, variablesJson, draftSubject, draftHtml]);
 
   const sendTest = async () => {
     if (!to.trim()) {
@@ -69,14 +155,7 @@ export default function EmailTemplatesTab() {
     }
     setSending(true);
     try {
-      let { data: sessionData } = await supabase.auth.getSession();
-      let token = sessionData.session?.access_token || '';
-      if (!token) {
-        await supabase.auth.refreshSession();
-        sessionData = (await supabase.auth.getSession()).data;
-        token = sessionData.session?.access_token || '';
-      }
-      if (!token) throw new Error('Přihlášení vypršelo. Obnovte stránku nebo se přihlaste znovu.');
+      const token = await getToken();
       const res = await fetch('/api/admin/email/send-test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'x-supabase-token': token },
@@ -98,6 +177,51 @@ export default function EmailTemplatesTab() {
     }
   };
 
+  const saveOverride = async () => {
+    if (!draftSubject.trim() || !draftHtml.trim()) {
+      showToast('Vyplňte subject i HTML', 'error');
+      return;
+    }
+    setSaving(true);
+    try {
+      const token = await getToken();
+      const res = await fetch('/api/admin/email/templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'x-supabase-token': token },
+        body: JSON.stringify({ templateKey, subject: draftSubject, html: draftHtml, isEnabled: draftEnabled }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j?.error || 'Save failed');
+      showToast('Uloženo', 'success');
+      await loadOverrides();
+      await refreshPreview({ forceDraft: false });
+    } catch (e: any) {
+      showToast(e?.message || 'Chyba', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteOverride = async () => {
+    setDeleting(true);
+    try {
+      const token = await getToken();
+      const res = await fetch(`/api/admin/email/templates/${templateKey}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}`, 'x-supabase-token': token },
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j?.error || 'Delete failed');
+      showToast('Resetováno na default', 'success');
+      await loadOverrides();
+      await refreshPreview({ forceDraft: false });
+    } catch (e: any) {
+      showToast(e?.message || 'Chyba', 'error');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="bg-white p-8 rounded-[2.5rem] border shadow-sm">
@@ -107,7 +231,7 @@ export default function EmailTemplatesTab() {
               <Mail className="text-green-600" />
               E-mail šablony
             </h2>
-            <p className="text-stone-500 font-medium">Náhled šablon a odeslání testovacího e-mailu.</p>
+            <p className="text-stone-500 font-medium">Správa override šablon, náhled a odeslání testovacího e-mailu.</p>
           </div>
           <button
             type="button"
@@ -136,6 +260,76 @@ export default function EmailTemplatesTab() {
               </select>
               <div className="mt-3 text-[10px] font-black uppercase tracking-widest text-stone-300">
                 Proměnné: {templates.find((t) => t.key === templateKey)?.variables?.join(', ')}
+              </div>
+            </div>
+
+            <div className="bg-stone-50 border border-stone-100 rounded-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">Override</div>
+                <button
+                  type="button"
+                  onClick={loadOverrides}
+                  disabled={overridesLoading}
+                  className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
+                >
+                  {overridesLoading ? <InlinePulse className="bg-stone-400/70" size={14} /> : <RefreshCw size={14} />}
+                  Reload
+                </button>
+              </div>
+
+              <label className="flex items-center gap-3 text-xs font-bold text-stone-600">
+                <input
+                  type="checkbox"
+                  checked={draftEnabled}
+                  onChange={(e) => setDraftEnabled(e.target.checked)}
+                  className="h-4 w-4"
+                />
+                Aktivní
+              </label>
+
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">Subject template</div>
+                <input
+                  value={draftSubject}
+                  onChange={(e) => setDraftSubject(e.target.value)}
+                  placeholder="Např. Vstupenka: {{eventTitle}}"
+                  className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition"
+                />
+              </div>
+
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">HTML template</div>
+                <textarea
+                  value={draftHtml}
+                  onChange={(e) => setDraftHtml(e.target.value)}
+                  rows={10}
+                  placeholder="<h1>{{eventTitle}}</h1>\n<div>{{{html}}}</div>"
+                  className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 font-mono text-xs font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition resize-none"
+                />
+                <div className="mt-2 text-[10px] font-black uppercase tracking-widest text-stone-300">
+                  Tokeny: {'{{x}}'} escapuje, {'{{{x}}}'} neescapuje.
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={saveOverride}
+                  disabled={saving}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-green-200 bg-green-600 text-white hover:bg-green-700 transition disabled:opacity-50"
+                >
+                  {saving ? <InlinePulse className="bg-white/80" size={14} /> : <Save size={16} />}
+                  Uložit
+                </button>
+                <button
+                  type="button"
+                  onClick={deleteOverride}
+                  disabled={deleting || !currentOverride}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
+                >
+                  {deleting ? <InlinePulse className="bg-stone-400/70" size={14} /> : <Trash2 size={16} />}
+                  Reset
+                </button>
               </div>
             </div>
 
@@ -172,12 +366,29 @@ export default function EmailTemplatesTab() {
                 <div className="mt-2 text-[10px] font-black uppercase tracking-widest text-red-600">{parsed.error}</div>
               )}
             </div>
-
             {previewOpen && preview && (
               <div className="bg-white border border-stone-100 rounded-2xl overflow-hidden shadow-sm">
                 <div className="p-4 border-b border-stone-100 bg-stone-50/50">
-                  <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">Předmět</div>
-                  <div className="font-bold text-stone-900">{preview.subject}</div>
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">Předmět</div>
+                      <div className="font-bold text-stone-900">{preview.subject}</div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {preview.source ? (
+                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-300">{String(preview.source)}</div>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => refreshPreview()}
+                        disabled={previewLoading || !parsed.ok}
+                        className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
+                      >
+                        {previewLoading ? <InlinePulse className="bg-stone-400/70" size={14} /> : <RefreshCw size={14} />}
+                        Aktualizovat
+                      </button>
+                    </div>
+                  </div>
                 </div>
                 <iframe title="Email preview" className="w-full h-[520px]" srcDoc={preview.html} />
               </div>

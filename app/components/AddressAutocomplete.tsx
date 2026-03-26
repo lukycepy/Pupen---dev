@@ -6,6 +6,10 @@ type Item = {
   id: string;
   label: string;
   full: string;
+  provider?: string;
+  score?: number | null;
+  lat?: number | null;
+  lon?: number | null;
   city?: string;
   street?: string;
   house_number?: string;
@@ -16,12 +20,14 @@ export default function AddressAutocomplete({
   lang,
   value,
   onChange,
+  onSelect,
   placeholder,
   inputClassName,
 }: {
   lang: string;
   value: string;
   onChange: (v: string) => void;
+  onSelect?: (it: Item) => void;
   placeholder?: string;
   inputClassName?: string;
 }) {
@@ -71,6 +77,7 @@ export default function AddressAutocomplete({
 
   const choose = (it: Item) => {
     onChange(it.full || it.label);
+    onSelect?.(it);
     setOpen(false);
   };
 
@@ -115,4 +122,3 @@ export default function AddressAutocomplete({
     </div>
   );
 }
-

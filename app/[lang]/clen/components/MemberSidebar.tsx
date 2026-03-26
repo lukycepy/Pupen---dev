@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { 
   LayoutDashboard, FileText, Calendar, Users, BookOpen, 
   Settings, LogOut, ShieldCheck, ChevronRight, Menu, X, 
-  Mail, Bell, QrCode, Ticket, FolderKanban, BarChart3, ScrollText, ChevronDown
+  Mail, Bell, QrCode, Ticket, FolderKanban, BarChart3, ScrollText, ChevronDown, Award
 } from 'lucide-react';
 
 interface MemberSidebarProps {
@@ -60,6 +60,7 @@ const SidebarContent = ({
         { id: 'directory', label: dict.member?.tabDirectory || 'Adresář členů', icon: Users },
         { id: 'projects', label: dict.member?.tabProjects || 'Projekty', icon: FolderKanban },
         { id: 'polls', label: dict.member?.tabPolls || 'Ankety', icon: BarChart3 },
+        { id: 'badges', label: (dict.member as any)?.tabBadges || (lang === 'en' ? 'Badges' : 'Odznaky'), icon: Award },
         { id: 'governance', label: dict.member?.tabGovernance || 'Governance', icon: ScrollText },
         { id: 'board', label: dict.member?.tabBoard || 'Vedení', icon: Users },
       ],

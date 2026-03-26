@@ -26,7 +26,19 @@ export async function GET(req: Request) {
       : { data: [], error: null as any };
     if ((rsvpRes as any).error) throw (rsvpRes as any).error;
 
-    const prefsRes = await supabase
+    const badgesRes = await supabase.from('user_badges').select('*, gamification_badges(*)').eq('user_id', user.id);
+  const applicationsRes = await supabase.from('member_applications').select('*').eq('email', email);
+    
+    // Log the action
+    await supabase.from('admin_logs').insert([{
+      admin_email: user.email || 'system',
+      admin_name: 'GDPR Export',
+      action: 'EXPORT_DOWNLOAD',
+      target_id: user.id,
+      details: { format: 'json', type: 'gdpr_all', exportedBy: user.id }
+    }]);
+
+    const payload = {prefsRes = await supabase
       .from('admin_logs')
       .select('created_at, details')
       .eq('action', 'USER_EMAIL_PREFS')
@@ -107,6 +119,8 @@ export async function GET(req: Request) {
       user: { id: user.id, email: user.email || null },
       profile: profileRes.data || null,
       rsvp: (rsvpRes as any).data || [],
+      badges: (badgesRes as any).data || [],
+      applications: (applicationsRes as any).data || [],
       emailPreferencesLogs: prefsRes.data || [],
       pollVotes: pollVotesRes.data || [],
       reports: reportsRes.data || [],

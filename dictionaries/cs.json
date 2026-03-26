@@ -234,7 +234,15 @@
     "storyTitle": "Všechno to začalo v roce 2007...",
     "storyP1": "Tehdy se parta studentů rozhodla, že Suchdol potřebuje víc života. Nebylo to o velkých plánech, ale o chuti se potkávat.",
     "storyP2": "První akce byla malá grilovačka pro pár kamarádů. Dnes? Dnes pořádáme akce pro studenty i zaměstnance, máme vlastní zázemí a jsme hrdou součástí univerzity.",
-    "storyP3": "I když se členové mění, duch Pupenu zůstává stejný. Jsme otevření všem, kdo chtějí přiložit ruku k dlu nebo se jen pobavit."
+    "storyP3": "I když se členové mění, duch Pupenu zůstává stejný. Jsme otevření všem, kdo chtějí přiložit ruku k dlu nebo se jen pobavit.",
+    "timelineTitle": "Důležité milníky",
+    "timeline": [
+      { "year": "2007", "title": "Založení spolku", "desc": "Parta nadšenců z FAPPZ uspořádala první neoficiální grilovačku." },
+      { "year": "2010", "title": "První velká akce", "desc": "Podařilo se nám zorganizovat první ročník legendárního seznamováku pro prváky." },
+      { "year": "2015", "title": "Oficiální klubovna", "desc": "Získali jsme vlastní zázemí přímo na fakultě. Místo, kde vznikají ty nejlepší nápady." },
+      { "year": "2020", "title": "Přes 100 aktivních členů", "desc": "Rozrostli jsme se do obřích rozměrů. Pupen začal fungovat jako dobře promazaný stroj." },
+      { "year": "Současnost", "title": "Inovujeme", "desc": "Digitalizujeme spolek, spouštíme nový web a rozšiřujeme aktivity i do dalších oblastí." }
+    ]
   },
   "categories": {
     "Vše": "Vše",

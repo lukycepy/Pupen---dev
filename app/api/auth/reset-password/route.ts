@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createHash } from 'crypto';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { evaluatePassword } from '@/lib/auth/password-policy';
 
 function isSchemaCacheMissingTable(e: any) {
   const msg = String(e?.message || '');
@@ -16,9 +17,12 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const token = String(body?.token || '').trim();
     const password = String(body?.password || '');
+    const email = body?.email ? String(body.email).trim() : '';
 
     if (!token || token.length < 32) return NextResponse.json({ error: 'Invalid token' }, { status: 400 });
-    if (!password || password.length < 8) return NextResponse.json({ error: 'Invalid password' }, { status: 400 });
+    if (!password) return NextResponse.json({ error: 'Invalid password' }, { status: 400 });
+    const pw = evaluatePassword(password, { email });
+    if (!pw.ok) return NextResponse.json({ error: 'Password does not meet policy' }, { status: 400 });
 
     const supabase = getServerSupabase();
     const tokenHash = sha256Hex(token);

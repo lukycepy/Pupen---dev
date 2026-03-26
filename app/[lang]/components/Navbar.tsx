@@ -562,13 +562,15 @@ export default function Navbar({ lang, dict }: NavbarProps) {
           {/* MOBILNÍ HAMBURGER */}
           <div className="lg:hidden flex items-center gap-3">
             <div className="flex items-center gap-1 bg-stone-100 p-1 rounded-xl border border-stone-200">
-              <Link href={getTransliteratedPath('cs')} className={`px-2 py-1 rounded-lg text-[9px] font-black transition ${lang === 'cs' ? 'bg-white text-green-600 shadow-sm' : 'text-stone-400'}`}>CZ</Link>
-              <Link href={getTransliteratedPath('en')} className={`px-2 py-1 rounded-lg text-[9px] font-black transition ${lang === 'en' ? 'bg-white text-green-600 shadow-sm' : 'text-stone-400'}`}>EN</Link>
+              <Link href={getTransliteratedPath('cs')} className={`px-2 py-1 rounded-lg text-[9px] font-black transition focus:ring-2 focus:ring-green-500 focus:outline-none ${lang === 'cs' ? 'bg-white text-green-600 shadow-sm' : 'text-stone-400'}`}>CZ</Link>
+              <Link href={getTransliteratedPath('en')} className={`px-2 py-1 rounded-lg text-[9px] font-black transition focus:ring-2 focus:ring-green-500 focus:outline-none ${lang === 'en' ? 'bg-white text-green-600 shadow-sm' : 'text-stone-400'}`}>EN</Link>
             </div>
             
             <button 
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="text-stone-900 hover:text-green-600 transition p-2 bg-stone-100 rounded-xl border border-stone-200"
+              className="text-stone-900 hover:text-green-600 transition p-2 bg-stone-100 rounded-xl border border-stone-200 focus:ring-2 focus:ring-green-500 focus:outline-none"
+              aria-label={isMenuOpen ? "Zavřít menu" : "Otevřít menu"}
+              aria-expanded={isMenuOpen}
             >
               {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
@@ -578,7 +580,12 @@ export default function Navbar({ lang, dict }: NavbarProps) {
 
       {/* MOBILNÍ MENU */}
       {isMenuOpen && (
-        <div className="lg:hidden fixed inset-0 top-16 bg-white z-[9998] animate-in slide-in-from-top-10 duration-500 overflow-y-auto">
+        <div 
+          className="lg:hidden fixed inset-0 top-16 bg-white z-[9998] animate-in slide-in-from-top-10 duration-500 overflow-y-auto"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Mobilní navigace"
+        >
           <div className="flex flex-col p-8 space-y-6 font-black uppercase tracking-[0.2em] text-stone-700">
             {/* MOBILNÍ SEARCH */}
             <div className="relative mb-4">

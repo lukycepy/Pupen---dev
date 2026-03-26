@@ -33,6 +33,7 @@ export default function PrihlaskaPage() {
     gdpr_consent: false,
     applicant_signature: '',
   });
+  const [addressMeta, setAddressMeta] = useState<any>(null);
 
   useEffect(() => {
     getDictionary(lang).then(d => setDict(d.recruitment));
@@ -54,6 +55,24 @@ export default function PrihlaskaPage() {
 
     setLoading(true);
     try {
+      let validatedAddress = String(formData.address || '').trim();
+      let validatedMeta: any = addressMeta;
+      if (validatedAddress) {
+        const res = await fetch('/api/address/validate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ q: validatedAddress, lang }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || !json?.ok) {
+          showToast(lang === 'en' ? 'Please enter a valid address.' : 'Zadejte prosím platnou adresu.', 'error');
+          setLoading(false);
+          return;
+        }
+        validatedAddress = String(json?.address || validatedAddress);
+        validatedMeta = json?.meta || validatedMeta;
+      }
+
       const full_name = `${formData.first_name} ${formData.last_name}`.trim();
       const payload: any = {
         full_name,
@@ -62,7 +81,9 @@ export default function PrihlaskaPage() {
         last_name: formData.last_name,
         email: formData.email,
         phone: formData.phone,
-        address: formData.address || null,
+        address: validatedAddress || null,
+        address_meta: validatedMeta || {},
+        address_validated_at: validatedAddress ? new Date().toISOString() : null,
         membership_type: formData.membership_type,
         university_email: formData.membership_type === 'regular' ? formData.university_email : null,
         field_of_study: formData.membership_type === 'regular' ? formData.field_of_study : null,
@@ -96,6 +117,47 @@ export default function PrihlaskaPage() {
           </div>
           <h1 className="text-3xl font-black text-stone-900 mb-4">{dict.successTitle}</h1>
           <p className="text-stone-500 mb-8 font-medium">{dict.successDesc}</p>
+          <div className="bg-stone-50 border border-stone-100 rounded-[2rem] p-6 text-left mb-6">
+            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-3">
+              {lang === 'en' ? 'What happens next' : 'Co bude dál'}
+            </div>
+            <div className="space-y-2 text-sm font-medium text-stone-700">
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-xl bg-white border border-stone-100 flex items-center justify-center font-black text-stone-400 shrink-0">1</div>
+                <div>{lang === 'en' ? 'Admins will review your application.' : 'Administrátoři přihlášku zkontrolují.'}</div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-xl bg-white border border-stone-100 flex items-center justify-center font-black text-stone-400 shrink-0">2</div>
+                <div>
+                  {lang === 'en'
+                    ? 'After approval you will receive an email with access to the member portal.'
+                    : 'Po schválení přijde e-mail s přístupem do členské sekce.'}
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-xl bg-white border border-stone-100 flex items-center justify-center font-black text-stone-400 shrink-0">3</div>
+                <div>
+                  {lang === 'en'
+                    ? 'You can check your application status in the member portal after you sign in.'
+                    : 'Stav přihlášky uvidíte po přihlášení v členské sekci.'}
+                </div>
+              </div>
+            </div>
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <Link
+                href={`/${lang}/login`}
+                className="inline-flex items-center justify-center bg-white text-stone-700 px-4 py-3 rounded-2xl font-bold hover:bg-stone-100 transition border border-stone-200 text-xs"
+              >
+                {lang === 'en' ? 'Sign in' : 'Přihlásit se'}
+              </Link>
+              <Link
+                href={`/${lang}/clen`}
+                className="inline-flex items-center justify-center bg-stone-900 text-white px-4 py-3 rounded-2xl font-bold hover:bg-green-600 transition text-xs"
+              >
+                {lang === 'en' ? 'Member portal' : 'Členská sekce'}
+              </Link>
+            </div>
+          </div>
           <Link href={`/${lang}`} className="inline-flex items-center gap-2 bg-green-600 text-white px-8 py-4 rounded-2xl font-bold hover:bg-green-700 transition shadow-lg shadow-green-100">
             <ArrowLeft size={18} /> {dict.backHome}
           </Link>
@@ -199,6 +261,7 @@ export default function PrihlaskaPage() {
                 lang={lang}
                 value={formData.address}
                 onChange={(v) => setFormData({ ...formData, address: v })}
+                onSelect={(it) => setAddressMeta(it)}
                 inputClassName="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 focus:ring-2 focus:ring-green-500 transition font-bold"
               />
             </div>

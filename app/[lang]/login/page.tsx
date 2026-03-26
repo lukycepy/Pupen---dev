@@ -8,14 +8,24 @@ import { getDictionary } from '@/lib/get-dictionary';
 import Link from 'next/link';
 import InlinePulse from '@/app/components/InlinePulse';
 import PasswordField from '@/app/components/PasswordField';
+import { evaluatePassword, passwordScoreLabel } from '@/lib/auth/password-policy';
 
 export default function LoginPage() {
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
+  const universitySsoProvider = process.env.NEXT_PUBLIC_UNIVERSITY_SSO_PROVIDER || '';
+  const universitySsoLabel = process.env.NEXT_PUBLIC_UNIVERSITY_SSO_LABEL || '';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [mfa, setMfa] = useState<{ factorId: string; challengeId: string } | null>(null);
   const [mfaCode, setMfaCode] = useState('');
+  const [adminMfaEnroll, setAdminMfaEnroll] = useState(false);
+  const [adminMfaEnrollQr, setAdminMfaEnrollQr] = useState('');
+  const [adminMfaFactorId, setAdminMfaFactorId] = useState('');
+  const [adminMfaEnrollCode, setAdminMfaEnrollCode] = useState('');
   const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState('');
   const [dict, setDict] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [showRoleSelection, setShowRoleSelection] = useState(false);
@@ -24,6 +34,19 @@ export default function LoginPage() {
   const params = useParams();
   const lang = (params?.lang as string) || 'cs';
 
+  const logSecurity = async (event: string, details: any) => {
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) return;
+      await fetch('/api/auth/security-log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ event, details }),
+      });
+    } catch {}
+  };
+
   useEffect(() => {
     async function loadDict() {
       const d = await getDictionary(lang);
@@ -31,6 +54,44 @@ export default function LoginPage() {
     }
     loadDict();
   }, [lang]);
+
+  useEffect(() => {
+    if (!turnstileSiteKey) return;
+    const w: any = window as any;
+    const render = () => {
+      const el = document.getElementById('turnstile-login');
+      if (!el) return;
+      if ((el as any).__rendered) return;
+      if (!w.turnstile) return;
+      (el as any).__rendered = true;
+      w.turnstile.render('#turnstile-login', {
+        sitekey: turnstileSiteKey,
+        callback: (t: string) => setCaptchaToken(String(t || '')),
+        'expired-callback': () => setCaptchaToken(''),
+        'error-callback': () => setCaptchaToken(''),
+      });
+    };
+
+    if (w.turnstile) {
+      render();
+      return;
+    }
+
+    const existing = document.querySelector('script[data-turnstile="1"]') as HTMLScriptElement | null;
+    if (existing) {
+      existing.addEventListener('load', render);
+      return () => existing.removeEventListener('load', render);
+    }
+
+    const s = document.createElement('script');
+    s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    s.async = true;
+    s.defer = true;
+    s.dataset.turnstile = '1';
+    s.addEventListener('load', render);
+    document.head.appendChild(s);
+    return () => s.removeEventListener('load', render);
+  }, [turnstileSiteKey]);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -42,26 +103,145 @@ export default function LoginPage() {
           .eq('id', session.user.id)
           .maybeSingle();
         
-        handleRedirect(profile, session.user.email);
+        handleRedirect(profile, session.user.email, 'session');
       }
     };
     checkSession();
   }, [router, lang]);
 
-  const handleRedirect = (profile: any, email?: string) => {
+  const startAdminMfaEnroll = async () => {
+    const authAny: any = supabase.auth as any;
+    if (!authAny?.mfa?.enroll) {
+      setError(lang === 'cs' ? '2FA není podporováno.' : '2FA not supported.');
+      return;
+    }
+    setAdminMfaEnroll(true);
+    setLoading(true);
+    setError('');
+    setInfo('');
+    try {
+      const res = await authAny.mfa.enroll({ factorType: 'totp' });
+      if (res?.error) throw res.error;
+      const factorId = String(res?.data?.id || '');
+      const uri = String(res?.data?.totp?.uri || res?.data?.totp?.qr_code || '');
+      if (!factorId || !uri) throw new Error('Enroll failed');
+      setAdminMfaFactorId(factorId);
+      const QRCode: any = await import('qrcode');
+      const qr = await QRCode.toDataURL(uri, { margin: 1, width: 320 });
+      setAdminMfaEnrollQr(qr);
+      setAdminMfaEnrollCode('');
+      setInfo(lang === 'cs' ? 'Admin účet vyžaduje 2FA. Naskenujte QR a ověřte kód.' : 'Admin accounts require 2FA. Scan QR and verify code.');
+    } catch (e: any) {
+      setError(e?.message || (lang === 'cs' ? 'Chyba' : 'Error'));
+      setAdminMfaEnroll(false);
+      setAdminMfaEnrollQr('');
+      setAdminMfaFactorId('');
+      setAdminMfaEnrollCode('');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyAdminMfaEnroll = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const authAny: any = supabase.auth as any;
+    if (!adminMfaFactorId) return;
+    setLoading(true);
+    setError('');
+    setInfo('');
+    try {
+      const ch = await authAny?.mfa?.challenge?.({ factorId: adminMfaFactorId });
+      const challengeId = String(ch?.data?.id || ch?.data?.challengeId || '');
+      if (!challengeId) throw new Error('Challenge failed');
+      const res = await authAny?.mfa?.verify?.({ factorId: adminMfaFactorId, challengeId, code: adminMfaEnrollCode });
+      if (res?.error) throw res.error;
+
+      setAdminMfaEnroll(false);
+      setAdminMfaEnrollQr('');
+      setAdminMfaFactorId('');
+      setAdminMfaEnrollCode('');
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData.session?.user;
+      if (!user) throw new Error('Unauthorized');
+      const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
+      await handleRedirect(profile, user.email || undefined, 'mfa_enroll');
+    } catch (e: any) {
+      setError(e?.message || (lang === 'cs' ? 'Chyba' : 'Error'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const ensureAdminAal2 = async (profile: any, email?: string, method?: string) => {
+    const isSuperAdmin = email === 'cepelak@pupen.org' || profile?.email === 'cepelak@pupen.org';
+    const hasAdmin = profile?.is_admin || profile?.can_manage_admins || isSuperAdmin;
+    if (!hasAdmin || isSuperAdmin) return true;
+
+    const authAny: any = supabase.auth as any;
+    const mfaAny: any = authAny?.mfa;
+    if (!mfaAny) return true;
+
+    try {
+      const aal = await mfaAny.getAuthenticatorAssuranceLevel?.();
+      const current = String(aal?.data?.currentLevel || aal?.data?.current_level || '');
+      if (current === 'aal2') return true;
+    } catch {}
+
+    try {
+      const factorsRes = await mfaAny.listFactors?.();
+      const factors = factorsRes?.data?.totp || factorsRes?.data?.all || [];
+      const verified = Array.isArray(factors) ? factors.find((f: any) => f?.status === 'verified') : null;
+      if (!verified?.id) {
+        await startAdminMfaEnroll();
+        return false;
+      }
+      const factorId = String(verified.id);
+      const ch = await mfaAny.challenge?.({ factorId });
+      const challengeId = String(ch?.data?.id || ch?.data?.challengeId || '');
+      if (!challengeId) throw new Error('Challenge failed');
+      setMfa({ factorId, challengeId });
+      setMfaCode('');
+      setError(lang === 'cs' ? 'Admin účet vyžaduje 2FA.' : 'Admin accounts require 2FA.');
+      await logSecurity('LOGIN_NO_ACCESS', { method: method || 'session', reason: 'admin_requires_2fa' });
+      setLoading(false);
+      return false;
+    } catch {
+      await startAdminMfaEnroll();
+      return false;
+    }
+  };
+
+  const handleRedirect = async (profile: any, email?: string, method?: string) => {
+    if (profile?.is_blocked) {
+      setError(lang === 'cs' ? 'Účet je zablokován. Kontaktujte správce.' : 'Your account is blocked. Please contact an administrator.');
+      await logSecurity('LOGIN_BLOCKED', { method: method || 'session' });
+      await supabase.auth.signOut();
+      return;
+    }
+
     const isSuperAdmin = email === 'cepelak@pupen.org' || profile?.email === 'cepelak@pupen.org';
     const hasAdmin = profile?.is_admin || isSuperAdmin;
     const hasMember = !!(profile?.is_member || profile?.is_admin || profile?.can_view_member_portal || profile?.can_edit_member_portal) || isSuperAdmin;
 
+    if (hasAdmin) {
+      const ok = await ensureAdminAal2(profile, email, method);
+      if (!ok) return;
+    }
+
     if (hasAdmin && hasMember) {
       setUserProfile(profile || { email: 'cepelak@pupen.org' });
       setShowRoleSelection(true);
+      await logSecurity('LOGIN_SUCCESS', { method: method || 'session', outcome: 'multi' });
     } else if (hasAdmin) {
+      await logSecurity('LOGIN_SUCCESS', { method: method || 'session', outcome: 'admin' });
       router.replace(`/${lang}/admin/dashboard`);
     } else if (hasMember) {
+      await logSecurity('LOGIN_SUCCESS', { method: method || 'session', outcome: 'member' });
       router.replace(`/${lang}/clen`);
     } else {
       setError((dict?.auth?.login?.noAccess as string) || (lang === 'cs' ? 'Váš účet nemá přístup do chráněných sekcí.' : 'Your account has no access to protected sections.'));
+      await logSecurity('LOGIN_NO_ACCESS', { method: method || 'session' });
       supabase.auth.signOut();
     }
   };
@@ -70,6 +250,28 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setInfo('');
+
+    try {
+      const guard = await fetch('/api/auth/login-guard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(turnstileSiteKey ? { token: captchaToken } : {}),
+      });
+      if (!guard.ok) {
+        const j = await guard.json().catch(() => ({}));
+        if (guard.status === 400) {
+          setError(lang === 'cs' ? 'Ověřte, že nejste robot.' : 'Please verify you are not a robot.');
+          setLoading(false);
+          return;
+        }
+        const retryAfterMs = Number(j?.retryAfterMs || 0);
+        const sec = retryAfterMs ? Math.ceil(retryAfterMs / 1000) : 60;
+        setError(lang === 'cs' ? `Příliš mnoho pokusů. Zkuste to za ${sec}s.` : `Too many attempts. Try again in ${sec}s.`);
+        setLoading(false);
+        return;
+      }
+    } catch {}
 
     const { data, error: loginError } = await supabase.auth.signInWithPassword({
       email,
@@ -102,7 +304,53 @@ export default function LoginPage() {
         .eq('id', data.user.id)
         .maybeSingle();
       
-      handleRedirect(profile, data.user.email);
+      await handleRedirect(profile, data.user.email, 'password');
+    }
+  };
+
+  const handleMagicLink = async () => {
+    setLoading(true);
+    setError('');
+    setInfo('');
+    try {
+      try {
+        const guard = await fetch('/api/auth/login-guard', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(turnstileSiteKey ? { token: captchaToken } : {}),
+        });
+        if (!guard.ok) {
+          if (guard.status === 400) {
+            setError(lang === 'cs' ? 'Ověřte, že nejste robot.' : 'Please verify you are not a robot.');
+            setLoading(false);
+            return;
+          }
+          const j = await guard.json().catch(() => ({}));
+          const retryAfterMs = Number(j?.retryAfterMs || 0);
+          const sec = retryAfterMs ? Math.ceil(retryAfterMs / 1000) : 60;
+          setError(lang === 'cs' ? `Příliš mnoho pokusů. Zkuste to za ${sec}s.` : `Too many attempts. Try again in ${sec}s.`);
+          setLoading(false);
+          return;
+        }
+      } catch {}
+
+      const emailValue = String(email || '').trim();
+      if (!emailValue) {
+        setError(lang === 'cs' ? 'Zadejte e-mail.' : 'Enter your email.');
+        setLoading(false);
+        return;
+      }
+      const redirectTo = `${window.location.origin}/${lang}/login`;
+      const { error: otpError } = await (supabase.auth as any).signInWithOtp({
+        email: emailValue,
+        options: { emailRedirectTo: redirectTo },
+      });
+      if (otpError) throw otpError;
+      setInfo(lang === 'cs' ? 'Odkaz pro přihlášení byl odeslán na e-mail.' : 'A sign-in link has been sent to your email.');
+    } catch (e: any) {
+      setError(e?.message || (lang === 'cs' ? 'Chyba' : 'Error'));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -121,7 +369,7 @@ export default function LoginPage() {
       const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
       setMfa(null);
       setMfaCode('');
-      handleRedirect(profile, user.email || undefined);
+      await handleRedirect(profile, user.email || undefined, 'mfa');
     } catch (e: any) {
       setError(e?.message || (lang === 'cs' ? 'Chyba' : 'Error'));
       setLoading(false);
@@ -132,9 +380,105 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
+      try {
+        const guard = await fetch('/api/auth/login-guard', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(turnstileSiteKey ? { token: captchaToken } : {}),
+        });
+        if (!guard.ok) {
+          if (guard.status === 400) {
+            setError(lang === 'cs' ? 'Ověřte, že nejste robot.' : 'Please verify you are not a robot.');
+            setLoading(false);
+            return;
+          }
+          const j = await guard.json().catch(() => ({}));
+          const retryAfterMs = Number(j?.retryAfterMs || 0);
+          const sec = retryAfterMs ? Math.ceil(retryAfterMs / 1000) : 60;
+          setError(lang === 'cs' ? `Příliš mnoho pokusů. Zkuste to za ${sec}s.` : `Too many attempts. Try again in ${sec}s.`);
+          setLoading(false);
+          return;
+        }
+      } catch {}
+
       const origin = window.location.origin;
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
+        options: { redirectTo: `${origin}/${lang}/login` },
+      });
+      if (error) throw error;
+    } catch (e: any) {
+      setError(e?.message || (lang === 'cs' ? 'Chyba' : 'Error'));
+      setLoading(false);
+    }
+  };
+
+  const handleApple = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      try {
+        const guard = await fetch('/api/auth/login-guard', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(turnstileSiteKey ? { token: captchaToken } : {}),
+        });
+        if (!guard.ok) {
+          if (guard.status === 400) {
+            setError(lang === 'cs' ? 'Ověřte, že nejste robot.' : 'Please verify you are not a robot.');
+            setLoading(false);
+            return;
+          }
+          const j = await guard.json().catch(() => ({}));
+          const retryAfterMs = Number(j?.retryAfterMs || 0);
+          const sec = retryAfterMs ? Math.ceil(retryAfterMs / 1000) : 60;
+          setError(lang === 'cs' ? `Příliš mnoho pokusů. Zkuste to za ${sec}s.` : `Too many attempts. Try again in ${sec}s.`);
+          setLoading(false);
+          return;
+        }
+      } catch {}
+
+      const origin = window.location.origin;
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'apple',
+        options: { redirectTo: `${origin}/${lang}/login` },
+      });
+      if (error) throw error;
+    } catch (e: any) {
+      setError(e?.message || (lang === 'cs' ? 'Chyba' : 'Error'));
+      setLoading(false);
+    }
+  };
+
+  const handleUniversitySso = async () => {
+    if (!universitySsoProvider) return;
+    setError('');
+    setLoading(true);
+    try {
+      try {
+        const guard = await fetch('/api/auth/login-guard', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(turnstileSiteKey ? { token: captchaToken } : {}),
+        });
+        if (!guard.ok) {
+          if (guard.status === 400) {
+            setError(lang === 'cs' ? 'Ověřte, že nejste robot.' : 'Please verify you are not a robot.');
+            setLoading(false);
+            return;
+          }
+          const j = await guard.json().catch(() => ({}));
+          const retryAfterMs = Number(j?.retryAfterMs || 0);
+          const sec = retryAfterMs ? Math.ceil(retryAfterMs / 1000) : 60;
+          setError(lang === 'cs' ? `Příliš mnoho pokusů. Zkuste to za ${sec}s.` : `Too many attempts. Try again in ${sec}s.`);
+          setLoading(false);
+          return;
+        }
+      } catch {}
+
+      const origin = window.location.origin;
+      const { error } = await (supabase.auth as any).signInWithOAuth({
+        provider: universitySsoProvider,
         options: { redirectTo: `${origin}/${lang}/login` },
       });
       if (error) throw error;
@@ -161,7 +505,10 @@ export default function LoginPage() {
           
           <div className="grid gap-4">
             <button
-              onClick={() => router.push(`/${lang}/admin/dashboard`)}
+              onClick={async () => {
+                await logSecurity('LOGIN_SUCCESS', { method: 'session', outcome: 'admin' });
+                router.push(`/${lang}/admin/dashboard`);
+              }}
               className="group flex items-center justify-between p-6 bg-stone-900 text-white rounded-[2rem] hover:bg-green-600 transition-all duration-300 shadow-xl shadow-stone-900/20"
             >
               <div className="flex items-center gap-4">
@@ -177,7 +524,10 @@ export default function LoginPage() {
             </button>
 
             <button
-              onClick={() => router.push(`/${lang}/clen`)}
+              onClick={async () => {
+                await logSecurity('LOGIN_SUCCESS', { method: 'session', outcome: 'member' });
+                router.push(`/${lang}/clen`);
+              }}
               className="group flex items-center justify-between p-6 bg-white text-stone-900 rounded-[2rem] border-2 border-stone-100 hover:border-green-500 hover:text-green-600 transition-all duration-300 shadow-lg shadow-stone-200/50"
             >
               <div className="flex items-center gap-4">
@@ -221,8 +571,50 @@ export default function LoginPage() {
           {t.subtitle || (lang === 'cs' ? 'Přihlášení do ekosystému Pupen' : 'Log in to the Pupen ecosystem')}
         </p>
         
-        <form onSubmit={mfa ? handleMfaVerify : handleLogin} className="space-y-4 text-left">
-          {mfa ? (
+        <form onSubmit={adminMfaEnroll ? verifyAdminMfaEnroll : mfa ? handleMfaVerify : handleLogin} className="space-y-4 text-left">
+          {adminMfaEnroll ? (
+            <div className="space-y-4">
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">
+                {lang === 'cs' ? 'Nastavení 2FA pro admin účet' : 'Set up 2FA for admin account'}
+              </div>
+              {adminMfaEnrollQr ? (
+                <div className="flex justify-center">
+                  <img src={adminMfaEnrollQr} alt="2FA QR" className="w-48 h-48 rounded-2xl border border-stone-200" />
+                </div>
+              ) : null}
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">
+                  {t.mfaCodeLabel || (lang === 'cs' ? '2FA kód' : '2FA code')}
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={adminMfaEnrollCode}
+                  onChange={(e) => setAdminMfaEnrollCode(e.target.value)}
+                  aria-invalid={error ? 'true' : 'false'}
+                  className="w-full bg-stone-50 border-none rounded-2xl px-4 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
+                  placeholder="123456"
+                />
+                <div className="text-[9px] text-stone-400 italic px-1">
+                  {t.mfaHint || (lang === 'cs' ? 'Zadejte kód z autentizační aplikace.' : 'Enter code from your authenticator app.')}
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  setAdminMfaEnroll(false);
+                  setAdminMfaEnrollQr('');
+                  setAdminMfaFactorId('');
+                  setAdminMfaEnrollCode('');
+                }}
+                className="w-full bg-white text-stone-700 py-4 rounded-2xl font-black uppercase tracking-widest text-xs border border-stone-200 hover:bg-stone-50 transition disabled:opacity-50"
+              >
+                {lang === 'cs' ? 'Zrušit' : 'Cancel'}
+              </button>
+            </div>
+          ) : mfa ? (
             <div className="space-y-1">
               <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">
                 {t.mfaCodeLabel || (lang === 'cs' ? '2FA kód' : '2FA code')}
@@ -276,6 +668,28 @@ export default function LoginPage() {
                     autoComplete="current-password"
                   />
                 </div>
+                {password ? (
+                  <div className="pt-2">
+                    {(() => {
+                      const r = evaluatePassword(password, { email });
+                      const score = r.score;
+                      const label = passwordScoreLabel(score, lang === 'en' ? 'en' : 'cs');
+                      const pct = (score / 4) * 100;
+                      const bar = score <= 1 ? 'bg-red-500' : score === 2 ? 'bg-amber-500' : score === 3 ? 'bg-green-500' : 'bg-green-600';
+                      return (
+                        <>
+                          <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">
+                            <span>{lang === 'cs' ? 'Síla hesla' : 'Password strength'}</span>
+                            <span className="text-stone-500">{label}</span>
+                          </div>
+                          <div className="mt-2 h-2 bg-stone-200 rounded-full overflow-hidden">
+                            <div className={`h-2 ${bar}`} style={{ width: `${pct}%` }} />
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                ) : null}
               </div>
               <div className="flex items-center justify-end">
                 <Link href={`/${lang}/forgot`} className="text-stone-400 text-xs font-bold hover:text-green-600 transition">
@@ -292,6 +706,17 @@ export default function LoginPage() {
               </p>
             </div>
           )}
+          {info && (
+            <div className="p-4 bg-green-50 rounded-2xl border border-green-100">
+              <p className="text-green-700 text-xs font-bold text-center">{info}</p>
+            </div>
+          )}
+
+          {!mfa && turnstileSiteKey ? (
+            <div className="pt-1">
+              <div id="turnstile-login" className="flex justify-center" />
+            </div>
+          ) : null}
 
           <button
             type="submit"
@@ -309,14 +734,42 @@ export default function LoginPage() {
           </button>
 
           {!mfa && (
-            <button
-              type="button"
-              onClick={handleGoogle}
-              disabled={loading}
-              className="w-full bg-white text-stone-700 py-4 rounded-2xl font-black uppercase tracking-widest text-xs border border-stone-200 hover:bg-stone-50 transition disabled:opacity-50"
-            >
-              {t.google || (lang === 'cs' ? 'Pokračovat s Google' : 'Continue with Google')}
-            </button>
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={handleGoogle}
+                disabled={loading}
+                className="w-full bg-white text-stone-700 py-4 rounded-2xl font-black uppercase tracking-widest text-xs border border-stone-200 hover:bg-stone-50 transition disabled:opacity-50"
+              >
+                {t.google || (lang === 'cs' ? 'Pokračovat s Google' : 'Continue with Google')}
+              </button>
+              <button
+                type="button"
+                onClick={handleApple}
+                disabled={loading}
+                className="w-full bg-white text-stone-700 py-4 rounded-2xl font-black uppercase tracking-widest text-xs border border-stone-200 hover:bg-stone-50 transition disabled:opacity-50"
+              >
+                {lang === 'cs' ? 'Pokračovat s Apple' : 'Continue with Apple'}
+              </button>
+              {universitySsoProvider ? (
+                <button
+                  type="button"
+                  onClick={handleUniversitySso}
+                  disabled={loading}
+                  className="w-full bg-white text-stone-700 py-4 rounded-2xl font-black uppercase tracking-widest text-xs border border-stone-200 hover:bg-stone-50 transition disabled:opacity-50"
+                >
+                  {universitySsoLabel ? universitySsoLabel : lang === 'cs' ? 'SSO (Univerzita)' : 'SSO (University)'}
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={handleMagicLink}
+                disabled={loading}
+                className="w-full bg-white text-stone-700 py-4 rounded-2xl font-black uppercase tracking-widest text-xs border border-stone-200 hover:bg-stone-50 transition disabled:opacity-50"
+              >
+                {lang === 'cs' ? 'Poslat magic link' : 'Send magic link'}
+              </button>
+            </div>
           )}
         </form>
 

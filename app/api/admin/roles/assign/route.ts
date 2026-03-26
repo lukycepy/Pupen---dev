@@ -85,6 +85,7 @@ export async function POST(req: Request) {
     const { user, profile } = await requireAdmin(req);
     if (!profile?.can_manage_admins) throw new Error('Forbidden');
     const body = await req.json().catch(() => ({}));
+    const action = String(body?.action || '').trim().toLowerCase();
     let userId = String(body?.userId || '').trim();
     const email = body?.email ? String(body.email).trim().toLowerCase() : '';
     const roleId = body?.roleId ? String(body.roleId) : '';
@@ -97,6 +98,23 @@ export async function POST(req: Request) {
     }
     if (!userId) return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
 
+    if (action === 'unassign' && roleId) {
+      await supabase.from('app_user_roles').delete().eq('user_id', userId).eq('role_id', roleId).throwOnError();
+      await supabase
+        .from('admin_logs')
+        .insert([
+          {
+            admin_email: user.email || 'admin',
+            admin_name: user.user_metadata?.full_name || user.email || 'admin',
+            action: 'ROLE_UNASSIGN',
+            target_id: userId,
+            details: { email: email || null, role_id: roleId },
+          },
+        ])
+        .throwOnError();
+      return NextResponse.json({ ok: true });
+    }
+
     if (!roleId) {
       await supabase.from('app_user_roles').delete().eq('user_id', userId).throwOnError();
       await supabase
@@ -105,7 +123,7 @@ export async function POST(req: Request) {
           {
             admin_email: user.email || 'admin',
             admin_name: user.user_metadata?.full_name || user.email || 'admin',
-            action: 'ROLE_UNASSIGN',
+            action: 'ROLE_CLEAR',
             target_id: userId,
             details: email ? { email } : {},
           },
@@ -121,7 +139,10 @@ export async function POST(req: Request) {
 
     await supabase
       .from('app_user_roles')
-      .upsert([{ user_id: userId, role_id: roleId, assigned_at: new Date().toISOString(), assigned_by_email: user.email || null }], { onConflict: 'user_id' })
+      .upsert(
+        [{ user_id: userId, role_id: roleId, assigned_at: new Date().toISOString(), assigned_by_email: user.email || null }],
+        { onConflict: 'user_id,role_id' },
+      )
       .throwOnError();
 
     if (Object.keys(patch).length > 0) {

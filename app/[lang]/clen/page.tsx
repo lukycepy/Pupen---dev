@@ -20,6 +20,8 @@ import OnboardingCard from './components/OnboardingCard';
 import MemberPanel from './components/ui/MemberPanel';
 import PasswordField from '@/app/components/PasswordField';
 import AddressAutocomplete from '@/app/components/AddressAutocomplete';
+import ConfirmModal from '@/app/components/ConfirmModal';
+import { evaluatePassword } from '@/lib/auth/password-policy';
 
 const MemberCard = dynamic<any>(() => import('./components/MemberCard'), { loading: () => <SkeletonTabContent /> });
 const MyEventsTab = dynamic<any>(() => import('./components/MyEventsTab'), { loading: () => <SkeletonTabContent /> });
@@ -67,6 +69,7 @@ export default function ClenskaSekcePage() {
   });
   const [prefsLoading, setPrefsLoading] = useState(false);
   const [prefsSaving, setPrefsSaving] = useState(false);
+  const [gdprDeleteOpen, setGdprDeleteOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -116,6 +119,7 @@ export default function ClenskaSekcePage() {
   };
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [editProfile, setEditProfile] = useState({ first_name: '', last_name: '', address: '' });
+  const [editAddressMeta, setEditAddressMeta] = useState<any>(null);
   const [pw1, setPw1] = useState('');
   const [pw2, setPw2] = useState('');
   const [pwSaving, setPwSaving] = useState(false);
@@ -126,6 +130,9 @@ export default function ClenskaSekcePage() {
   const [mfaEnrollQr, setMfaEnrollQr] = useState<string>('');
   const [mfaVerifyCode, setMfaVerifyCode] = useState('');
   const [googleBusy, setGoogleBusy] = useState(false);
+  const [passkeysLoading, setPasskeysLoading] = useState(false);
+  const [passkeyFriendlyName, setPasskeyFriendlyName] = useState('');
+  const [passkeyFactors, setPasskeyFactors] = useState<any[]>([]);
   const logSecurityEvent = async (event: string, details?: any) => {
     try {
       const { data } = await supabase.auth.getSession();
@@ -164,6 +171,19 @@ export default function ClenskaSekcePage() {
       
       const userProf = prof || (isSuperAdmin ? { first_name: 'Super', last_name: 'Admin', is_admin: true, is_member: true } : null);
       setProfile(userProf);
+
+      if (!isSuperAdmin && userProf && !(userProf as any).member_no) {
+        try {
+          const { data } = await supabase.auth.getSession();
+          const token = data.session?.access_token;
+          if (token) {
+            const res = await fetch('/api/member/assign-number', { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+            const json = await res.json().catch(() => ({}));
+            if (res.ok && json?.memberNo) setProfile((p: any) => (p ? { ...p, member_no: json.memberNo } : p));
+          }
+        } catch {}
+      }
+
       const prefTab = (userProf as any)?.ui_prefs?.member?.defaultTab ? String((userProf as any).ui_prefs.member.defaultTab) : '';
       if (prefTab) setMemberDefaultTab(prefTab);
       if (prefTab && !didInitTab) {
@@ -198,20 +218,53 @@ export default function ClenskaSekcePage() {
     })();
   }, [activeTab, user]);
 
+  useEffect(() => {
+    if (!user?.email) return;
+    setPrefsLoading(true);
+    fetch(`/api/newsletter/preferences?email=${encodeURIComponent(user.email)}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.preferences) {
+          const cats = d.preferences.categories || [];
+          setEmailPrefs({
+            digestWeekly: d.preferences.consent,
+            categories: {
+              events: cats.includes('all') || cats.includes('Akce') || cats.includes('events'),
+              community: cats.includes('all') || cats.includes('Komunita') || cats.includes('community'),
+              finance: cats.includes('all') || cats.includes('Finance') || cats.includes('finance'),
+              news: cats.includes('all') || cats.includes('Novinky') || cats.includes('news')
+            }
+          });
+        }
+      })
+      .catch(() => {})
+      .finally(() => setPrefsLoading(false));
+  }, [user]);
+
   const saveEmailPrefs = async () => {
     setPrefsSaving(true);
     try {
-      const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token;
-      if (!token) throw new Error(lang === 'en' ? 'Unauthorized' : 'Nepřihlášen');
-      const res = await fetch('/api/preferences/email', {
+      const cats = Object.entries(emailPrefs.categories)
+        .filter(([_, v]) => !!v)
+        .map(([k, _]) => {
+          if (k === 'events') return 'Akce';
+          if (k === 'community') return 'Komunita';
+          if (k === 'finance') return 'Finance';
+          if (k === 'news') return 'Novinky';
+          return k;
+        });
+
+      const res = await fetch('/api/newsletter/preferences', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ prefs: emailPrefs }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: user.email,
+          categories: cats 
+        }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error || 'Request failed');
-      showToast(lang === 'en' ? 'Saved' : 'Uloženo', 'success');
+      showToast(lang === 'en' ? 'Preferences updated' : 'Preference uloženy', 'success');
     } catch (e: any) {
       showToast(e?.message || 'Chyba', 'error');
     } finally {
@@ -270,13 +323,10 @@ export default function ClenskaSekcePage() {
   };
 
   const requestGdprDelete = async () => {
-    const ok = confirm(
-      lang === 'en'
-        ? 'Send a data deletion request to admins? This does not delete data immediately.'
-        : 'Odeslat žádost o smazání osobních údajů administrátorům? Data se nesmažou okamžitě.',
-    );
-    if (!ok) return;
+    setGdprDeleteOpen(true);
+  };
 
+  const doRequestGdprDelete = async () => {
     try {
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
@@ -299,18 +349,34 @@ export default function ClenskaSekcePage() {
     e.preventDefault();
     setIsSavingProfile(true);
     try {
+      let validatedAddress = String(editProfile.address || '').trim();
+      let validatedMeta: any = editAddressMeta;
+      if (validatedAddress && validatedAddress !== String(profile?.address || '').trim()) {
+        const res = await fetch('/api/address/validate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ q: validatedAddress, lang }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || !json?.ok) throw new Error(lang === 'en' ? 'Please enter a valid address.' : 'Zadejte prosím platnou adresu.');
+        validatedAddress = String(json?.address || validatedAddress);
+        validatedMeta = json?.meta || validatedMeta;
+      }
+
       const { error } = await supabase
         .from('profiles')
         .update({
           first_name: editProfile.first_name,
           last_name: editProfile.last_name,
-          address: editProfile.address
+          address: validatedAddress,
+          address_meta: validatedAddress ? (validatedMeta || {}) : {},
+          address_validated_at: validatedAddress ? new Date().toISOString() : null,
         })
         .eq('id', user.id);
 
       if (error) throw error;
       
-      setProfile({ ...profile, ...editProfile });
+      setProfile({ ...profile, ...editProfile, address: validatedAddress });
       showToast(dict.member.profileUpdated, 'success');
     } catch (err: any) {
       showToast(err.message, 'error');
@@ -320,8 +386,9 @@ export default function ClenskaSekcePage() {
   };
 
   const handleChangePassword = async () => {
-    if (!pw1 || pw1.length < 8) {
-      showToast(lang === 'en' ? 'Password must be at least 8 characters.' : 'Heslo musí mít alespoň 8 znaků.', 'error');
+    const pw = evaluatePassword(pw1);
+    if (!pw.ok) {
+      showToast(lang === 'en' ? 'Password does not meet policy.' : 'Heslo nesplňuje požadavky.', 'error');
       return;
     }
     if (pw1 !== pw2) {
@@ -365,6 +432,67 @@ export default function ClenskaSekcePage() {
   useEffect(() => {
     refreshMfa();
   }, []);
+
+  const refreshPasskeys = async () => {
+    const authAny: any = supabase.auth as any;
+    if (!authAny?.mfa?.listFactors) return;
+    setPasskeysLoading(true);
+    try {
+      const res = await authAny.mfa.listFactors();
+      if (res?.error) throw res.error;
+      const all = res?.data?.all || [];
+      const webauthn = Array.isArray(all) ? all.filter((f: any) => f?.factor_type === 'webauthn') : [];
+      setPasskeyFactors(webauthn);
+    } catch {
+      setPasskeyFactors([]);
+    } finally {
+      setPasskeysLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshPasskeys();
+  }, []);
+
+  const registerPasskey = async () => {
+    const authAny: any = supabase.auth as any;
+    if (!authAny?.mfa?.webauthn?.register) {
+      showToast(lang === 'en' ? 'Passkeys are not supported.' : 'Passkeys nejsou podporované.', 'error');
+      return;
+    }
+    setPasskeysLoading(true);
+    try {
+      await logSecurityEvent('PASSKEY_REGISTER_START', {});
+      const friendlyName = String(passkeyFriendlyName || '').trim() || (lang === 'en' ? 'Passkey' : 'Passkey');
+      const res = await authAny.mfa.webauthn.register({ friendlyName });
+      if (res?.error) throw res.error;
+      setPasskeyFriendlyName('');
+      await refreshPasskeys();
+      showToast(lang === 'en' ? 'Passkey added.' : 'Passkey přidán.', 'success');
+      await logSecurityEvent('PASSKEY_REGISTERED', {});
+    } catch (e: any) {
+      showToast(e?.message || 'Chyba', 'error');
+    } finally {
+      setPasskeysLoading(false);
+    }
+  };
+
+  const removePasskey = async (factorId: string) => {
+    const authAny: any = supabase.auth as any;
+    if (!authAny?.mfa?.unenroll) return;
+    setPasskeysLoading(true);
+    try {
+      const res = await authAny.mfa.unenroll({ factorId });
+      if (res?.error) throw res.error;
+      await refreshPasskeys();
+      showToast(lang === 'en' ? 'Passkey removed.' : 'Passkey odebrán.', 'success');
+      await logSecurityEvent('PASSKEY_REMOVED', {});
+    } catch (e: any) {
+      showToast(e?.message || 'Chyba', 'error');
+    } finally {
+      setPasskeysLoading(false);
+    }
+  };
 
   const startMfaEnroll = async () => {
     const authAny: any = supabase.auth as any;
@@ -473,6 +601,7 @@ export default function ClenskaSekcePage() {
         .from('documents')
         .select('*')
         .eq('is_member_only', true)
+        .neq('access_level', 'admin')
         .order('created_at', { ascending: false })
         .limit(200);
       return data || [];
@@ -536,6 +665,37 @@ export default function ClenskaSekcePage() {
         .limit(200);
       return data || [];
     }
+  });
+
+  const { data: badgeStats } = useQuery({
+    queryKey: ['member_badges_stats', user?.id, user?.email],
+    enabled: !!user && activeTab === 'badges',
+    queryFn: async () => {
+      const email = String(user?.email || '').trim();
+      const [attRes, payRes] = await Promise.all([
+        email
+          ? supabase.from('rsvp').select('id', { count: 'exact', head: true }).eq('email', email).eq('checked_in', true)
+          : Promise.resolve({ count: 0, error: null } as any),
+        supabase.from('membership_payments').select('id', { count: 'exact', head: true }).eq('member_id', user.id),
+      ]);
+      if (attRes.error) throw attRes.error;
+      if (payRes.error) throw payRes.error;
+      return { attendance: attRes.count || 0, payments: payRes.count || 0 };
+    },
+  });
+
+  const { data: memberBadges = [] } = useQuery({
+    queryKey: ['member_badges', user?.id],
+    enabled: !!user && activeTab === 'badges',
+    queryFn: async () => {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) return [];
+      const res = await fetch('/api/member/badges', { headers: { Authorization: `Bearer ${token}` } });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Request failed');
+      return Array.isArray(json?.badges) ? json.badges : [];
+    },
   });
 
   if (loading || !dict) return (
@@ -605,6 +765,20 @@ export default function ClenskaSekcePage() {
 
   return (
     <div className="min-h-screen bg-stone-50 lg:pl-72">
+      <ConfirmModal
+        isOpen={gdprDeleteOpen}
+        onClose={() => setGdprDeleteOpen(false)}
+        onConfirm={doRequestGdprDelete}
+        title={lang === 'en' ? 'Send deletion request?' : 'Odeslat žádost o smazání?'}
+        message={
+          lang === 'en'
+            ? 'This does not delete data immediately. Admins will process the request.'
+            : 'Data se nesmažou okamžitě. Administrátoři žádost zpracují.'
+        }
+        confirmLabel={lang === 'en' ? 'Send request' : 'Odeslat žádost'}
+        cancelLabel={lang === 'en' ? 'Cancel' : 'Zrušit'}
+        variant="warning"
+      />
       <ReportModal
         open={!!reportOpen}
         onClose={() => setReportOpen(null)}
@@ -826,6 +1000,141 @@ export default function ClenskaSekcePage() {
             <MemberPollsTab lang={lang} />
           )}
 
+          {/* BADGES TAB */}
+          {activeTab === 'badges' && (
+            <div className="space-y-8">
+              <div className="bg-white p-8 rounded-[3rem] border border-stone-100 shadow-sm">
+                <h2 className="text-2xl font-black mb-8 flex items-center gap-3">
+                  <span className="text-amber-500">★</span> {lang === 'en' ? 'My Badges' : 'Moje odznaky'}
+                </h2>
+                
+                {memberBadges.length > 0 ? (
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {memberBadges.map((ub: any) => {
+                      const badge = ub.gamification_badges;
+                      return (
+                        <div key={ub.id} className="p-6 bg-stone-50 rounded-[2rem] border border-stone-100 relative overflow-hidden group">
+                          <div className="absolute top-0 right-0 bg-amber-100 text-amber-700 px-3 py-1.5 rounded-bl-[1.5rem] font-black text-[10px] uppercase tracking-widest">
+                            {new Date(ub.awarded_at).toLocaleDateString()}
+                          </div>
+                          <div className="w-16 h-16 rounded-2xl bg-white flex items-center justify-center shadow-sm mb-4 border border-stone-100 overflow-hidden relative">
+                            {badge?.icon ? (
+                              <img src={badge.icon} alt={badge.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-amber-500 text-2xl">★</span>
+                            )}
+                          </div>
+                          <h3 className="font-black text-stone-900 text-lg leading-tight mb-2">{badge?.name}</h3>
+                          <p className="text-xs font-bold text-stone-500 mb-4">{badge?.description}</p>
+                          <div className="inline-flex items-center gap-1 px-2 py-1 bg-white border border-stone-200 text-stone-600 rounded text-[10px] font-black uppercase tracking-widest">
+                            +{badge?.points || 0} bodů
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-stone-400 italic font-medium bg-stone-50 rounded-[2rem]">
+                    {lang === 'en' ? 'You have no badges yet. Keep participating!' : 'Zatím nemáte žádné odznaky. Zapojte se do aktivit!'}
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-white p-8 rounded-[3rem] border border-stone-100 shadow-sm">
+                <h2 className="text-2xl font-black mb-8 flex items-center gap-3">
+                  <span className="text-stone-400">📊</span> {lang === 'en' ? 'Progress & Milestones' : 'Progres a milníky'}
+                </h2>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {(() => {
+                  const attendance = badgeStats?.attendance || 0;
+                  const payments = badgeStats?.payments || 0;
+                  const hasPasskey = passkeyFactors.length > 0;
+                  const has2fa = !!mfaEnabled;
+                  const isMember = !!profile?.is_member;
+                  const hasMemberNo = !!profile?.member_no;
+                  const hasProfileBasics = !!(profile?.first_name && profile?.last_name && profile?.address);
+                  const items = [
+                    {
+                      k: 'member',
+                      title: lang === 'en' ? 'Member' : 'Člen',
+                      desc: lang === 'en' ? 'Approved membership.' : 'Schválené členství.',
+                      ok: isMember,
+                    },
+                    {
+                      k: 'profile',
+                      title: lang === 'en' ? 'Profile complete' : 'Profil vyplněn',
+                      desc: lang === 'en' ? 'Name + address filled in.' : 'Jméno + adresa vyplněna.',
+                      ok: hasProfileBasics,
+                    },
+                    {
+                      k: 'member_no',
+                      title: lang === 'en' ? 'Member number' : 'Členské číslo',
+                      desc: lang === 'en' ? 'Member number assigned.' : 'Přiřazené členské číslo.',
+                      ok: hasMemberNo,
+                    },
+                    {
+                      k: 'payment',
+                      title: lang === 'en' ? 'Membership paid' : 'Zaplaceno',
+                      desc: lang === 'en' ? 'At least one membership payment.' : 'Alespoň jedna platba členství.',
+                      ok: payments >= 1,
+                    },
+                    {
+                      k: 'event_1',
+                      title: lang === 'en' ? 'First event' : 'První akce',
+                      desc: lang === 'en' ? 'Checked in at an event.' : 'Odbavení na akci.',
+                      ok: attendance >= 1,
+                    },
+                    {
+                      k: 'event_5',
+                      title: lang === 'en' ? 'Regular' : 'Pravidelný účastník',
+                      desc: lang === 'en' ? '5 checked-in events.' : '5 odbavených akcí.',
+                      ok: attendance >= 5,
+                    },
+                    {
+                      k: '2fa',
+                      title: lang === 'en' ? '2FA enabled' : '2FA zapnuté',
+                      desc: lang === 'en' ? 'Extra account protection.' : 'Extra ochrana účtu.',
+                      ok: has2fa,
+                    },
+                    {
+                      k: 'passkey',
+                      title: lang === 'en' ? 'Passkey' : 'Passkey',
+                      desc: lang === 'en' ? 'Passkey added.' : 'Přidaný passkey.',
+                      ok: hasPasskey,
+                    },
+                  ];
+
+                  return items.map((b) => (
+                    <div
+                      key={b.k}
+                      className={`rounded-[2rem] border p-6 transition ${
+                        b.ok ? 'bg-green-50 border-green-100' : 'bg-stone-50 border-stone-100'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">
+                            {b.ok ? (lang === 'en' ? 'Unlocked' : 'Odemčeno') : (lang === 'en' ? 'Locked' : 'Zamčeno')}
+                          </div>
+                          <div className="mt-2 text-lg font-black text-stone-900 truncate">{b.title}</div>
+                        </div>
+                        <div
+                          className={`shrink-0 w-10 h-10 rounded-2xl flex items-center justify-center font-black ${
+                            b.ok ? 'bg-green-600 text-white' : 'bg-white text-stone-300 border border-stone-200'
+                          }`}
+                        >
+                          {b.ok ? '✓' : '•'}
+                        </div>
+                      </div>
+                      <div className="mt-3 text-sm text-stone-600 font-medium">{b.desc}</div>
+                    </div>
+                  ));
+                })()}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* MY EVENTS TAB */}
           {activeTab === 'my_events' && (
             <MyEventsTab lang={lang} userEmail={user.email} />
@@ -837,7 +1146,30 @@ export default function ClenskaSekcePage() {
               <h2 className="text-2xl font-black mb-8 flex items-center gap-3"><FileText className="text-stone-900" /> {dict.member.internalDocs}</h2>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {internalDocs.length > 0 ? internalDocs.map((doc: any) => (
-                  <a key={doc.id} href={doc.file_url} target="_blank" rel="noopener noreferrer" className="flex flex-col p-6 bg-stone-50 rounded-[2rem] hover:bg-green-50 transition group border border-transparent hover:border-green-100">
+                  <button
+                    key={doc.id}
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const { data } = await supabase.auth.getSession();
+                        const token = data.session?.access_token;
+                        if (!token) throw new Error('Unauthorized');
+                        const res = await fetch('/api/documents/signed-url', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                          body: JSON.stringify({ documentId: doc.id }),
+                        });
+                        const json = await res.json().catch(() => ({}));
+                        if (!res.ok) throw new Error(json?.error || 'Chyba');
+                        const url = String(json?.url || '');
+                        if (url) window.open(url, '_blank', 'noopener,noreferrer');
+                        else window.open(String(doc.file_url || ''), '_blank', 'noopener,noreferrer');
+                      } catch {
+                        window.open(String(doc.file_url || ''), '_blank', 'noopener,noreferrer');
+                      }
+                    }}
+                    className="flex flex-col text-left p-6 bg-stone-50 rounded-[2rem] hover:bg-green-50 transition group border border-transparent hover:border-green-100"
+                  >
                     <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-stone-400 group-hover:text-green-600 shadow-sm mb-4 transition">
                       <FileText size={24} />
                     </div>
@@ -846,7 +1178,7 @@ export default function ClenskaSekcePage() {
                       <span className="text-[10px] font-black uppercase tracking-widest text-stone-400">{new Date(doc.created_at).toLocaleDateString()}</span>
                       <Download size={18} className="text-stone-300 group-hover:text-green-600 transition" />
                     </div>
-                  </a>
+                  </button>
                 )) : (
                   <div className="col-span-full py-12 text-center text-stone-400 italic font-medium">{dict.member.noDocs}</div>
                 )}
@@ -1029,6 +1361,7 @@ export default function ClenskaSekcePage() {
                       lang={lang}
                       value={editProfile.address}
                       onChange={(v) => setEditProfile({ ...editProfile, address: v })}
+                      onSelect={(it) => setEditAddressMeta(it)}
                       placeholder={dict.member.addressPlaceholder}
                       inputClassName="w-full bg-stone-50 border-stone-100 border rounded-2xl px-5 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 outline-none transition"
                     />
@@ -1073,6 +1406,7 @@ export default function ClenskaSekcePage() {
                         ['documents', dict.member.tabDocuments],
                         ['card', lang === 'en' ? 'Member card' : 'Členská karta'],
                         ['messages', lang === 'en' ? 'Messages' : 'Zprávy'],
+                        ['badges', lang === 'en' ? 'Badges' : 'Odznaky'],
                         ['settings', dict.member.tabSettings],
                       ]
                         .filter(([id]) => !memberPortalCfg.hiddenTabs.includes(id))
@@ -1204,6 +1538,61 @@ export default function ClenskaSekcePage() {
                         </button>
                       </div>
                     )}
+                  </div>
+
+                  <div className="bg-stone-50 border border-stone-100 rounded-[2rem] p-6">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">
+                      {lang === 'en' ? 'Passkeys (WebAuthn)' : 'Passkeys (WebAuthn)'}
+                    </div>
+                    <div className="mt-2 text-sm text-stone-600 font-medium">
+                      {lang === 'en'
+                        ? 'Add a passkey for faster and safer sign-in.'
+                        : 'Přidejte passkey pro rychlejší a bezpečnější přihlášení.'}
+                    </div>
+
+                    <div className="mt-4 space-y-3">
+                      <input
+                        value={passkeyFriendlyName}
+                        onChange={(e) => setPasskeyFriendlyName(e.target.value)}
+                        className="w-full bg-white border border-stone-200 rounded-2xl px-5 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 outline-none transition"
+                        placeholder={lang === 'en' ? 'Name (e.g., MacBook)' : 'Název (např. MacBook)'}
+                      />
+                      <button
+                        type="button"
+                        onClick={registerPasskey}
+                        disabled={passkeysLoading}
+                        className="w-full py-4 bg-stone-900 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-600 transition disabled:opacity-50"
+                      >
+                        {passkeysLoading ? (lang === 'en' ? 'Loading...' : 'Načítám...') : (lang === 'en' ? 'Add passkey' : 'Přidat passkey')}
+                      </button>
+                    </div>
+
+                    <div className="mt-6 space-y-2">
+                      {passkeyFactors.length ? (
+                        passkeyFactors.map((f: any) => (
+                          <div key={f.id} className="flex items-center justify-between gap-3 bg-white border border-stone-100 rounded-2xl px-4 py-3">
+                            <div className="min-w-0">
+                              <div className="font-bold text-stone-900 truncate">{f.friendly_name || 'Passkey'}</div>
+                              <div className="text-[10px] font-black uppercase tracking-widest text-stone-300">
+                                {String(f.status || '').toUpperCase() || '—'}
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removePasskey(String(f.id))}
+                              disabled={passkeysLoading}
+                              className="shrink-0 px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border bg-white text-stone-700 border-stone-200 hover:bg-stone-50 disabled:opacity-50"
+                            >
+                              {lang === 'en' ? 'Remove' : 'Odebrat'}
+                            </button>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-xs text-stone-400 font-bold uppercase tracking-widest">
+                          {lang === 'en' ? 'No passkeys yet.' : 'Zatím žádné passkeys.'}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="bg-stone-50 border border-stone-100 rounded-[2rem] p-6">

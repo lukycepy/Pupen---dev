@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import InlinePulse from '@/app/components/InlinePulse';
+import ConfirmModal from '@/app/components/ConfirmModal';
 import { useToast } from '@/app/context/ToastContext';
 import { Mail, Plus, Search, Send, X, AlertTriangle, ShieldAlert, ShieldCheck } from 'lucide-react';
 
@@ -33,6 +34,7 @@ export default function MemberMessagesTab({ lang }: { lang: string }) {
   const [members, setMembers] = useState<any[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
   const [memberQ, setMemberQ] = useState('');
+  const [reportingId, setReportingId] = useState<string | null>(null);
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
@@ -105,7 +107,6 @@ export default function MemberMessagesTab({ lang }: { lang: string }) {
   };
 
   const reportMessage = async (messageId: string) => {
-    if (!confirm(lang === 'en' ? 'Report this message to moderators?' : 'Nahlásit tuto zprávu moderátorům?')) return;
     try {
       const token = await getToken();
       const res = await fetch('/api/dm/report', {
@@ -197,6 +198,18 @@ export default function MemberMessagesTab({ lang }: { lang: string }) {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
+      <ConfirmModal
+        isOpen={!!reportingId}
+        onClose={() => setReportingId(null)}
+        onConfirm={() => {
+          if (reportingId) reportMessage(reportingId);
+        }}
+        title={lang === 'en' ? 'Report message?' : 'Nahlásit zprávu?'}
+        message={lang === 'en' ? 'This will send a report to moderators.' : 'Tímto odešlete hlášení moderátorům.'}
+        confirmLabel={lang === 'en' ? 'Report' : 'Nahlásit'}
+        cancelLabel={lang === 'en' ? 'Cancel' : 'Zrušit'}
+        variant="warning"
+      />
       <div className="bg-white p-8 rounded-[3rem] border border-stone-100 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
           <div>
@@ -345,7 +358,7 @@ export default function MemberMessagesTab({ lang }: { lang: string }) {
                             {!isMine && (
                               <button
                                 type="button"
-                                onClick={() => reportMessage(m.id)}
+                                onClick={() => setReportingId(String(m.id))}
                                 className="opacity-0 group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-600 flex items-center gap-1"
                                 title={lang === 'en' ? 'Report message' : 'Nahlásit zprávu'}
                               >

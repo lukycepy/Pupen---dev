@@ -1,553 +1,337 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Trash2, Image as ImageIcon, Loader2, Tag, X, Search, Folder, Link as LinkIcon } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { Folder, Plus, Trash2, Image as ImageIcon, Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import Image from 'next/image';
 import { useToast } from '../../../../context/ToastContext';
 import ConfirmModal from '@/app/components/ConfirmModal';
-import CopyButton from '@/app/components/CopyButton';
 
-type MediaMeta = { tags: string[]; folder: string };
-const META_KEY = 'pupen_media_meta_v1';
-
-function readMeta(): Record<string, MediaMeta> {
-  try {
-    const raw = window.localStorage.getItem(META_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
-}
-
-function writeMeta(meta: Record<string, MediaMeta>) {
-  try {
-    window.localStorage.setItem(META_KEY, JSON.stringify(meta));
-  } catch {}
-}
-
-export default function GalleryTab({
-  dict,
-  uploadImage,
-  currentUser,
-  readOnly = false,
-  events = [],
-  posts = [],
-}: {
-  dict: any;
-  uploadImage: any;
-  currentUser?: any;
-  readOnly?: boolean;
-  events?: any[];
-  posts?: any[];
-}) {
+export default function GalleryTab({ dict, uploadImage }: { dict: any, uploadImage: any }) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const [isAdding, setIsAdding] = useState(false);
-  const [files, setFiles] = useState<File[]>([]);
-  const [formData, setFormData] = useState({ title: '', title_en: '', category: 'Akce', event_date: '' });
-  const [activeFilter, setActiveFilter] = useState('Vše');
-  const [folderFilter, setFolderFilter] = useState('Vše');
-  const [query, setQuery] = useState('');
-  const [meta, setMeta] = useState<Record<string, MediaMeta>>({});
-  const [editOpen, setEditOpen] = useState<null | { id: string; url: string }>(null);
-  const [editFolder, setEditFolder] = useState('');
-  const [editTags, setEditTags] = useState('');
-  const [usageOpen, setUsageOpen] = useState<null | { title: string; items: Array<{ type: string; id: string; title: string }> }>(null);
+  
+  const [activeAlbumId, setActiveAlbumId] = useState<string | null>(null);
+  const [isAddingAlbum, setIsAddingAlbum] = useState(false);
+  const [newAlbum, setNewAlbum] = useState({ title: '', description: '', year: new Date().getFullYear(), is_public: true });
+  
+  const [isUploading, setIsUploading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalConfig, setModalConfig] = useState<{ title: string; message: string; onConfirm: () => void }>({
-    title: '',
-    message: '',
-    onConfirm: () => {}
-  });
+  const [modalConfig, setModalConfig] = useState({ title: '', message: '', onConfirm: () => {} });
 
-  useEffect(() => {
-    setMeta(readMeta());
-  }, []);
-
-  const { data: images = [], isLoading } = useQuery({
-    queryKey: ['admin_gallery'],
+  // 1. Fetch Albums
+  const { data: albums = [], isLoading: loadingAlbums } = useQuery({
+    queryKey: ['gallery_albums'],
     queryFn: async () => {
-      const { data } = await supabase.from('gallery').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('gallery_albums').select('*').order('year', { ascending: false }).order('created_at', { ascending: false });
+      if (error) throw error;
       return data || [];
     }
   });
 
-  const folders = useMemo(() => {
-    const set = new Set<string>();
-    Object.values(meta || {}).forEach((m) => {
-      if (m?.folder) set.add(m.folder);
-    });
-    return ['Vše', ...Array.from(set).sort((a, b) => a.localeCompare(b))];
-  }, [meta]);
-
-  const usageByUrl = useMemo(() => {
-    const map = new Map<string, Array<{ type: string; id: string; title: string }>>();
-    const add = (url: string, item: { type: string; id: string; title: string }) => {
-      if (!url) return;
-      const arr = map.get(url) || [];
-      arr.push(item);
-      map.set(url, arr);
-    };
-
-    const evs = Array.isArray(events) ? events : [];
-    const ps = Array.isArray(posts) ? posts : [];
-
-    const scan = (url: string, type: string, obj: any, title: string) => {
-      if (!url) return false;
-      try {
-        return JSON.stringify(obj).includes(url);
-      } catch {
-        return false;
-      }
-    };
-
-    for (const img of images || []) {
-      const url = img.image_url;
-      if (!url) continue;
-      for (const e of evs) {
-        const title = e.title || 'Akce';
-        if (scan(url, 'event', e, title)) add(url, { type: 'Akce', id: String(e.id), title });
-      }
-      for (const p of ps) {
-        const title = p.title || 'Novinka';
-        if (scan(url, 'post', p, title)) add(url, { type: 'Novinka', id: String(p.id), title });
-      }
-    }
-    return map;
-  }, [events, images, posts]);
-
-  const filteredImages = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return (images || []).filter((img: any) => {
-      if (activeFilter !== 'Vše' && img.category !== activeFilter) return false;
-      const m = meta[String(img.id)] || { tags: [], folder: '' };
-      if (folderFilter !== 'Vše' && (m.folder || '') !== folderFilter) return false;
-      if (!q) return true;
-      const hay = `${img.title || ''} ${(img.title_en || '')} ${(m.folder || '')} ${(m.tags || []).join(' ')}`.toLowerCase();
-      return hay.includes(q);
-    });
-  }, [activeFilter, folderFilter, images, meta, query]);
-
-  const openEdit = (img: any) => {
-    const m = meta[String(img.id)] || { tags: [], folder: '' };
-    setEditFolder(m.folder || '');
-    setEditTags((m.tags || []).join(', '));
-    setEditOpen({ id: String(img.id), url: img.image_url });
-  };
-
-  const saveEdit = () => {
-    if (!editOpen) return;
-    const tags = editTags
-      .split(',')
-      .map((t) => t.trim())
-      .filter(Boolean)
-      .slice(0, 20);
-    const next = {
-      ...meta,
-      [editOpen.id]: { tags, folder: editFolder.trim() },
-    };
-    setMeta(next);
-    writeMeta(next);
-    setEditOpen(null);
-  };
-
-  const saveMutation = useMutation({
-    mutationFn: async () => {
-      if (files.length === 0) throw new Error(dict.admin.clickUpload || 'Vyberte soubory');
-      
-      // Postupné nahrávání s indikací pokroku by bylo lepší, ale pro začátek stačí hromadné
-      for (const f of files) {
-        const imageUrl = await uploadImage(f, 'gallery');
-        const { error } = await supabase.from('gallery').insert([{ 
-          ...formData, 
-          title: files.length > 1 ? `${formData.title} - ${f.name.split('.')[0]}` : formData.title,
-          image_url: imageUrl 
-        }]);
-        if (error) throw error;
-      }
+  // 2. Fetch Photos for active album
+  const { data: photos = [], isLoading: loadingPhotos } = useQuery({
+    queryKey: ['gallery_photos', activeAlbumId],
+    queryFn: async () => {
+      if (!activeAlbumId) return [];
+      const { data, error } = await supabase.from('gallery_photos').select('*').eq('album_id', activeAlbumId).order('sort_order', { ascending: true }).order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin_gallery'] });
-      setIsAdding(false);
-      setFiles([]);
-      setFormData({ title: '', title_en: '', category: 'Akce', event_date: '' });
-      showToast(dict.admin.gallery?.saveSuccess || 'Fotografie byly úspěšně nahrány', 'success');
-    },
-    onError: (err: any) => showToast(err.message, 'error')
+    enabled: !!activeAlbumId
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('gallery').delete().eq('id', id);
+  // Mutations
+  const createAlbumMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from('gallery_albums').insert([newAlbum]);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin_gallery'] });
-      showToast(dict.admin.confirmDeleteSuccess, 'success');
+      queryClient.invalidateQueries({ queryKey: ['gallery_albums'] });
+      setIsAddingAlbum(false);
+      setNewAlbum({ title: '', description: '', year: new Date().getFullYear(), is_public: true });
+      showToast('Album vytvořeno', 'success');
     },
     onError: (err: any) => showToast(err.message, 'error')
   });
 
-  const deleteItem = (id: string) => {
+  const deleteAlbumMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('gallery_albums').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['gallery_albums'] });
+      showToast('Album smazáno', 'success');
+      setActiveAlbumId(null);
+    },
+    onError: (err: any) => showToast(err.message, 'error')
+  });
+
+  const toggleAlbumPublicMutation = useMutation({
+    mutationFn: async ({ id, is_public }: { id: string, is_public: boolean }) => {
+      const { error } = await supabase.from('gallery_albums').update({ is_public }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['gallery_albums'] });
+    }
+  });
+
+  const uploadPhotosMutation = useMutation({
+    mutationFn: async (files: File[]) => {
+      if (!activeAlbumId) throw new Error('Není vybráno album');
+      setIsUploading(true);
+      
+      const uploadedUrls: string[] = [];
+      for (const file of files) {
+        try {
+          const url = await uploadImage(file, 'gallery');
+          uploadedUrls.push(url);
+        } catch (err) {
+          console.error('Chyba nahrávání:', err);
+        }
+      }
+
+      if (uploadedUrls.length > 0) {
+        const inserts = uploadedUrls.map(url => ({
+          album_id: activeAlbumId,
+          image_url: url
+        }));
+        const { error } = await supabase.from('gallery_photos').insert(inserts);
+        if (error) throw error;
+
+        // Nastavit cover_image_url albu, pokud ještě nemá
+        const album = albums.find(a => a.id === activeAlbumId);
+        if (album && !album.cover_image_url) {
+           await supabase.from('gallery_albums').update({ cover_image_url: uploadedUrls[0] }).eq('id', activeAlbumId);
+           queryClient.invalidateQueries({ queryKey: ['gallery_albums'] });
+        }
+      }
+      setIsUploading(false);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['gallery_photos', activeAlbumId] });
+      showToast('Fotografie nahrány', 'success');
+    },
+    onError: (err: any) => {
+      setIsUploading(false);
+      showToast(err.message, 'error');
+    }
+  });
+
+  const deletePhotoMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('gallery_photos').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['gallery_photos', activeAlbumId] });
+      showToast('Fotografie smazána', 'success');
+    },
+    onError: (err: any) => showToast(err.message, 'error')
+  });
+
+  const handleDeleteAlbum = (id: string) => {
     setModalConfig({
-      title: 'Smazat fotografii?',
-      message: 'Opravdu chcete tuto fotografii smazat?',
-      onConfirm: () => deleteMutation.mutate(id)
+      title: 'Smazat album',
+      message: 'Opravdu chcete smazat toto album? Všechny fotky v něm budou také smazány.',
+      onConfirm: () => deleteAlbumMutation.mutate(id)
     });
     setModalOpen(true);
   };
 
+  const handleDeletePhoto = (id: string) => {
+    setModalConfig({
+      title: 'Smazat fotku',
+      message: 'Opravdu chcete smazat tuto fotku?',
+      onConfirm: () => deletePhotoMutation.mutate(id)
+    });
+    setModalOpen(true);
+  };
+
+  if (activeAlbumId) {
+    const album = albums.find(a => a.id === activeAlbumId);
+    return (
+      <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => setActiveAlbumId(null)}
+            className="p-3 bg-white border border-stone-200 rounded-xl hover:bg-stone-50 transition text-stone-500"
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <div>
+            <h2 className="text-2xl font-bold text-stone-900">{album?.title}</h2>
+            <p className="text-sm text-stone-500">{album?.year} • {album?.description}</p>
+          </div>
+        </div>
+
+        <div className="bg-white p-8 rounded-3xl border shadow-sm flex flex-col items-center justify-center border-dashed border-2 border-stone-200">
+          <input 
+            type="file" 
+            multiple 
+            accept="image/*"
+            id="photo-upload"
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files && e.target.files.length > 0) {
+                uploadPhotosMutation.mutate(Array.from(e.target.files));
+              }
+            }}
+          />
+          <label htmlFor="photo-upload" className="cursor-pointer flex flex-col items-center">
+            <div className={`p-4 rounded-full ${isUploading ? 'bg-green-100 text-green-600 animate-pulse' : 'bg-stone-100 text-stone-500'} mb-4`}>
+              {isUploading ? <Loader2 size={32} className="animate-spin" /> : <ImageIcon size={32} />}
+            </div>
+            <span className="font-bold text-stone-700">{isUploading ? 'Nahrávám...' : 'Klikněte pro nahrání fotek'}</span>
+            <span className="text-xs text-stone-400 mt-1">Lze vybrat více souborů najednou</span>
+          </label>
+        </div>
+
+        {loadingPhotos ? (
+          <div className="flex justify-center p-12"><Loader2 className="animate-spin text-stone-300" size={32} /></div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {photos.map((photo: any) => (
+              <div key={photo.id} className="relative aspect-square rounded-2xl overflow-hidden group bg-stone-100">
+                <Image src={photo.image_url} alt="Photo" fill className="object-cover" unoptimized />
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <button 
+                    onClick={() => handleDeletePhoto(photo.id)}
+                    className="p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition shadow-lg"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <ConfirmModal isOpen={modalOpen} onClose={() => setModalOpen(false)} onConfirm={modalConfig.onConfirm} title={modalConfig.title} message={modalConfig.message} />
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="bg-white p-8 rounded-[2rem] border shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h2 className="text-xl font-bold flex items-center gap-3 mb-1">
             <ImageIcon className="text-green-600" />
-            {dict.admin.tabGallery}
+            Galerie a Alba
           </h2>
-          <p className="text-stone-400 text-[10px] font-black uppercase tracking-widest">Správa fotek a alb z akcí</p>
+          <p className="text-stone-400 text-[10px] font-black uppercase tracking-widest">Správa fotoalb z akcí</p>
         </div>
-        {!readOnly && (
-          <button 
-            onClick={() => setIsAdding(!isAdding)}
-            className="bg-green-600 text-white px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-500 transition shadow-lg shadow-green-900/20 flex items-center gap-2"
-          >
-            {isAdding ? <X size={16} /> : <Plus size={16} />}
-            {isAdding ? 'Zrušit' : dict.admin.gallery.addPhoto}
-          </button>
-        )}
+        <button 
+          onClick={() => setIsAddingAlbum(!isAddingAlbum)}
+          className="bg-green-600 text-white px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-500 transition shadow-lg shadow-green-900/20 flex items-center gap-2"
+        >
+          <Plus size={16} />
+          {isAddingAlbum ? 'Zrušit' : 'Nové album'}
+        </button>
       </div>
 
-      {isAdding && !readOnly && (
-        <div className="bg-white p-8 rounded-[2.5rem] border shadow-xl animate-in fade-in slide-in-from-top-4 duration-300">
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="space-y-4">
-              <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.admin.labelTitle}</label>
-                <input 
-                  type="text" 
-                  value={formData.title}
-                  onChange={e => setFormData({...formData, title: e.target.value})}
-                  className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
-                  placeholder="Název fotky"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.admin.labelTitleEn}</label>
-                <input 
-                  type="text" 
-                  value={formData.title_en}
-                  onChange={e => setFormData({...formData, title_en: e.target.value})}
-                  className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
-                  placeholder="Photo title (EN)"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Datum akce</label>
-                  <input 
-                    type="date" 
-                    value={formData.event_date}
-                    onChange={e => setFormData({...formData, event_date: e.target.value})}
-                    className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Kategorie</label>
-                  <select 
-                    value={formData.category}
-                    onChange={e => setFormData({...formData, category: e.target.value})}
-                    className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
-                  >
-                    <option>{dict.admin.gallery.categories.events}</option>
-                    <option>{dict.admin.gallery.categories.lectures}</option>
-                    <option>{dict.admin.gallery.categories.other}</option>
-                  </select>
-                </div>
-              </div>
-            </div>
+      {isAddingAlbum && (
+        <div className="bg-white p-8 rounded-3xl border shadow-xl">
+          <h3 className="font-bold text-lg mb-4">Vytvořit nové album</h3>
+          <div className="grid md:grid-cols-2 gap-4 mb-4">
+            <input 
+              type="text" 
+              placeholder="Název alba" 
+              value={newAlbum.title}
+              onChange={e => setNewAlbum({...newAlbum, title: e.target.value})}
+              className="bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700"
+            />
+            <input 
+              type="number" 
+              placeholder="Rok" 
+              value={newAlbum.year}
+              onChange={e => setNewAlbum({...newAlbum, year: parseInt(e.target.value)})}
+              className="bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700"
+            />
+          </div>
+          <textarea 
+            placeholder="Popis alba (volitelné)" 
+            value={newAlbum.description}
+            onChange={e => setNewAlbum({...newAlbum, description: e.target.value})}
+            className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 mb-4"
+          />
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => createAlbumMutation.mutate()}
+              disabled={!newAlbum.title || createAlbumMutation.isPending}
+              className="bg-stone-900 text-white px-6 py-3 rounded-xl font-bold hover:bg-stone-800 disabled:opacity-50 transition"
+            >
+              Uložit album
+            </button>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input 
+                type="checkbox" 
+                checked={newAlbum.is_public}
+                onChange={e => setNewAlbum({...newAlbum, is_public: e.target.checked})}
+                className="accent-green-600 w-4 h-4"
+              />
+              <span className="text-sm font-bold text-stone-600">Veřejné</span>
+            </label>
+          </div>
+        </div>
+      )}
 
-            <div className="flex flex-col gap-4">
-              <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Nahrát fotografie (možno i více najednou)</label>
+      {loadingAlbums ? (
+        <div className="flex justify-center p-12"><Loader2 className="animate-spin text-stone-300" size={32} /></div>
+      ) : (
+        <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {albums.map((album: any) => (
+            <div key={album.id} className="bg-white rounded-3xl border shadow-sm overflow-hidden group hover:shadow-lg transition">
               <div 
-                onClick={() => document.getElementById('file-upload')?.click()}
-                className={`flex-grow border-2 border-dashed rounded-2xl flex flex-col items-center justify-center p-6 cursor-pointer transition-all duration-300 ${files.length > 0 ? 'border-green-500 bg-green-50' : 'border-stone-200 bg-stone-50 hover:border-green-300'}`}
+                className="aspect-video bg-stone-100 relative cursor-pointer"
+                onClick={() => setActiveAlbumId(album.id)}
               >
-                <input 
-                  id="file-upload"
-                  type="file" 
-                  accept="image/*"
-                  multiple
-                  onChange={e => setFiles(Array.from(e.target.files || []))}
-                  className="hidden" 
-                />
-                {files.length > 0 ? (
-                  <div className="text-center">
-                    <ImageIcon className="text-green-600 mx-auto mb-2" size={32} />
-                    <p className="text-xs font-bold text-green-700 truncate max-w-[200px]">
-                      {files.length === 1 ? files[0].name : `${files.length} souborů vybráno`}
-                    </p>
-                    <p className="text-[10px] text-green-600/60 uppercase font-black tracking-widest mt-1">Připraveno k nahrání</p>
-                  </div>
+                {album.cover_image_url ? (
+                  <Image src={album.cover_image_url} alt={album.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" unoptimized />
                 ) : (
-                  <div className="text-center">
-                    <Plus className="text-stone-300 mx-auto mb-2" size={32} />
-                    <p className="text-xs font-bold text-stone-400">{dict.admin.clickUpload}</p>
+                  <div className="absolute inset-0 flex items-center justify-center text-stone-300">
+                    <Folder size={48} />
+                  </div>
+                )}
+                {!album.is_public && (
+                  <div className="absolute top-3 left-3 bg-stone-900/80 backdrop-blur text-white px-2 py-1 rounded-md text-[10px] font-black flex items-center gap-1">
+                    <EyeOff size={12} /> Skryté
                   </div>
                 )}
               </div>
-              <button 
-                onClick={() => saveMutation.mutate()} 
-                disabled={saveMutation.isPending || files.length === 0} 
-                className="w-full bg-stone-900 text-white py-4 rounded-xl font-black uppercase tracking-widest hover:bg-green-600 disabled:opacity-50 transition shadow-lg"
-              >
-                {saveMutation.isPending ? <Loader2 className="animate-spin mx-auto" /> : dict.admin.gallery.uploadBtn}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* FILTRY */}
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center gap-2">
-        {['Vše', dict.admin.gallery.categories.events, dict.admin.gallery.categories.lectures, dict.admin.gallery.categories.other].map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setActiveFilter(cat)}
-            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeFilter === cat ? 'bg-green-600 text-white shadow-lg' : 'bg-white text-stone-400 border hover:bg-stone-50'}`}
-          >
-            {cat}
-          </button>
-        ))}
-      </div>
-        <div className="grid md:grid-cols-12 gap-3">
-          <div className="md:col-span-7 relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-300" size={18} />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Hledat podle názvu, tagu nebo složky…"
-              className="w-full bg-white border border-stone-200 rounded-2xl pl-12 pr-4 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none"
-            />
-          </div>
-          <div className="md:col-span-5 flex items-center gap-2 bg-white border border-stone-200 rounded-2xl px-4 py-3">
-            <Folder size={18} className="text-stone-300" />
-            <select
-              value={folderFilter}
-              onChange={(e) => setFolderFilter(e.target.value)}
-              className="w-full bg-transparent font-bold text-sm text-stone-700 outline-none"
-            >
-              {folders.map((f) => (
-                <option key={f} value={f}>
-                  {f}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
-        {filteredImages.map((img: any) => (
-          <div key={img.id} className="relative aspect-square rounded-3xl overflow-hidden group border border-stone-100 shadow-sm hover:shadow-xl transition-all duration-500 hover:-translate-y-1">
-            <Image src={img.image_url} alt={img.title} fill className="object-cover group-hover:scale-110 transition-transform duration-700" />
-            
-            {/* OVERLAY */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
-              <p className="text-white font-bold text-xs mb-1 truncate">{img.title}</p>
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[8px] font-black uppercase tracking-widest text-white/60 bg-white/10 px-2 py-0.5 rounded backdrop-blur-md">
-                  {img.category}
-                </span>
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const usages = usageByUrl.get(img.image_url) || [];
-                      setUsageOpen({
-                        title: img.title || 'Médium',
-                        items: usages,
-                      });
-                    }}
-                    className="p-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition backdrop-blur-md"
-                    title="Použití"
+              <div className="p-5">
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="font-bold text-stone-900 leading-tight cursor-pointer hover:text-green-600 transition" onClick={() => setActiveAlbumId(album.id)}>
+                    {album.title}
+                  </h3>
+                  <span className="text-xs font-black text-stone-400 bg-stone-100 px-2 py-1 rounded-lg">{album.year}</span>
+                </div>
+                <div className="flex items-center justify-between mt-4 pt-4 border-t border-stone-100">
+                  <button 
+                    onClick={() => toggleAlbumPublicMutation.mutate({ id: album.id, is_public: !album.is_public })}
+                    className={`p-2 rounded-lg transition ${album.is_public ? 'text-green-600 hover:bg-green-50' : 'text-stone-400 hover:bg-stone-100'}`}
+                    title={album.is_public ? 'Zneveřejnit' : 'Zveřejnit'}
                   >
-                    <LinkIcon size={14} />
+                    {album.is_public ? <Eye size={16} /> : <EyeOff size={16} />}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => openEdit(img)}
-                    className="p-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition backdrop-blur-md"
-                    title="Tagy / složka"
+                  <button 
+                    onClick={() => handleDeleteAlbum(album.id)}
+                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition"
+                    title="Smazat album"
                   >
-                    <Tag size={14} />
+                    <Trash2 size={16} />
                   </button>
-                  {!readOnly && (
-                    <button 
-                      onClick={() => deleteItem(img.id)} 
-                      className="p-2 bg-red-500/80 text-white rounded-lg hover:bg-red-600 transition backdrop-blur-md"
-                      title="Smazat"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  )}
                 </div>
-              </div>
-              {(() => {
-                const m = meta[String(img.id)];
-                const folder = m?.folder || '';
-                const tags = (m?.tags || []).slice(0, 3);
-                const usage = (usageByUrl.get(img.image_url) || []).length;
-                return (
-                  <div className="mt-2 flex flex-wrap items-center gap-1">
-                    {folder && (
-                      <span className="text-[8px] font-black uppercase tracking-widest text-white/70 bg-white/10 px-2 py-0.5 rounded backdrop-blur-md">
-                        {folder}
-                      </span>
-                    )}
-                    {tags.map((t) => (
-                      <span key={t} className="text-[8px] font-black uppercase tracking-widest text-white/70 bg-white/10 px-2 py-0.5 rounded backdrop-blur-md">
-                        {t}
-                      </span>
-                    ))}
-                    {usage > 0 && (
-                      <span className="text-[8px] font-black uppercase tracking-widest text-white/70 bg-green-600/50 px-2 py-0.5 rounded backdrop-blur-md">
-                        used {usage}
-                      </span>
-                    )}
-                  </div>
-                );
-              })()}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {editOpen && (
-        <div className="fixed inset-0 z-[10002] flex items-center justify-center p-6">
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setEditOpen(null)}
-            aria-label="Zavřít"
-          />
-          <div className="relative w-full max-w-xl bg-white rounded-[2.5rem] border border-stone-100 shadow-2xl overflow-hidden">
-            <div className="p-6 border-b border-stone-100 flex items-center justify-between">
-              <div>
-                <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">Médium</div>
-                <div className="font-black text-stone-900">Tagy a složka</div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEditOpen(null)}
-                className="p-2 rounded-xl hover:bg-stone-50 transition text-stone-400"
-                aria-label="Zavřít"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <div className="p-8 space-y-4">
-              <div className="bg-stone-50 border border-stone-100 rounded-2xl p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="font-bold text-stone-700 truncate">{editOpen.url}</div>
-                  <CopyButton value={editOpen.url} className="border-stone-200 bg-white text-stone-700 hover:bg-stone-50" />
-                </div>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Složka</label>
-                  <input
-                    value={editFolder}
-                    onChange={(e) => setEditFolder(e.target.value)}
-                    placeholder="např. Akce 2026"
-                    className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Tagy</label>
-                  <input
-                    value={editTags}
-                    onChange={(e) => setEditTags(e.target.value)}
-                    placeholder="např. party, uvodak, promo"
-                    className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none"
-                  />
-                </div>
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setEditOpen(null)}
-                  className="flex-1 bg-stone-100 text-stone-600 py-4 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-stone-200 transition"
-                >
-                  Zrušit
-                </button>
-                <button
-                  type="button"
-                  onClick={saveEdit}
-                  className="flex-1 bg-green-600 text-white py-4 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-green-500 transition shadow-lg shadow-green-900/20"
-                >
-                  Uložit
-                </button>
               </div>
             </div>
-          </div>
+          ))}
         </div>
       )}
-
-      {usageOpen && (
-        <div className="fixed inset-0 z-[10002] flex items-center justify-center p-6">
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setUsageOpen(null)}
-            aria-label="Zavřít"
-          />
-          <div className="relative w-full max-w-xl bg-white rounded-[2.5rem] border border-stone-100 shadow-2xl overflow-hidden">
-            <div className="p-6 border-b border-stone-100 flex items-center justify-between">
-              <div>
-                <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">Použití</div>
-                <div className="font-black text-stone-900 truncate">{usageOpen.title}</div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setUsageOpen(null)}
-                className="p-2 rounded-xl hover:bg-stone-50 transition text-stone-400"
-                aria-label="Zavřít"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <div className="p-8">
-              {usageOpen.items.length === 0 ? (
-                <div className="py-10 text-center text-stone-400 font-bold uppercase tracking-widest text-xs">
-                  Nikde nenalezeno.
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {usageOpen.items.slice(0, 40).map((u, idx) => (
-                    <div key={`${u.type}-${u.id}-${idx}`} className="p-4 bg-stone-50 border border-stone-100 rounded-2xl">
-                      <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{u.type}</div>
-                      <div className="font-bold text-stone-900">{u.title}</div>
-                      <div className="text-[10px] font-black uppercase tracking-widest text-stone-300">#{u.id}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-      <ConfirmModal 
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onConfirm={modalConfig.onConfirm}
-        title={modalConfig.title}
-        message={modalConfig.message}
-      />
+      <ConfirmModal isOpen={modalOpen} onClose={() => setModalOpen(false)} onConfirm={modalConfig.onConfirm} title={modalConfig.title} message={modalConfig.message} />
     </div>
   );
 }

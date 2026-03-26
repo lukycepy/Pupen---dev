@@ -3,6 +3,7 @@ import { getServerSupabase } from '@/lib/supabase-server';
 import { requireMember } from '@/lib/server-auth';
 import { getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer';
 import { getClientIp, rateLimit } from '@/lib/rate-limit';
+import { sendMailWithQueueFallback } from '@/lib/email/queue';
 
 export async function POST(req: Request) {
   try {
@@ -67,12 +68,11 @@ export async function POST(req: Request) {
       </div>
     `;
 
-    await transporter.sendMail({
-      from,
-      to: toEmail,
-      replyTo: user.email || undefined,
-      subject,
-      html,
+    await sendMailWithQueueFallback({
+      transporter,
+      supabase,
+      meta: { kind: 'gdpr_delete_request' },
+      message: { from, to: toEmail, replyTo: user.email || undefined, subject, html },
     });
 
     return NextResponse.json({ ok: true, requestId: (ins.data as any)?.id || null });

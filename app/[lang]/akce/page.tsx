@@ -379,19 +379,27 @@ export default function AkcePage() {
               <p className="text-stone-500 text-lg font-medium">{dict.subtitle}</p>
             </div>
 
-            <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-stone-100">
-              <button 
-                onClick={() => setActiveViewMode('list')}
-                className={`p-3 rounded-xl transition ${viewMode === 'list' ? 'bg-green-600 text-white shadow-lg shadow-green-100' : 'text-stone-400 hover:text-stone-600'}`}
+            <div className="flex items-center gap-3">
+              <a
+                href={`/api/ical/events?lang=${lang}`}
+                className="inline-flex items-center gap-2 rounded-2xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
               >
-                <LayoutGrid size={20} />
-              </button>
-              <button 
-                onClick={() => setActiveViewMode('calendar')}
-                className={`p-3 rounded-xl transition ${viewMode === 'calendar' ? 'bg-green-600 text-white shadow-lg shadow-green-100' : 'text-stone-400 hover:text-stone-600'}`}
-              >
-                <Calendar size={20} />
-              </button>
+                {lang === 'en' ? 'iCal feed' : 'iCal feed'}
+              </a>
+              <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-stone-100">
+                <button 
+                  onClick={() => setActiveViewMode('list')}
+                  className={`p-3 rounded-xl transition ${viewMode === 'list' ? 'bg-green-600 text-white shadow-lg shadow-green-100' : 'text-stone-400 hover:text-stone-600'}`}
+                >
+                  <LayoutGrid size={20} />
+                </button>
+                <button 
+                  onClick={() => setActiveViewMode('calendar')}
+                  className={`p-3 rounded-xl transition ${viewMode === 'calendar' ? 'bg-green-600 text-white shadow-lg shadow-green-100' : 'text-stone-400 hover:text-stone-600'}`}
+                >
+                  <Calendar size={20} />
+                </button>
+              </div>
             </div>
           </div>
 

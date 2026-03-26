@@ -7,6 +7,17 @@ import ScrollProgressBar from '../../components/ScrollProgressBar';
 import SocialShareInline from '@/app/components/SocialShareInline';
 import { ArrowLeft, Calendar, Clock, MapPin, Navigation, Ticket } from 'lucide-react';
 
+function formatGoogleCalDateUtc(d: Date) {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`;
+}
+
+function addHours(date: Date, hours: number) {
+  const d = new Date(date);
+  d.setHours(d.getHours() + hours);
+  return d;
+}
+
 function parseTimeline(description: string) {
   const lines = description
     .split('\n')
@@ -71,9 +82,17 @@ export default async function EventDetailPage({ params }: { params: Promise<{ la
   const timeline = description ? parseTimeline(description) : [];
 
   const location = event.location || '';
-  const googleMaps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
-  const appleMaps = `https://maps.apple.com/?q=${encodeURIComponent(location)}`;
-  const waze = `https://waze.com/ul?q=${encodeURIComponent(location)}`;
+  const googleMaps = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(location)}`;
+  const appleMaps = `https://maps.apple.com/?daddr=${encodeURIComponent(location)}`;
+  const waze = `https://waze.com/ul?q=${encodeURIComponent(location)}&navigate=yes`;
+
+  const start = event.date ? new Date(event.date) : null;
+  const end = event.end_date ? new Date(event.end_date) : start ? addHours(start, 2) : null;
+  const googleCalUrl =
+    start && end
+      ? `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${encodeURIComponent(`${formatGoogleCalDateUtc(start)}/${formatGoogleCalDateUtc(end)}`)}&details=${encodeURIComponent(description || '')}&location=${encodeURIComponent(location)}&sprop=website:${encodeURIComponent(`https://pupen.org/${lang}/akce/${event.id}`)}`
+      : '';
+  const icsUrl = `/api/ical/events/${event.id}?lang=${lang}`;
 
   return (
     <div className="min-h-screen bg-stone-50 font-sans">
@@ -182,7 +201,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ la
                     className="w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
                   >
                     <Navigation size={16} />
-                    Google Maps
+                    {lang === 'en' ? 'Route (Google)' : 'Trasa (Google)'}
                   </a>
                   <a
                     href={appleMaps}
@@ -191,7 +210,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ la
                     className="w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
                   >
                     <Navigation size={16} />
-                    Apple Maps
+                    {lang === 'en' ? 'Route (Apple)' : 'Trasa (Apple)'}
                   </a>
                   <a
                     href={waze}
@@ -200,7 +219,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ la
                     className="w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
                   >
                     <Navigation size={16} />
-                    Waze
+                    {lang === 'en' ? 'Navigate (Waze)' : 'Navigovat (Waze)'}
                   </a>
                 </div>
               </section>
@@ -224,6 +243,24 @@ export default async function EventDetailPage({ params }: { params: Promise<{ la
                     <ArrowLeft size={16} className="rotate-180" />
                     {lang === 'en' ? 'Open list view' : 'Otevřít seznam'}
                   </Link>
+                  {googleCalUrl ? (
+                    <a
+                      href={googleCalUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
+                    >
+                      <Calendar size={16} />
+                      {lang === 'en' ? 'Add to Google Calendar' : 'Přidat do Google Calendar'}
+                    </a>
+                  ) : null}
+                  <a
+                    href={icsUrl}
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
+                  >
+                    <Calendar size={16} />
+                    {lang === 'en' ? 'Download iCal (.ics)' : 'Stáhnout iCal (.ics)'}
+                  </a>
                 </div>
               </section>
             </div>

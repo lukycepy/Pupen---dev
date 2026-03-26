@@ -27,11 +27,19 @@ export default function ConfirmModal({
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
+      // Trap focus or handle escape
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') onClose();
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.body.style.overflow = 'unset';
+        window.removeEventListener('keydown', handleKeyDown);
+      };
     } else {
       document.body.style.overflow = 'unset';
     }
-    return () => { document.body.style.overflow = 'unset'; };
-  }, [isOpen]);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -56,7 +64,13 @@ export default function ConfirmModal({
       />
       
       {/* Modal */}
-      <div className="relative w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl border border-stone-100 overflow-hidden animate-in zoom-in slide-in-from-bottom-8 duration-300">
+      <div 
+        className="relative w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl border border-stone-100 overflow-hidden animate-in zoom-in slide-in-from-bottom-8 duration-300"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+        aria-describedby="modal-desc"
+      >
         <div className="p-8">
           <div className="flex items-start justify-between mb-6">
             <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${iconColors[variant]}`}>
@@ -64,14 +78,15 @@ export default function ConfirmModal({
             </div>
             <button 
               onClick={onClose}
-              className="p-2 text-stone-300 hover:text-stone-500 hover:bg-stone-50 rounded-xl transition"
+              className="p-2 text-stone-300 hover:text-stone-500 hover:bg-stone-50 rounded-xl transition focus:ring-2 focus:ring-stone-500 focus:outline-none"
+              aria-label="Zavřít"
             >
               <X size={20} />
             </button>
           </div>
 
-          <h3 className="text-2xl font-black text-stone-900 mb-3 tracking-tight">{title}</h3>
-          <p className="text-stone-500 font-medium leading-relaxed mb-8">{message}</p>
+          <h3 id="modal-title" className="text-2xl font-black text-stone-900 mb-3 tracking-tight">{title}</h3>
+          <p id="modal-desc" className="text-stone-500 font-medium leading-relaxed mb-8">{message}</p>
 
           <div className="flex flex-col sm:flex-row gap-3">
             <button
@@ -79,13 +94,13 @@ export default function ConfirmModal({
                 onConfirm();
                 onClose();
               }}
-              className={`flex-grow py-4 px-6 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-lg hover:scale-[1.02] active:scale-[0.98] ${colors[variant]}`}
+              className={`flex-grow py-4 px-6 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-lg hover:scale-[1.02] active:scale-[0.98] focus:ring-2 focus:ring-offset-2 focus:outline-none ${colors[variant]}`}
             >
               {confirmLabel}
             </button>
             <button
               onClick={onClose}
-              className="flex-grow py-4 px-6 rounded-2xl font-black uppercase tracking-widest text-xs bg-stone-100 text-stone-500 hover:bg-stone-200 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="flex-grow py-4 px-6 rounded-2xl font-black uppercase tracking-widest text-xs bg-stone-100 text-stone-500 hover:bg-stone-200 transition-all hover:scale-[1.02] active:scale-[0.98] focus:ring-2 focus:ring-stone-500 focus:outline-none"
             >
               {cancelLabel}
             </button>

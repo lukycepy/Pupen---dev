@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer';
-import { renderEmailTemplate } from '@/lib/email/templates';
+import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
+import { sendMailWithQueueFallback } from '@/lib/email/queue';
 
 async function findUserIdByEmail(supabase: any, email: string) {
   const perPage = 200;
@@ -117,10 +118,44 @@ export async function POST(req: Request) {
       .eq('id', userId)
       .throwOnError();
 
+    try {
+      const prof = await supabase.from('profiles').select('member_since, member_expires_at').eq('id', userId).maybeSingle();
+      const cur: any = prof.data || {};
+      const updates: any = {};
+      if (!cur.member_since) updates.member_since = new Date().toISOString();
+      if (!cur.member_expires_at) {
+        const d = new Date();
+        d.setFullYear(d.getFullYear() + 1);
+        updates.member_expires_at = d.toISOString();
+      }
+      if (Object.keys(updates).length) {
+        await supabase.from('profiles').update(updates).eq('id', userId);
+      }
+    } catch {}
+
+    let memberNo: number | null = null;
+    try {
+      const m = await supabase.rpc('assign_member_no', { p_user_id: userId });
+      if (!m.error) memberNo = typeof m.data === 'number' ? m.data : Number(m.data);
+    } catch {}
+
     const transporter = await getMailerWithSettings();
     const from = await getSenderFromSettings();
-    const { subject, html } = renderEmailTemplate('member_access', { toEmail: email, firstName, actionUrl, lang });
-    await transporter.sendMail({ from, to: email, subject, html });
+    const { subject, html } = await renderEmailTemplateWithDbOverride('member_access', { toEmail: email, firstName, actionUrl, lang });
+    await sendMailWithQueueFallback({
+      transporter,
+      supabase,
+      meta: { kind: 'member_access' },
+      message: { from, to: email, subject, html },
+    });
+
+    const welcome = await renderEmailTemplateWithDbOverride('member_welcome', { toEmail: email, firstName, lang });
+    await sendMailWithQueueFallback({
+      transporter,
+      supabase,
+      meta: { kind: 'member_welcome' },
+      message: { from, to: email, subject: welcome.subject, html: welcome.html },
+    });
 
     await supabase
       .from('admin_logs')
@@ -130,7 +165,7 @@ export async function POST(req: Request) {
           admin_name: user.user_metadata?.full_name || user.email || 'admin',
           action: 'APPLICATION_APPROVED_ACCESS_SENT',
           target_id: String(applicationId),
-          details: { email, user_id: userId, role_id: role.id, role_name: role.name },
+          details: { email, user_id: userId, role_id: role.id, role_name: role.name, member_no: memberNo },
         },
       ])
       .throwOnError();

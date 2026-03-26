@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer';
 import { buildWeeklyDigest } from '@/lib/email/digest';
+import { sendMailWithQueueFallback } from '@/lib/email/queue';
 
 function weekdayToNum(w: string) {
   const x = String(w || '').toLowerCase();
@@ -115,11 +116,11 @@ export async function GET(req: Request) {
 
     for (const r of recipients) {
       try {
-        await transporter.sendMail({
-          from,
-          to: r.email,
-          subject: digest.subject,
-          html: digest.html,
+        await sendMailWithQueueFallback({
+          transporter,
+          supabase,
+          meta: { kind: 'digest', batchId },
+          message: { from, to: r.email, subject: digest.subject, html: digest.html },
         });
         try {
           await supabase.from('admin_logs').insert([

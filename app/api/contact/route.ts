@@ -2,11 +2,34 @@ import { NextResponse } from 'next/server';
 import { getClientIp, rateLimit } from '@/lib/rate-limit';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer';
-import { renderEmailTemplate } from '@/lib/email/templates';
+import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
+import { sendMailWithQueueFallback } from '@/lib/email/queue';
+import { triggerWebhooks } from '@/lib/webhook';
 
 function isEmail(input: string) {
   const v = String(input || '').trim();
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+}
+
+const BLOCKED_DOMAINS = [
+  'mailinator.com',
+  '10minutemail.com',
+  'guerrillamail.com',
+  'tempmail.com',
+  'yopmail.com',
+  'spam.com'
+];
+
+function isBlockedDomain(email: string) {
+  const domain = email.split('@')[1];
+  if (!domain) return false;
+  return BLOCKED_DOMAINS.includes(domain.toLowerCase());
+}
+
+function countLinks(input: string) {
+  const s = String(input || '');
+  const m = s.match(/https?:\/\/[^\s]+/gi);
+  return m ? m.length : 0;
 }
 
 export async function POST(req: Request) {
@@ -25,6 +48,8 @@ export async function POST(req: Request) {
 
     if (!name || !email || !message) return NextResponse.json({ error: 'Chybí povinná pole.' }, { status: 400 });
     if (!isEmail(email)) return NextResponse.json({ error: 'Neplatný e-mail.' }, { status: 400 });
+    if (isBlockedDomain(email)) return NextResponse.json({ error: 'Tato doména je na seznamu blokovaných kvůli spamu.' }, { status: 400 });
+    if (countLinks(message) > 3) return NextResponse.json({ error: 'Zpráva obsahuje příliš mnoho odkazů.' }, { status: 400 });
 
     const supabase = getServerSupabase();
     const ins = await supabase.from('messages').insert([{ name, email, subject, message }]).select('id, created_at').single();
@@ -33,7 +58,7 @@ export async function POST(req: Request) {
     const ps = await supabase.from('payment_settings').select('notification_email').limit(1).maybeSingle();
     const to = ps.data?.notification_email ? String(ps.data.notification_email) : 'info@pupen.org';
 
-    const { subject: mailSubject, html } = renderEmailTemplate('contact_message', {
+    const { subject: mailSubject, html } = await renderEmailTemplateWithDbOverride('contact_message', {
       name,
       email,
       subject,
@@ -45,13 +70,15 @@ export async function POST(req: Request) {
     const transporter = await getMailerWithSettings();
     const from = await getSenderFromSettings();
 
-    await transporter.sendMail({
-      from,
-      to,
-      replyTo: email,
-      subject: mailSubject,
-      html,
+    await sendMailWithQueueFallback({
+      transporter,
+      supabase,
+      meta: { kind: 'contact' },
+      message: { from, to, replyTo: email, subject: mailSubject, html },
     });
+
+    // Trigger webhook asynchronously
+    triggerWebhooks('new_message', { name, email, subject, message });
 
     return NextResponse.json({ ok: true });
   } catch (e: any) {

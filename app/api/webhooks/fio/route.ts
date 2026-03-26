@@ -63,6 +63,12 @@ function normalizeFioPayload(payload: any): NormalizedTx[] {
     .filter((t) => (t.amount || 0) > 0);
 }
 
+function addYears(date: Date, years: number) {
+  const d = new Date(date);
+  d.setFullYear(d.getFullYear() + years);
+  return d;
+}
+
 async function pullFromFio(fioToken: string) {
   const to = new Date();
   const from = new Date(to.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -143,6 +149,75 @@ export async function POST(req: Request) {
         } catch {}
 
         break;
+      }
+
+      if (!updated) {
+        const vsRaw = (tx.variableSymbol || '').trim();
+        const txId = tx.id ? String(tx.id) : '';
+        const amount = typeof tx.amount === 'number' ? tx.amount : null;
+        const currency = tx.currency ? String(tx.currency) : 'CZK';
+
+        if (vsRaw && /^\d{1,12}$/.test(vsRaw) && txId && amount && amount > 0) {
+          const vsNum = Number(vsRaw);
+          if (Number.isFinite(vsNum) && vsNum <= Number.MAX_SAFE_INTEGER) {
+            const profRes = await supabase
+              .from('profiles')
+              .select('id, email, first_name, last_name, is_member, member_no, member_expires_at')
+              .eq('member_no', vsNum as any)
+              .limit(1)
+              .maybeSingle();
+            const p: any = profRes.data;
+            if (p?.id && p?.is_member) {
+              const up = await supabase
+                .from('membership_payments')
+                .upsert(
+                  [
+                    {
+                      member_id: String(p.id),
+                      provider: 'fio',
+                      provider_tx_id: txId,
+                      paid_at: tx.date ? new Date(String(tx.date)).toISOString() : new Date().toISOString(),
+                      amount,
+                      currency,
+                      vs: vsRaw,
+                      message: tx.message ? String(tx.message).slice(0, 500) : null,
+                      raw: tx as any,
+                      updated_at: new Date().toISOString(),
+                    },
+                  ],
+                  { onConflict: 'provider,provider_tx_id', ignoreDuplicates: true },
+                )
+                .select('id')
+                .maybeSingle();
+
+              if (!up.error && up.data?.id) {
+                const now = new Date();
+                const curExp = p.member_expires_at ? new Date(String(p.member_expires_at)) : null;
+                const base = curExp && curExp > now ? curExp : now;
+                const nextExp = addYears(base, 1);
+                await supabase
+                  .from('profiles')
+                  .update({ member_expires_at: nextExp.toISOString(), member_expiry_notice_stage: null, member_expiry_notice_at: null })
+                  .eq('id', String(p.id));
+
+                matched += 1;
+                updated = true;
+
+                try {
+                  await supabase.from('admin_logs').insert([
+                    {
+                      admin_email: 'fio-webhook',
+                      admin_name: 'Fio',
+                      action: 'MEMBERSHIP_PAYMENT_FIO',
+                      target_id: String(p.id),
+                      details: { email: p.email || null, member_no: p.member_no || null, amount, currency, member_expires_at: nextExp.toISOString(), tx },
+                    },
+                  ]);
+                } catch {}
+              }
+            }
+          }
+        }
       }
 
       if (!updated) skipped += 1;

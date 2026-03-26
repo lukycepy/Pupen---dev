@@ -8,6 +8,7 @@ import { getDictionary } from '@/lib/get-dictionary';
 import { Metadata } from 'next';
 import ScrollProgressBar from '../../components/ScrollProgressBar';
 import SocialShareInline from '@/app/components/SocialShareInline';
+import NewsFeedback from './NewsFeedback';
 
 export const revalidate = 60;
 
@@ -267,6 +268,8 @@ export default async function DetailNovinky({ params }: Props) {
                 dangerouslySetInnerHTML={{ __html: contentHtml }}
               />
             </article>
+
+            <NewsFeedback postId={String(post.id)} lang={lang} />
           </div>
 
           {toc.length > 0 && (

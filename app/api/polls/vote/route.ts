@@ -16,35 +16,65 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json().catch(() => ({}));
-    const { pollId, optionId } = body || {};
-    if (!pollId || !optionId) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+    const pollId = String(body?.pollId || body?.poll_id || '').trim();
+    const optionId = body?.optionId ? String(body.optionId).trim() : '';
+    const optionIdsRaw = Array.isArray(body?.optionIds) ? body.optionIds : null;
+    const optionIds = optionIdsRaw ? optionIdsRaw.map((x: any) => String(x).trim()).filter(Boolean) : [];
+    if (!pollId) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
 
     const supabase = getServerSupabase();
 
-    const already = await supabase
-      .from('admin_logs')
-      .select('id')
-      .eq('action', 'POLL_VOTE')
-      .eq('target_id', String(pollId))
-      .eq('details->>userId', user.id)
-      .limit(1)
+    const pollRes = await supabase
+      .from('polls')
+      .select('id,is_active,ends_at,allow_multiple')
+      .eq('id', pollId)
       .maybeSingle();
-    if (already.error) throw already.error;
-    if (already.data) return NextResponse.json({ ok: true, alreadyVoted: true });
-
-    const optRes = await supabase
-      .from('poll_options')
-      .select('id, poll_id, votes')
-      .eq('id', optionId)
-      .maybeSingle();
-    if (optRes.error) throw optRes.error;
-    if (!optRes.data || String(optRes.data.poll_id) !== String(pollId)) {
-      return NextResponse.json({ error: 'Invalid option' }, { status: 400 });
+    if (pollRes.error) throw pollRes.error;
+    const poll: any = pollRes.data;
+    if (!poll?.id) return NextResponse.json({ error: 'Invalid poll' }, { status: 400 });
+    if (!poll.is_active) return NextResponse.json({ error: 'Poll is inactive' }, { status: 400 });
+    if (poll.ends_at) {
+      const exp = new Date(String(poll.ends_at));
+      if (!Number.isNaN(exp.getTime()) && exp.getTime() <= Date.now()) {
+        return NextResponse.json({ error: 'Poll ended' }, { status: 400 });
+      }
     }
 
-    const nextVotes = (optRes.data.votes || 0) + 1;
-    const upd = await supabase.from('poll_options').update({ votes: nextVotes }).eq('id', optionId);
-    if (upd.error) throw upd.error;
+    const existingVote = await supabase
+      .from('poll_votes')
+      .select('id')
+      .eq('poll_id', pollId)
+      .eq('user_id', user.id)
+      .limit(1)
+      .maybeSingle();
+    if (existingVote.error) throw existingVote.error;
+    if (existingVote.data?.id) return NextResponse.json({ ok: true, alreadyVoted: true });
+
+    const selected = poll.allow_multiple ? optionIds : optionId ? [optionId] : [];
+    const uniq = Array.from(new Set(selected)).filter(Boolean);
+    if (uniq.length === 0) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+
+    const optionsRes = await supabase.from('poll_options').select('id, poll_id, votes').in('id', uniq);
+    if (optionsRes.error) throw optionsRes.error;
+    const rows = optionsRes.data || [];
+    if (rows.length !== uniq.length) return NextResponse.json({ error: 'Invalid option' }, { status: 400 });
+    if (rows.some((r: any) => String(r.poll_id) !== String(pollId))) return NextResponse.json({ error: 'Invalid option' }, { status: 400 });
+
+    const voteInsert = await supabase.from('poll_votes').insert([
+      {
+        poll_id: pollId,
+        user_id: user.id,
+        option_ids: uniq,
+        ip: ip === 'unknown' ? null : ip,
+      },
+    ]);
+    if (voteInsert.error) throw voteInsert.error;
+
+    for (const opt of rows as any[]) {
+      const nextVotes = (opt.votes || 0) + 1;
+      const upd = await supabase.from('poll_options').update({ votes: nextVotes }).eq('id', opt.id);
+      if (upd.error) throw upd.error;
+    }
 
     const log = await supabase.from('admin_logs').insert([
       {
@@ -52,15 +82,15 @@ export async function POST(req: Request) {
         admin_name: 'PollVote',
         action: 'POLL_VOTE',
         target_id: String(pollId),
-        details: { userId: user.id, email: user.email, optionId: String(optionId), createdAt: new Date().toISOString() },
+        details: { userId: user.id, email: user.email, optionIds: uniq, createdAt: new Date().toISOString() },
       },
     ]);
     if (log.error) throw log.error;
 
-    const pollRes = await supabase.from('polls').select('*, poll_options(*)').eq('id', pollId).maybeSingle();
-    if (pollRes.error) throw pollRes.error;
+    const full = await supabase.from('polls').select('*, poll_options(*)').eq('id', pollId).maybeSingle();
+    if (full.error) throw full.error;
 
-    return NextResponse.json({ ok: true, poll: pollRes.data, alreadyVoted: false });
+    return NextResponse.json({ ok: true, poll: full.data, alreadyVoted: false });
   } catch (e: any) {
     const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
     return NextResponse.json({ error: e?.message || 'Error' }, { status });

@@ -65,7 +65,10 @@ export default function UsersTab({ dict }: UsersTabProps) {
     last_name: z.string().min(1, dict.admin.validation.required),
     is_admin: z.boolean().default(false),
     is_member: z.boolean().default(false),
+    is_blocked: z.boolean().default(false),
+    blocked_reason: z.string().optional(),
     member_since: z.string().optional(),
+    member_expires_at: z.string().optional(),
     application_scan_url: z.string().optional(),
     phone: z.string().optional(),
     address: z.string().optional(),
@@ -93,6 +96,7 @@ export default function UsersTab({ dict }: UsersTabProps) {
   const [scanBusy, setScanBusy] = useState(false);
   const [sendingReset, setSendingReset] = useState(false);
   const [sendingPassword, setSendingPassword] = useState(false);
+  const [revokingSessions, setRevokingSessions] = useState(false);
 
   const sendResetLink = async (email: string) => {
     setSendingReset(true);
@@ -112,6 +116,26 @@ export default function UsersTab({ dict }: UsersTabProps) {
       showToast(e?.message || 'Chyba', 'error');
     } finally {
       setSendingReset(false);
+    }
+  };
+
+  const revokeAllSessions = async (userId: string) => {
+    setRevokingSessions(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
+      const res = await fetch(`/api/admin/users/${userId}/revoke-sessions`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Chyba');
+      showToast('Sessions revokovány', 'success');
+    } catch (e: any) {
+      showToast(e?.message || 'Chyba', 'error');
+    } finally {
+      setRevokingSessions(false);
     }
   };
 
@@ -150,7 +174,7 @@ export default function UsersTab({ dict }: UsersTabProps) {
       const to = from + PAGE_SIZE - 1;
       const res = await supabase
         .from('profiles')
-        .select('id,email,first_name,last_name,is_admin,is_member,can_manage_admins')
+        .select('id,email,first_name,last_name,is_admin,is_member,is_blocked,can_manage_admins')
         .eq('is_admin', true)
         .order('last_name', { ascending: true })
         .range(from, to);
@@ -169,8 +193,28 @@ export default function UsersTab({ dict }: UsersTabProps) {
       const to = from + PAGE_SIZE - 1;
       const res = await supabase
         .from('profiles')
-        .select('id,email,first_name,last_name,is_admin,is_member,can_manage_admins')
+        .select('id,email,first_name,last_name,is_admin,is_member,is_blocked,can_manage_admins')
         .eq('is_member', true)
+        .eq('is_admin', false)
+        .order('last_name', { ascending: true })
+        .range(from, to);
+      if (res.error) throw res.error;
+      const items = res.data || [];
+      return { items, nextFrom: items.length === PAGE_SIZE ? to + 1 : null };
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => lastPage.nextFrom,
+  });
+
+  const othersQuery = useInfiniteQuery({
+    queryKey: ['others_paged'],
+    queryFn: async ({ pageParam }) => {
+      const from = typeof pageParam === 'number' ? pageParam : 0;
+      const to = from + PAGE_SIZE - 1;
+      const res = await supabase
+        .from('profiles')
+        .select('id,email,first_name,last_name,is_admin,is_member,is_blocked,can_manage_admins')
+        .eq('is_member', false)
         .eq('is_admin', false)
         .order('last_name', { ascending: true })
         .range(from, to);
@@ -184,6 +228,7 @@ export default function UsersTab({ dict }: UsersTabProps) {
 
   const admins = (adminsQuery.data?.pages || []).flatMap((p) => p.items);
   const members = (membersQuery.data?.pages || []).flatMap((p) => p.items);
+  const others = (othersQuery.data?.pages || []).flatMap((p) => p.items);
 
   const defaultPerms: any = {};
   modules.forEach(m => {
@@ -200,6 +245,8 @@ export default function UsersTab({ dict }: UsersTabProps) {
       password: '',
       is_admin: false,
       is_member: false,
+      is_blocked: false,
+      blocked_reason: '',
       can_manage_admins: false,
       ...defaultPerms
     }
@@ -254,7 +301,10 @@ export default function UsersTab({ dict }: UsersTabProps) {
         last_name: data.last_name,
         is_admin: !!data.is_admin,
         is_member: !!data.is_member,
+        is_blocked: !!data.is_blocked,
+        blocked_reason: data.is_blocked ? (String(data.blocked_reason || '').trim().slice(0, 2000) || null) : null,
         member_since: data.member_since || null,
+      member_expires_at: data.member_expires_at || null,
         can_manage_admins: !!data.can_manage_admins,
         ...modules.reduce((acc: any, mod) => ({
           ...acc,
@@ -262,6 +312,19 @@ export default function UsersTab({ dict }: UsersTabProps) {
           [`can_edit_${mod.id}`]: !!data[`can_edit_${mod.id}`],
         }), {}),
       };
+
+      const wasBlocked = !!editingAdmin?.is_blocked;
+      const nextBlocked = !!data.is_blocked;
+      if (nextBlocked !== wasBlocked) {
+        profilePayload.blocked_at = nextBlocked ? new Date().toISOString() : null;
+      }
+
+      const prevExp = editingAdmin?.member_expires_at ? String(editingAdmin.member_expires_at).slice(0, 10) : '';
+      const nextExp = data.member_expires_at ? String(data.member_expires_at).slice(0, 10) : '';
+      if (nextExp !== prevExp) {
+        profilePayload.member_expiry_notice_stage = null;
+        profilePayload.member_expiry_notice_at = null;
+      }
 
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
@@ -306,6 +369,7 @@ export default function UsersTab({ dict }: UsersTabProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admins_paged'] });
       queryClient.invalidateQueries({ queryKey: ['members_paged'] });
+      queryClient.invalidateQueries({ queryKey: ['others_paged'] });
       handleCancel();
       showToast(dict.admin.alertAdminSuccess, 'success');
     },
@@ -331,6 +395,7 @@ export default function UsersTab({ dict }: UsersTabProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admins_paged'] });
       queryClient.invalidateQueries({ queryKey: ['members_paged'] });
+      queryClient.invalidateQueries({ queryKey: ['others_paged'] });
       showToast(dict.admin.confirmDeleteSuccess || 'Smazáno', 'success');
     },
     onError: (err: any) => {
@@ -358,6 +423,7 @@ export default function UsersTab({ dict }: UsersTabProps) {
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['admins_paged'] });
       queryClient.invalidateQueries({ queryKey: ['members_paged'] });
+      queryClient.invalidateQueries({ queryKey: ['others_paged'] });
       const results = Array.isArray(data?.results) ? data.results : [];
       const okCount = results.filter((r: any) => r?.ok).length;
       const errCount = results.length - okCount;
@@ -457,7 +523,10 @@ export default function UsersTab({ dict }: UsersTabProps) {
       last_name: full.last_name || '',
       is_admin: full.is_admin || false,
       is_member: full.is_member || false,
+      is_blocked: full.is_blocked || false,
+      blocked_reason: full.blocked_reason || '',
       member_since: full.member_since || '',
+      member_expires_at: full.member_expires_at || '',
       application_scan_url: full.application_scan_url || '',
       phone: '',
       address: '',
@@ -590,6 +659,18 @@ export default function UsersTab({ dict }: UsersTabProps) {
                     className="w-full bg-stone-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-600 transition disabled:opacity-50"
                   >
                     {sendingPassword ? 'Odesílám...' : 'Poslat nové heslo'}
+                  </button>
+                </div>
+              )}
+              {editingAdmin && (
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    disabled={revokingSessions}
+                    onClick={() => revokeAllSessions(String(editingAdmin?.id || ''))}
+                    className="w-full bg-white text-stone-700 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-stone-200 hover:bg-stone-50 transition disabled:opacity-50"
+                  >
+                    {revokingSessions ? 'Provádím...' : 'Odhlásit ze všech zařízení'}
                   </button>
                 </div>
               )}
@@ -747,10 +828,48 @@ export default function UsersTab({ dict }: UsersTabProps) {
                       <span className="text-[10px] text-stone-500 font-medium">{dict.admin.roleMemberDesc}</span>
                     </div>
                   </label>
+                  {watch('is_member') ? (
+                    <div className="grid grid-cols-2 gap-3 pt-2 border-t border-stone-800">
+                      <div className="space-y-1">
+                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-500 px-1">Členem od</div>
+                        <input
+                          {...register('member_since')}
+                          type="date"
+                          className="w-full bg-stone-800 border border-stone-700 rounded-2xl px-4 py-3 text-xs font-bold text-stone-100 outline-none focus:ring-2 focus:ring-blue-500 transition"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-500 px-1">Platnost do</div>
+                        <input
+                          {...register('member_expires_at')}
+                          type="date"
+                          className="w-full bg-stone-800 border border-stone-700 rounded-2xl px-4 py-3 text-xs font-bold text-stone-100 outline-none focus:ring-2 focus:ring-blue-500 transition"
+                        />
+                      </div>
+                    </div>
+                  ) : null}
                   <label className="flex items-center gap-3 cursor-pointer group pt-2 border-t border-stone-800">
                     <input type="checkbox" {...register('can_manage_admins')} className="w-5 h-5 rounded-lg border-stone-700 bg-stone-800 text-purple-500 focus:ring-purple-500" />
                     <span className="text-sm font-bold text-stone-200 group-hover:text-white transition">{dict.admin.superAdmin || 'SuperAdmin'}</span>
                   </label>
+                  <label className="flex items-center gap-3 cursor-pointer group pt-2 border-t border-stone-800">
+                    <input type="checkbox" {...register('is_blocked')} className="w-5 h-5 rounded-lg border-stone-700 bg-stone-800 text-red-500 focus:ring-red-500" />
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold text-stone-200 group-hover:text-white transition">Blokovat účet</span>
+                      <span className="text-[10px] text-stone-500 font-medium">Zakáže přístup do chráněných sekcí.</span>
+                    </div>
+                  </label>
+                  {watch('is_blocked') ? (
+                    <div className="pt-1">
+                      <div className="text-[10px] font-black uppercase tracking-widest text-stone-500 px-1 mb-2">Důvod blokace</div>
+                      <textarea
+                        {...register('blocked_reason')}
+                        rows={3}
+                        className="w-full bg-stone-800 border border-stone-700 rounded-2xl px-4 py-3 text-xs font-bold text-stone-100 outline-none focus:ring-2 focus:ring-red-500 transition resize-none"
+                        placeholder="Např. opakované zneužití, spam…"
+                      />
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -843,6 +962,7 @@ export default function UsersTab({ dict }: UsersTabProps) {
                       {adm.is_admin && <span className="text-[8px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-black uppercase tracking-widest">Admin</span>}
                       {adm.is_member && <span className="text-[8px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-black uppercase tracking-widest">Člen</span>}
                       {adm.can_manage_admins && <span className="text-[8px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-black uppercase tracking-widest">SuperAdmin</span>}
+                      {adm.is_blocked && <span className="text-[8px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-black uppercase tracking-widest">Blokovaný</span>}
                     </div>
                   </div>
                   <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -890,6 +1010,7 @@ export default function UsersTab({ dict }: UsersTabProps) {
                       <p className="text-xs text-stone-400 font-bold truncate mb-3">{adm.email}</p>
                       <div className="flex flex-wrap gap-1.5">
                         <span className="text-[8px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-black uppercase tracking-widest">Člen</span>
+                        {adm.is_blocked && <span className="text-[8px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-black uppercase tracking-widest">Blokovaný</span>}
                       </div>
                     </div>
                     <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -916,6 +1037,58 @@ export default function UsersTab({ dict }: UsersTabProps) {
                   className="px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
                 >
                   {membersQuery.isFetchingNextPage ? (dict.admin.btnLoading || 'Načítám...') : (dict.admin.btnMore || 'Načíst další')}
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-10 pt-10 border-t border-stone-100">
+            <h2 className="text-xl font-black text-stone-900 mb-8">Uživatelé</h2>
+            <div className="grid sm:grid-cols-2 gap-4">
+              {othersQuery.isLoading ? (
+                <div className="sm:col-span-2 p-10 text-center text-stone-400 font-bold uppercase tracking-widest text-xs bg-stone-50 rounded-[2rem] border border-dashed border-stone-200">
+                  {dict.admin.btnLoading || 'Načítám...'}
+                </div>
+              ) : (
+                others.map((u) => (
+                  <div key={u.id} className="flex gap-4 items-center p-5 bg-stone-50/50 rounded-[2rem] border border-transparent hover:border-stone-100 hover:bg-white transition-all group">
+                    <div className="w-14 h-14 bg-stone-900 text-white rounded-2xl flex items-center justify-center font-black text-lg uppercase shrink-0 shadow-lg shadow-stone-900/20 group-hover:bg-stone-700 transition-colors">
+                      {((u.first_name?.[0] || '') as string)}
+                      {((u.last_name?.[0] || '') as string)}
+                    </div>
+                    <div className="flex-grow min-w-0">
+                      <h3 className="font-black text-stone-900 truncate">
+                        {u.first_name} {u.last_name}
+                      </h3>
+                      <p className="text-xs text-stone-400 font-bold truncate mb-3">{u.email}</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {u.is_blocked && <span className="text-[8px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-black uppercase tracking-widest">Blokovaný</span>}
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => handleEdit(u)} className="p-2 text-stone-400 hover:text-stone-900 hover:bg-stone-100 rounded-xl transition-all">
+                        <Edit3 size={18} />
+                      </button>
+                      {u.email !== 'cepelak@pupen.org' && (
+                        <button onClick={() => deleteAdmin(u.id)} className="p-2 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all">
+                          <Trash2 size={18} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {othersQuery.hasNextPage && (
+              <div className="flex justify-center pt-6">
+                <button
+                  type="button"
+                  onClick={() => othersQuery.fetchNextPage()}
+                  disabled={othersQuery.isFetchingNextPage}
+                  className="px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
+                >
+                  {othersQuery.isFetchingNextPage ? (dict.admin.btnLoading || 'Načítám...') : (dict.admin.btnMore || 'Načíst další')}
                 </button>
               </div>
             )}

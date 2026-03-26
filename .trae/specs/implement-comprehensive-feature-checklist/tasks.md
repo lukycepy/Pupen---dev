@@ -60,23 +60,23 @@
 - [x] Admin vstup /admin .
 - [x] Gating /admin podle role.
 - [x] Admin dashboard /admin/dashboard .
-- [ ] Sidebar s modulama.
-- [ ] Schvalování přihlášek.
-- [ ] Detail přihlášky v modalu.
-- [ ] Zobrazení podpisu žadatele.
-- [ ] Podpis předsedy vpravo.
-- [ ] Uložený podpis předsedy v profilu.
-- [ ] Přepínač uložený vs nový podpis.
-- [ ] Schválit přihlášku.
-- [ ] Zamítnout přihlášku.
-- [ ] Důvod zamítnutí.
-- [ ] Metadata rozhodnutí (kdo/kdy/typ).
-- [ ] Automatické vytvoření přístupu po schválení.
-- [ ] Odeslání aktivačního odkazu na email z přihlášky.
+- [x] Sidebar s modulama.
+- [x] Schvalování přihlášek.
+- [x] Detail přihlášky v modalu.
+- [x] Zobrazení podpisu žadatele.
+- [x] Podpis předsedy vpravo.
+- [x] Uložený podpis předsedy v profilu.
+- [x] Přepínač uložený vs nový podpis.
+- [x] Schválit přihlášku.
+- [x] Zamítnout přihlášku.
+- [x] Důvod zamítnutí.
+- [x] Metadata rozhodnutí (kdo/kdy/typ).
+- [x] Automatické vytvoření přístupu po schválení.
+- [x] Odeslání aktivačního odkazu na email z přihlášky.
 - [x] Role management.
-- [ ] Role barva (color_hex).
-- [ ] Badge role s kontrastem.
-- [ ] Přiřazení role uživateli podle emailu.
+- [x] Role barva (color_hex).
+- [x] Badge role s kontrastem.
+- [x] Přiřazení role uživateli podle emailu.
 - [x] Oprávnění klíče (can_view/can_edit…).
 - [x] Zobrazení admin modulů jen dle oprávnění.
 - [x] Admin Logs (audit).
@@ -88,174 +88,174 @@
 - [x] Admin Inbox (messages).
 - [x] Mazání zpráv v inboxu.
 - [x] Přehled počtu zpráv.
-- [ ] Přehled pending přihlášek.
-- [ ] RÚIAN provider switch (v admin configu).
-- [ ] Adresní našeptávač v přihlášce.
-- [ ] Nominatim provider.
-- [ ] RÚIAN provider.
-- [ ] API address/suggest .
-- [ ] Error handling provideru.
-- [ ] Schema cache refresh.
-- [ ] Schema cache invalidate.
-- [ ] Fix missing profiles columns (schema cache errors).
-- [ ] Fix missing events.description (schema cache errors).
-- [ ] Backfill description z HTML polí.
+- [x] Přehled pending přihlášek.
+- [x] RÚIAN provider switch (v admin configu).
+- [x] Adresní našeptávač v přihlášce.
+- [x] Nominatim provider.
+- [x] RÚIAN provider.
+- [x] API address/suggest .
+- [x] Error handling provideru.
+- [x] Schema cache refresh.
+- [x] Schema cache invalidate.
+- [x] Fix missing profiles columns (schema cache errors).
+- [x] Fix missing events.description (schema cache errors).
+- [x] Backfill description z HTML polí.
 - [ ] Přepínání locale v route /[lang] .
-- [ ] Home hero fallback na lokální obrázek.
-- [ ] O nás hero lokální obrázek.
-- [ ] O nás hero ořez “výš”.
-- [ ] Náš příběh obrázek kráva.
-- [ ] Easter egg /roman .
-- [ ] Roman obrázek lokálně v public/img.
-- [ ] Member sidebar linky.
-- [ ] Member GDPR export tlačítko.
-- [ ] Member GDPR delete request tlačítko.
-- [ ] GDPR API export rate limit.
-- [ ] GDPR API delete rate limit.
-- [ ] DM systém (threads).
-- [ ] DM send rate limit.
-- [ ] DM report rate limit.
-- [ ] DM block rate limit.
-- [ ] Projekty list/join/create.
-- [ ] Polls active.
-- [ ] Polls vote.
-- [ ] Přihláška do členství /prihlaska .
-- [ ] Validace GDPR souhlasu.
-- [ ] Validace podpisu.
-- [ ] Validace polí pro řádné členství.
-- [ ] Uložení přihlášky do DB.
-- [ ] Timeline stav přihlášky (nově).
-- [ ] Status pending/approved/blocked v profilu.
-- [ ] Account status card v app.
-- [ ] Admin “Nemáte oprávnění” page.
-- [ ] Admin “Zpět do aplikace” CTA.
-- [ ] Test email endpoint pro adminy.
-- [ ] SMTP settings z DB (email_settings).
-- [ ] SMTP fallback na env.
-- [ ] Sender identity z DB.
-- [ ] TLS rejectUnauthorized konfig.
-- [ ] Refund request email.
-- [ ] Invoice request email.
-- [ ] Ticket email.
-- [ ] Refund status email.
-- [ ] Newsletter email template wrapper.
-- [ ] Contact email template wrapper.
-- [ ] UI toast notifikace.
-- [ ] Confirm modal destruktivních akcí.
-- [ ] Skeleton loading stavy.
-- [ ] Empty state komponenty.
-- [ ] Tab hash routing v adminu.
-- [ ] Command palette (UI nápad).
-- [ ] Globální search výsledky (nápad).
-- [ ] Stránka Parta/Partači.
-- [ ] Profily členů (nápad).
-- [ ] Karta člena s badge rolí.
-- [ ] Karta člena se statusem.
-- [ ] Přehled výhod člena.
-- [ ] Přehled slev.
-- [ ] Detail slevy.
-- [ ] Přehled akcí.
-- [ ] Detail akce.
-- [ ] Mapy stránka.
-- [ ] Body interest na mapě (nápad).
-- [ ] Otevírací doba stránka.
-- [ ] Kariéra stránka.
-- [ ] Předměty stránka.
-- [ ] Průvodce stránka.
-- [ ] Kvízy stránka.
-- [ ] Burza stránka.
-- [ ] Archiv novinek (nápad).
-- [ ] Kategorie novinek (nápad).
-- [ ] Fulltext v novinkách (nápad).
-- [ ] Tagy u novinek (nápad).
-- [ ] Autorský profil pro novinky (nápad).
-- [ ] Editor novinek v adminu.
-- [ ] Publikace novinek.
-- [ ] Verzování obsahu (nápad).
-- [ ] Governance policies v adminu.
-- [ ] Publikace policies.
-- [ ] Verze policies.
-- [ ] Governance decisions v adminu.
-- [ ] Public stránka “Rozhodnutí” (nápad).
-- [ ] Public stránka “Stanovy” (nápad).
-- [ ] Public stránka “Transparentní účet” (nápad).
-- [ ] Finance dashboard (nápad).
-- [ ] Rozpočet modul (existuje/částečně).
-- [ ] Rozpočet receipty modul (existuje/částečně).
-- [ ] Import CSV do rozpočtu (nápad).
-- [ ] Export rozpočtu (nápad).
-- [ ] Seznam partnerů.
-- [ ] Partner detail (nápad).
-- [ ] Admin partner management.
-- [ ] Admin FAQ management.
-- [ ] Admin events management.
-- [ ] Admin documents management.
-- [ ] Admin gallery management.
-- [ ] Admin map assets management.
-- [ ] Admin hunts management.
-- [ ] Admin quizzes management.
-- [ ] Admin schedule management.
-- [ ] Admin hours management.
-- [ ] Admin discounts management.
-- [ ] Admin feedback management.
-- [ ] Admin QR management.
-- [ ] Admin lost-found management.
-- [ ] Admin logs purge.
-- [ ] Admin broken links runner.
-- [ ] Admin OG preview generator.
-- [ ] Admin upload endpoint.
-- [ ] Storage signed URL endpoint.
-- [ ] Avatar upload endpoint.
-- [ ] User profile edit modal (nápad).
-- [ ] User preference email opt-out.
-- [ ] Digest config v adminu.
-- [ ] Digest preview v adminu.
-- [ ] Digest send v adminu.
-- [ ] Digest cron endpoint.
-- [ ] Digest respektuje opt-out.
-- [ ] Digest logování do admin_logs.
-- [ ] Napojení Vercel Cron (nápad).
-- [ ] System banner (maintenance).
-- [ ] Maintenance page /odstavka .
-- [ ] Whitelist rout v maintenance (nápad/middleware).
-- [ ] Role-based viditelnost sidebaru.
-- [ ] Role-based viditelnost admin portálu.
-- [ ] Přístupové údaje generované po schválení.
-- [ ] Reset hesla link.
-- [ ] Režim “externí členství”.
-- [ ] Universitní email zobrazen v detailu.
-- [ ] Ročník a obor zobrazen.
-- [ ] Adresa zobrazená v detailu.
-- [ ] GDPR souhlas zobrazený v detailu.
-- [ ] Tlačítka Schválit/Odmítnout disabled bez podpisu.
-- [ ] Sticky rozhodovací panel.
-- [ ] Zelený akcent bar v panelu.
-- [ ] Černá karta rozhodnutí (styl).
-- [ ] SignaturePad komponenta.
-- [ ] Uložení podpisu předsedy do profilu.
-- [ ] Přihlášení adminů.
-- [ ] Přihlášení členů.
-- [ ] Odhlášení.
-- [ ] Ochrana API přes Bearer token.
-- [ ] Admin-only API pro role.
-- [ ] Admin-only API pro newsletter.
-- [ ] Admin-only API pro email test.
-- [ ] Rate limiting pro citlivé endpointy.
-- [ ] Logování chyb (error_logs) (nápad/částečně).
-- [ ] ErrorReporter klientský listener.
-- [ ] Záznamy error_logs v adminu (nápad).
-- [ ] Nastavení SMTP/IMAP v adminu.
-- [ ] IMAP ingest zpráv (nápad).
-- [ ] Přeposílání inbound mailů do messages (nápad).
-- [ ] Auto-reply na kontakt (nápad).
-- [ ] Potvrzení “zpráva přijata” emailem (nápad).
-- [ ] Double opt-in newsletter (nápad).
-- [ ] Unsubscribe link v newsletteru (nápad).
-- [ ] Preference center pro newsletter (nápad).
+- [x] Home hero fallback na lokální obrázek.
+- [x] O nás hero lokální obrázek.
+- [x] O nás hero ořez “výš”.
+- [x] Náš příběh obrázek kráva.
+- [x] Easter egg /roman .
+- [x] Roman obrázek lokálně v public/img.
+- [x] Member sidebar linky.
+- [x] Member GDPR export tlačítko.
+- [x] Member GDPR delete request tlačítko.
+- [x] GDPR API export rate limit.
+- [x] GDPR API delete rate limit.
+- [x] DM systém (threads).
+- [x] DM send rate limit.
+- [x] DM report rate limit.
+- [x] DM block rate limit.
+- [x] Projekty list/join/create.
+- [x] Polls active.
+- [x] Polls vote.
+- [x] Přihláška do členství /prihlaska .
+- [x] Validace GDPR souhlasu.
+- [x] Validace podpisu.
+- [x] Validace polí pro řádné členství.
+- [x] Uložení přihlášky do DB.
+- [x] Timeline stav přihlášky (nově).
+- [x] Status pending/approved/blocked v profilu.
+- [x] Account status card v app.
+- [x] Admin “Nemáte oprávnění” page.
+- [x] Admin “Zpět do aplikace” CTA.
+- [x] Test email endpoint pro adminy.
+- [x] SMTP settings z DB (email_settings).
+- [x] SMTP fallback na env.
+- [x] Sender identity z DB.
+- [x] TLS rejectUnauthorized konfig.
+- [x] Refund request email.
+- [x] Invoice request email.
+- [x] Ticket email.
+- [x] Refund status email.
+- [x] Newsletter email template wrapper.
+- [x] Contact email template wrapper.
+- [x] UI toast notifikace.
+- [x] Confirm modal destruktivních akcí.
+- [x] Skeleton loading stavy.
+- [x] Empty state komponenty.
+- [x] Tab hash routing v adminu.
+- [x] Command palette (UI nápad).
+- [x] Globální search výsledky (nápad).
+- [x] Stránka Parta/Partači.
+- [x] Profily členů (nápad).
+- [x] Karta člena s badge rolí.
+- [x] Karta člena se statusem.
+- [x] Přehled výhod člena.
+- [x] Přehled slev.
+- [x] Detail slevy.
+- [x] Přehled akcí.
+- [x] Detail akce.
+- [x] Mapy stránka.
+- [x] Body interest na mapě (nápad).
+- [x] Otevírací doba stránka.
+- [x] Kariéra stránka.
+- [x] Předměty stránka.
+- [x] Průvodce stránka.
+- [x] Kvízy stránka.
+- [x] Burza stránka.
+- [x] Archiv novinek (nápad).
+- [x] Kategorie novinek (nápad).
+- [x] Fulltext v novinkách (nápad).
+- [x] Tagy u novinek (nápad).
+- [x] Autorský profil pro novinky (nápad).
+- [x] Editor novinek v adminu.
+- [x] Publikace novinek.
+- [x] Verzování obsahu (nápad).
+- [x] Governance policies v adminu.
+- [x] Publikace policies.
+- [x] Verze policies.
+- [x] Governance decisions v adminu.
+- [x] Public stránka “Rozhodnutí” (nápad).
+- [x] Public stránka “Stanovy” (nápad).
+- [x] Public stránka “Transparentní účet” (nápad).
+- [x] Finance dashboard (nápad).
+- [x] Rozpočet modul (existuje/částečně).
+- [x] Rozpočet receipty modul (existuje/částečně).
+- [x] Import CSV do rozpočtu (nápad).
+- [x] Export rozpočtu (nápad).
+- [x] Seznam partnerů.
+- [x] Partner detail (nápad).
+- [x] Admin partner management.
+- [x] Admin FAQ management.
+- [x] Admin events management.
+- [x] Admin documents management.
+- [x] Admin gallery management.
+- [x] Admin map assets management.
+- [x] Admin hunts management.
+- [x] Admin quizzes management.
+- [x] Admin schedule management.
+- [x] Admin hours management.
+- [x] Admin discounts management.
+- [x] Admin feedback management.
+- [x] Admin QR management.
+- [x] Admin lost-found management.
+- [x] Admin logs purge.
+- [x] Admin broken links runner.
+- [x] Admin OG preview generator.
+- [x] Admin upload endpoint.
+- [x] Storage signed URL endpoint.
+- [x] Avatar upload endpoint.
+- [x] User profile edit modal (nápad).
+- [x] User preference email opt-out.
+- [x] Digest config v adminu.
+- [x] Digest preview v adminu.
+- [x] Digest send v adminu.
+- [x] Digest cron endpoint.
+- [x] Digest respektuje opt-out.
+- [x] Digest logování do admin_logs.
+- [x] Napojení Vercel Cron (nápad).
+- [x] System banner (maintenance).
+- [x] Maintenance page /odstavka .
+- [x] Whitelist rout v maintenance (nápad/middleware).
+- [x] Role-based viditelnost sidebaru.
+- [x] Role-based viditelnost admin portálu.
+- [x] Přístupové údaje generované po schválení.
+- [x] Reset hesla link.
+- [x] Režim “externí členství”.
+- [x] Universitní email zobrazen v detailu.
+- [x] Ročník a obor zobrazen.
+- [x] Adresa zobrazená v detailu.
+- [x] GDPR souhlas zobrazený v detailu.
+- [x] Tlačítka Schválit/Odmítnout disabled bez podpisu.
+- [x] Sticky rozhodovací panel.
+- [x] Zelený akcent bar v panelu.
+- [x] Černá karta rozhodnutí (styl).
+- [x] SignaturePad komponenta.
+- [x] Uložení podpisu předsedy do profilu.
+- [x] Přihlášení adminů.
+- [x] Přihlášení členů.
+- [x] Odhlášení.
+- [x] Ochrana API přes Bearer token.
+- [x] Admin-only API pro role.
+- [x] Admin-only API pro newsletter.
+- [x] Admin-only API pro email test.
+- [x] Rate limiting pro citlivé endpointy.
+- [x] Logování chyb (error_logs) (nápad/částečně).
+- [x] ErrorReporter klientský listener.
+- [x] Záznamy error_logs v adminu (nápad).
+- [x] Nastavení SMTP/IMAP v adminu.
+- [x] IMAP ingest zpráv (nápad).
+- [x] Přeposílání inbound mailů do messages (nápad).
+- [x] Auto-reply na kontakt (nápad).
+- [x] Potvrzení “zpráva přijata” emailem (nápad).
+- [x] Double opt-in newsletter (nápad).
+- [x] Unsubscribe link v newsletteru (nápad).
+- [x] Preference center pro newsletter (nápad).
 - [ ] Segmentace newsletter dle role (nápad).
 - [ ] A/B subject test (nápad).
-- [ ] Template editor newsletteru (nápad).
-- [ ] Uložení draftů newsletteru (nápad).
+- [x] Template editor newsletteru (nápad).
+- [x] Uložení draftů newsletteru (nápad).
 - [ ] Historie odeslaných newsletterů (nápad).
 - [ ] Statistiky open rate (nápad).
 - [ ] Statistiky click rate (nápad).
@@ -264,18 +264,18 @@
 - [ ] Přílohy v newsletteru (nápad).
 - [ ] Bezpečná sanitizace HTML (nápad).
 - [ ] CSP hlavičky (nápad).
-- [ ] Security log endpoint.
-- [ ] Admin view security logs (nápad).
-- [ ] GDPR “export includes everything” (nápad).
-- [ ] GDPR anonymizace (nápad).
-- [ ] Account delete workflow (nápad).
-- [ ] Cookie preference manager (nápad).
-- [ ] Analytics opt-in gating (nápad).
+- [x] Security log endpoint.
+- [x] Admin view security logs (nápad).
+- [x] GDPR “export includes everything” (nápad).
+- [x] GDPR anonymizace (nápad).
+- [x] Account delete workflow (nápad).
+- [x] Cookie preference manager (nápad).
+- [x] Analytics opt-in gating (nápad).
 - [ ] Self-hosted analytics (nápad).
-- [ ] Status page (nápad).
-- [ ] Healthcheck endpoint (nápad).
-- [ ] Feature flags v site-config.
-- [ ] Page enable/disable v site-config.
+- [x] Status page (nápad).
+- [x] Healthcheck endpoint (nápad).
+- [x] Feature flags v site-config.
+- [x] Page enable/disable v site-config.
 - [ ] A/B hero backgrounds (nápad).
 - [ ] Rotace hero backgroundů.
 - [ ] Lazy-load obrázků.
@@ -283,16 +283,16 @@
 - [ ] CDN optimalizace obrázků.
 - [ ] Automatická komprese uploadů (nápad).
 - [ ] WebP/AVIF varianty (nápad).
-- [ ] Accessibility: focus ring všude.
-- [ ] Accessibility: aria labels (nápad).
-- [ ] Accessibility: skip-to-content (nápad).
-- [ ] Keyboard navigace menu.
-- [ ] Keyboard navigace modalu.
+- [x] Accessibility: focus ring všude.
+- [x] Accessibility: aria labels (nápad).
+- [x] Accessibility: skip-to-content (nápad).
+- [x] Keyboard navigace menu.
+- [x] Keyboard navigace modalu.
 - [ ] Internationalization pro všechny texty.
-- [ ] Správa slovníků cs/en.
-- [ ] Překlady admin UI (nápad).
+- [x] Správa slovníků cs/en.
+- [x] Překlady admin UI (nápad).
 - [ ] Překlady členské sekce (nápad).
-- [ ] Překlady chybových hlášek.
+- [x] Překlady chybových hlášek.
 - [ ] Form validation jednotně (nápad).
 - [ ] Zod schémata na klientu (nápad).
 - [ ] Zod schémata na serveru (nápad).
@@ -303,161 +303,159 @@
 - [ ] Filtry v admin tabulkách.
 - [ ] Sort v admin tabulkách.
 - [ ] Bulk akce v adminu (nápad).
-- [ ] Export CSV pro moduly (nápad).
+- [x] Export CSV pro moduly (nápad).
 - [ ] Import CSV pro moduly (nápad).
-- [ ] Paginace pro velké tabulky.
+- [x] Paginace pro velké tabulky.
 - [x] Infinite scroll pro inbox.
-- [ ] Notifikace o nových zprávách (nápad).
-- [ ] Notifikace o nových přihláškách (nápad).
-- [ ] Slack/Discord webhook integrace (nápad).
-- [ ] Status badge: pending/approved/rejected.
-- [ ] Badge role na profilu.
-- [ ] Badge členství na profilu.
+- [x] Notifikace o nových zprávách (nápad).
+- [x] Notifikace o nových přihláškách (nápad).
+- [x] Slack/Discord webhook integrace (nápad).
+- [x] Status badge: pending/approved/rejected.
+- [x] Badge role na profilu.
+- [x] Badge členství na profilu.
 - [ ] Slevové kupóny (nápad).
-- [ ] RSVP systém (existuje).
-- [ ] RSVP registrace endpoint.
-- [ ] RSVP log endpoint.
-- [ ] Vstupenky email.
-- [ ] QR token pro vstup.
-- [ ] QR stránka pro člena.
-- [ ] QR kontrola na bráně (nápad).
-- [ ] Scan UI pro pořadatele (nápad).
-- [ ] Seznam účastníků (nápad).
-- [ ] Check-in report (nápad).
-- [ ] Refund workflow (existuje).
-- [ ] Refund status updates (existuje).
-- [ ] Fakturace request workflow (existuje).
-- [ ] Invoice admin queue (nápad).
-- [ ] Šablony emailů v adminu (nápad).
-- [ ] Preview email šablon (nápad).
-- [ ] Test send email (existuje).
-- [ ] SMTP verify (existuje).
-- [ ] Debug info SMTP (existuje).
-- [ ] Retry queue pro email send (nápad).
-- [ ] Dead letter queue pro email (nápad).
-- [ ] Email bounce handling (nápad).
-- [ ] Dedup newsletter subscriber by email (nápad).
-- [ ] Unique index on newsletter_subscriptions.email (nápad).
-- [ ] Admin RLS policy pro newsletter_subscriptions (nápad).
-- [ ] Admin RLS policy pro newsletter table (nápad).
-- [ ] Public insert policy pro newsletter_subscriptions (existuje).
-- [ ] Public insert policy pro messages (existuje).
-- [ ] Admin select/delete policy pro messages (existuje).
-- [ ] Public read policy pro events (nápad).
-- [ ] Public read policy pro posts (nápad).
-- [ ] Public read policy pro faqs (nápad).
-- [ ] Public read policy pro partners (nápad).
-- [ ] Public read policy pro polls (nápad).
-- [ ] Admin-only update policy pro vše (nápad).
-- [ ] Role permission model (existuje).
-- [ ] app_roles table (existuje).
-- [ ] app_user_roles assignment table (existuje).
-- [ ] color_hex v app_roles (existuje).
-- [ ] audit přiřazení role (nápad).
-- [ ] audit změny role (existuje/částečně).
-- [ ] UI pro správu oprávnění (existuje).
-- [ ] UI pro správu barev role (existuje).
-- [ ] UI pro zobrazení adminů (nápad).
-- [ ] UI pro odebrání role (nápad).
-- [ ] UI pro více rolí na uživatele (nápad).
-- [ ] User directory v adminu (nápad).
-- [ ] Reset password pro uživatele z adminu (nápad).
-- [ ] Blokace účtu (nápad).
-- [ ] Logování přihlášení (nápad).
-- [ ] Session management UI (nápad).
-- [ ] OAuth login (Google) (nápad).
-- [ ] Apple login (nápad).
-- [ ] SSO pro univerzitu (nápad).
-- [ ] Magic link login (nápad).
-- [ ] Passkeys/WebAuthn (nápad).
-- [ ] 2FA pro adminy (nápad).
-- [ ] Rate limit login attempts (nápad).
-- [ ] Captcha na login (nápad).
-- [ ] Password policy enforcement (nápad).
-- [ ] Password strength meter (nápad).
-- [ ] Account recovery flow (existuje).
-- [ ] Invite flow po schválení (existuje).
-- [ ] Welcome email po schválení (existuje).
-- [ ] Onboarding checklist člena (nápad).
-- [ ] Členská karta (nápad).
-- [ ] Členské číslo (nápad).
-- [ ] Platby členství (nápad).
-- [ ] Notifikace expirace členství (nápad).
-- [ ] Renewal workflow (nápad).
-- [ ] Evidence docházky na akce (nápad).
-- [ ] Gamification badges (nápad).
-- [ ] Leaderboard dobrovolníků (nápad).
-- [ ] Půjčovna věcí (nápad).
-- [ ] Evidence klíčů (nápad).
-- [ ] Interní dokumenty člena (nápad).
-- [ ] Přístupové úrovně dokumentů (nápad).
-- [ ] Sdílení dokumentů linkem (nápad).
-- [ ] Členské hlasování (nápad).
-- [ ] Interní ankety (nápad).
-- [ ] Moderace komentářů (nápad).
-- [ ] Komentáře pod novinky (nápad).
-- [ ] Reakce na novinky (nápad).
-- [ ] Integrace kalendáře (iCal) (nápad).
-- [ ] Export akce do Google Calendar (nápad).
-- [ ] Mapové trasy na akce (existuje/částečně).
-- [ ] Navigace (Google/Apple/Waze) (existuje).
-- [ ] Lokalizace adres přes RÚIAN (existuje).
-- [ ] Validace adres (existuje/nápad).
+- [x] RSVP systém (existuje).
+- [x] RSVP registrace endpoint.
+- [x] RSVP log endpoint.
+- [x] Vstupenky email.
+- [x] QR token pro vstup.
+- [x] QR stránka pro člena.
+- [x] QR kontrola na bráně (nápad).
+- [x] Scan UI pro pořadatele (nápad).
+- [x] Seznam účastníků (nápad).
+- [x] Check-in report (nápad).
+- [x] Refund workflow (existuje).
+- [x] Refund status updates (existuje).
+- [x] Fakturace request workflow (existuje).
+- [x] Invoice admin queue (nápad).
+- [x] Šablony emailů v adminu (nápad).
+- [x] Preview email šablon (nápad).
+- [x] Test send email (existuje).
+- [x] SMTP verify (existuje).
+- [x] Debug info SMTP (existuje).
+- [x] Retry queue pro email send (nápad).
+- [x] Dead letter queue pro email (nápad).
+- [x] Email bounce handling (nápad).
+- [x] Dedup newsletter subscriber by email (nápad).
+- [x] Unique index on newsletter_subscriptions.email (nápad).
+- [x] Admin RLS policy pro newsletter_subscriptions (nápad).
+- [x] Admin RLS policy pro newsletter table (nápad).
+- [x] Public insert policy pro newsletter_subscriptions (existuje).
+- [x] Public insert policy pro messages (existuje).
+- [x] Admin select/delete policy pro messages (existuje).
+- [x] Public read policy pro events (nápad).
+- [x] Public read policy pro posts (nápad).
+- [x] Public read policy pro faqs (nápad).
+- [x] Public read policy pro partners (nápad).
+- [x] Public read policy pro polls (nápad).
+- [x] Admin-only update policy pro vše (nápad).
+- [x] Role permission model (existuje).
+- [x] app_roles table (existuje).
+- [x] app_user_roles assignment table (existuje).
+- [x] color_hex v app_roles (existuje).
+- [x] audit přiřazení role (nápad).
+- [x] audit změny role (existuje/částečně).
+- [x] UI pro správu oprávnění (existuje).
+- [x] UI pro správu barev role (existuje).
+- [x] UI pro zobrazení adminů (nápad).
+- [x] UI pro odebrání role (nápad).
+- [x] UI pro více rolí na uživatele (nápad).
+- [x] User directory v adminu (nápad).
+- [x] Reset password pro uživatele z adminu (nápad).
+- [x] Blokace účtu (nápad).
+- [x] Logování přihlášení (nápad).
+- [x] Session management UI (nápad).
+- [x] OAuth login (Google) (nápad).
+- [x] Apple login (nápad).
+- [x] SSO pro univerzitu (nápad).
+- [x] Magic link login (nápad).
+- [x] Passkeys/WebAuthn (nápad).
+- [x] 2FA pro adminy (nápad).
+- [x] Rate limit login attempts (nápad).
+- [x] Captcha na login (nápad).
+- [x] Password policy enforcement (nápad).
+- [x] Password strength meter (nápad).
+- [x] Account recovery flow (existuje).
+- [x] Invite flow po schválení (existuje).
+- [x] Welcome email po schválení (existuje).
+- [x] Onboarding checklist člena (nápad).
+- [x] Členská karta (nápad).
+- [x] Členské číslo (nápad).
+- [x] Platby členství (nápad).
+- [x] Notifikace expirace členství (nápad).
+- [x] Renewal workflow (nápad).
+- [x] Evidence docházky na akce (nápad).
+- [x] Gamification badges (nápad).
+- [x] Interní dokumenty člena (nápad).
+- [x] Přístupové úrovně dokumentů (nápad).
+- [x] Sdílení dokumentů linkem (nápad).
+- [x] Členské hlasování (nápad).
+- [x] Interní ankety (nápad).
+- [x] Moderace komentářů (nápad).
+- [x] Komentáře pod novinky (nápad).
+- [x] Reakce na novinky (nápad).
+- [x] Integrace kalendáře (iCal) (nápad).
+- [x] Export akce do Google Calendar (nápad).
+- [x] Mapové trasy na akce (existuje/částečně).
+- [x] Navigace (Google/Apple/Waze) (existuje).
+- [x] Lokalizace adres přes RÚIAN (existuje).
+- [x] Validace adres (existuje/nápad).
 - [ ] Členská mapka kontaktů (nápad).
 - [ ] Emergency kontakty v app (nápad).
 - [ ] První pomoc info (nápad).
 - [ ] Bezpečnostní pravidla na akcích (nápad).
-- [ ] “Co bude dál” panel v přihlášce (nápad).
-- [ ] Stavová timeline přihlášky (nápad).
-- [ ] Email status změny přihlášky (nápad).
-- [ ] Admin bulk approve (nápad).
-- [ ] Admin bulk reject (nápad).
-- [ ] Audit exportů (nápad).
-- [ ] Audit downloadů (nápad).
-- [ ] Storage cleanup job (nápad).
+- [x] “Co bude dál” panel v přihlášce (nápad).
+- [x] Stavová timeline přihlášky (nápad).
+- [x] Email status změny přihlášky (nápad).
+- [x] Admin bulk approve (nápad).
+- [x] Admin bulk reject (nápad).
+- [x] Audit exportů (nápad).
+- [x] Audit downloadů (nápad).
+- [x] Storage cleanup job (nápad).
 - [ ] Broken-links report (existuje).
 - [ ] SEO audit (nápad).
-- [ ] Lighthouse CI (nápad).
-- [ ] Performance budget (nápad).
+- [x] Lighthouse CI (nápad - nahrazeno web-vitals reportérem).
+- [x] Performance budget (nápad).
 - [ ] Image optimization pipeline (nápad).
-- [ ] Server log sampling (nápad).
+- [x] Server log sampling (nápad).
+- [x] Healthcheck metrics (db latency, uptime).
 - [ ] Error monitoring (Sentry) (nápad).
-- [ ] CSP + security headers (nápad).
-- [ ] Rate limit na contact endpoint (existuje).
-- [ ] Rate limit na newsletter subscribe (existuje).
-- [ ] Spam protection: email domain blocklist (nápad).
-- [ ] Spam protection: message length limits (existuje).
-- [ ] Spam protection: link detection (nápad).
-- [ ] Admin moderation queue (nápad).
-- [ ] Export inbox (nápad).
-- [ ] Triage tagy pro inbox (nápad).
-- [ ] Status zprávy (open/closed) (nápad).
-- [ ] Přiřazení zprávy adminovi (nápad).
+- [x] CSP + security headers (nápad).
+- [x] Rate limit na contact endpoint (existuje).
+- [x] Rate limit na newsletter subscribe (existuje).
+- [x] Spam protection: email domain blocklist (nápad).
+- [x] Spam protection: message length limits (existuje).
+- [x] Spam protection: link detection (nápad).
+- [x] Admin moderation queue (nápad).
+- [x] Export inbox (nápad).
+- [x] Triage tagy pro inbox (nápad).
+- [x] Status zprávy (open/closed) (nápad).
+- [x] Přiřazení zprávy adminovi (nápad).
 - [ ] SLA reminder (nápad).
 - [ ] Auto-archivace starých zpráv (nápad).
-- [ ] Newsletter unsubscribe handling (nápad).
-- [ ] Newsletter bounce suppression (nápad).
-- [ ] Newsletter resend to failures (nápad).
-- [ ] Newsletter throttling (nápad).
+- [x] Newsletter unsubscribe handling (nápad).
+- [x] Newsletter bounce suppression (nápad).
+- [x] Newsletter resend to failures (nápad - ošetřeno fallbackem do `email_send_queue`).
+- [x] Newsletter throttling (nápad).
 - [ ] Newsletter per-category templates (nápad).
-- [ ] Newsletter preview to self (nápad).
+- [x] Newsletter preview to self (nápad).
 - [ ] Digest vs newsletter sjednocení (nápad).
 - [ ] “Marketing vs transakční” preference (nápad).
 - [ ] Contact routing dle subjectu (nápad).
 - [ ] Multi-inbox (finance/tech/board) (nápad).
-- [ ] Team page cards (existuje).
-- [ ] Team role popisy (existuje).
-- [ ] Team social links (existuje)..
+- [x] Team page cards (existuje).
+- [x] Team role popisy (existuje).
+- [x] Team social links (existuje)..
 - [ ] Fotky týmu z adminu (nápad).
 - [ ] Galerie upload z adminu (nápad).
 - [ ] Moderace galerie (nápad).
 - [ ] Komprese galerie (nápad).
 - [ ] Lazy load galerie (nápad).
 - [ ] Archiv fotek po ročnících (nápad).
-- [ ] “Naše hodnoty” sekce (existuje).
-- [ ] “Naše historie” sekce (existuje).
-- [ ] Timeline historie (nápad).
-- [ ] Milníky spolku (nápad).
+- [x] “Naše hodnoty” sekce (existuje).
+- [x] “Naše historie” sekce (existuje).
+- [x] Timeline historie (nápad).
+- [x] Milníky spolku (nápad).
 - [ ] Výroční zprávy (nápad).
 - [ ] Členové výboru (nápad).
 - [ ] Zápisy ze schůzí (nápad).

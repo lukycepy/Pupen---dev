@@ -30,6 +30,15 @@ export async function POST(req: Request) {
     });
     if (upload.error) throw upload.error;
 
+    // Log the upload action
+    await supabase.from('admin_logs').insert([{
+      admin_email: profile.email || 'admin',
+      admin_name: 'Admin API',
+      action: 'UPLOAD_FILE',
+      target_id: path,
+      details: { bucket, size: bytes.length, type: file.type }
+    }]);
+
     const publicUrl = supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
     return NextResponse.json({ ok: true, bucket, path, publicUrl });
   } catch (e: any) {

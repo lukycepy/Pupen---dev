@@ -6,18 +6,34 @@ const ALLOWED_EVENTS = new Set([
   'MFA_ENROLL_START',
   'MFA_ENABLED',
   'MFA_DISABLED',
+  'PASSKEY_REGISTER_START',
+  'PASSKEY_REGISTERED',
+  'PASSKEY_REMOVED',
   'GOOGLE_LINK_START',
   'GOOGLE_LINK_UNSUPPORTED',
   'GOOGLE_LINK_ERROR',
+  'LOGIN_SUCCESS',
+  'LOGIN_BLOCKED',
+  'LOGIN_NO_ACCESS',
+  'LOGOUT',
+  'PERFORMANCE_METRIC',
 ]);
 
 export async function POST(req: Request) {
   try {
-    const user = await requireUser(req);
     const body = await req.json().catch(() => ({}));
-
     const event = String(body?.event || '');
     if (!ALLOWED_EVENTS.has(event)) return NextResponse.json({ error: 'Invalid event' }, { status: 400 });
+
+    // Allow PERFORMANCE_METRIC without full user auth (might be anonymous session)
+    let user: any = null;
+    if (event !== 'PERFORMANCE_METRIC') {
+      user = await requireUser(req);
+    } else {
+      const supabase = getServerSupabase();
+      const { data: { session } } = await supabase.auth.getSession();
+      user = session?.user;
+    }
 
     const detailsRaw = body?.details;
     const details = detailsRaw && typeof detailsRaw === 'object' ? detailsRaw : {};
@@ -29,8 +45,8 @@ export async function POST(req: Request) {
       .from('user_security_logs')
       .insert([
         {
-          user_id: user.id,
-          user_email: user.email || null,
+          user_id: user?.id || null,
+          user_email: user?.email || null,
           event,
           details,
         },
@@ -45,4 +61,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: e?.message || 'Error' }, { status });
   }
 }
-

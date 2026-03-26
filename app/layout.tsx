@@ -3,6 +3,8 @@ import { Inter, Montserrat } from 'next/font/google'
 import type { Viewport } from 'next'
 import Providers from './providers'
 import ServiceWorker from './components/ServiceWorker'
+import { ErrorReporter } from '@/components/ErrorReporter';
+import { WebVitalsReporter } from '@/components/WebVitalsReporter';
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -33,6 +35,8 @@ export default function RootLayout({
     <html lang="cs" className={`scroll-smooth ${inter.variable} ${montserrat.variable}`} suppressHydrationWarning>
       <body className={`${inter.className} bg-stone-50 text-stone-900 antialiased font-sans`} suppressHydrationWarning>
         <Providers>
+          <ErrorReporter />
+          <WebVitalsReporter />
           {children}
           <ServiceWorker />
         </Providers>

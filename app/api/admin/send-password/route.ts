@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getMailerDebugInfoWithSettings, getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer';
-import { renderEmailTemplate } from '@/lib/email/templates';
+import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
+import { sendMailWithQueueFallback } from '@/lib/email/queue';
 import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 
@@ -16,17 +17,16 @@ export async function POST(req: Request) {
 
     const transporter = await getMailerWithSettings();
     const from = await getSenderFromSettings();
-    const { subject, html } = renderEmailTemplate('admin_password', { email, password, firstName });
+    const { subject, html } = await renderEmailTemplateWithDbOverride('admin_password', { email, password, firstName });
 
-    try {
-      await transporter.sendMail({
-        from,
-        to: email,
-        subject,
-        html,
-      });
-    } catch (e: any) {
-      const supabase = getServerSupabase();
+    const supabase = getServerSupabase();
+    const sendRes = await sendMailWithQueueFallback({
+      transporter,
+      supabase,
+      meta: { kind: 'admin_password' },
+      message: { from, to: email, subject, html },
+    });
+    if (!sendRes.ok) {
       const smtp = await getMailerDebugInfoWithSettings().catch(() => null);
       try {
         await supabase.from('admin_logs').insert([
@@ -39,23 +39,23 @@ export async function POST(req: Request) {
               email,
               smtp,
               details: {
-                code: e?.code,
-                errno: e?.errno,
-                syscall: e?.syscall,
-                address: e?.address,
-                port: e?.port,
-                command: e?.command,
-                responseCode: e?.responseCode,
+                code: sendRes.error?.code,
+                errno: sendRes.error?.errno,
+                syscall: sendRes.error?.syscall,
+                address: sendRes.error?.address,
+                port: sendRes.error?.port,
+                command: sendRes.error?.command,
+                responseCode: sendRes.error?.responseCode,
               },
-              error: e?.message || 'Email send failed',
+              error: sendRes.error?.message || 'Email send failed',
+              queued: sendRes.queued === true,
             },
           },
         ]);
       } catch {}
-      throw e;
+      if (sendRes.queued !== true) throw sendRes.error;
     }
 
-    const supabase = getServerSupabase();
     try {
       await supabase.from('admin_logs').insert([
         {
@@ -68,7 +68,7 @@ export async function POST(req: Request) {
       ]);
     } catch {}
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, queued: sendRes.ok ? false : true });
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || 'Error' }, { status: 500 });
   }

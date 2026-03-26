@@ -96,6 +96,9 @@ export default async function RootLayout({
   return (
     <Providers>
       <ErrorReporter />
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-green-600 text-white p-4 z-[100] rounded-xl font-bold shadow-xl">
+        {lang === 'en' ? 'Skip to content' : 'Přeskočit na obsah'}
+      </a>
       <div data-pupen-banner>
         <Banner lang={lang} dict={dict.homePage} />
       </div>
@@ -105,7 +108,7 @@ export default async function RootLayout({
       </div>
 
       <div className="flex flex-col min-h-screen">
-        <main className="flex-grow">
+        <main id="main-content" className="flex-grow">
           {children}
         </main>
 

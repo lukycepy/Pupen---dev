@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { requireAdmin } from '@/lib/server-auth';
+import { evaluatePassword } from '@/lib/auth/password-policy';
 
 const ALLOWED_PROFILE_FIELDS = new Set([
   'first_name',
@@ -9,6 +10,9 @@ const ALLOWED_PROFILE_FIELDS = new Set([
   'is_admin',
   'is_member',
   'member_since',
+  'member_expires_at',
+  'member_expiry_notice_stage',
+  'member_expiry_notice_at',
   'can_manage_admins',
   'can_view_events',
   'can_edit_events',
@@ -64,6 +68,9 @@ const ALLOWED_PROFILE_FIELDS = new Set([
   'can_edit_blog_mod',
   'can_view_reviews',
   'can_edit_reviews',
+  'is_blocked',
+  'blocked_at',
+  'blocked_reason',
 ]);
 
 function pickProfilePatch(input: any) {
@@ -75,10 +82,16 @@ function pickProfilePatch(input: any) {
   if ('is_admin' in out) out.is_admin = !!out.is_admin;
   if ('is_member' in out) out.is_member = !!out.is_member;
   if ('can_manage_admins' in out) out.can_manage_admins = !!out.can_manage_admins;
+  if ('is_blocked' in out) out.is_blocked = !!out.is_blocked;
   for (const k of Object.keys(out)) {
     if (k.startsWith('can_view_') || k.startsWith('can_edit_')) out[k] = !!out[k];
   }
   if ('member_since' in out && !out.member_since) out.member_since = null;
+  if ('member_expires_at' in out && !out.member_expires_at) out.member_expires_at = null;
+  if ('member_expiry_notice_stage' in out && !out.member_expiry_notice_stage) out.member_expiry_notice_stage = null;
+  if ('member_expiry_notice_at' in out && !out.member_expiry_notice_at) out.member_expiry_notice_at = null;
+  if ('blocked_at' in out && !out.blocked_at) out.blocked_at = null;
+  if ('blocked_reason' in out && !out.blocked_reason) out.blocked_reason = null;
   return out;
 }
 
@@ -94,6 +107,9 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     const password = typeof body?.password === 'string' ? body.password : '';
 
     if (password) {
+      const email = profilePatch.email ? String(profilePatch.email) : body?.email ? String(body.email) : '';
+      const pw = evaluatePassword(password, { email });
+      if (!pw.ok) return NextResponse.json({ error: 'Password does not meet policy' }, { status: 400 });
       const upd = await supabase.auth.admin.updateUserById(id, { password });
       if (upd.error) throw upd.error;
     }

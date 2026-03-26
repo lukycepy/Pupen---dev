@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { requireAdmin } from '@/lib/server-auth';
 import { getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer';
-import { renderEmailTemplate } from '@/lib/email/templates';
+import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
+import { sendMailWithQueueFallback } from '@/lib/email/queue';
 
 export async function POST(req: Request) {
   try {
@@ -55,7 +56,7 @@ export async function POST(req: Request) {
         const transporter = await getMailerWithSettings();
         const from = await getSenderFromSettings();
 
-        const { subject, html } = renderEmailTemplate('refund_status', {
+        const { subject, html } = await renderEmailTemplateWithDbOverride('refund_status', {
           toEmail: requesterEmail,
           refundLogId,
           rsvpId,
@@ -67,11 +68,11 @@ export async function POST(req: Request) {
           note,
         });
 
-        await transporter.sendMail({
-          from,
-          to: requesterEmail,
-          subject,
-          html,
+        await sendMailWithQueueFallback({
+          transporter,
+          supabase,
+          meta: { kind: 'refund_status' },
+          message: { from, to: requesterEmail, subject, html },
         });
 
         try {

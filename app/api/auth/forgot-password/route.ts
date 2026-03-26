@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server';
 import { createHash } from 'crypto';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer';
-import { renderEmailTemplate } from '@/lib/email/templates';
+import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
 import { getClientIp, rateLimit } from '@/lib/rate-limit';
+import { sendMailWithQueueFallback } from '@/lib/email/queue';
 
 function sha256Hex(input: string) {
   return createHash('sha256').update(input).digest('hex');
@@ -44,11 +45,18 @@ export async function POST(req: Request) {
     const resetUrl = String((gen.data as any)?.properties?.action_link || '');
     if (!resetUrl) return NextResponse.json({ ok: true });
 
-    const { subject, html } = renderEmailTemplate('password_reset', { email, resetUrl, lang });
+    const { subject, html } = await renderEmailTemplateWithDbOverride('password_reset', { email, resetUrl, lang });
     const transporter = await getMailerWithSettings();
     const from = await getSenderFromSettings();
 
-    await transporter.sendMail({ from, to: email, subject, html });
+    try {
+      await sendMailWithQueueFallback({
+        transporter,
+        supabase,
+        meta: { kind: 'password_reset' },
+        message: { from, to: email, subject, html },
+      });
+    } catch {}
 
     return NextResponse.json({ ok: true });
   } catch {

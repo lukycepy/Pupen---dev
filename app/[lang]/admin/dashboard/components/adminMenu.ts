@@ -29,6 +29,9 @@ import {
   Link2,
   Siren,
   Wrench,
+  Award,
+  Webhook,
+  AlertTriangle,
 } from 'lucide-react';
 
 export type AdminMenuItem = {
@@ -57,6 +60,7 @@ export function buildAdminMenuGroups(dict: any, permissions: any): AdminMenuGrou
         { id: 'events', label: dict.admin.tabEvents, icon: Calendar, visible: canView('events') },
         { id: 'blog', label: dict.admin.tabNews, icon: FileText, visible: canView('news') },
         { id: 'gallery', label: dict.admin.tabGallery || 'Galerie', icon: ImageIcon, visible: canView('gallery') },
+        { id: 'team', label: 'Tým', icon: Users, visible: permissions.can_manage_admins },
         { id: 'archive', label: dict.admin.tabArchive || 'Archiv', icon: Archive, visible: canView('archive') },
         { id: 'banners', label: dict.admin.tabBanners || 'Bannery', icon: Tag, visible: canView('banners') },
         { id: 'faq', label: dict.admin.tabFaq, icon: HelpCircle, visible: canView('faq') },
@@ -83,6 +87,7 @@ export function buildAdminMenuGroups(dict: any, permissions: any): AdminMenuGrou
     {
       title: 'Komunita',
       items: [
+        { id: 'badges', label: 'Odznaky (Gamifikace)', icon: Award, visible: permissions.can_manage_admins },
         { id: 'messages', label: dict.admin.tabMessages, icon: MessageSquare, visible: canView('messages') },
         { id: 'polls', label: dict.admin.tabPolls || 'Ankety', icon: BarChart3, visible: canView('polls') },
         { id: 'feedback', label: dict.admin.tabFeedback || 'Feedback', icon: MessageSquare, visible: canView('feedback') },
@@ -120,6 +125,8 @@ export function buildAdminMenuGroups(dict: any, permissions: any): AdminMenuGrou
       items: [
         { id: 'site_pages', label: dict.admin?.tabSitePages || 'Stránky', icon: Globe, visible: permissions.can_manage_admins },
         { id: 'broken_links', label: 'Broken links', icon: Link2, visible: permissions.can_manage_admins },
+        { id: 'webhooks', label: 'Webhooky', icon: Webhook, visible: permissions.can_manage_admins },
+        { id: 'error_logs', label: 'Chyby (Logs)', icon: AlertTriangle, visible: permissions.can_manage_admins },
         { id: 'god_mode', label: 'God Mode', icon: Wrench, visible: permissions.can_manage_admins },
         { id: 'analytics', label: dict.admin.tabAnalytics || 'Analytika', icon: BarChart3, visible: canView('analytics') },
         { id: 'logs', label: dict.admin.tabLogs || 'Logy', icon: FileSearch, visible: canView('logs') },

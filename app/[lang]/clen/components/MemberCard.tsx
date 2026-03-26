@@ -22,8 +22,10 @@ export default function MemberCard({
       id: user?.id,
       email: user?.email,
       name: name || null,
+      memberNo: profile?.member_no ?? null,
+      memberExpiresAt: profile?.member_expires_at ?? null,
     });
-  }, [profile?.first_name, profile?.last_name, user?.email, user?.id]);
+  }, [profile?.first_name, profile?.last_name, profile?.member_no, profile?.member_expires_at, user?.email, user?.id]);
 
   const [qrUrl, setQrUrl] = useState('');
 
@@ -110,6 +112,24 @@ export default function MemberCard({
               {[profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || user?.email}
             </div>
             <div className="mt-4 grid sm:grid-cols-2 gap-4">
+              {profile?.member_no ? (
+                <div className="bg-white border border-stone-100 rounded-2xl p-4 sm:col-span-2">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">
+                    {lang === 'en' ? 'Member number' : 'Členské číslo'}
+                  </div>
+                  <div className="text-sm font-bold text-stone-700 truncate">{String(profile.member_no)}</div>
+                </div>
+              ) : null}
+              {profile?.member_expires_at ? (
+                <div className="bg-white border border-stone-100 rounded-2xl p-4 sm:col-span-2">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">
+                    {lang === 'en' ? 'Valid until' : 'Platnost do'}
+                  </div>
+                  <div className="text-sm font-bold text-stone-700 truncate">
+                    {new Date(String(profile.member_expires_at)).toLocaleDateString(lang === 'en' ? 'en-US' : 'cs-CZ')}
+                  </div>
+                </div>
+              ) : null}
               <div className="bg-white border border-stone-100 rounded-2xl p-4">
                 <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">Email</div>
                 <div className="text-sm font-bold text-stone-700 truncate">{user?.email}</div>

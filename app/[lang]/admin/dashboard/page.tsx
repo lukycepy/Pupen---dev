@@ -61,6 +61,10 @@ const LostFoundTab = dynamic<any>(() => import('./components/LostFoundTab'), { l
 const SosTab = dynamic<any>(() => import('./components/SosTab'), { loading: () => <SkeletonTabContent /> });
 const BrokenLinksTab = dynamic<any>(() => import('./components/BrokenLinksTab'), { loading: () => <SkeletonTabContent /> });
 const GodModeTab = dynamic<any>(() => import('./components/GodModeTab'), { loading: () => <SkeletonTabContent /> });
+const BadgesTab = dynamic<any>(() => import('./components/BadgesTab'), { loading: () => <SkeletonTabContent /> });
+const ErrorLogsTab = dynamic<any>(() => import('./components/ErrorLogsTab'), { loading: () => <SkeletonTabContent /> });
+const WebhooksTab = dynamic<any>(() => import('./components/WebhooksTab'), { loading: () => <SkeletonTabContent /> });
+const TeamTab = dynamic<any>(() => import('./components/TeamTab'), { loading: () => <SkeletonTabContent /> });
 
 import { useToast } from '@/app/context/ToastContext';
 import Skeleton, { SkeletonTabContent } from '@/app/[lang]/components/Skeleton';
@@ -258,6 +262,18 @@ export default function AdminDashboard() {
             router.replace(`/${lang}/admin`);
           }
           return;
+        }
+
+        if ((profile.is_admin || profile.can_manage_admins) && user.email !== 'cepelak@pupen.org') {
+          try {
+            const authAny: any = supabase.auth as any;
+            const aal = await authAny?.mfa?.getAuthenticatorAssuranceLevel?.();
+            const current = String(aal?.data?.currentLevel || aal?.data?.current_level || '');
+            if (current && current !== 'aal2') {
+              router.replace(`/${lang}/login`);
+              return;
+            }
+          } catch {}
         }
 
         setUserProfile(profile);
@@ -530,8 +546,24 @@ export default function AdminDashboard() {
               <BrokenLinksTab />
             )}
 
+            {activeTab === 'webhooks' && permissions.can_manage_admins && (
+              <WebhooksTab dict={dict} />
+            )}
+
+            {activeTab === 'error_logs' && permissions.can_manage_admins && (
+              <ErrorLogsTab dict={dict} />
+            )}
+
             {activeTab === 'god_mode' && permissions.can_manage_admins && (
               <GodModeTab />
+            )}
+
+            {activeTab === 'badges' && permissions.can_manage_admins && (
+              <BadgesTab dict={dict} uploadImage={uploadImage} />
+            )}
+
+            {activeTab === 'team' && permissions.can_manage_admins && (
+              <TeamTab dict={dict} uploadImage={uploadImage} />
             )}
 
             {activeTab === 'faq' && canView('faq') && (

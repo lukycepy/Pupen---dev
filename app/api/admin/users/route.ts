@@ -2,13 +2,32 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { requireAdmin } from '@/lib/server-auth';
 import { getMailerDebugInfoWithSettings, getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer';
-import { renderEmailTemplate } from '@/lib/email/templates';
+import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
+import { sendMailWithQueueFallback } from '@/lib/email/queue';
+import { evaluatePassword } from '@/lib/auth/password-policy';
 
 function generatePassword(length = 14) {
-  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*';
+  const a = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const b = 'abcdefghijkmnopqrstuvwxyz';
+  const c = '23456789';
+  const d = '!@#$%^&*';
+  const all = a + b + c + d;
   const bytes = new Uint8Array(length);
   crypto.getRandomValues(bytes);
-  return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join('');
+  const out = [
+    a[bytes[0] % a.length],
+    b[bytes[1] % b.length],
+    c[bytes[2] % c.length],
+    d[bytes[3] % d.length],
+  ];
+  for (let i = out.length; i < length; i += 1) out.push(all[bytes[i] % all.length]);
+  for (let i = out.length - 1; i > 0; i -= 1) {
+    const j = bytes[i] % (i + 1);
+    const tmp = out[i];
+    out[i] = out[j];
+    out[j] = tmp;
+  }
+  return out.join('');
 }
 
 const ALLOWED_PROFILE_FIELDS = new Set([
@@ -18,6 +37,9 @@ const ALLOWED_PROFILE_FIELDS = new Set([
   'is_admin',
   'is_member',
   'member_since',
+  'member_expires_at',
+  'member_expiry_notice_stage',
+  'member_expiry_notice_at',
   'can_manage_admins',
   'can_view_events',
   'can_edit_events',
@@ -58,6 +80,9 @@ const ALLOWED_PROFILE_FIELDS = new Set([
   'can_view_hours',
   'can_edit_hours',
   'can_view_discounts',
+  'is_blocked',
+  'blocked_at',
+  'blocked_reason',
   'can_edit_discounts',
   'can_view_feedback',
   'can_edit_feedback',
@@ -84,10 +109,16 @@ function pickProfilePatch(input: any) {
   if ('is_admin' in out) out.is_admin = !!out.is_admin;
   if ('is_member' in out) out.is_member = !!out.is_member;
   if ('can_manage_admins' in out) out.can_manage_admins = !!out.can_manage_admins;
+  if ('is_blocked' in out) out.is_blocked = !!out.is_blocked;
   for (const k of Object.keys(out)) {
     if (k.startsWith('can_view_') || k.startsWith('can_edit_')) out[k] = !!out[k];
   }
   if ('member_since' in out && !out.member_since) out.member_since = null;
+  if ('member_expires_at' in out && !out.member_expires_at) out.member_expires_at = null;
+  if ('member_expiry_notice_stage' in out && !out.member_expiry_notice_stage) out.member_expiry_notice_stage = null;
+  if ('member_expiry_notice_at' in out && !out.member_expiry_notice_at) out.member_expiry_notice_at = null;
+  if ('blocked_at' in out && !out.blocked_at) out.blocked_at = null;
+  if ('blocked_reason' in out && !out.blocked_reason) out.blocked_reason = null;
   return out;
 }
 
@@ -106,13 +137,12 @@ async function findUserIdByEmail(supabase: any, email: string) {
 
 async function sendPasswordEmail(email: string, password: string, firstName?: string) {
   const transporter = await getMailerWithSettings();
-  const { subject, html } = renderEmailTemplate('admin_password', { email, password, firstName });
+  const { subject, html } = await renderEmailTemplateWithDbOverride('admin_password', { email, password, firstName });
   const from = await getSenderFromSettings();
-  await transporter.sendMail({
-    from,
-    to: email,
-    subject,
-    html,
+  await sendMailWithQueueFallback({
+    transporter,
+    meta: { kind: 'admin_password' },
+    message: { from, to: email, subject, html },
   });
 }
 
@@ -134,7 +164,19 @@ export async function POST(req: Request) {
 
       if (!email || !email.includes('@')) return { ok: false, email, error: 'Missing email' };
 
-      const password = providedPassword || generatePassword(14);
+      let password = providedPassword || '';
+      if (!password) {
+        for (let i = 0; i < 20; i += 1) {
+          const candidate = generatePassword(14);
+          if (evaluatePassword(candidate, { email }).ok) {
+            password = candidate;
+            break;
+          }
+        }
+        if (!password) password = generatePassword(18);
+      }
+      const pw = evaluatePassword(password, { email });
+      if (!pw.ok) return { ok: false, email, error: 'Password does not meet policy' };
 
       let userId = await findUserIdByEmail(supabase, email);
       let created = false;

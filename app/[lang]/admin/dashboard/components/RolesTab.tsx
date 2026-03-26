@@ -29,6 +29,28 @@ export default function RolesTab({ dict }: { dict: any }) {
   const [assignRoleId, setAssignRoleId] = useState('');
   const [assigning, setAssigning] = useState(false);
 
+  const assignmentsGrouped = useMemo(() => {
+    const out: Array<{ userId: string; profile: any; items: Assignment[] }> = [];
+    const byUser = new Map<string, { userId: string; profile: any; items: Assignment[] }>();
+    for (const a of assignments) {
+      const userId = String(a.user_id || '').trim();
+      if (!userId) continue;
+      const prev = byUser.get(userId);
+      if (prev) {
+        prev.items.push(a);
+      } else {
+        byUser.set(userId, { userId, profile: a.profiles || null, items: [a] });
+      }
+    }
+    for (const v of byUser.values()) out.push(v);
+    out.sort((a, b) => {
+      const at = a.items[0]?.assigned_at ? new Date(a.items[0].assigned_at).getTime() : 0;
+      const bt = b.items[0]?.assigned_at ? new Date(b.items[0].assigned_at).getTime() : 0;
+      return bt - at;
+    });
+    return out;
+  }, [assignments]);
+
   const load = async () => {
     setLoading(true);
     try {
@@ -130,7 +152,7 @@ export default function RolesTab({ dict }: { dict: any }) {
     }
   };
 
-  const assign = async (roleId: string | null) => {
+  const updateAssignment = async ({ email, roleId, action }: { email: string; roleId?: string | null; action?: string }) => {
     setAssigning(true);
     try {
       const { data } = await supabase.auth.getSession();
@@ -139,13 +161,15 @@ export default function RolesTab({ dict }: { dict: any }) {
       const res = await fetch('/api/admin/roles/assign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ email: assignEmail, roleId }),
+        body: JSON.stringify({ email, roleId: roleId || null, action: action || null }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error || 'Error');
       showToast(String(t.saved || 'Uloženo'), 'success');
-      setAssignEmail('');
-      setAssignRoleId('');
+      if ((action || '').toLowerCase() !== 'unassign') {
+        setAssignEmail('');
+        setAssignRoleId('');
+      }
       await load();
     } catch (e: any) {
       showToast(e?.message || (t?.error || 'Chyba'), 'error');
@@ -334,7 +358,7 @@ export default function RolesTab({ dict }: { dict: any }) {
                 <button
                   type="button"
                   disabled={assigning || !assignEmail.trim() || !assignRoleId}
-                  onClick={() => assign(assignRoleId)}
+                  onClick={() => updateAssignment({ email: assignEmail, roleId: assignRoleId, action: 'assign' })}
                   className="w-full bg-stone-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-600 transition disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {assigning ? <InlinePulse className="bg-white/80" size={14} /> : <UserPlus size={16} />} {t.assign || 'Přiřadit'}
@@ -343,46 +367,59 @@ export default function RolesTab({ dict }: { dict: any }) {
             </div>
 
             <div className="mt-6 grid gap-3">
-              {assignments.map((a) => (
-                <div key={a.user_id} className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-stone-50 border border-stone-100 rounded-[2rem] px-6 py-5">
+              {assignmentsGrouped.map((g) => (
+                <div key={g.userId} className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-stone-50 border border-stone-100 rounded-[2rem] px-6 py-5">
                   <div className="min-w-0">
                     <div className="font-black text-stone-900 truncate">
-                      {a.profiles?.first_name || ''} {a.profiles?.last_name || ''}{' '}
-                      <span className="text-stone-400 font-bold">{a.profiles?.email ? `(${a.profiles.email})` : ''}</span>
+                      {g.profile?.first_name || ''} {g.profile?.last_name || ''}{' '}
+                      <span className="text-stone-400 font-bold">{g.profile?.email ? `(${g.profile.email})` : ''}</span>
                     </div>
-                    {(() => {
-                      const role = roles.find((r) => r.id === a.role_id);
-                      const colorHex = String(role?.color_hex || '#64748b');
-                      const label = String(role?.name || a.role_id || '').trim();
-                      return (
-                        <div className="mt-2 flex items-center gap-2">
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      {g.items.map((a) => {
+                        const role = roles.find((r) => r.id === a.role_id);
+                        const colorHex = String(role?.color_hex || '#64748b');
+                        const label = String(role?.name || a.role_id || '').trim();
+                        return (
                           <span
-                            className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border"
+                            key={`${g.userId}_${a.role_id}`}
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border"
                             style={{ backgroundColor: colorHex, borderColor: colorHex, color: textColorForBg(colorHex) }}
                           >
                             {label}
+                            {g.profile?.email ? (
+                              <button
+                                type="button"
+                                disabled={assigning}
+                                onClick={() => updateAssignment({ email: String(g.profile.email), roleId: String(a.role_id), action: 'unassign' })}
+                                className="ml-1 inline-flex items-center justify-center h-5 w-5 rounded-full bg-white/20 hover:bg-white/30 transition disabled:opacity-50"
+                                aria-label={t.unassign || 'Odebrat'}
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            ) : null}
                           </span>
-                          {a.assigned_by_email ? (
-                            <span className="text-[10px] font-bold text-stone-400 truncate">{a.assigned_by_email}</span>
-                          ) : null}
-                        </div>
-                      );
-                    })()}
+                        );
+                      })}
+                      {g.items.some((a) => a.assigned_by_email) ? (
+                        <span className="text-[10px] font-bold text-stone-400 truncate">
+                          {String(g.items.find((a) => a.assigned_by_email)?.assigned_by_email || '')}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    disabled={assigning}
-                    onClick={async () => {
-                      setAssignEmail(String(a.profiles?.email || ''));
-                      await assign(null);
-                    }}
-                    className="shrink-0 px-5 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition bg-white text-stone-700 border-stone-200 hover:bg-stone-50 disabled:opacity-50"
-                  >
-                    {t.unassign || 'Odebrat'}
-                  </button>
+                  {g.profile?.email ? (
+                    <button
+                      type="button"
+                      disabled={assigning}
+                      onClick={() => updateAssignment({ email: String(g.profile.email), roleId: null, action: 'clear' })}
+                      className="shrink-0 px-5 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition bg-white text-stone-700 border-stone-200 hover:bg-stone-50 disabled:opacity-50"
+                    >
+                      {t.unassign || 'Odebrat'} vše
+                    </button>
+                  ) : null}
                 </div>
               ))}
-              {assignments.length === 0 && (
+              {assignmentsGrouped.length === 0 && (
                 <div className="py-10 text-center text-stone-400 font-bold uppercase tracking-widest text-xs">
                   {t.emptyAssignments || 'Žádná přiřazení'}
                 </div>

@@ -8,6 +8,7 @@ import PasswordField from '@/app/components/PasswordField';
 import Link from 'next/link';
 import { getDictionary } from '@/lib/get-dictionary';
 import { supabase } from '@/lib/supabase';
+import { evaluatePassword } from '@/lib/auth/password-policy';
 
 export default function ResetPasswordClient({ lang }: { lang: string }) {
   const search = useSearchParams();
@@ -61,7 +62,8 @@ export default function ResetPasswordClient({ lang }: { lang: string }) {
     setError('');
     const t = dict?.auth?.reset || {};
     if (!token && !recoveryReady) return setError((t.errorMissingToken as string) || (lang === 'en' ? 'Missing token.' : 'Chybí token.'));
-    if (password.length < 8) return setError((t.errorTooShort as string) || (lang === 'en' ? 'Password must be at least 8 characters.' : 'Heslo musí mít alespoň 8 znaků.'));
+    const pw = evaluatePassword(password);
+    if (!pw.ok) return setError(lang === 'en' ? 'Password does not meet policy.' : 'Heslo nesplňuje požadavky.');
     if (password !== password2) return setError((t.errorMismatch as string) || (lang === 'en' ? 'Passwords do not match.' : 'Hesla se neshodují.'));
 
     setLoading(true);

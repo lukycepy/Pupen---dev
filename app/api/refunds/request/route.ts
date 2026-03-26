@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { requireUser } from '@/lib/server-auth';
 import { getMailer } from '@/lib/email/mailer';
-import { renderEmailTemplate } from '@/lib/email/templates';
+import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
 import { isEmailBlacklisted } from '@/lib/tickets/blacklist';
 import { getClientIp, rateLimit } from '@/lib/rate-limit';
+import { sendMailWithQueueFallback } from '@/lib/email/queue';
 
 export async function POST(req: Request) {
   try {
@@ -54,7 +55,7 @@ export async function POST(req: Request) {
     const toEmail = paymentSettings?.notification_email || process.env.INVOICE_EMAIL || process.env.SMTP_USER || 'info@pupen.org';
     const replyTo = user.email || '';
 
-    const { subject, html } = renderEmailTemplate('refund_request', {
+    const { subject, html } = await renderEmailTemplateWithDbOverride('refund_request', {
       toEmail,
       replyTo,
       rsvpId,
@@ -76,12 +77,11 @@ export async function POST(req: Request) {
     const fromName = emailSettings?.sender_name || 'Pupen.org';
     const fromEmail = emailSettings?.sender_email || 'info@pupen.org';
 
-    await transporter.sendMail({
-      from: `"${fromName}" <${fromEmail}>`,
-      to: toEmail,
-      replyTo: replyTo || undefined,
-      subject,
-      html,
+    await sendMailWithQueueFallback({
+      transporter,
+      supabase,
+      meta: { kind: 'refund_request' },
+      message: { from: `"${fromName}" <${fromEmail}>`, to: toEmail, replyTo: replyTo || undefined, subject, html },
     });
 
     const payload = {

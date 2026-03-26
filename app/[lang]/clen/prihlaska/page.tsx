@@ -131,6 +131,54 @@ export default function MyApplicationPage() {
             </div>
           ) : (
             <div className="space-y-8">
+              {(() => {
+                const createdAt = application.created_at ? new Date(application.created_at) : null;
+                const decidedAt = application.decided_at ? new Date(application.decided_at) : null;
+                const isPending = application.status === 'pending';
+                const isApproved = application.status === 'approved';
+                const isRejected = application.status === 'rejected';
+
+                const steps = [
+                  { k: 'submitted', label: isEn ? 'Submitted' : 'Odesláno', done: true, at: createdAt },
+                  { k: 'review', label: isEn ? 'Under review' : 'Posuzování', done: true, at: null },
+                  {
+                    k: 'decision',
+                    label: isApproved ? (isEn ? 'Approved' : 'Schváleno') : isRejected ? (isEn ? 'Rejected' : 'Odmítnuto') : isEn ? 'Pending' : 'Čeká',
+                    done: !isPending,
+                    at: decidedAt,
+                  },
+                  { k: 'access', label: isEn ? 'Access email' : 'E-mail s přístupem', done: isApproved, at: null },
+                ];
+
+                return (
+                  <div className="bg-stone-50 border border-stone-100 rounded-2xl p-6">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-4">
+                      {isEn ? 'Status timeline' : 'Stavová timeline'}
+                    </div>
+                    <div className="grid md:grid-cols-4 gap-3">
+                      {steps.map((s, idx) => (
+                        <div key={s.k} className="bg-white border border-stone-100 rounded-2xl p-4">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="text-[10px] font-black uppercase tracking-widest text-stone-300">#{idx + 1}</div>
+                            <div
+                              className={`w-8 h-8 rounded-2xl flex items-center justify-center font-black ${
+                                s.done ? 'bg-green-600 text-white' : 'bg-stone-50 text-stone-300 border border-stone-100'
+                              }`}
+                            >
+                              {s.done ? '✓' : '•'}
+                            </div>
+                          </div>
+                          <div className="mt-3 font-black text-stone-900">{s.label}</div>
+                          <div className="mt-2 text-[10px] font-black uppercase tracking-widest text-stone-300">
+                            {s.at && !Number.isNaN(s.at.getTime()) ? s.at.toLocaleString(isEn ? 'en-US' : 'cs-CZ') : '—'}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
               <div className="grid md:grid-cols-2 gap-4">
                 {[
                   { label: isEn ? 'Membership type' : 'Typ členství', value: membershipTypeLabel },

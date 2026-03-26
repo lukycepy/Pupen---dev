@@ -1,9 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { MessageSquare, Trash2, Mail, Clock, Download } from 'lucide-react';
+import { MessageSquare, Trash2, Mail, Clock, Download, Tag, CheckCircle, Clock3, User } from 'lucide-react';
 import ConfirmModal from '@/app/components/ConfirmModal';
 import { useToast } from '@/app/context/ToastContext';
 
@@ -13,6 +13,8 @@ interface MessagesTabProps {
 }
 
 const PAGE_SIZE = 40;
+
+const availableTags = ['dotaz', 'stížnost', 'spolupráce', 'spam', 'urgentní', 'finance', 'členství'];
 
 export default function MessagesTab({ dict, readOnly = false }: MessagesTabProps) {
   const queryClient = useQueryClient();
@@ -53,6 +55,34 @@ export default function MessagesTab({ dict, readOnly = false }: MessagesTabProps
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('messages').delete().eq('id', id);
       if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['messages_paged'] });
+    },
+    onError: (err: any) => {
+      showToast(err?.message || 'Chyba', 'error');
+    }
+  });
+
+  const { data: admins = [] } = useQuery({
+    queryKey: ['admin_users'],
+    queryFn: async () => {
+      const res = await supabase.from('profiles').select('id, email, first_name, last_name').eq('is_admin', true);
+      return res.data || [];
+    }
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string, data: any }) => {
+      const res = await fetch(`/api/admin/messages/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['messages_paged'] });
@@ -146,35 +176,93 @@ export default function MessagesTab({ dict, readOnly = false }: MessagesTabProps
 
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-stone-50 rounded-full flex items-center justify-center text-stone-400 font-bold border border-stone-100 uppercase">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold border uppercase ${
+                    msg.status === 'closed' ? 'bg-stone-100 text-stone-400 border-stone-200' :
+                    msg.status === 'in_progress' ? 'bg-amber-50 text-amber-500 border-amber-200' :
+                    'bg-green-50 text-green-600 border-green-200'
+                  }`}>
                     {msg.name?.substring(0, 2)}
                   </div>
                   <div>
-                    <h3 className="font-bold text-stone-900 leading-tight">{msg.name}</h3>
+                    <h3 className="font-bold text-stone-900 leading-tight flex items-center gap-2">
+                      {msg.name}
+                      {msg.status === 'closed' && <CheckCircle size={14} className="text-stone-400" />}
+                    </h3>
                     <a href={`mailto:${msg.email}`} className="text-xs text-stone-400 hover:text-green-600 transition flex items-center gap-1">
                       <Mail size={12} /> {msg.email}
                     </a>
                   </div>
                 </div>
-                <a 
-                  href={`mailto:${msg.email}?subject=Re: ${msg.subject || 'Zpráva z webu Pupen'}`}
-                  className="bg-green-50 text-green-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-600 hover:text-white transition-all shadow-sm"
-                >
-                  Odpovědět
-                </a>
+                <div className="flex flex-col gap-2 items-end">
+                  <select
+                    value={msg.status || 'open'}
+                    onChange={(e) => updateMutation.mutate({ id: msg.id, data: { status: e.target.value } })}
+                    className="text-[10px] font-black uppercase tracking-widest bg-stone-50 border-none rounded-lg px-2 py-1 outline-none cursor-pointer"
+                  >
+                    <option value="open">Otevřeno</option>
+                    <option value="in_progress">Řeší se</option>
+                    <option value="closed">Uzavřeno</option>
+                  </select>
+                  <a 
+                    href={`mailto:${msg.email}?subject=Re: ${msg.subject || 'Zpráva z webu Pupen'}`}
+                    className="bg-stone-900 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-stone-800 transition-all shadow-sm"
+                  >
+                    Odpovědět
+                  </a>
+                </div>
               </div>
 
-              <div className="bg-stone-50 p-4 rounded-xl mb-4">
+              <div className="bg-stone-50 p-4 rounded-xl mb-4 border border-stone-100">
                 <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">{dict.admin.labelSubject}</p>
                 <p className="font-bold text-stone-700">{msg.subject || dict.admin.noSubject}</p>
               </div>
 
-              <p className="text-stone-600 text-sm leading-relaxed mb-6 whitespace-pre-wrap">
+              <p className="text-stone-600 text-sm leading-relaxed mb-6 whitespace-pre-wrap pl-2 border-l-2 border-stone-100">
                 {msg.message}
               </p>
 
-              <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-stone-300 pt-4 border-t border-stone-50">
-                <span className="flex items-center gap-1">
+              <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-stone-50">
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <User size={14} className="text-stone-400" />
+                    <select
+                      value={msg.assigned_to || ''}
+                      onChange={(e) => updateMutation.mutate({ id: msg.id, data: { assigned_to: e.target.value || null } })}
+                      className="text-xs text-stone-600 bg-transparent outline-none cursor-pointer hover:bg-stone-50 rounded px-1"
+                    >
+                      <option value="">-- Nepřiřazeno --</option>
+                      {admins.map((a: any) => (
+                        <option key={a.id} value={a.id}>{a.first_name} {a.last_name || a.email}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Tag size={14} className="text-stone-400" />
+                    {msg.tags?.map((t: string) => (
+                      <span key={t} className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-bold uppercase flex items-center gap-1 cursor-pointer"
+                        onClick={() => updateMutation.mutate({ id: msg.id, data: { tags: msg.tags.filter((x: string) => x !== t) } })}
+                      >
+                        {t} &times;
+                      </span>
+                    ))}
+                    <select
+                      value=""
+                      onChange={(e) => {
+                        if (e.target.value && !msg.tags?.includes(e.target.value)) {
+                          updateMutation.mutate({ id: msg.id, data: { tags: [...(msg.tags || []), e.target.value] } });
+                        }
+                      }}
+                      className="text-[10px] bg-transparent text-stone-400 font-bold uppercase outline-none cursor-pointer"
+                    >
+                      <option value="">+ Tag</option>
+                      {availableTags.filter(t => !msg.tags?.includes(t)).map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-stone-300">
                   <Clock size={12} /> {new Date(msg.created_at).toLocaleString()}
                 </span>
               </div>

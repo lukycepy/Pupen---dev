@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FileText, Plus, Trash2, Download, Eye, Loader2, Save, X, Lock, Unlock, Globe, Upload, AlertTriangle, CheckCircle, Edit3 } from 'lucide-react';
+import { FileText, Plus, Trash2, Download, Eye, EyeOff, Loader2, Save, X, Lock, Unlock, Globe, Upload, AlertTriangle, CheckCircle, Edit3 } from 'lucide-react';
 import { useToast } from '../../../../context/ToastContext';
 import ConfirmModal from '@/app/components/ConfirmModal';
 import { SkeletonTabContent } from '../../../components/Skeleton';
@@ -15,7 +15,7 @@ export default function DocumentsTab({ dict, uploadFile }: { dict: any, uploadFi
   const queryClient = useQueryClient();
   const [isAdding, setIsAdding] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
-  const [formData, setFormData] = useState({ title: '', title_en: '', file_url: '', category: 'Ostatní', is_member_only: true });
+  const [formData, setFormData] = useState({ title: '', title_en: '', file_url: '', category: 'Ostatní', access_level: 'member', is_member_only: true, share_enabled: false, share_token: '' });
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -28,12 +28,16 @@ export default function DocumentsTab({ dict, uploadFile }: { dict: any, uploadFi
 
   const handleEdit = (doc: any) => {
     setEditingItem(doc);
+    const accessLevel = doc.access_level ? String(doc.access_level) : doc.is_member_only ? 'member' : 'public';
     setFormData({
       title: doc.title || '',
       title_en: doc.title_en || '',
       file_url: doc.file_url || '',
       category: doc.category || 'Ostatní',
-      is_member_only: doc.is_member_only ?? true
+      access_level: accessLevel,
+      is_member_only: accessLevel !== 'public',
+      share_enabled: !!doc.share_enabled,
+      share_token: doc.share_token || ''
     });
     setIsAdding(true);
   };
@@ -41,7 +45,7 @@ export default function DocumentsTab({ dict, uploadFile }: { dict: any, uploadFi
   const handleCancel = () => {
     setIsAdding(false);
     setEditingItem(null);
-    setFormData({ title: '', title_en: '', file_url: '', category: 'Ostatní', is_member_only: true });
+    setFormData({ title: '', title_en: '', file_url: '', category: 'Ostatní', access_level: 'member', is_member_only: true, share_enabled: false, share_token: '' });
   };
 
   const { data: documents = [], isLoading } = useQuery({
@@ -54,11 +58,12 @@ export default function DocumentsTab({ dict, uploadFile }: { dict: any, uploadFi
 
   const saveMutation = useMutation({
     mutationFn: async (newData: any) => {
+      const payload = { ...newData, is_member_only: newData.access_level !== 'public' };
       if (editingItem) {
-        const { error } = await supabase.from('documents').update(newData).eq('id', editingItem.id);
+        const { error } = await supabase.from('documents').update(payload).eq('id', editingItem.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('documents').insert([newData]);
+        const { error } = await supabase.from('documents').insert([payload]);
         if (error) throw error;
       }
     },
@@ -128,6 +133,33 @@ export default function DocumentsTab({ dict, uploadFile }: { dict: any, uploadFi
       onConfirm: () => deleteMutation.mutate(id)
     });
     setModalOpen(true);
+  };
+
+  const setShare = async (doc: any, enabled: boolean) => {
+    try {
+      const token = enabled
+        ? (doc.share_token ||
+            Array.from(crypto.getRandomValues(new Uint8Array(16)))
+              .map((b) => b.toString(16).padStart(2, '0'))
+              .join(''))
+        : null;
+      const { error } = await supabase
+        .from('documents')
+        .update({ share_enabled: enabled, share_token: token })
+        .eq('id', doc.id);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ['admin_documents'] });
+      showToast(enabled ? 'Sdílení zapnuto' : 'Sdílení vypnuto', 'success');
+      if (enabled && token) {
+        const url = `${window.location.origin}/api/documents/share/${token}`;
+        try {
+          await navigator.clipboard.writeText(url);
+          showToast('Link zkopírován', 'success');
+        } catch {}
+      }
+    } catch (e: any) {
+      showToast(e?.message || 'Chyba', 'error');
+    }
   };
 
   if (isLoading) return <SkeletonTabContent />;
@@ -225,18 +257,16 @@ export default function DocumentsTab({ dict, uploadFile }: { dict: any, uploadFi
               </select>
             </div>
             <div className="flex flex-col justify-end">
-              <label className="flex items-center gap-3 cursor-pointer group p-3 bg-stone-50 rounded-xl hover:bg-green-50 transition">
-                <input 
-                  type="checkbox" 
-                  checked={formData.is_member_only}
-                  onChange={e => setFormData({...formData, is_member_only: e.target.checked})}
-                  className="w-5 h-5 rounded border-stone-300 text-green-600 focus:ring-green-500"
-                />
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold text-stone-700 group-hover:text-green-600 transition">Pouze pro členy</span>
-                  <span className="text-[9px] text-stone-400 font-medium uppercase tracking-tighter">Dokument uvidí jen přihlášení členové</span>
-                </div>
-              </label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Přístup</label>
+              <select
+                value={formData.access_level}
+                onChange={(e) => setFormData({ ...formData, access_level: e.target.value })}
+                className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition appearance-none"
+              >
+                <option value="public">Veřejné</option>
+                <option value="member">Jen členové</option>
+                <option value="admin">Jen admin</option>
+              </select>
             </div>
           </div>
 
@@ -262,11 +292,16 @@ export default function DocumentsTab({ dict, uploadFile }: { dict: any, uploadFi
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div className="flex-grow">
                   <div className="flex items-center gap-2 mb-1">
-                    {doc.is_member_only ? (
+                    {String(doc.access_level || (doc.is_member_only ? 'member' : 'public')) === 'admin' ? (
+                      <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md"><Lock size={10} /> Jen admin</span>
+                    ) : doc.is_member_only ? (
                       <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md"><Lock size={10} /> Jen členové</span>
                     ) : (
                       <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-green-600 bg-green-50 px-2 py-0.5 rounded-md"><Globe size={10} /> Veřejné</span>
                     )}
+                    {doc.share_enabled && doc.share_token ? (
+                      <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-stone-500 bg-stone-100 px-2 py-0.5 rounded-md"><Eye size={10} /> Sdílení</span>
+                    ) : null}
                   </div>
                   <h3 className="text-lg font-bold text-stone-900 mb-1">{doc.title}</h3>
                   <div className="flex items-center gap-4 text-stone-400 text-[10px] font-black uppercase tracking-widest">
@@ -276,6 +311,13 @@ export default function DocumentsTab({ dict, uploadFile }: { dict: any, uploadFi
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setShare(doc, !doc.share_enabled)}
+                    className="p-4 bg-stone-50 text-stone-600 rounded-2xl hover:bg-stone-900 hover:text-white transition shadow-sm"
+                  >
+                    {doc.share_enabled ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
                   <button 
                     onClick={() => handleEdit(doc)}
                     className="p-4 bg-stone-50 text-stone-600 rounded-2xl hover:bg-stone-900 hover:text-white transition shadow-sm"

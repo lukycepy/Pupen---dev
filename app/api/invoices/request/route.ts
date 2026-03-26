@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer';
-import { renderEmailTemplate } from '@/lib/email/templates';
+import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
 import { isEmailBlacklisted } from '@/lib/tickets/blacklist';
 import { getClientIp, rateLimit } from '@/lib/rate-limit';
+import { sendMailWithQueueFallback } from '@/lib/email/queue';
 
 export async function POST(req: Request) {
   try {
@@ -68,7 +69,7 @@ export async function POST(req: Request) {
     const toEmail = settings?.notification_email || process.env.INVOICE_EMAIL || process.env.SMTP_USER || 'info@pupen.org';
     const transporter = await getMailerWithSettings();
     const from = await getSenderFromSettings();
-    const { subject, html } = renderEmailTemplate('invoice_request', {
+    const { subject, html } = await renderEmailTemplateWithDbOverride('invoice_request', {
       toEmail,
       replyTo: email,
       rsvpId,
@@ -83,12 +84,11 @@ export async function POST(req: Request) {
       note,
     });
 
-    await transporter.sendMail({
-      from,
-      to: toEmail,
-      replyTo: email,
-      subject,
-      html,
+    await sendMailWithQueueFallback({
+      transporter,
+      supabase,
+      meta: { kind: 'invoice_request' },
+      message: { from, to: toEmail, replyTo: email, subject, html },
     });
 
     try {

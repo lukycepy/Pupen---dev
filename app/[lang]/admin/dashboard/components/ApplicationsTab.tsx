@@ -15,6 +15,7 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [selectedApp, setSelectedApp] = useState<any>(null);
+  const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
   const [chairSignature, setChairSignature] = useState('');
   const [storedSignature, setStoredSignature] = useState<string>('');
   const [useStoredSignature, setUseStoredSignature] = useState(true);
@@ -59,6 +60,14 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
     }
   });
 
+  const selectedPendingIds = useMemo(() => {
+    return applications.filter((a: any) => a?.status === 'pending' && selectedIds[String(a.id)]).map((a: any) => String(a.id));
+  }, [applications, selectedIds]);
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status, signature, reason, decisionType }: any) => {
       const { data } = await supabase.auth.getSession();
@@ -95,6 +104,18 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
           if (!res.ok) throw new Error(json?.error || 'Chyba');
         }
       }
+
+      try {
+        const prev = applications.find((a: any) => a.id === id);
+        const prevStatus = String(prev?.status || '');
+        if (token && prevStatus !== String(status)) {
+          await fetch('/api/admin/applications/status-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ applicationId: id, lang: isEn ? 'en' : 'cs' }),
+          });
+        }
+      } catch {}
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['applications'] });
@@ -108,17 +129,73 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
 
   if (isLoading) return <SkeletonTabContent />;
 
+  const bulkApprove = async () => {
+    try {
+      if (!storedSignature) {
+        showToast(isEn ? 'Missing stored signature.' : 'Chybí uložený podpis.', 'error');
+        return;
+      }
+      for (const id of selectedPendingIds) {
+        const app = applications.find((a: any) => String(a.id) === String(id));
+        const decisionType = app?.membership_type === 'external' ? 'external' : 'regular';
+        await updateStatusMutation.mutateAsync({ id, status: 'approved', signature: storedSignature, decisionType });
+      }
+      setSelectedIds({});
+    } catch (e: any) {
+      showToast(e?.message || 'Chyba', 'error');
+    }
+  };
+
+  const bulkReject = async () => {
+    if (!confirm('Opravdu odmítnout vybrané přihlášky?')) return;
+    try {
+      const res = await fetch('/api/admin/applications/bulk-reject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedPendingIds })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      queryClient.invalidateQueries({ queryKey: ['applications'] });
+      setSelectedIds({});
+      showToast(`Odmítnuto ${data.count} přihlášek`, 'success');
+    } catch (e: any) {
+      showToast(e.message, 'error');
+    }
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <AdminModuleHeader
         title={dict.admin.tabApplications}
         description="Správa a schvalování členských přihlášek"
         actions={
-          <div className="flex items-center gap-2 px-4 py-2 bg-stone-50 rounded-xl border border-stone-100">
-            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-            <span className="text-[10px] font-black uppercase tracking-widest text-stone-500">
-              {applications.filter((a: any) => a.status === 'pending').length} k vyřízení
-            </span>
+          <div className="flex items-center gap-2">
+            {selectedPendingIds.length ? (
+              <>
+                <button
+                  type="button"
+                  onClick={bulkReject}
+                  className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-red-100 text-red-600 hover:bg-red-200 transition"
+                >
+                  {isEn ? 'Bulk reject' : 'Hromadně zamítnout'} ({selectedPendingIds.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={bulkApprove}
+                  disabled={updateStatusMutation.isPending}
+                  className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-green-600 text-white hover:bg-green-700 transition disabled:opacity-50"
+                >
+                  {isEn ? 'Bulk approve' : 'Hromadně schválit'} ({selectedPendingIds.length})
+                </button>
+              </>
+            ) : null}
+            <div className="flex items-center gap-2 px-4 py-2 bg-stone-50 rounded-xl border border-stone-100">
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-stone-500">
+                {applications.filter((a: any) => a.status === 'pending').length} k vyřízení
+              </span>
+            </div>
           </div>
         }
       />
@@ -145,13 +222,27 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
               <div className="w-14 h-14 bg-stone-50 rounded-2xl flex items-center justify-center text-stone-400 font-black text-xl border border-stone-100 group-hover:bg-white group-hover:scale-110 transition-all">
                 {String(app.full_name || app.name || '').split(' ').filter(Boolean).map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() || '—'}
               </div>
-              <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm ${
-                app.status === 'approved' ? 'bg-green-100 text-green-700' : 
-                app.status === 'rejected' ? 'bg-red-100 text-red-700' : 
-                'bg-amber-100 text-amber-700'
-              }`}>
-                {app.status === 'approved' ? 'Schváleno' : app.status === 'rejected' ? 'Odmítnuto' : 'Čeká'}
-              </span>
+              <div className="flex items-center gap-2">
+                {app.status === 'pending' ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleSelected(String(app.id));
+                    }}
+                    className="w-7 h-7 rounded-xl border border-stone-200 bg-white flex items-center justify-center"
+                  >
+                    <div className={`w-4 h-4 rounded-md ${selectedIds[String(app.id)] ? 'bg-green-600' : 'bg-stone-100'}`} />
+                  </button>
+                ) : null}
+                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm ${
+                  app.status === 'approved' ? 'bg-green-100 text-green-700' : 
+                  app.status === 'rejected' ? 'bg-red-100 text-red-700' : 
+                  'bg-amber-100 text-amber-700'
+                }`}>
+                  {app.status === 'approved' ? 'Schváleno' : app.status === 'rejected' ? 'Odmítnuto' : 'Čeká'}
+                </span>
+              </div>
             </div>
             <h3 className="font-black text-stone-900 text-lg mb-1 group-hover:text-green-600 transition-colors">{app.full_name || app.name}</h3>
             <div className="flex items-center gap-3 mb-6">

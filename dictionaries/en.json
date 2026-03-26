@@ -232,8 +232,16 @@
     "storyLabel": "Our story",
     "storyTitle": "It all started in 2007...",
     "storyP1": "Back then, a group of students decided that Suchdol needed more life. It wasn't about big plans, but about the desire to meet up.",
-    "storyP2": "The first event was a small barbecue for a few friends. Today? Today we organize events for students and staff, we have our own facilities, and we are a proud part of the university.",
-    "storyP3": "Even though members change, the spirit of Pupen remains the same. We are open to anyone who wants to lend a hand or just have fun."
+    "storyP2": "Our first event was a small barbecue for a few friends. Today? We organize events for students and staff, have our own facilities, and are a proud part of the university.",
+    "storyP3": "Although members change, the spirit of Pupen remains the same. We are open to anyone who wants to lend a hand or just have fun.",
+    "timelineTitle": "Important Milestones",
+    "timeline": [
+      { "year": "2007", "title": "Founding of the club", "desc": "A group of enthusiasts from FAFNR organized the first unofficial barbecue." },
+      { "year": "2010", "title": "First big event", "desc": "We managed to organize the first edition of the legendary orientation week for freshmen." },
+      { "year": "2015", "title": "Official clubhouse", "desc": "We got our own facilities right at the faculty. A place where the best ideas are born." },
+      { "year": "2020", "title": "Over 100 active members", "desc": "We grew to massive proportions. Pupen started functioning like a well-oiled machine." },
+      { "year": "Present", "title": "Innovating", "desc": "We are digitizing the club, launching a new website, and expanding activities into other areas." }
+    ]
   },
   "categories": {
     "Vše": "All",
@@ -566,8 +574,8 @@
     "logout": "Log out",
     "tabEvents": "Events",
     "tabNews": "News",
-    "tabMessages": "Messages",
-    "tabUsers": "Users",
+    "tabMessages": "Inbox (Triage)",
+    "tabUsers": "User Management",
     "newEvent": "New event",
     "editEvent": "Edit event",
     "newPost": "Write an article",
@@ -623,7 +631,7 @@
     "btnSaveUser": "Save user",
     "alertAdminSuccess": "Admin has been successfully saved.",
     "confirmDeleteAdmin": "Are you sure you want to delete this admin?",
-    "noSubject": "No subject",
+    "noSubject": "(No subject)",
     "alertEventSuccess": "Event successfully added!",
     "alertPostSuccess": "Article published!",
     "confirmDelete": "Are you sure you want to delete this item?",
@@ -633,7 +641,7 @@
     "messagesCountText": "in inbox",
     "labelSender": "Sender",
     "labelDateReceived": "Date received",
-    "labelSubject": "Message subject",
+    "labelSubject": "Subject",
     "emptyInbox": "Inbox is empty",
     "deleteTooltip": "Delete message",
     "webContent": "Website Content",
@@ -780,6 +788,24 @@
         "lectures": "Lectures",
         "other": "Other"
       }
+    },
+    "tabNewsletter": "Newsletter",
+    "tabSettings": "Settings",
+    "tabSitePages": "Site Pages",
+    "bulkApprove": "Bulk Approve",
+    "bulkReject": "Bulk Reject",
+    "confirmBulkApprove": "Are you sure you want to approve selected applications?",
+    "confirmBulkReject": "Are you sure you want to reject selected applications?",
+    "newsletter": {
+      "newCampaign": "New Campaign",
+      "subscribers": "Subscribers",
+      "history": "Drafts & Templates",
+      "sendToAll": "Send to all",
+      "saveDraft": "Save Draft",
+      "exportCsv": "Export CSV",
+      "noSubscribers": "No subscribers found.",
+      "searchEmail": "Search email...",
+      "categories": "Categories"
     }
   },
   "privacyPage": {

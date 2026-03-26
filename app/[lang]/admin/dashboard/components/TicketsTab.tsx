@@ -7,6 +7,7 @@ import { QrCode, Search, CheckCircle, Loader2, User, Calendar, Send, Camera, X, 
 import { useToast } from '@/app/context/ToastContext';
 import Skeleton from '@/app/[lang]/components/Skeleton';
 import InlinePulse from '@/app/components/InlinePulse';
+import ConfirmModal from '@/app/components/ConfirmModal';
 
 export default function TicketsTab() {
   const queryClient = useQueryClient();
@@ -17,6 +18,7 @@ export default function TicketsTab() {
   const [scanBusy, setScanBusy] = useState(false);
   const [manualToken, setManualToken] = useState('');
   const [scanMessage, setScanMessage] = useState<string | null>(null);
+  const [feedbackConfirmOpen, setFeedbackConfirmOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const scanBusyRef = useRef(false);
@@ -85,8 +87,17 @@ export default function TicketsTab() {
 
   const checkInMutation = useMutation({
     mutationFn: async ({ id, checked_in }: { id: string, checked_in: boolean }) => {
-      const { error } = await supabase.from('rsvp').update({ checked_in }).eq('id', id);
-      if (error) throw error;
+      if (!activeEvent) throw new Error('Missing event');
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
+      const res = await fetch('/api/admin/tickets/check-in', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ eventId: activeEvent, rsvpId: id, checkedIn: checked_in, source: 'list' }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Chyba');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['attendees', activeEvent] });
@@ -185,41 +196,37 @@ export default function TicketsTab() {
     setScanBusy(true);
     setScanMessage(null);
     try {
-      const now = new Date();
-      const res = await supabase
-        .from('rsvp')
-        .select('id, status, expires_at, checked_in')
-        .eq('event_id', activeEvent)
-        .eq('qr_code', token)
-        .maybeSingle();
-
-      if (res.error) throw res.error;
-      if (!res.data) {
-        setScanMessage('Kód nenalezen pro tuto akci');
-        showToast('Kód nenalezen', 'error');
+      const { data } = await supabase.auth.getSession();
+      const auth = data.session?.access_token;
+      if (!auth) throw new Error('Unauthorized');
+      const resp = await fetch('/api/admin/tickets/check-in', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth}` },
+        body: JSON.stringify({ eventId: activeEvent, token, checkedIn: true, source: 'scan' }),
+      });
+      const json = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        const msg =
+          json?.error === 'Not found'
+            ? 'Kód nenalezen pro tuto akci'
+            : json?.error === 'Cancelled'
+              ? 'Registrace je zrušena'
+              : json?.error === 'Expired'
+                ? 'Rezervace expirovala'
+                : 'Chyba při odbavení';
+        setScanMessage(msg);
+        showToast(msg, 'error');
         return;
       }
 
-      if (res.data.status === 'cancelled') {
-        setScanMessage('Registrace je zrušena');
-        showToast('Registrace zrušena', 'error');
-        return;
-      }
-
-      if (res.data.expires_at && new Date(res.data.expires_at) <= now) {
-        setScanMessage('Rezervace expirovala');
-        showToast('Rezervace expirovala', 'error');
-        return;
-      }
-
-      if (res.data.checked_in) {
+      if (json?.status === 'already_checked_in') {
         setScanMessage('Už odbaveno');
         showToast('Už odbaveno', 'info');
         return;
       }
 
-      await checkInMutation.mutateAsync({ id: res.data.id, checked_in: true });
       setScanMessage('Odbaveno');
+      queryClient.invalidateQueries({ queryKey: ['attendees', activeEvent] });
     } catch (e: any) {
       setScanMessage('Chyba při odbavení');
       showToast(e?.message || 'Chyba', 'error');
@@ -312,6 +319,18 @@ export default function TicketsTab() {
 
   return (
     <div className="space-y-8">
+      <ConfirmModal
+        isOpen={feedbackConfirmOpen}
+        onClose={() => setFeedbackConfirmOpen(false)}
+        onConfirm={() => {
+          if (activeEvent) sendFeedbackMutation.mutate(activeEvent);
+        }}
+        title="Požádat o feedback?"
+        message="Odeslat všem potvrzeným účastníkům e-mail s žádostí o zpětnou vazbu?"
+        confirmLabel="Odeslat"
+        cancelLabel="Zrušit"
+        variant="warning"
+      />
       <div className="bg-white p-8 rounded-[2.5rem] border shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h2 className="text-xl font-bold flex items-center gap-3 mb-1">
@@ -394,7 +413,8 @@ export default function TicketsTab() {
                     Skenovat QR
                   </button>
                   <button
-                    onClick={() => { if(activeEvent && confirm('Odeslat všem potvrzeným účastníkům e-mail s žádostí o zpětnou vazbu?')) sendFeedbackMutation.mutate(activeEvent); }}
+                    type="button"
+                    onClick={() => setFeedbackConfirmOpen(true)}
                     disabled={sendFeedbackMutation.isPending || attendees.filter(a => a.checked_in).length === 0}
                     className="flex items-center gap-2 px-4 py-2 bg-stone-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-600 transition disabled:opacity-50"
                   >

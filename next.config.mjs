@@ -17,7 +17,7 @@ const nextConfig = {
     ],
   },
   async headers() {
-    const cspReportOnly = [
+    const csp = [
       "base-uri 'self'",
       "frame-ancestors 'none'",
       "object-src 'none'",
@@ -29,6 +29,7 @@ const nextConfig = {
       "frame-src 'self' https:",
       "worker-src 'self' blob:",
     ].join('; ');
+    const enforceCsp = process.env.CSP_ENFORCE === '1';
 
     return [
       {
@@ -41,7 +42,7 @@ const nextConfig = {
           { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
           { key: 'Cross-Origin-Resource-Policy', value: 'same-site' },
           { key: 'Strict-Transport-Security', value: 'max-age=15552000; includeSubDomains' },
-          { key: 'Content-Security-Policy-Report-Only', value: cspReportOnly },
+          { key: enforceCsp ? 'Content-Security-Policy' : 'Content-Security-Policy-Report-Only', value: csp },
         ],
       },
     ];
