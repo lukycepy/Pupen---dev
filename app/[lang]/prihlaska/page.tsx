@@ -97,6 +97,24 @@ export default function PrihlaskaPage() {
       };
       const { error } = await supabase.from('applications').insert([payload]);
       if (error) throw error;
+      
+      // Notify admins about new application
+      try {
+        await fetch('/api/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: 'Systém Spolku Pupen',
+            email: 'noreply@pupen.org',
+            hp: '',
+            subject: 'Nová přihláška do spolku',
+            message: `Byla podána nová přihláška.\n\nJméno: ${full_name}\nE-mail: ${formData.email}\nTyp: ${formData.membership_type === 'regular' ? 'Řádný člen' : 'Externista'}\n\nZkontrolujte ji v administraci v sekci Přihlášky.`
+          })
+        });
+      } catch (e) {
+        console.error('Failed to notify admins:', e);
+      }
+      
       setSuccess(true);
       showToast(dict.successTitle, 'success');
     } catch (err: any) {

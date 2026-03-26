@@ -4,13 +4,19 @@ import React, { useState, useEffect } from 'react';
 import { Mail, Instagram, MapPin, Send, CheckCircle, AlertCircle, ShieldCheck } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { getDictionary } from '@/lib/get-dictionary';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { contactFormSchema, type ContactFormData } from '@/lib/validations/contact';
+import { useToast } from '@/app/context/ToastContext';
 
 export default function KontaktPage() {
   const params = useParams();
   const lang = (params?.lang as string) || 'cs';
+  const { showToast } = useToast();
 
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState('');
   const [dict, setDict] = useState<any>(null);
   
   const [honeyPot, setHoneyPot] = useState('');
@@ -18,6 +24,16 @@ export default function KontaktPage() {
   const [captcha, setCaptcha] = useState({ num1: 0, num2: 0, userAnswer: '' });
 
   const [dictGlobal, setDictGlobal] = useState<any>(null);
+
+  const { register, handleSubmit: hookFormSubmit, reset, formState: { errors } } = useForm<ContactFormData>({
+    resolver: zodResolver(contactFormSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      subject: '',
+      message: ''
+    }
+  });
 
   useEffect(() => {
     async function loadData() {
@@ -38,16 +54,7 @@ export default function KontaktPage() {
     });
   };
 
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    subject: '',
-    message: ''
-  });
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const onSubmit = async (data: ContactFormData) => {
     if (honeyPot !== '' || (Date.now() - startTime < 2000)) {
       setStatus('success'); 
       return;
@@ -55,36 +62,33 @@ export default function KontaktPage() {
 
     const correctAnswer = captcha.num1 + captcha.num2;
     if (parseInt(captcha.userAnswer) !== correctAnswer) {
-      // Použijeme text z dictionary pro alert
-      alert(`${dict.captchaAlert} ${captcha.num1} + ${captcha.num2}`);
+      showToast(`${dict.captchaAlert} ${captcha.num1} + ${captcha.num2}`, 'error');
       generateCaptcha();
       return;
     }
 
     setLoading(true);
     setStatus('idle');
+    setErrorMessage('');
 
     try {
       const res = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, website: honeyPot }),
+        body: JSON.stringify({ ...data, website: honeyPot }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error || 'Chyba');
 
       setStatus('success');
-      setFormData({ name: '', email: '', subject: '', message: '' });
+      reset();
       generateCaptcha();
-    } catch {
+    } catch (e: any) {
       setStatus('error');
+      setErrorMessage(e.message || dict.errorText);
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   if (!dict) return null;
@@ -146,28 +150,31 @@ export default function KontaktPage() {
                 <button onClick={() => setStatus('idle')} className="mt-4 text-sm font-bold underline hover:text-green-900 transition">{dict.sendAnother}</button>
               </div>
             ) : (
-              <form className="space-y-4" onSubmit={handleSubmit}>
+              <form className="space-y-4" onSubmit={hookFormSubmit(onSubmit)}>
                 <input type="text" name="website" value={honeyPot} onChange={(e) => setHoneyPot(e.target.value)} className="opacity-0 absolute -z-10 w-0 h-0" tabIndex={-1} autoComplete="off" />
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-stone-600">{dict.labelName}</label>
-                    <input name="name" required value={formData.name} onChange={handleChange} type="text" className="w-full bg-stone-50 border border-stone-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 transition" placeholder={dict.placeholderName} />
+                    <input {...register('name')} type="text" className="w-full bg-stone-50 border border-stone-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 transition" placeholder={dict.placeholderName} />
+                    {errors.name && <p className="text-red-500 text-xs font-bold">{errors.name.message}</p>}
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-stone-600">{dict.labelEmail}</label>
-                    <input name="email" required value={formData.email} onChange={handleChange} type="email" className="w-full bg-stone-50 border border-stone-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 transition" placeholder="jan@example.com" />
+                    <input {...register('email')} type="email" className="w-full bg-stone-50 border border-stone-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 transition" placeholder="jan@example.com" />
+                    {errors.email && <p className="text-red-500 text-xs font-bold">{errors.email.message}</p>}
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-stone-600">{dict.labelSubject}</label>
-                  <input name="subject" value={formData.subject} onChange={handleChange} type="text" className="w-full bg-stone-50 border border-stone-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 transition" placeholder={dict.placeholderSubject} />
+                  <input {...register('subject')} type="text" className="w-full bg-stone-50 border border-stone-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 transition" placeholder={dict.placeholderSubject} />
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-stone-600">{dict.labelMessage}</label>
-                  <textarea name="message" required value={formData.message} onChange={handleChange} rows={4} className="w-full bg-stone-50 border border-stone-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 transition resize-none" placeholder={dict.placeholderMessage}></textarea>
+                  <textarea {...register('message')} rows={4} className="w-full bg-stone-50 border border-stone-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 transition resize-none" placeholder={dict.placeholderMessage}></textarea>
+                  {errors.message && <p className="text-red-500 text-xs font-bold">{errors.message.message}</p>}
                 </div>
 
                 {/* MATEMATICKÁ CAPTCHA */}
@@ -193,7 +200,7 @@ export default function KontaktPage() {
 
                 {status === 'error' && (
                   <div className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-lg text-sm font-bold border border-red-100">
-                    <AlertCircle size={18} /> {dict.errorText}
+                    <AlertCircle size={18} /> {errorMessage || dict.errorText}
                   </div>
                 )}
 

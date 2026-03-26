@@ -10,7 +10,7 @@ export async function GET(req: Request) {
     const supabase = getServerSupabase();
     const res = await supabase
       .from('newsletter')
-      .select('id,created_at,subject,sent_at')
+      .select('id,created_at,subject,sent_at,target_count,open_count,click_count')
       .order('sent_at', { ascending: false })
       .limit(50);
     if (res.error) throw res.error;

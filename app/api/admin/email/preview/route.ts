@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/server-auth';
 import { renderEmailTemplate, type EmailTemplateKey, listEmailTemplates } from '@/lib/email/templates';
 import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
+import { sanitizeEmailHtml } from '@/lib/email/sanitize';
 
 function escapeHtml(s: string) {
   return s
@@ -51,7 +52,7 @@ export async function POST(req: Request) {
       return NextResponse.json({
         ok: true,
         subject: renderTokens(String(draftSubject || ''), variables),
-        html: renderTokens(String(draftHtml || ''), variables),
+        html: sanitizeEmailHtml(renderTokens(String(draftHtml || ''), variables)),
         source: 'draft',
       });
     }
@@ -59,10 +60,9 @@ export async function POST(req: Request) {
     const out = await renderEmailTemplateWithDbOverride(templateKey, variables);
     const def = renderEmailTemplate(templateKey, variables);
     const source = out?.subject === def.subject && out?.html === def.html ? 'default' : 'db';
-    return NextResponse.json({ ok: true, ...out, source });
+    return NextResponse.json({ ok: true, ...out, html: sanitizeEmailHtml(out?.html || ''), source });
   } catch (e: any) {
     const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
     return NextResponse.json({ error: e?.message || 'Error' }, { status });
   }
 }
-

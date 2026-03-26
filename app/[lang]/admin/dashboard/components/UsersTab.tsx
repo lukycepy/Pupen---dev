@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { supabase } from '@/lib/supabase';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { UserPlus, Edit3, Trash2, ShieldCheck, X, FileText, ExternalLink } from 'lucide-react';
+import { UserPlus, Edit3, Trash2, ShieldCheck, X, FileText, ExternalLink, Users, Search } from 'lucide-react';
 import { useToast } from '../../../../context/ToastContext';
 import ConfirmModal from '@/app/components/ConfirmModal';
 import AdminModuleHeader from './ui/AdminModuleHeader';
@@ -96,6 +96,10 @@ export default function UsersTab({ dict }: UsersTabProps) {
   const [scanBusy, setScanBusy] = useState(false);
   const [sendingReset, setSendingReset] = useState(false);
   const [sendingPassword, setSendingPassword] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'member' | 'other'>('all');
+  const [sortConfig, setSortConfig] = useState<{ col: string; asc: boolean }>({ col: 'last_name', asc: true });
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [revokingSessions, setRevokingSessions] = useState(false);
 
   const sendResetLink = async (email: string) => {
@@ -167,17 +171,22 @@ export default function UsersTab({ dict }: UsersTabProps) {
     return out;
   };
 
-  const adminsQuery = useInfiniteQuery({
-    queryKey: ['admins_paged'],
+  const usersQuery = useInfiniteQuery({
+    queryKey: ['users_paged', roleFilter, searchQuery, sortConfig.col, sortConfig.asc],
     queryFn: async ({ pageParam }) => {
       const from = typeof pageParam === 'number' ? pageParam : 0;
       const to = from + PAGE_SIZE - 1;
-      const res = await supabase
-        .from('profiles')
-        .select('id,email,first_name,last_name,is_admin,is_member,is_blocked,can_manage_admins')
-        .eq('is_admin', true)
-        .order('last_name', { ascending: true })
-        .range(from, to);
+      let q = supabase.from('profiles').select('id,email,first_name,last_name,is_admin,is_member,is_blocked,can_manage_admins,created_at');
+      
+      if (roleFilter === 'admin') q = q.eq('is_admin', true);
+      else if (roleFilter === 'member') q = q.eq('is_member', true).eq('is_admin', false);
+      else if (roleFilter === 'other') q = q.eq('is_member', false).eq('is_admin', false);
+
+      if (searchQuery) {
+        q = q.or(`email.ilike.%${searchQuery}%,first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%`);
+      }
+
+      const res = await q.order(sortConfig.col, { ascending: sortConfig.asc }).range(from, to);
       if (res.error) throw res.error;
       const items = res.data || [];
       return { items, nextFrom: items.length === PAGE_SIZE ? to + 1 : null };
@@ -186,49 +195,7 @@ export default function UsersTab({ dict }: UsersTabProps) {
     getNextPageParam: (lastPage) => lastPage.nextFrom,
   });
 
-  const membersQuery = useInfiniteQuery({
-    queryKey: ['members_paged'],
-    queryFn: async ({ pageParam }) => {
-      const from = typeof pageParam === 'number' ? pageParam : 0;
-      const to = from + PAGE_SIZE - 1;
-      const res = await supabase
-        .from('profiles')
-        .select('id,email,first_name,last_name,is_admin,is_member,is_blocked,can_manage_admins')
-        .eq('is_member', true)
-        .eq('is_admin', false)
-        .order('last_name', { ascending: true })
-        .range(from, to);
-      if (res.error) throw res.error;
-      const items = res.data || [];
-      return { items, nextFrom: items.length === PAGE_SIZE ? to + 1 : null };
-    },
-    initialPageParam: 0,
-    getNextPageParam: (lastPage) => lastPage.nextFrom,
-  });
-
-  const othersQuery = useInfiniteQuery({
-    queryKey: ['others_paged'],
-    queryFn: async ({ pageParam }) => {
-      const from = typeof pageParam === 'number' ? pageParam : 0;
-      const to = from + PAGE_SIZE - 1;
-      const res = await supabase
-        .from('profiles')
-        .select('id,email,first_name,last_name,is_admin,is_member,is_blocked,can_manage_admins')
-        .eq('is_member', false)
-        .eq('is_admin', false)
-        .order('last_name', { ascending: true })
-        .range(from, to);
-      if (res.error) throw res.error;
-      const items = res.data || [];
-      return { items, nextFrom: items.length === PAGE_SIZE ? to + 1 : null };
-    },
-    initialPageParam: 0,
-    getNextPageParam: (lastPage) => lastPage.nextFrom,
-  });
-
-  const admins = (adminsQuery.data?.pages || []).flatMap((p) => p.items);
-  const members = (membersQuery.data?.pages || []).flatMap((p) => p.items);
-  const others = (othersQuery.data?.pages || []).flatMap((p) => p.items);
+  const allUsers = (usersQuery.data?.pages || []).flatMap((p) => p.items);
 
   const defaultPerms: any = {};
   modules.forEach(m => {
@@ -367,9 +334,7 @@ export default function UsersTab({ dict }: UsersTabProps) {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admins_paged'] });
-      queryClient.invalidateQueries({ queryKey: ['members_paged'] });
-      queryClient.invalidateQueries({ queryKey: ['others_paged'] });
+      queryClient.invalidateQueries({ queryKey: ['users_paged'] });
       handleCancel();
       showToast(dict.admin.alertAdminSuccess, 'success');
     },
@@ -393,10 +358,9 @@ export default function UsersTab({ dict }: UsersTabProps) {
       if (!res.ok) throw new Error(json?.error || 'Chyba');
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admins_paged'] });
-      queryClient.invalidateQueries({ queryKey: ['members_paged'] });
-      queryClient.invalidateQueries({ queryKey: ['others_paged'] });
+      queryClient.invalidateQueries({ queryKey: ['users_paged'] });
       showToast(dict.admin.confirmDeleteSuccess || 'Smazáno', 'success');
+      setModalOpen(false);
     },
     onError: (err: any) => {
       showToast(err.message, 'error');
@@ -421,9 +385,7 @@ export default function UsersTab({ dict }: UsersTabProps) {
       return json;
     },
     onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ['admins_paged'] });
-      queryClient.invalidateQueries({ queryKey: ['members_paged'] });
-      queryClient.invalidateQueries({ queryKey: ['others_paged'] });
+      queryClient.invalidateQueries({ queryKey: ['users_paged'] });
       const results = Array.isArray(data?.results) ? data.results : [];
       const okCount = results.filter((r: any) => r?.ok).length;
       const errCount = results.length - okCount;
@@ -433,6 +395,29 @@ export default function UsersTab({ dict }: UsersTabProps) {
     onError: (err: any) => {
       showToast(err?.message || 'Chyba', 'error');
     },
+  });
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
+      
+      const res = await fetch('/api/admin/users/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ids })
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Chyba smazání');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users_paged'] });
+      setSelectedIds([]);
+      showToast('Vybraní uživatelé smazáni', 'success');
+      setModalOpen(false);
+    },
+    onError: (err: any) => showToast(err.message, 'error')
   });
 
   const onSubmit = (data: any) => {
@@ -501,6 +486,32 @@ export default function UsersTab({ dict }: UsersTabProps) {
     const url = String(json?.signedUrl || '');
     if (!url) throw new Error('Chybí URL');
     window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleCreateNew = () => {
+    setEditingAdmin({ id: null });
+    reset({
+      email: '',
+      first_name: '',
+      last_name: '',
+      is_admin: false,
+      is_member: false,
+      is_blocked: false,
+      blocked_reason: '',
+      member_since: '',
+      member_expires_at: '',
+      application_scan_url: '',
+      password: generatePassword(12),
+      can_manage_admins: false,
+      phone: '',
+      address: '',
+      date_of_birth: '',
+      application_received_at: '',
+      notes_internal: '',
+      ...defaultPerms
+    });
+    setScanDoc(null);
+    setScanFile(null);
   };
 
   const handleEdit = async (adm: any) => {
@@ -580,10 +591,19 @@ export default function UsersTab({ dict }: UsersTabProps) {
     reset();
   };
 
-  const deleteAdmin = (id: string) => {
+  const handleBulkDelete = () => {
     setModalConfig({
-      title: dict.admin.confirmDeleteAdmin || 'Smazat administrátora?',
-      message: dict.admin.confirmDeleteAdminMessage || 'Opravdu chcete tohoto administrátora smazat? Tato operace je nevratná a uživatel ztratí přístup do admin panelu.',
+      title: 'Smazat vybrané uživatele?',
+      message: `Opravdu chcete smazat ${selectedIds.length} uživatelů? Tato akce je nevratná.`,
+      onConfirm: () => bulkDeleteMutation.mutate(selectedIds)
+    });
+    setModalOpen(true);
+  };
+
+  const deleteItem = (id: string) => {
+    setModalConfig({
+      title: dict.admin.confirmDeleteAdmin || 'Smazat uživatele?',
+      message: dict.admin.confirmDeleteAdminMessage || 'Opravdu chcete smazat tohoto uživatele? Tato operace je nevratná.',
       onConfirm: () => deleteMutation.mutate(id)
     });
     setModalOpen(true);
@@ -598,7 +618,7 @@ export default function UsersTab({ dict }: UsersTabProps) {
           <div className="flex items-center gap-2 px-4 py-2 bg-stone-50 rounded-xl border border-stone-100">
             <ShieldCheck size={16} className="text-green-600" />
             <span className="text-[10px] font-black uppercase tracking-widest text-stone-500">
-              {admins.length + members.length}{adminsQuery.hasNextPage || membersQuery.hasNextPage ? '+' : ''} uživatelů
+              {allUsers.length}{usersQuery.hasNextPage ? '+' : ''} uživatelů
             </span>
           </div>
         }
@@ -943,156 +963,133 @@ export default function UsersTab({ dict }: UsersTabProps) {
             </div>
           </div>
 
-          <h2 className="text-xl font-black text-stone-900 mb-8">Admini</h2>
-          <div className="grid sm:grid-cols-2 gap-4">
-            {adminsQuery.isLoading ? (
-              <div className="sm:col-span-2 p-10 text-center text-stone-400 font-bold uppercase tracking-widest text-xs bg-stone-50 rounded-[2rem] border border-dashed border-stone-200">
-                {dict.admin.btnLoading || 'Načítám...'}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+            <h2 className="text-xl font-black text-stone-900">Seznam uživatelů</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={`${sortConfig.col}|${sortConfig.asc}`}
+                onChange={(e) => {
+                  const [col, asc] = e.target.value.split('|');
+                  setSortConfig({ col, asc: asc === 'true' });
+                }}
+                className="px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition cursor-pointer"
+              >
+                <option value="last_name|true">Příjmení (A-Z)</option>
+                <option value="last_name|false">Příjmení (Z-A)</option>
+                <option value="first_name|true">Jméno (A-Z)</option>
+                <option value="first_name|false">Jméno (Z-A)</option>
+                <option value="email|true">E-mail (A-Z)</option>
+                <option value="email|false">E-mail (Z-A)</option>
+                <option value="created_at|false">Nejnovější</option>
+                <option value="created_at|true">Nejstarší</option>
+              </select>
+
+              <div className="bg-stone-100 p-1 rounded-xl flex">
+                {['all', 'admin', 'member', 'other'].map(r => (
+                  <button
+                    key={r}
+                    onClick={() => setRoleFilter(r as any)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${roleFilter === r ? 'bg-white shadow-sm text-stone-900' : 'text-stone-500 hover:text-stone-700'}`}
+                  >
+                    {r === 'all' ? 'Všichni' : r === 'admin' ? 'Admini' : r === 'member' ? 'Členové' : 'Ostatní'}
+                  </button>
+                ))}
               </div>
-            ) : (
-              admins.map((adm) => (
-                <div key={adm.id} className="flex gap-4 items-center p-5 bg-stone-50/50 rounded-[2rem] border border-transparent hover:border-stone-100 hover:bg-white transition-all group">
-                  <div className="w-14 h-14 bg-stone-900 text-white rounded-2xl flex items-center justify-center font-black text-lg uppercase shrink-0 shadow-lg shadow-stone-900/20 group-hover:bg-green-600 transition-colors">
-                    {((adm.first_name?.[0] || '') as string)}{((adm.last_name?.[0] || '') as string)}
-                  </div>
-                  <div className="flex-grow min-w-0">
-                    <h3 className="font-black text-stone-900 truncate">{adm.first_name} {adm.last_name}</h3>
-                    <p className="text-xs text-stone-400 font-bold truncate mb-3">{adm.email}</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {adm.is_admin && <span className="text-[8px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-black uppercase tracking-widest">Admin</span>}
-                      {adm.is_member && <span className="text-[8px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-black uppercase tracking-widest">Člen</span>}
-                      {adm.can_manage_admins && <span className="text-[8px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-black uppercase tracking-widest">SuperAdmin</span>}
-                      {adm.is_blocked && <span className="text-[8px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-black uppercase tracking-widest">Blokovaný</span>}
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => handleEdit(adm)} className="p-2 text-stone-400 hover:text-green-600 hover:bg-green-50 rounded-xl transition-all"><Edit3 size={18} /></button>
-                    {adm.email !== 'cepelak@pupen.org' && (
-                      <button onClick={() => deleteAdmin(adm.id)} className="p-2 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={18} /></button>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
+            </div>
           </div>
 
-          {adminsQuery.hasNextPage && (
-            <div className="flex justify-center pt-6">
+          <div className="relative mb-6">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400" size={16} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Hledat podle e-mailu, jména..."
+              className="w-full pl-12 pr-4 py-3 bg-stone-50 border-none rounded-xl focus:ring-2 focus:ring-green-500 transition text-sm font-medium"
+            />
+          </div>
+
+          {selectedIds.length > 0 && (
+            <div className="bg-red-50 p-4 rounded-2xl border border-red-100 flex items-center justify-between animate-in fade-in zoom-in duration-200 mb-6">
+              <span className="text-red-700 font-bold text-sm">Vybráno uživatelů: {selectedIds.length}</span>
               <button
-                type="button"
-                onClick={() => adminsQuery.fetchNextPage()}
-                disabled={adminsQuery.isFetchingNextPage}
-                className="px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
+                onClick={handleBulkDelete}
+                className="bg-red-600 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-red-700 transition shadow-sm"
               >
-                {adminsQuery.isFetchingNextPage ? (dict.admin.btnLoading || 'Načítám...') : (dict.admin.btnMore || 'Načíst další')}
+                <Trash2 size={14} /> Smazat vybrané
               </button>
             </div>
           )}
 
-          <div className="mt-10 pt-10 border-t border-stone-100">
-            <h2 className="text-xl font-black text-stone-900 mb-8">Členové</h2>
-            <div className="grid sm:grid-cols-2 gap-4">
-              {membersQuery.isLoading ? (
-                <div className="sm:col-span-2 p-10 text-center text-stone-400 font-bold uppercase tracking-widest text-xs bg-stone-50 rounded-[2rem] border border-dashed border-stone-200">
-                  {dict.admin.btnLoading || 'Načítám...'}
-                </div>
-              ) : (
-                members.map((adm) => (
-                  <div key={adm.id} className="flex gap-4 items-center p-5 bg-stone-50/50 rounded-[2rem] border border-transparent hover:border-stone-100 hover:bg-white transition-all group">
-                    <div className="w-14 h-14 bg-stone-900 text-white rounded-2xl flex items-center justify-center font-black text-lg uppercase shrink-0 shadow-lg shadow-stone-900/20 group-hover:bg-blue-600 transition-colors">
-                      {((adm.first_name?.[0] || '') as string)}
-                      {((adm.last_name?.[0] || '') as string)}
-                    </div>
-                    <div className="flex-grow min-w-0">
-                      <h3 className="font-black text-stone-900 truncate">
-                        {adm.first_name} {adm.last_name}
-                      </h3>
-                      <p className="text-xs text-stone-400 font-bold truncate mb-3">{adm.email}</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        <span className="text-[8px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-black uppercase tracking-widest">Člen</span>
-                        {adm.is_blocked && <span className="text-[8px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-black uppercase tracking-widest">Blokovaný</span>}
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => handleEdit(adm)} className="p-2 text-stone-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
-                        <Edit3 size={18} />
-                      </button>
-                      {adm.email !== 'cepelak@pupen.org' && (
-                        <button onClick={() => deleteAdmin(adm.id)} className="p-2 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all">
-                          <Trash2 size={18} />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            {membersQuery.hasNextPage && (
-              <div className="flex justify-center pt-6">
-                <button
-                  type="button"
-                  onClick={() => membersQuery.fetchNextPage()}
-                  disabled={membersQuery.isFetchingNextPage}
-                  className="px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
-                >
-                  {membersQuery.isFetchingNextPage ? (dict.admin.btnLoading || 'Načítám...') : (dict.admin.btnMore || 'Načíst další')}
-                </button>
+          <div className="grid sm:grid-cols-2 gap-4">
+            {usersQuery.isLoading ? (
+              <div className="sm:col-span-2 p-10 text-center text-stone-400 font-bold uppercase tracking-widest text-xs bg-stone-50 rounded-[2rem] border border-dashed border-stone-200">
+                {dict.admin.btnLoading || 'Načítám...'}
               </div>
-            )}
-          </div>
+            ) : (
+              allUsers.map((u: any) => {
+                const isAdmin = u.is_admin;
+                const isMember = u.is_member;
+                const isBlocked = u.is_blocked;
+                const isSelected = selectedIds.includes(u.id);
 
-          <div className="mt-10 pt-10 border-t border-stone-100">
-            <h2 className="text-xl font-black text-stone-900 mb-8">Uživatelé</h2>
-            <div className="grid sm:grid-cols-2 gap-4">
-              {othersQuery.isLoading ? (
-                <div className="sm:col-span-2 p-10 text-center text-stone-400 font-bold uppercase tracking-widest text-xs bg-stone-50 rounded-[2rem] border border-dashed border-stone-200">
-                  {dict.admin.btnLoading || 'Načítám...'}
-                </div>
-              ) : (
-                others.map((u) => (
-                  <div key={u.id} className="flex gap-4 items-center p-5 bg-stone-50/50 rounded-[2rem] border border-transparent hover:border-stone-100 hover:bg-white transition-all group">
-                    <div className="w-14 h-14 bg-stone-900 text-white rounded-2xl flex items-center justify-center font-black text-lg uppercase shrink-0 shadow-lg shadow-stone-900/20 group-hover:bg-stone-700 transition-colors">
-                      {((u.first_name?.[0] || '') as string)}
-                      {((u.last_name?.[0] || '') as string)}
+                return (
+                  <div key={u.id} className={`flex gap-4 items-center p-5 rounded-[2rem] border transition-all group ${isSelected ? 'border-green-500 bg-green-50/10' : 'bg-stone-50/50 border-transparent hover:border-stone-100 hover:bg-white'}`}>
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={(e) => {
+                          if (e.target.checked) setSelectedIds([...selectedIds, u.id]);
+                          else setSelectedIds(selectedIds.filter(id => id !== u.id));
+                        }}
+                        className="w-5 h-5 text-green-600 rounded-lg border-stone-300 focus:ring-green-500 cursor-pointer"
+                      />
+                    </div>
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-lg uppercase shrink-0 transition-colors ${isAdmin ? 'bg-stone-900 text-white shadow-lg shadow-stone-900/20' : isMember ? 'bg-blue-100 text-blue-700' : 'bg-stone-200 text-stone-500'}`}>
+                      {((u.first_name?.[0] || '') as string)}{((u.last_name?.[0] || '') as string)}
                     </div>
                     <div className="flex-grow min-w-0">
-                      <h3 className="font-black text-stone-900 truncate">
-                        {u.first_name} {u.last_name}
-                      </h3>
+                      <h3 className="font-black text-stone-900 truncate">{u.first_name || 'Neznámý'} {u.last_name || 'Uživatel'}</h3>
                       <p className="text-xs text-stone-400 font-bold truncate mb-3">{u.email}</p>
                       <div className="flex flex-wrap gap-1.5">
-                        {u.is_blocked && <span className="text-[8px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-black uppercase tracking-widest">Blokovaný</span>}
+                        {isAdmin && <span className="text-[8px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-black uppercase tracking-widest">Admin</span>}
+                        {isMember && <span className="text-[8px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-black uppercase tracking-widest">Člen</span>}
+                        {u.can_manage_admins && <span className="text-[8px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-black uppercase tracking-widest">SuperAdmin</span>}
+                        {isBlocked && <span className="text-[8px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-black uppercase tracking-widest">Blokovaný</span>}
                       </div>
                     </div>
                     <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => handleEdit(u)} className="p-2 text-stone-400 hover:text-stone-900 hover:bg-stone-100 rounded-xl transition-all">
-                        <Edit3 size={18} />
-                      </button>
+                      <button onClick={() => handleEdit(u)} className="p-2 text-stone-400 hover:text-green-600 hover:bg-green-50 rounded-xl transition-all"><Edit3 size={18} /></button>
                       {u.email !== 'cepelak@pupen.org' && (
-                        <button onClick={() => deleteAdmin(u.id)} className="p-2 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all">
-                          <Trash2 size={18} />
-                        </button>
+                        <button onClick={() => deleteItem(u.id)} className="p-2 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={18} /></button>
                       )}
                     </div>
                   </div>
-                ))
-              )}
-            </div>
-
-            {othersQuery.hasNextPage && (
-              <div className="flex justify-center pt-6">
-                <button
-                  type="button"
-                  onClick={() => othersQuery.fetchNextPage()}
-                  disabled={othersQuery.isFetchingNextPage}
-                  className="px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
-                >
-                  {othersQuery.isFetchingNextPage ? (dict.admin.btnLoading || 'Načítám...') : (dict.admin.btnMore || 'Načíst další')}
-                </button>
-              </div>
+                );
+              })
             )}
           </div>
+
+          {allUsers.length === 0 && !usersQuery.isLoading && (
+            <div className="p-10 text-center text-stone-400 font-bold text-sm bg-stone-50 rounded-[2rem] border border-dashed border-stone-200 mt-4">
+              Žádní uživatelé neodpovídají filtru.
+            </div>
+          )}
+
+          {usersQuery.hasNextPage && (
+            <div className="flex justify-center pt-6">
+              <button
+                type="button"
+                onClick={() => usersQuery.fetchNextPage()}
+                disabled={usersQuery.isFetchingNextPage}
+                className="px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
+              >
+                {usersQuery.isFetchingNextPage ? (dict.admin.btnLoading || 'Načítám...') : (dict.admin.btnMore || 'Načíst další')}
+              </button>
+            </div>
+          )}
+
         </div>
       </div>
 

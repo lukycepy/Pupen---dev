@@ -50,7 +50,7 @@ export async function enqueueEmailSend(input: EnqueueEmailInput, supabase?: any)
 
 export async function sendMailWithQueueFallback(opts: {
   transporter: any;
-  message: { from: string; to: string; subject: string; html: string; replyTo?: string; headers?: Record<string, string> };
+  message: { from: string; to: string; subject: string; html: string; replyTo?: string; headers?: Record<string, string>; attachments?: any[] };
   meta?: EmailQueueMeta;
   supabase?: any;
 }) {
@@ -62,6 +62,7 @@ export async function sendMailWithQueueFallback(opts: {
       html: opts.message.html,
       replyTo: opts.message.replyTo || undefined,
       headers: opts.message.headers,
+      attachments: opts.message.attachments,
     });
     return { ok: true as const };
   } catch (e: any) {

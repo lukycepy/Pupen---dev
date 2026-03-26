@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { MessageSquare, Trash2, Mail, Clock, Download, Tag, CheckCircle, Clock3, User } from 'lucide-react';
+import { MessageSquare, Trash2, Mail, Clock, Download, Tag, CheckCircle, Clock3, User, AlertTriangle } from 'lucide-react';
 import ConfirmModal from '@/app/components/ConfirmModal';
 import { useToast } from '@/app/context/ToastContext';
 
@@ -13,6 +13,7 @@ interface MessagesTabProps {
 }
 
 const PAGE_SIZE = 40;
+const SLA_HOURS = 48; // Upozornění po 48 hodinách
 
 const availableTags = ['dotaz', 'stížnost', 'spolupráce', 'spam', 'urgentní', 'finance', 'členství'];
 
@@ -134,9 +135,41 @@ export default function MessagesTab({ dict, readOnly = false }: MessagesTabProps
     }
   };
 
+  const archiveMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/admin/messages/bulk-archive`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ olderThanDays: 30 })
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error || 'Chyba při archivaci');
+      }
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['messages_paged'] });
+      queryClient.invalidateQueries({ queryKey: ['messages_count'] });
+      showToast(`Archivováno ${data.archivedCount} starých zpráv`, 'success');
+    },
+    onError: (err: any) => {
+      showToast(err?.message || 'Chyba při archivaci', 'error');
+    }
+  });
+
+  const handleBulkArchive = () => {
+    setModalConfig({
+      title: 'Hromadná archivace',
+      message: 'Opravdu chcete uzavřít (archivovat) všechny zprávy starší než 30 dní?',
+      onConfirm: () => archiveMutation.mutate()
+    });
+    setModalOpen(true);
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center bg-white p-6 rounded-2xl border shadow-sm">
+      <div className="flex justify-between items-center bg-white p-6 rounded-2xl border shadow-sm flex-wrap gap-4">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-green-100 text-green-600 rounded-xl">
             <Mail size={24} />
@@ -146,13 +179,25 @@ export default function MessagesTab({ dict, readOnly = false }: MessagesTabProps
             <p className="text-sm text-stone-500">{(countQuery.data ?? messages.length)} {dict.admin.messagesCountText}</p>
           </div>
         </div>
-        <button 
-          onClick={exportMessages}
-          className="flex items-center gap-2 bg-stone-900 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-stone-800 transition shadow-lg"
-        >
-          <Download size={18} />
-          {dict.admin?.btnExportCsv || 'Export CSV'}
-        </button>
+        <div className="flex gap-2 flex-wrap">
+          {!readOnly && (
+            <button 
+              onClick={handleBulkArchive}
+              className="flex items-center gap-2 bg-stone-100 text-stone-600 px-5 py-2.5 rounded-xl font-bold hover:bg-stone-200 transition shadow-sm"
+              disabled={archiveMutation.isPending}
+            >
+              <CheckCircle size={18} />
+              {archiveMutation.isPending ? 'Archivuji...' : 'Archivovat starší 30 dní'}
+            </button>
+          )}
+          <button 
+            onClick={exportMessages}
+            className="flex items-center gap-2 bg-stone-900 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-stone-800 transition shadow-lg"
+          >
+            <Download size={18} />
+            {dict.admin?.btnExportCsv || 'Export CSV'}
+          </button>
+        </div>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
@@ -162,112 +207,118 @@ export default function MessagesTab({ dict, readOnly = false }: MessagesTabProps
             <p className="text-stone-400 font-bold">{dict.admin.emptyInbox}</p>
           </div>
         ) : (
-          messages.map((msg) => (
-            <div key={msg.id} className="bg-white p-6 rounded-2xl border border-stone-100 shadow-sm hover:shadow-md transition group relative">
-              {!readOnly && (
-                <button 
-                  onClick={() => deleteMessage(msg.id)}
-                  className="absolute top-4 right-4 p-2 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition opacity-0 group-hover:opacity-100"
-                  title={dict.admin.deleteTooltip}
-                >
-                  <Trash2 size={18} />
-                </button>
-              )}
+          messages.map((msg) => {
+            const isSlaBreached = msg.status === 'open' && (new Date().getTime() - new Date(msg.created_at).getTime()) > SLA_HOURS * 60 * 60 * 1000;
 
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold border uppercase ${
-                    msg.status === 'closed' ? 'bg-stone-100 text-stone-400 border-stone-200' :
-                    msg.status === 'in_progress' ? 'bg-amber-50 text-amber-500 border-amber-200' :
-                    'bg-green-50 text-green-600 border-green-200'
-                  }`}>
-                    {msg.name?.substring(0, 2)}
+            return (
+              <div key={msg.id} className={`bg-white p-6 rounded-2xl border ${isSlaBreached ? 'border-red-300 shadow-red-900/5' : 'border-stone-100'} shadow-sm hover:shadow-md transition group relative`}>
+                {!readOnly && (
+                  <button 
+                    onClick={() => deleteMessage(msg.id)}
+                    className="absolute top-4 right-4 p-2 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition opacity-0 group-hover:opacity-100"
+                    title={dict.admin.deleteTooltip}
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                )}
+
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold border uppercase ${
+                      msg.status === 'closed' ? 'bg-stone-100 text-stone-400 border-stone-200' :
+                      msg.status === 'in_progress' ? 'bg-amber-50 text-amber-500 border-amber-200' :
+                      isSlaBreached ? 'bg-red-50 text-red-600 border-red-200 animate-pulse' :
+                      'bg-green-50 text-green-600 border-green-200'
+                    }`}>
+                      {msg.name?.substring(0, 2)}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-stone-900 leading-tight flex items-center gap-2">
+                        {msg.name}
+                        {msg.status === 'closed' && <CheckCircle size={14} className="text-stone-400" />}
+                        {isSlaBreached && <span title="SLA vypršelo (nevyřešeno přes 48h)"><AlertTriangle size={14} className="text-red-500" /></span>}
+                      </h3>
+                      <a href={`mailto:${msg.email}`} className="text-xs text-stone-400 hover:text-green-600 transition flex items-center gap-1">
+                        <Mail size={12} /> {msg.email}
+                      </a>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-bold text-stone-900 leading-tight flex items-center gap-2">
-                      {msg.name}
-                      {msg.status === 'closed' && <CheckCircle size={14} className="text-stone-400" />}
-                    </h3>
-                    <a href={`mailto:${msg.email}`} className="text-xs text-stone-400 hover:text-green-600 transition flex items-center gap-1">
-                      <Mail size={12} /> {msg.email}
+                  <div className="flex flex-col gap-2 items-end">
+                    <select
+                      value={msg.status || 'open'}
+                      onChange={(e) => updateMutation.mutate({ id: msg.id, data: { status: e.target.value } })}
+                      className="text-[10px] font-black uppercase tracking-widest bg-stone-50 border-none rounded-lg px-2 py-1 outline-none cursor-pointer"
+                    >
+                      <option value="open">Otevřeno</option>
+                      <option value="in_progress">Řeší se</option>
+                      <option value="closed">Uzavřeno</option>
+                    </select>
+                    <a 
+                      href={`mailto:${msg.email}?subject=Re: ${msg.subject || 'Zpráva z webu Pupen'}`}
+                      className="bg-stone-900 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-stone-800 transition-all shadow-sm"
+                    >
+                      Odpovědět
                     </a>
                   </div>
                 </div>
-                <div className="flex flex-col gap-2 items-end">
-                  <select
-                    value={msg.status || 'open'}
-                    onChange={(e) => updateMutation.mutate({ id: msg.id, data: { status: e.target.value } })}
-                    className="text-[10px] font-black uppercase tracking-widest bg-stone-50 border-none rounded-lg px-2 py-1 outline-none cursor-pointer"
-                  >
-                    <option value="open">Otevřeno</option>
-                    <option value="in_progress">Řeší se</option>
-                    <option value="closed">Uzavřeno</option>
-                  </select>
-                  <a 
-                    href={`mailto:${msg.email}?subject=Re: ${msg.subject || 'Zpráva z webu Pupen'}`}
-                    className="bg-stone-900 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-stone-800 transition-all shadow-sm"
-                  >
-                    Odpovědět
-                  </a>
+
+                <div className="bg-stone-50 p-4 rounded-xl mb-4 border border-stone-100">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">{dict.admin.labelSubject}</p>
+                  <p className="font-bold text-stone-700">{msg.subject || dict.admin.noSubject}</p>
                 </div>
-              </div>
 
-              <div className="bg-stone-50 p-4 rounded-xl mb-4 border border-stone-100">
-                <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">{dict.admin.labelSubject}</p>
-                <p className="font-bold text-stone-700">{msg.subject || dict.admin.noSubject}</p>
-              </div>
+                <p className="text-stone-600 text-sm leading-relaxed mb-6 whitespace-pre-wrap pl-2 border-l-2 border-stone-100">
+                  {msg.message}
+                </p>
 
-              <p className="text-stone-600 text-sm leading-relaxed mb-6 whitespace-pre-wrap pl-2 border-l-2 border-stone-100">
-                {msg.message}
-              </p>
-
-              <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-stone-50">
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-2">
-                    <User size={14} className="text-stone-400" />
-                    <select
-                      value={msg.assigned_to || ''}
-                      onChange={(e) => updateMutation.mutate({ id: msg.id, data: { assigned_to: e.target.value || null } })}
-                      className="text-xs text-stone-600 bg-transparent outline-none cursor-pointer hover:bg-stone-50 rounded px-1"
-                    >
-                      <option value="">-- Nepřiřazeno --</option>
-                      {admins.map((a: any) => (
-                        <option key={a.id} value={a.id}>{a.first_name} {a.last_name || a.email}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Tag size={14} className="text-stone-400" />
-                    {msg.tags?.map((t: string) => (
-                      <span key={t} className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-bold uppercase flex items-center gap-1 cursor-pointer"
-                        onClick={() => updateMutation.mutate({ id: msg.id, data: { tags: msg.tags.filter((x: string) => x !== t) } })}
+                <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-stone-50">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <User size={14} className="text-stone-400" />
+                      <select
+                        value={msg.assigned_to || ''}
+                        onChange={(e) => updateMutation.mutate({ id: msg.id, data: { assigned_to: e.target.value || null } })}
+                        className="text-xs text-stone-600 bg-transparent outline-none cursor-pointer hover:bg-stone-50 rounded px-1"
                       >
-                        {t} &times;
-                      </span>
-                    ))}
-                    <select
-                      value=""
-                      onChange={(e) => {
-                        if (e.target.value && !msg.tags?.includes(e.target.value)) {
-                          updateMutation.mutate({ id: msg.id, data: { tags: [...(msg.tags || []), e.target.value] } });
-                        }
-                      }}
-                      className="text-[10px] bg-transparent text-stone-400 font-bold uppercase outline-none cursor-pointer"
-                    >
-                      <option value="">+ Tag</option>
-                      {availableTags.filter(t => !msg.tags?.includes(t)).map(t => (
-                        <option key={t} value={t}>{t}</option>
+                        <option value="">-- Nepřiřazeno --</option>
+                        {admins.map((a: any) => (
+                          <option key={a.id} value={a.id}>{a.first_name} {a.last_name || a.email}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Tag size={14} className="text-stone-400" />
+                      {msg.tags?.map((t: string) => (
+                        <span key={t} className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-bold uppercase flex items-center gap-1 cursor-pointer"
+                          onClick={() => updateMutation.mutate({ id: msg.id, data: { tags: msg.tags.filter((x: string) => x !== t) } })}
+                        >
+                          {t} &times;
+                        </span>
                       ))}
-                    </select>
+                      <select
+                        value=""
+                        onChange={(e) => {
+                          if (e.target.value && !msg.tags?.includes(e.target.value)) {
+                            updateMutation.mutate({ id: msg.id, data: { tags: [...(msg.tags || []), e.target.value] } });
+                          }
+                        }}
+                        className="text-[10px] bg-transparent text-stone-400 font-bold uppercase outline-none cursor-pointer"
+                      >
+                        <option value="">+ Tag</option>
+                        {availableTags.filter(t => !msg.tags?.includes(t)).map(t => (
+                          <option key={t} value={t}>{t}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
-                </div>
 
-                <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-stone-300">
-                  <Clock size={12} /> {new Date(msg.created_at).toLocaleString()}
-                </span>
+                  <span className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-widest ${isSlaBreached ? 'text-red-500' : 'text-stone-300'}`}>
+                    <Clock size={12} /> {new Date(msg.created_at).toLocaleString('cs-CZ')}
+                  </span>
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 

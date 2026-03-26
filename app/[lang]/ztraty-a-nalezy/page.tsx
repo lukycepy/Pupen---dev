@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { KeyRound, MapPin, Phone, ShieldCheck, Search } from 'lucide-react';
+import { KeyRound, MapPin, Phone, ShieldCheck, Search, HandHeart } from 'lucide-react';
 import InlinePulse from '@/app/components/InlinePulse';
 
 type Item = {
@@ -23,6 +23,42 @@ export default function LostFoundPage() {
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState('');
   const [status, setStatus] = useState<'all' | 'open' | 'returned'>('open');
+  const [claimingItem, setClaimingItem] = useState<Item | null>(null);
+  const [claimEmail, setClaimEmail] = useState('');
+  const [claimMessage, setClaimMessage] = useState('');
+  const [claimSending, setClaimSending] = useState(false);
+  const [claimSent, setClaimSent] = useState(false);
+
+  const handleClaimSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!claimingItem || !claimEmail) return;
+    setClaimSending(true);
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'Žádost z webu (Lost & Found)',
+          email: claimEmail,
+          subject: `Nárok na nalezenou věc: ${claimingItem.title}`,
+          message: `Dobrý den,\n\ntímto žádám o navrácení položky nalezené na webu:\n- ID: ${claimingItem.id}\n- Název: ${claimingItem.title}\n\nMůj vzkaz:\n${claimMessage}\n\nS pozdravem,\n${claimEmail}`,
+          hp: ''
+        })
+      });
+      if (!res.ok) throw new Error('Chyba odeslání');
+      setClaimSent(true);
+      setTimeout(() => {
+        setClaimingItem(null);
+        setClaimSent(false);
+        setClaimEmail('');
+        setClaimMessage('');
+      }, 3000);
+    } catch (err) {
+      alert(lang === 'en' ? 'Error sending request' : 'Chyba při odesílání žádosti');
+    } finally {
+      setClaimSending(false);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -134,8 +170,72 @@ export default function LostFoundPage() {
                   </div>
                 ) : null}
               </div>
+              {i.status === 'open' && (
+                <div className="mt-6 pt-6 border-t border-stone-100">
+                  <button 
+                    onClick={() => setClaimingItem(i)}
+                    className="w-full flex items-center justify-center gap-2 bg-stone-900 text-white px-6 py-3 rounded-xl font-bold hover:bg-stone-800 transition"
+                  >
+                    <HandHeart size={18} />
+                    {lang === 'en' ? 'This is mine!' : 'To je moje!'}
+                  </button>
+                </div>
+              )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Claim Modal */}
+      {claimingItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl relative">
+            <button onClick={() => setClaimingItem(null)} className="absolute top-6 right-6 text-stone-400 hover:text-stone-900">✕</button>
+            <h3 className="text-2xl font-black text-stone-900 mb-2">{lang === 'en' ? 'Claim item' : 'Žádost o navrácení'}</h3>
+            <p className="text-stone-500 mb-6 font-medium">
+              {lang === 'en' ? `You are claiming: ` : `Žádáte o navrácení věci: `} 
+              <strong className="text-stone-900">{claimingItem.title}</strong>
+            </p>
+
+            {claimSent ? (
+              <div className="bg-green-50 text-green-700 p-6 rounded-2xl text-center font-bold">
+                {lang === 'en' ? 'Request sent! We will contact you soon.' : 'Žádost odeslána! Brzy se vám ozveme.'}
+              </div>
+            ) : (
+              <form onSubmit={handleClaimSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">E-mail</label>
+                  <input
+                    type="email"
+                    required
+                    value={claimEmail}
+                    onChange={(e) => setClaimEmail(e.target.value)}
+                    className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
+                    placeholder="vas@email.cz"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">{lang === 'en' ? 'Message (how do you prove it is yours?)' : 'Zpráva (jak prokážete, že je věc vaše?)'}</label>
+                  <textarea
+                    required
+                    value={claimMessage}
+                    onChange={(e) => setClaimMessage(e.target.value)}
+                    rows={4}
+                    className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-medium text-stone-700 focus:ring-2 focus:ring-green-500 transition resize-none"
+                    placeholder={lang === 'en' ? 'Describe specific details...' : 'Popište specifické detaily věci...'}
+                  />
+                </div>
+                <button 
+                  type="submit" 
+                  disabled={claimSending}
+                  className="w-full bg-green-600 text-white font-bold py-4 rounded-xl hover:bg-green-700 transition flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {claimSending ? <InlinePulse className="bg-white" size={16} /> : <HandHeart size={18} />}
+                  {lang === 'en' ? 'Send request' : 'Odeslat žádost'}
+                </button>
+              </form>
+            )}
+          </div>
         </div>
       )}
     </div>

@@ -1,0 +1,119 @@
+import { NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/server-auth';
+import { getServerSupabase } from '@/lib/supabase-server';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+
+export async function GET(req: Request) {
+  try {
+    const { profile } = await requireAdmin(req);
+    if (!profile?.is_admin && !profile?.can_manage_admins) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+    if (!id) return NextResponse.json({ error: 'Missing ID' }, { status: 400 });
+
+    const supabase = getServerSupabase();
+    const { data: app, error } = await supabase.from('membership_applications').select('*').eq('id', id).single();
+    if (error || !app) throw error || new Error('Not found');
+
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage([595.28, 841.89]); // A4
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    
+    let y = 800;
+    const margin = 50;
+
+    const drawText = (text: string, size = 12, isBold = false) => {
+      // Very basic non-ascii strip for Helvetica
+      const safeText = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9\s.,@:-_]/g, '?');
+      page.drawText(safeText, {
+        x: margin,
+        y,
+        size,
+        font: isBold ? fontBold : font,
+        color: rgb(0, 0, 0),
+      });
+      y -= (size + 10);
+    };
+
+    drawText('Prihlaska za clena spolku Pupen', 20, true);
+    y -= 20;
+
+    drawText('OSOBNI UDAJE', 14, true);
+    drawText(`Jmeno: ${app.first_name} ${app.last_name}`);
+    drawText(`Email: ${app.email}`);
+    drawText(`Univerzitni email: ${app.university_email || '-'}`);
+    drawText(`Telefon: ${app.phone || '-'}`);
+    drawText(`Rocnik: ${app.study_year || '-'}, Obor: ${app.study_program || '-'}`);
+    y -= 10;
+
+    drawText('ADRESA', 14, true);
+    drawText(`Ulice: ${app.address_street || '-'}`);
+    drawText(`Mesto: ${app.address_city || '-'} ${app.address_zip || '-'}`);
+    drawText(`Kolej/Pokoj: ${app.dormitory || '-'} / ${app.room_number || '-'}`);
+    y -= 10;
+
+    drawText('O ZADATELOVI', 14, true);
+    drawText(`Ocekavani: ${app.expectations || '-'}`);
+    drawText(`Zkusenosti: ${app.experience || '-'}`);
+    y -= 10;
+
+    drawText('STAV', 14, true);
+    drawText(`Status: ${app.status}`);
+    drawText(`Podano: ${new Date(app.created_at).toLocaleString('cs-CZ')}`);
+
+    if (app.applicant_signature) {
+      y -= 20;
+      drawText('PODPIS ZADATELE', 14, true);
+      try {
+        const sigImageBytes = Buffer.from(app.applicant_signature.split(',')[1], 'base64');
+        const image = await pdfDoc.embedPng(sigImageBytes);
+        const { width, height } = image.scale(0.5);
+        page.drawImage(image, {
+          x: margin,
+          y: y - height,
+          width,
+          height,
+        });
+        y -= (height + 20);
+      } catch (e) {
+        drawText('(Chyba pri nacteni podpisu)');
+      }
+    }
+
+    if (app.president_signature) {
+      y -= 20;
+      drawText('PODPIS PREDSEDY', 14, true);
+      try {
+        const sigImageBytes = Buffer.from(app.president_signature.split(',')[1], 'base64');
+        const image = await pdfDoc.embedPng(sigImageBytes);
+        const { width, height } = image.scale(0.5);
+        page.drawImage(image, {
+          x: margin,
+          y: y - height,
+          width,
+          height,
+        });
+        y -= (height + 20);
+      } catch (e) {
+        drawText('(Chyba pri nacteni podpisu)');
+      }
+    }
+
+    const pdfBytes = await pdfDoc.save();
+
+    return new NextResponse(Buffer.from(pdfBytes), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="prihlaska_${app.last_name}_${app.first_name}.pdf"`,
+      },
+    });
+
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}

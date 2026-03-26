@@ -3,6 +3,8 @@ export type PromoRule = {
   title?: string;
   active: boolean;
   mode?: 'per_rsvp' | 'per_attendee';
+  discountAmount?: number | null;
+  discountPercentage?: number | null;
   maxUses?: number | null;
   maxUsesPerEmail?: number | null;
   eventIds?: string[];
@@ -46,6 +48,8 @@ export function normalizePromoRules(input: any): PromoRule[] {
 
     const maxUses = r?.maxUses === '' || r?.maxUses == null ? null : Number(r.maxUses);
     const maxUsesPerEmail = r?.maxUsesPerEmail === '' || r?.maxUsesPerEmail == null ? null : Number(r.maxUsesPerEmail);
+    const discountAmount = r?.discountAmount === '' || r?.discountAmount == null ? null : Number(r.discountAmount);
+    const discountPercentage = r?.discountPercentage === '' || r?.discountPercentage == null ? null : Number(r.discountPercentage);
     const eventIds = Array.isArray(r?.eventIds) ? r.eventIds.map((x: any) => String(x)).filter(Boolean) : [];
     const mode = r?.mode === 'per_attendee' ? 'per_attendee' : 'per_rsvp';
     const whitelistEmails = normalizeEmailList(r?.whitelistEmails);
@@ -55,6 +59,8 @@ export function normalizePromoRules(input: any): PromoRule[] {
       title: r?.title ? String(r.title).trim() : '',
       active: !!r?.active,
       mode,
+      discountAmount: Number.isFinite(discountAmount) && discountAmount! >= 0 ? discountAmount : null,
+      discountPercentage: Number.isFinite(discountPercentage) && discountPercentage! >= 0 && discountPercentage! <= 100 ? discountPercentage : null,
       maxUses: Number.isFinite(maxUses) && maxUses! >= 1 ? Math.floor(maxUses!) : null,
       maxUsesPerEmail: Number.isFinite(maxUsesPerEmail) && maxUsesPerEmail! >= 1 ? Math.floor(maxUsesPerEmail!) : null,
       eventIds,

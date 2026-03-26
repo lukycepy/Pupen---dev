@@ -2,10 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Mail, Users, Send, Trash2, Download, Search, FileText, Save, History, Plus, Edit2, Loader2, Copy } from 'lucide-react';
+import { Mail, Users, Send, Trash2, Download, Search, FileText, Save, History, Plus, Edit2, Loader2, Copy, Paperclip, X } from 'lucide-react';
 import { useToast } from '@/app/context/ToastContext';
 import ConfirmModal from '@/app/components/ConfirmModal';
 import { SkeletonTabContent } from '@/app/[lang]/components/Skeleton';
+import TiptapEditor from '@/app/[lang]/components/Editor';
 
 export default function NewsletterTab({ dict }: { dict: any }) {
   const { showToast } = useToast();
@@ -23,10 +24,11 @@ export default function NewsletterTab({ dict }: { dict: any }) {
   const [composeHtml, setComposeHtml] = useState('');
   const [composeCats, setComposeCats] = useState<string[]>(['all']);
   const [composeRoleIds, setComposeRoleIds] = useState<string[]>([]);
+  const [attachments, setAttachments] = useState<{name: string, url: string}[]>([]);
   
   const [sending, setSending] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [view, setView] = useState<'compose' | 'subscribers' | 'history'>('compose');
+  const [view, setView] = useState<'compose' | 'subscribers' | 'history' | 'digest'>('compose');
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState<{ title: string; message: string; onConfirm: () => void }>({
@@ -34,6 +36,32 @@ export default function NewsletterTab({ dict }: { dict: any }) {
     message: '',
     onConfirm: () => {}
   });
+
+  const [digestData, setDigestData] = useState<any>(null);
+  const [loadingDigest, setLoadingDigest] = useState(false);
+
+  const fetchDigest = async () => {
+    setLoadingDigest(true);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const res = await fetch('/api/admin/digest', { headers: { Authorization: `Bearer ${data.session?.access_token}` } });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Chyba načítání digestu');
+      setDigestData(json.digest);
+    } catch (e: any) {
+      showToast(e.message, 'error');
+    } finally {
+      setLoadingDigest(false);
+    }
+  };
+
+  const importDigestToEditor = () => {
+    if (!digestData) return;
+    setComposeSubject(digestData.subject || 'Týdenní souhrn');
+    setComposeHtml(digestData.html || '');
+    setView('compose');
+    showToast('Digest načten do editoru', 'success');
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -114,6 +142,17 @@ export default function NewsletterTab({ dict }: { dict: any }) {
     }
   };
 
+  const addAttachment = () => {
+    const url = prompt('Vložte URL přílohy (musí být veřejně dostupná):');
+    if (!url) return;
+    const name = prompt('Název přílohy (např. dokument.pdf):') || url.split('/').pop() || 'priloha';
+    setAttachments([...attachments, { name, url }]);
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments(attachments.filter((_, i) => i !== index));
+  };
+
   const sendNewsletter = async () => {
     setSending(true);
     try {
@@ -141,6 +180,7 @@ export default function NewsletterTab({ dict }: { dict: any }) {
       setComposeHtml('');
       setComposeCats(['all']);
       setComposeRoleIds([]);
+      setAttachments([]);
       setActiveDraftId(null);
     } catch (e: any) {
       showToast(e?.message || 'Chyba', 'error');
@@ -253,7 +293,57 @@ export default function NewsletterTab({ dict }: { dict: any }) {
   const loadTemplate = (tpl: any) => {
     setComposeSubject(tpl.subject);
     setComposeHtml(tpl.body_html);
+    setView('compose');
     showToast('Šablona načtena', 'success');
+  };
+
+  const handleCreateTemplate = async () => {
+    const name = prompt('Název nové šablony:');
+    if (!name) return;
+    
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
+      
+      const res = await fetch('/api/admin/newsletter/templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ 
+          name,
+          subject: composeSubject || 'Předmět šablony', 
+          body_html: composeHtml || '<h3>Začněte psát...</h3>' 
+        }),
+      });
+      
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Chyba');
+      
+      setTemplates([...templates, json.template]);
+      showToast('Šablona vytvořena', 'success');
+    } catch (e: any) {
+      showToast(e.message, 'error');
+    }
+  };
+
+  const deleteTemplate = async (id: string) => {
+    if (!confirm('Smazat šablonu?')) return;
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
+      
+      const res = await fetch(`/api/admin/newsletter/templates/${id}`, { 
+        method: 'DELETE', 
+        headers: { Authorization: `Bearer ${token}` } 
+      });
+      
+      if (!res.ok) throw new Error('Chyba při mazání');
+      setTemplates(templates.filter(t => t.id !== id));
+      showToast('Šablona smazána', 'success');
+    } catch (e: any) {
+      showToast(e.message, 'error');
+    }
   };
 
   const filteredSubscribers = subscribers.filter(s => {
@@ -289,6 +379,13 @@ export default function NewsletterTab({ dict }: { dict: any }) {
             className={`px-4 py-2 rounded-lg text-xs font-bold transition ${view === 'history' ? 'bg-white shadow-sm text-stone-900' : 'text-stone-500 hover:text-stone-700'}`}
           >
             Drafty & Šablony
+          </button>
+          <button 
+            onClick={() => { setView('digest'); if (!digestData) fetchDigest(); }} 
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${view === 'digest' ? 'bg-white shadow-sm text-stone-900' : 'text-stone-500 hover:text-stone-700'}`}
+          >
+            <Loader2 size={14} className={loadingDigest ? 'animate-spin' : 'hidden'} />
+            Automatický Digest
           </button>
         </div>
       </div>
@@ -373,14 +470,39 @@ export default function NewsletterTab({ dict }: { dict: any }) {
             <div className="text-xs text-stone-500 font-medium">
               HTML se odešle tak, jak ho vložíš.
             </div>
+            
+            <div className="pt-4 border-t border-stone-100">
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2 flex items-center gap-2">
+                Přílohy <span className="bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded-md">{attachments.length}</span>
+              </div>
+              <div className="flex flex-col gap-2">
+                {attachments.map((a, i) => (
+                  <div key={i} className="flex items-center justify-between bg-stone-50 px-3 py-2 rounded-xl text-xs font-bold text-stone-700">
+                    <div className="flex items-center gap-2 truncate">
+                      <Paperclip size={14} className="text-stone-400 flex-shrink-0" />
+                      <span className="truncate">{a.name}</span>
+                    </div>
+                    <button onClick={() => removeAttachment(i)} className="p-1 hover:bg-stone-200 rounded text-stone-400 hover:text-red-500 transition">
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={addAttachment}
+                  className="flex items-center justify-center gap-2 w-full py-2 border-2 border-dashed border-stone-200 rounded-xl text-xs font-bold text-stone-500 hover:border-green-500 hover:text-green-600 transition"
+                >
+                  <Plus size={14} /> Přidat přílohu (URL)
+                </button>
+              </div>
+            </div>
           </div>
 
           <div>
             <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">Obsah (HTML)</div>
-            <textarea
+            <TiptapEditor 
               value={composeHtml}
-              onChange={(e) => setComposeHtml(e.target.value)}
-              className="w-full min-h-[220px] px-4 py-3 bg-stone-50 rounded-xl border border-stone-100 focus:ring-2 focus:ring-green-500 transition font-mono text-xs"
+              onChange={(html) => setComposeHtml(html)}
               placeholder="<h3>Ahoj!</h3><p>…</p>"
             />
           </div>
@@ -447,6 +569,7 @@ export default function NewsletterTab({ dict }: { dict: any }) {
                     <tr className="text-[10px] font-black uppercase tracking-widest text-stone-400">
                       <th className="px-6 py-4">E-mail</th>
                       <th className="px-6 py-4">Kategorie</th>
+                      <th className="px-6 py-4">Preference</th>
                       <th className="px-6 py-4">Datum</th>
                       <th className="px-6 py-4 text-right">Akce</th>
                     </tr>
@@ -454,7 +577,7 @@ export default function NewsletterTab({ dict }: { dict: any }) {
                   <tbody className="divide-y divide-stone-50">
                     {filteredSubscribers.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className="px-6 py-20 text-center text-stone-400 font-bold">
+                        <td colSpan={5} className="px-6 py-20 text-center text-stone-400 font-bold">
                           Žádní odběratelé k zobrazení
                         </td>
                       </tr>
@@ -469,6 +592,12 @@ export default function NewsletterTab({ dict }: { dict: any }) {
                                   {cat}
                                 </span>
                               ))}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-wrap gap-1">
+                              {s.preferences?.marketing && <span className="text-[9px] font-black uppercase tracking-widest bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">Marketing</span>}
+                              {s.preferences?.transactional && <span className="text-[9px] font-black uppercase tracking-widest bg-green-50 text-green-600 px-2 py-0.5 rounded-full">Transakční</span>}
                             </div>
                           </td>
                           <td className="px-6 py-4 text-xs text-stone-500 font-medium">
@@ -510,18 +639,36 @@ export default function NewsletterTab({ dict }: { dict: any }) {
                   <thead className="bg-stone-50 border-b">
                     <tr className="text-[10px] font-black uppercase tracking-widest text-stone-400">
                       <th className="px-6 py-4">Předmět</th>
+                      <th className="px-6 py-4 text-center">Dosah</th>
+                      <th className="px-6 py-4 text-center">Open Rate</th>
+                      <th className="px-6 py-4 text-center">Click Rate</th>
                       <th className="px-6 py-4">Odesláno</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-stone-50">
-                    {sentCampaigns.map((c: any) => (
-                      <tr key={c.id} className="hover:bg-stone-50/50 transition">
-                        <td className="px-6 py-4 font-bold text-stone-900">{c.subject || '(bez předmětu)'}</td>
-                        <td className="px-6 py-4 text-xs text-stone-500 font-medium">
-                          {c.sent_at ? new Date(c.sent_at).toLocaleString() : '-'}
-                        </td>
-                      </tr>
-                    ))}
+                    {sentCampaigns.map((c: any) => {
+                      const openRate = c.target_count ? Math.round((c.open_count / c.target_count) * 100) : 0;
+                      const clickRate = c.target_count ? Math.round((c.click_count / c.target_count) * 100) : 0;
+                      return (
+                        <tr key={c.id} className="hover:bg-stone-50/50 transition">
+                          <td className="px-6 py-4 font-bold text-stone-900">{c.subject || '(bez předmětu)'}</td>
+                          <td className="px-6 py-4 text-center text-stone-600 font-bold">{c.target_count || 0}</td>
+                          <td className="px-6 py-4 text-center">
+                            <span className={`px-2 py-1 rounded-lg text-xs font-bold ${openRate > 20 ? 'bg-green-50 text-green-700' : 'bg-stone-100 text-stone-600'}`}>
+                              {openRate}% <span className="text-[10px] text-stone-400 font-normal">({c.open_count || 0})</span>
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className={`px-2 py-1 rounded-lg text-xs font-bold ${clickRate > 5 ? 'bg-blue-50 text-blue-700' : 'bg-stone-100 text-stone-600'}`}>
+                              {clickRate}% <span className="text-[10px] text-stone-400 font-normal">({c.click_count || 0})</span>
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-xs text-stone-500 font-medium">
+                            {c.sent_at ? new Date(c.sent_at).toLocaleString() : '-'}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -597,16 +744,73 @@ export default function NewsletterTab({ dict }: { dict: any }) {
                           <button onClick={() => loadTemplate(t)} className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition" title="Použít šablonu">
                             <Copy size={16} />
                           </button>
+                          <button onClick={() => deleteTemplate(t.id)} className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition" title="Smazat šablonu">
+                            <Trash2 size={16} />
+                          </button>
                         </div>
                       </div>
                     </div>
                   ))
                 )}
-                <button className="w-full p-4 border-2 border-dashed border-stone-200 rounded-2xl text-stone-400 font-bold hover:bg-stone-50 hover:border-stone-300 transition flex items-center justify-center gap-2">
-                  <Plus size={20} /> Vytvořit novou šablonu
+                <button onClick={handleCreateTemplate} className="w-full p-4 border-2 border-dashed border-stone-200 rounded-2xl text-stone-400 font-bold hover:bg-stone-50 hover:border-stone-300 transition flex items-center justify-center gap-2">
+                  <Plus size={20} /> Uložit aktuální jako šablonu
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {view === 'digest' && (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="bg-white p-8 rounded-[2rem] border shadow-sm">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+              <div>
+                <h3 className="text-xl font-black flex items-center gap-3">
+                  <FileText className="text-purple-600" />
+                  Automatický týdenní souhrn (Digest)
+                </h3>
+                <p className="text-stone-500 mt-2 font-medium max-w-2xl">
+                  Digest se generuje automaticky z novinek, akcí a ztrát/nálezů za poslední týden. 
+                  Zde si ho můžete prohlédnout a v případě potřeby naimportovat do editoru newsletteru k úpravě a rozeslání všem odběratelům.
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={fetchDigest}
+                  disabled={loadingDigest}
+                  className="flex items-center gap-2 bg-stone-100 text-stone-600 px-5 py-2.5 rounded-xl font-bold hover:bg-stone-200 transition text-sm disabled:opacity-50"
+                >
+                  <Loader2 size={16} className={loadingDigest ? 'animate-spin' : 'hidden'} />
+                  Přegenerovat
+                </button>
+                <button
+                  onClick={importDigestToEditor}
+                  disabled={!digestData}
+                  className="flex items-center gap-2 bg-purple-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-purple-700 transition shadow-lg text-sm disabled:opacity-50"
+                >
+                  <Copy size={16} />
+                  Načíst do editoru
+                </button>
+              </div>
+            </div>
+
+            {digestData ? (
+              <div className="bg-stone-50 p-6 rounded-2xl border border-stone-100">
+                <div className="mb-4 pb-4 border-b border-stone-200">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-stone-400">Předmět:</span>
+                  <div className="font-bold text-stone-900 text-lg mt-1">{digestData.subject}</div>
+                </div>
+                <div 
+                  className="prose max-w-none bg-white p-8 rounded-xl border border-stone-200 shadow-sm"
+                  dangerouslySetInnerHTML={{ __html: digestData.html }}
+                />
+              </div>
+            ) : (
+              <div className="p-12 text-center bg-stone-50 rounded-2xl border border-dashed border-stone-200 text-stone-400 font-bold">
+                {loadingDigest ? 'Generuji souhrn...' : 'Digest není k dispozici. Zkuste ho přegenerovat.'}
+              </div>
+            )}
           </div>
         </div>
       )}

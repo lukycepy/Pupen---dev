@@ -10,6 +10,7 @@ import Image from 'next/image';
 import { SkeletonTabContent } from '../../../components/Skeleton';
 import AdminModuleHeader from './ui/AdminModuleHeader';
 import AdminEmptyState from './ui/AdminEmptyState';
+import { Download } from 'lucide-react';
 
 export default function ApplicationsTab({ dict }: { dict: any }) {
   const queryClient = useQueryClient();
@@ -279,9 +280,18 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
                   <p className="text-stone-400 text-[10px] font-black uppercase tracking-widest mt-0.5">ID: {selectedApp.id.substring(0, 8)}</p>
                 </div>
               </div>
-              <button onClick={() => setSelectedApp(null)} className="p-3 hover:bg-stone-100 rounded-2xl transition text-stone-400 hover:text-stone-900">
-                <XCircle size={28} />
-              </button>
+              <div className="flex items-center gap-2">
+                <a 
+                  href={`/api/admin/applications/export-pdf?id=${selectedApp.id}`}
+                  target="_blank"
+                  className="flex items-center gap-2 px-4 py-3 bg-white border border-stone-200 text-stone-700 rounded-xl hover:bg-stone-50 transition text-[10px] font-black uppercase tracking-widest shadow-sm"
+                >
+                  <Download size={14} /> Export PDF
+                </a>
+                <button onClick={() => setSelectedApp(null)} className="p-3 hover:bg-stone-100 rounded-2xl transition text-stone-400 hover:text-stone-900">
+                  <XCircle size={28} />
+                </button>
+              </div>
             </div>
             
             <div className="flex-grow overflow-y-auto p-8 lg:p-12 custom-scrollbar">

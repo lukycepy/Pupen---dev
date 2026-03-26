@@ -5,11 +5,7 @@ import { getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer
 import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
 import { sendMailWithQueueFallback } from '@/lib/email/queue';
 import { triggerWebhooks } from '@/lib/webhook';
-
-function isEmail(input: string) {
-  const v = String(input || '').trim();
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-}
+import { contactFormSchema } from '@/lib/validations/contact';
 
 const BLOCKED_DOMAINS = [
   'mailinator.com',
@@ -41,13 +37,14 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const honeypot = String(body?.website || body?.hp || '').trim();
     if (honeypot) return NextResponse.json({ ok: true });
-    const name = String(body?.name || '').trim().slice(0, 120);
-    const email = String(body?.email || '').trim().toLowerCase().slice(0, 240);
-    const subject = body?.subject != null ? String(body.subject).trim().slice(0, 240) : '';
-    const message = String(body?.message || '').trim().slice(0, 10_000);
 
-    if (!name || !email || !message) return NextResponse.json({ error: 'Chybí povinná pole.' }, { status: 400 });
-    if (!isEmail(email)) return NextResponse.json({ error: 'Neplatný e-mail.' }, { status: 400 });
+    const parseResult = contactFormSchema.safeParse(body);
+    if (!parseResult.success) {
+      return NextResponse.json({ error: parseResult.error.issues[0].message }, { status: 400 });
+    }
+
+    const { name, email, subject, message } = parseResult.data;
+
     if (isBlockedDomain(email)) return NextResponse.json({ error: 'Tato doména je na seznamu blokovaných kvůli spamu.' }, { status: 400 });
     if (countLinks(message) > 3) return NextResponse.json({ error: 'Zpráva obsahuje příliš mnoho odkazů.' }, { status: 400 });
 
@@ -55,8 +52,61 @@ export async function POST(req: Request) {
     const ins = await supabase.from('messages').insert([{ name, email, subject, message }]).select('id, created_at').single();
     if (ins.error) throw ins.error;
 
+    // Contact Routing dle subjectu (Multi-inbox)
+    let routingEmail = 'info@pupen.org'; // Default fallback
     const ps = await supabase.from('payment_settings').select('notification_email').limit(1).maybeSingle();
-    const to = ps.data?.notification_email ? String(ps.data.notification_email) : 'info@pupen.org';
+    if (ps.data?.notification_email) {
+      routingEmail = String(ps.data.notification_email);
+    }
+    
+    // Specifické směrování podle klíčových slov v předmětu
+    const subjectLower = String(subject || '').toLowerCase();
+    if (subjectLower.includes('financ') || subjectLower.includes('platb') || subjectLower.includes('faktur')) {
+      routingEmail = 'finance@pupen.org';
+    } else if (subjectLower.includes('tech') || subjectLower.includes('web') || subjectLower.includes('chyb')) {
+      routingEmail = 'tech@pupen.org';
+    } else if (subjectLower.includes('veden') || subjectLower.includes('spoluprac') || subjectLower.includes('board')) {
+      routingEmail = 'board@pupen.org';
+    }
+
+    // Send notifications to admins
+    try {
+      const { data: adminProfiles } = await supabase.from('profiles')
+        .select('email')
+        .or('is_admin.eq.true,can_manage_admins.eq.true');
+        
+      if (adminProfiles && adminProfiles.length > 0) {
+        // Unikátní maily včetně vybraného směrování
+        const adminEmailsSet = new Set(adminProfiles.map(p => p.email).filter(Boolean));
+        adminEmailsSet.add(routingEmail);
+        const adminEmails = Array.from(adminEmailsSet).join(',');
+        const transporter = await getMailerWithSettings();
+        const from = await getSenderFromSettings();
+        
+        await sendMailWithQueueFallback({
+          transporter,
+          supabase,
+          meta: { kind: 'notification' },
+          message: { 
+            from, 
+            to: adminEmails, 
+            subject: `Nová zpráva: ${subject}`, 
+            html: `
+              <h2>Nová zpráva z webu</h2>
+              <p><strong>Od:</strong> ${name} (${email})</p>
+              <p><strong>Předmět:</strong> ${subject}</p>
+              <p><strong>Zpráva:</strong></p>
+              <blockquote style="border-left: 4px solid #ccc; padding-left: 1rem; margin-left: 0;">
+                ${message.replace(/\n/g, '<br/>')}
+              </blockquote>
+              <p><a href="https://pupen.org/cs/admin#messages">Odpovědět v administraci</a></p>
+            ` 
+          },
+        });
+      }
+    } catch (notifyErr) {
+      console.error('Failed to send admin notification:', notifyErr);
+    }
 
     const { subject: mailSubject, html } = await renderEmailTemplateWithDbOverride('contact_message', {
       name,
@@ -74,7 +124,7 @@ export async function POST(req: Request) {
       transporter,
       supabase,
       meta: { kind: 'contact' },
-      message: { from, to, replyTo: email, subject: mailSubject, html },
+      message: { from, to: routingEmail, replyTo: email, subject: mailSubject, html },
     });
 
     // Trigger webhook asynchronously

@@ -9,6 +9,7 @@ import AdminEmptyState from './ui/AdminEmptyState';
 import AdminPanel from './ui/AdminPanel';
 import { useToast } from '../../../../context/ToastContext';
 import Image from 'next/image';
+import Papa from 'papaparse';
 
 export default function TeamTab({ dict, uploadImage }: { dict: any, uploadImage: (file: File, bucket: string) => Promise<string> }) {
   const queryClient = useQueryClient();
@@ -83,6 +84,32 @@ export default function TeamTab({ dict, uploadImage }: { dict: any, uploadImage:
     }
   };
 
+  const handleCsvImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        try {
+          const res = await fetch('/api/admin/team/import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rows: results.data })
+          });
+          const json = await res.json();
+          if (!res.ok) throw new Error(json.error);
+          showToast(`Úspěšně importováno ${json.imported} členů`, 'success');
+          queryClient.invalidateQueries({ queryKey: ['team_members'] });
+        } catch (err: any) {
+          showToast(err.message || 'Chyba importu', 'error');
+        }
+        e.target.value = '';
+      }
+    });
+  };
+
   if (isLoading) return <SkeletonTabContent />;
 
   return (
@@ -91,19 +118,25 @@ export default function TeamTab({ dict, uploadImage }: { dict: any, uploadImage:
         title="Tým a Vedení"
         description="Správa členů týmu, karet a sociálních odkazů"
         actions={
-          <button
-            onClick={() => {
-              setFormData({ 
-                name: '', role: '', bio: '', image_url: '', 
-                email: '', phone: '', social_linkedin: '', social_twitter: '', social_instagram: '',
-                sort_order: 0, is_active: true 
-              });
-              setIsEditing('new');
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-stone-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-stone-800 transition"
-          >
-            <Plus size={16} /> Přidat člena
-          </button>
+          <div className="flex gap-2">
+            <label className="flex items-center gap-2 px-4 py-2 bg-stone-100 text-stone-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-stone-200 transition cursor-pointer">
+              Import CSV
+              <input type="file" accept=".csv" className="hidden" onChange={handleCsvImport} />
+            </label>
+            <button
+              onClick={() => {
+                setFormData({ 
+                  name: '', role: '', bio: '', image_url: '', 
+                  email: '', phone: '', social_linkedin: '', social_twitter: '', social_instagram: '',
+                  sort_order: 0, is_active: true 
+                });
+                setIsEditing('new');
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-stone-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-stone-800 transition"
+            >
+              <Plus size={16} /> Přidat člena
+            </button>
+          </div>
         }
       />
 

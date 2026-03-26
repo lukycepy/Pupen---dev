@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { supabase } from '@/lib/supabase';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { Clock, Search, ChevronDown, ChevronUp, Download } from 'lucide-react';
 import { SkeletonTabContent } from '@/app/[lang]/components/Skeleton';
 import ConfirmModal from '@/app/components/ConfirmModal';
@@ -22,13 +22,20 @@ export default function LogsTab() {
   const [purgeMessage, setPurgeMessage] = React.useState('');
   const [purgePending, setPurgePending] = React.useState(false);
 
-  const { data: logs = [], isLoading } = useQuery({
+  const PAGE_SIZE = 100;
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ['admin_logs'],
-    queryFn: async () => {
-      const { data } = await supabase.from('admin_logs').select('*').order('created_at', { ascending: false }).limit(100);
-      return data || [];
-    }
+    queryFn: async ({ pageParam }) => {
+      const from = typeof pageParam === 'number' ? pageParam : 0;
+      const to = from + PAGE_SIZE - 1;
+      const { data: items } = await supabase.from('admin_logs').select('*').order('created_at', { ascending: false }).range(from, to);
+      return { items: items || [], nextFrom: (items || []).length === PAGE_SIZE ? to + 1 : null };
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => lastPage.nextFrom,
   });
+
+  const logs = data?.pages.flatMap(p => p.items) || [];
 
   React.useEffect(() => {
     let mounted = true;
@@ -287,6 +294,19 @@ export default function LogsTab() {
           );})
         )}
       </div>
+
+      {hasNextPage && (
+        <div className="flex justify-center pt-6">
+          <button
+            type="button"
+            onClick={() => fetchNextPage()}
+            disabled={isFetchingNextPage}
+            className="px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
+          >
+            {isFetchingNextPage ? 'Načítám...' : 'Načíst další'}
+          </button>
+        </div>
+      )}
 
       <ConfirmModal
         isOpen={purgeModalOpen}

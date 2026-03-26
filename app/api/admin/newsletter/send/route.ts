@@ -4,6 +4,8 @@ import { getServerSupabase } from '@/lib/supabase-server';
 import { getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer';
 import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
 import { sendMailWithQueueFallback } from '@/lib/email/queue';
+import { addUtmToEmailHtml } from '@/lib/email/utm';
+import { sanitizeEmailHtml } from '@/lib/email/sanitize';
 
 function normalizeCategories(input: any): string[] {
   const arr = Array.isArray(input) ? input : [];
@@ -49,9 +51,10 @@ export async function POST(req: Request) {
 
     const body = await req.json().catch(() => ({}));
     const subject = String(body?.subject || '').trim().slice(0, 240);
-    const html = String(body?.html || '').trim();
+    const html = sanitizeEmailHtml(String(body?.html || '').trim());
     const categories = normalizeCategories(body?.categories);
     const roleIds = Array.isArray(body?.roleIds) ? body.roleIds.map((x: any) => String(x || '').trim()).filter(Boolean) : [];
+    const attachments = Array.isArray(body?.attachments) ? body.attachments : [];
 
     if (!subject || !html) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
 
@@ -86,6 +89,15 @@ export async function POST(req: Request) {
     // Získáme URL pro odhlášení
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://pupen.org';
 
+    const createdAt = new Date().toISOString();
+    const ins = await supabase
+      .from('newsletter')
+      .insert([{ subject, html, sent_at: null, target_count: recipients.length }])
+      .select('id')
+      .single();
+    if (ins.error) throw ins.error;
+    const campaignId = String((ins.data as any)?.id || '');
+
     let queued = 0;
     // Povolíme maximálně 3 paralelní požadavky a po každém e-mailu ve frontě počkáme 100ms
     // Zabrání to rate limitingu od SMTP providera (např. SendGrid, AWS SES, Resend)
@@ -101,6 +113,7 @@ export async function POST(req: Request) {
         };
         
         const { html: wrappedHtml, subject: wrappedSubject } = await renderEmailTemplateWithDbOverride('newsletter', emailVars);
+        const trackedHtml = addUtmToEmailHtml(wrappedHtml, { baseUrl, campaign: campaignId, source: 'newsletter', medium: 'email', email: to });
         
         // Přidáme List-Unsubscribe hlavičku
         const r = await sendMailWithQueueFallback({
@@ -111,7 +124,11 @@ export async function POST(req: Request) {
             from, 
             to, 
             subject: wrappedSubject, 
-            html: wrappedHtml,
+            html: trackedHtml,
+            attachments: attachments.map((a: any) => ({
+              filename: a.name,
+              path: a.url
+            })),
             headers: {
               'List-Unsubscribe': `<${unsubUrl}>`,
               'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
@@ -130,17 +147,10 @@ export async function POST(req: Request) {
       100  // delayMs
     );
 
-    const now = new Date().toISOString();
-    const ins = await supabase
-      .from('newsletter')
-      .insert([{ subject, html, sent_at: now }])
-      .select('id')
-      .single();
-    if (ins.error) throw ins.error;
-    const campaignId = String((ins.data as any)?.id || '');
+    await supabase.from('newsletter').update({ sent_at: createdAt }).eq('id', campaignId);
 
     if (draftId) {
-      await supabase.from('newsletter_drafts').update({ status: 'sent', updated_at: now }).eq('id', draftId);
+      await supabase.from('newsletter_drafts').update({ status: 'sent', updated_at: createdAt }).eq('id', draftId);
     }
 
     await supabase
@@ -151,7 +161,7 @@ export async function POST(req: Request) {
           admin_name: user.user_metadata?.full_name || user.email || 'admin',
           action: 'NEWSLETTER_SENT',
           target_id: campaignId || null,
-          details: { categories, roleIds, sent: sendRes.ok, queued, failed: sendRes.failed, recipients: recipients.length },
+          details: { categories, roleIds, utmCampaign: campaignId, sent: sendRes.ok, queued, failed: sendRes.failed, recipients: recipients.length },
         },
       ])
       .throwOnError();

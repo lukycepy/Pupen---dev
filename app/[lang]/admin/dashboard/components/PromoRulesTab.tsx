@@ -13,6 +13,8 @@ type Rule = {
   title?: string;
   active: boolean;
   mode?: 'per_rsvp' | 'per_attendee';
+  discountAmount?: number | null;
+  discountPercentage?: number | null;
   maxUses?: number | null;
   maxUsesPerEmail?: number | null;
   eventIds?: string[];
@@ -31,6 +33,8 @@ export default function PromoRulesTab({ dict }: { dict: any }) {
     title: '',
     active: true,
     mode: 'per_rsvp' as 'per_rsvp' | 'per_attendee',
+    discountAmount: '',
+    discountPercentage: '',
     maxUses: '',
     maxUsesPerEmail: '',
     eventIdsCsv: '',
@@ -92,6 +96,8 @@ export default function PromoRulesTab({ dict }: { dict: any }) {
         code,
         title: r?.title ? String(r.title).trim() : '',
         active: !!r?.active,
+        discountAmount: r?.discountAmount == null || r?.discountAmount === '' ? null : Number(r.discountAmount),
+        discountPercentage: r?.discountPercentage == null || r?.discountPercentage === '' ? null : Number(r.discountPercentage),
         maxUses: r?.maxUses == null || r?.maxUses === '' ? null : Number(r.maxUses),
         maxUsesPerEmail: r?.maxUsesPerEmail == null || r?.maxUsesPerEmail === '' ? null : Number(r.maxUsesPerEmail),
         mode: r?.mode === 'per_attendee' ? 'per_attendee' : 'per_rsvp',
@@ -130,6 +136,8 @@ export default function PromoRulesTab({ dict }: { dict: any }) {
       title: '',
       active: true,
       mode: 'per_rsvp',
+      discountAmount: '',
+      discountPercentage: '',
       maxUses: '',
       maxUsesPerEmail: '',
       eventIdsCsv: '',
@@ -147,6 +155,8 @@ export default function PromoRulesTab({ dict }: { dict: any }) {
       title: r.title || '',
       active: !!r.active,
       mode: r.mode === 'per_attendee' ? 'per_attendee' : 'per_rsvp',
+      discountAmount: r.discountAmount != null ? String(r.discountAmount) : '',
+      discountPercentage: r.discountPercentage != null ? String(r.discountPercentage) : '',
       maxUses: r.maxUses != null ? String(r.maxUses) : '',
       maxUsesPerEmail: r.maxUsesPerEmail != null ? String(r.maxUsesPerEmail) : '',
       eventIdsCsv: (r.eventIds || []).join(','),
@@ -172,6 +182,8 @@ export default function PromoRulesTab({ dict }: { dict: any }) {
 
     const maxUses = newRule.maxUses ? Number(newRule.maxUses) : null;
     const maxUsesPerEmail = newRule.maxUsesPerEmail ? Number(newRule.maxUsesPerEmail) : null;
+    const discountAmount = newRule.discountAmount ? Number(newRule.discountAmount) : null;
+    const discountPercentage = newRule.discountPercentage ? Number(newRule.discountPercentage) : null;
 
     const next: Rule[] = [
       {
@@ -179,6 +191,8 @@ export default function PromoRulesTab({ dict }: { dict: any }) {
         title: newRule.title.trim(),
         active: !!newRule.active,
         mode: newRule.mode === 'per_attendee' ? 'per_attendee' : 'per_rsvp',
+        discountAmount: Number.isFinite(discountAmount) && discountAmount! >= 0 ? discountAmount : null,
+        discountPercentage: Number.isFinite(discountPercentage) && discountPercentage! >= 0 && discountPercentage! <= 100 ? discountPercentage : null,
         maxUses: Number.isFinite(maxUses) && maxUses! >= 1 ? Math.floor(maxUses!) : null,
         maxUsesPerEmail: Number.isFinite(maxUsesPerEmail) && maxUsesPerEmail! >= 1 ? Math.floor(maxUsesPerEmail!) : null,
         eventIds,
@@ -284,6 +298,26 @@ export default function PromoRulesTab({ dict }: { dict: any }) {
               <option value="per_rsvp">per RSVP</option>
               <option value="per_attendee">per attendee</option>
             </select>
+          </div>
+          <div className="md:col-span-2">
+            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">Sleva (Kč)</div>
+            <input
+              value={newRule.discountAmount}
+              onChange={(e) => setNewRule((p) => ({ ...p, discountAmount: e.target.value }))}
+              className="w-full bg-stone-50 border-none rounded-2xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none"
+              placeholder="např. 100"
+              inputMode="numeric"
+            />
+          </div>
+          <div className="md:col-span-2">
+            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">Sleva (%)</div>
+            <input
+              value={newRule.discountPercentage}
+              onChange={(e) => setNewRule((p) => ({ ...p, discountPercentage: e.target.value }))}
+              className="w-full bg-stone-50 border-none rounded-2xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none"
+              placeholder="např. 20"
+              inputMode="numeric"
+            />
           </div>
           <div className="md:col-span-2">
             <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">Max použití</div>
@@ -405,7 +439,9 @@ export default function PromoRulesTab({ dict }: { dict: any }) {
                     </div>
                     {r.title && <div className="mt-1 text-sm font-bold text-stone-700">{r.title}</div>}
                     <div className="mt-2 text-[10px] font-black uppercase tracking-widest text-stone-300">
-                      {r.eventIds && r.eventIds.length > 0 ? `events: ${r.eventIds.join(', ')}` : 'events: all'}
+                      {r.discountAmount ? `sleva: ${r.discountAmount} Kč` : ''}
+                      {r.discountPercentage ? ` • sleva: ${r.discountPercentage} %` : ''}
+                      {r.eventIds && r.eventIds.length > 0 ? ` • events: ${r.eventIds.join(', ')}` : ' • events: all'}
                       {r.maxUsesPerEmail ? ` • per email: ${r.maxUsesPerEmail}` : ''}
                       {r.whitelistEmails && r.whitelistEmails.length > 0 ? ` • whitelist: ${r.whitelistEmails.length}` : ''}
                       {r.startsAt ? ` • start: ${r.startsAt}` : ''}

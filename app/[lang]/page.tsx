@@ -98,8 +98,17 @@ export default function PupenWeb() {
         setPosts(postsRes?.data || []);
         setNextEvent(nextEventRes?.data || null);
 
-        const heroBgUrlRaw = cfgRes?.config?.home?.hero?.backgrounds?.[0];
-        const heroBgUrl = isSafeImageSrc(heroBgUrlRaw) ? String(heroBgUrlRaw) : '';
+        const heroBgUrlRaw = cfgRes?.config?.home?.hero?.backgrounds;
+        
+        // Vyber náhodný background z pole, nebo použij první, případně fallback
+        let heroBgUrl = '';
+        if (Array.isArray(heroBgUrlRaw) && heroBgUrlRaw.length > 0) {
+          const randomIndex = Math.floor(Math.random() * heroBgUrlRaw.length);
+          heroBgUrl = isSafeImageSrc(heroBgUrlRaw[randomIndex]) ? String(heroBgUrlRaw[randomIndex]) : '';
+        } else if (isSafeImageSrc(heroBgUrlRaw)) {
+          heroBgUrl = String(heroBgUrlRaw);
+        }
+        
         setHeroBg(heroBgUrl);
       } catch (e) {
         console.error('Homepage load failed', e);
@@ -168,10 +177,11 @@ export default function PupenWeb() {
             <img
               src={String(heroBg)}
               alt="Students"
-              className="absolute inset-0 w-full h-full object-cover"
-              loading="eager"
+              className="absolute inset-0 w-full h-full object-cover blur-sm transition-all duration-700"
+              loading="lazy"
               referrerPolicy="no-referrer"
               onError={() => setHeroBg('/img/prezentace_pupen.jpg')}
+              onLoad={(e) => e.currentTarget.classList.remove('blur-sm')}
             />
           ) : (
             <Image 
@@ -180,8 +190,9 @@ export default function PupenWeb() {
               fill
               priority
               sizes="100vw"
-              className="object-cover"
+              className="object-cover blur-sm transition-all duration-700"
               onError={() => setHeroBg('/img/prezentace_pupen.jpg')}
+              onLoadingComplete={(target) => target.classList.remove('blur-sm')}
             />
           )}
         </div>
@@ -257,8 +268,9 @@ export default function PupenWeb() {
               alt="Pupen" 
               width={800}
               height={550}
-              className="rounded-2xl shadow-2xl w-full aspect-[4/3] lg:aspect-auto object-cover h-auto lg:h-[550px]"
+              className="rounded-2xl shadow-2xl w-full aspect-[4/3] lg:aspect-auto object-cover h-auto lg:h-[550px] blur-sm transition-all duration-700"
               style={{ objectPosition: '50% 25%' }}
+              onLoadingComplete={(target) => target.classList.remove('blur-sm')}
             />
           </div>
         </div>
@@ -287,16 +299,18 @@ export default function PupenWeb() {
                              <img
                                src={String(post.image_url)}
                                alt={post.title}
-                               className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                               className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition duration-500 blur-sm"
                                loading="lazy"
                                referrerPolicy="no-referrer"
+                               onLoad={(e) => e.currentTarget.classList.remove('blur-sm')}
                              />
                            ) : (
                              <Image
                                src={post.image_url}
                                alt={post.title}
                                fill
-                               className="object-cover group-hover:scale-105 transition duration-500"
+                               className="object-cover group-hover:scale-105 transition duration-500 blur-sm"
+                               onLoadingComplete={(target) => target.classList.remove('blur-sm')}
                              />
                            )
                          ) : (
@@ -352,6 +366,28 @@ export default function PupenWeb() {
           </div>
         </div>
       </section>
+
+      {/* --- PŘIDÁNO: ZTRÁTY A NÁLEZY --- */}
+      {widgets.lostFound !== false && (
+        <section className="py-20 sm:py-24 bg-stone-100">
+          <div className="max-w-6xl mx-auto px-6">
+            <div className="text-center mb-12 sm:mb-16">
+              <span className="text-blue-600 font-bold uppercase tracking-widest text-sm mb-3 block">{lang === 'en' ? 'Lost & Found' : 'Ztráty a nálezy'}</span>
+              <h2 className="text-3xl sm:text-5xl font-black text-stone-900 tracking-tight">
+                {lang === 'en' ? 'Did you lose something?' : 'Ztratili jste něco?'}
+              </h2>
+              <p className="text-stone-500 mt-4 max-w-2xl mx-auto">
+                {lang === 'en' ? 'Check our public list of lost and found items from our events.' : 'Podívejte se na náš veřejný seznam ztrát a nálezů z našich akcí.'}
+              </p>
+            </div>
+            <div className="flex justify-center">
+              <Link href={`/${lang}/ztraty-a-nalezy`} className="inline-flex items-center gap-3 bg-white text-stone-900 px-8 py-4 rounded-2xl font-bold hover:bg-stone-50 transition shadow-sm border border-stone-200">
+                {lang === 'en' ? 'View Lost & Found' : 'Otevřít Ztráty a nálezy'} <ArrowRight size={20} />
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* --- 4.5 RYCHLÉ ODKAZY --- */}
       <section className="py-20 bg-stone-100">

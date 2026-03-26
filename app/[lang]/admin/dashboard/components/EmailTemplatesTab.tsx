@@ -390,7 +390,7 @@ export default function EmailTemplatesTab() {
                     </div>
                   </div>
                 </div>
-                <iframe title="Email preview" className="w-full h-[520px]" srcDoc={preview.html} />
+                <iframe title="Email preview" className="w-full h-[520px]" srcDoc={preview.html} sandbox="" />
               </div>
             )}
           </div>

@@ -9,7 +9,7 @@ export async function GET(req: Request) {
     const supabase = getServerSupabase();
     const res = await supabase
       .from('newsletter_subscriptions')
-      .select('*')
+      .select('id,email,categories,consent,source,preferences,created_at')
       .order('created_at', { ascending: false });
     if (res.error) throw res.error;
     return NextResponse.json({ ok: true, subscribers: res.data || [] });

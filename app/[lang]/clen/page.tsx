@@ -118,7 +118,7 @@ export default function ClenskaSekcePage() {
     } catch {}
   };
   const [isSavingProfile, setIsSavingProfile] = useState(false);
-  const [editProfile, setEditProfile] = useState({ first_name: '', last_name: '', address: '' });
+  const [editProfile, setEditProfile] = useState({ first_name: '', last_name: '', address: '', marketing_consent: true });
   const [editAddressMeta, setEditAddressMeta] = useState<any>(null);
   const [pw1, setPw1] = useState('');
   const [pw2, setPw2] = useState('');
@@ -193,7 +193,8 @@ export default function ClenskaSekcePage() {
       setEditProfile({ 
         first_name: userProf?.first_name || '', 
         last_name: userProf?.last_name || '',
-        address: (userProf as any)?.address || ''
+        address: (userProf as any)?.address || '',
+        marketing_consent: (userProf as any)?.marketing_consent !== false
       });
       setLoading(false);
     }
@@ -294,13 +295,14 @@ export default function ClenskaSekcePage() {
     }
   };
 
-  const downloadGdprExport = async () => {
+  const downloadGdprExport = async (format: 'json' | 'pdf' = 'json') => {
     try {
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
       if (!token) throw new Error(lang === 'en' ? 'Unauthorized' : 'Nepřihlášen');
 
-      const res = await fetch('/api/gdpr/export', { headers: { Authorization: `Bearer ${token}` } });
+      const endpoint = format === 'pdf' ? '/api/gdpr/export-pdf' : '/api/gdpr/export';
+      const res = await fetch(endpoint, { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         throw new Error(json?.error || 'Request failed');
@@ -310,7 +312,7 @@ export default function ClenskaSekcePage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `pupen_gdpr_export_${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `pupen_gdpr_export_${new Date().toISOString().slice(0, 10)}.${format}`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -371,12 +373,13 @@ export default function ClenskaSekcePage() {
           address: validatedAddress,
           address_meta: validatedAddress ? (validatedMeta || {}) : {},
           address_validated_at: validatedAddress ? new Date().toISOString() : null,
+          marketing_consent: editProfile.marketing_consent !== false,
         })
         .eq('id', user.id);
 
       if (error) throw error;
       
-      setProfile({ ...profile, ...editProfile, address: validatedAddress });
+      setProfile({ ...profile, ...editProfile, address: validatedAddress, marketing_consent: editProfile.marketing_consent !== false } as any);
       showToast(dict.member.profileUpdated, 'success');
     } catch (err: any) {
       showToast(err.message, 'error');
@@ -831,18 +834,18 @@ export default function ClenskaSekcePage() {
                         <p className="font-bold text-stone-900">
                           {myApplication
                             ? (myApplication.status === 'approved'
-                                ? (dict.member.appApproved || 'Přihláška schválena')
+                                ? (dict.member.appApproved || (lang === 'en' ? 'Application approved' : 'Přihláška schválena'))
                                 : myApplication.status === 'rejected'
-                                  ? (dict.member.appRejected || 'Přihláška zamítnuta')
-                                  : (dict.member.appPending || 'Přihláška evidována'))
-                            : (dict.member.appMissing || 'Přihláška nenalezena')}
+                                  ? (dict.member.appRejected || (lang === 'en' ? 'Application rejected' : 'Přihláška zamítnuta'))
+                                  : (dict.member.appPending || (lang === 'en' ? 'Application pending' : 'Přihláška evidována')))
+                            : (dict.member.appMissing || (lang === 'en' ? 'Application not found' : 'Přihláška nenalezena'))}
                         </p>
                         <p className="text-xs text-stone-400 font-medium uppercase tracking-widest">
                           {myApplication?.status === 'approved'
-                            ? (dict.member.officialMember || 'Oficiální člen')
+                            ? (dict.member.officialMember || (lang === 'en' ? 'Official member' : 'Oficiální člen'))
                             : myApplication?.status === 'rejected'
-                              ? (dict.member.notMember || 'Není člen')
-                              : (dict.member.awaitingReview || 'Čeká na kontrolu')}
+                              ? (dict.member.notMember || (lang === 'en' ? 'Not a member' : 'Není člen'))
+                              : (dict.member.awaitingReview || (lang === 'en' ? 'Awaiting review' : 'Čeká na kontrolu'))}
                         </p>
                       </div>
                     </div>
@@ -870,13 +873,13 @@ export default function ClenskaSekcePage() {
                           </div>
                           <div className="flex-grow min-w-0">
                             <h3 className="font-bold text-stone-900 text-sm truncate">{lang === 'en' && event.title_en ? event.title_en : event.title}</h3>
-                            <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mt-0.5">{new Date(event.date).toLocaleDateString()} • {event.location}</p>
+                            <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mt-0.5">{new Date(event.date).toLocaleDateString(lang === 'en' ? 'en-US' : 'cs-CZ')} • {event.location}</p>
                           </div>
                         </Link>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-center py-8 text-stone-400 font-medium italic">{dict.member.noEvents}</p>
+                    <p className="text-center py-8 text-stone-400 font-medium italic">{dict.member.noEvents || (lang === 'en' ? 'No events found.' : 'Žádné akce nenalezeny.')}</p>
                   )}
                 </div>
               </div>
@@ -897,7 +900,7 @@ export default function ClenskaSekcePage() {
                         <Download size={16} className="text-stone-300 group-hover:text-green-600 transition" />
                       </a>
                     )) : (
-                      <p className="text-xs text-stone-400 italic text-center py-4">{dict.member.noDocs}</p>
+                      <p className="text-xs text-stone-400 italic text-center py-4">{dict.member.noDocs || (lang === 'en' ? 'No documents found.' : 'Žádné dokumenty nenalezeny.')}</p>
                     )}
                   </div>
                   {internalDocs.length > 5 && (
@@ -1175,12 +1178,12 @@ export default function ClenskaSekcePage() {
                     </div>
                     <h3 className="font-bold text-stone-900 mb-2">{lang === 'en' && doc.title_en ? doc.title_en : doc.title}</h3>
                     <div className="flex items-center justify-between mt-auto pt-4">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-stone-400">{new Date(doc.created_at).toLocaleDateString()}</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-stone-400">{new Date(doc.created_at).toLocaleDateString(lang === 'en' ? 'en-US' : 'cs-CZ')}</span>
                       <Download size={18} className="text-stone-300 group-hover:text-green-600 transition" />
                     </div>
                   </button>
                 )) : (
-                  <div className="col-span-full py-12 text-center text-stone-400 italic font-medium">{dict.member.noDocs}</div>
+                  <div className="col-span-full py-12 text-center text-stone-400 italic font-medium">{dict.member.noDocs || (lang === 'en' ? 'No documents found.' : 'Žádné dokumenty nenalezeny.')}</div>
                 )}
               </div>
             </div>
@@ -1201,7 +1204,7 @@ export default function ClenskaSekcePage() {
                     </div>
                     <h3 className="text-xl font-black text-stone-900 mb-2">{lang === 'en' && event.title_en ? event.title_en : event.title}</h3>
                     <div className="space-y-2 mb-6">
-                      <p className="text-stone-500 font-bold flex items-center gap-2"><Clock size={16} /> {new Date(event.date).toLocaleDateString()}</p>
+                      <p className="text-stone-500 font-bold flex items-center gap-2"><Clock size={16} /> {new Date(event.date).toLocaleDateString(lang === 'en' ? 'en-US' : 'cs-CZ')}</p>
                       <p className="text-stone-400 text-sm font-medium flex items-center gap-2"><Users size={16} /> {event.location}</p>
                     </div>
                     <Link href={`/${lang}/akce`} className="inline-flex items-center gap-2 text-stone-900 font-black uppercase tracking-widest text-[10px] hover:text-amber-600 transition">
@@ -1209,7 +1212,7 @@ export default function ClenskaSekcePage() {
                     </Link>
                   </div>
                 )) : (
-                  <div className="col-span-full py-12 text-center text-stone-400 italic font-medium">{dict.member.noEvents}</div>
+                  <div className="col-span-full py-12 text-center text-stone-400 italic font-medium">{dict.member.noEvents || (lang === 'en' ? 'No events found.' : 'Žádné akce nenalezeny.')}</div>
                 )}
               </div>
             </div>
@@ -1234,10 +1237,10 @@ export default function ClenskaSekcePage() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-stone-50 border-b border-stone-100">
-                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">{dict.member.firstName}</th>
-                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">{dict.member.lastName}</th>
+                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">{dict.member.firstName || (lang === 'en' ? 'First name' : 'Jméno')}</th>
+                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">{dict.member.lastName || (lang === 'en' ? 'Last name' : 'Příjmení')}</th>
                       <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">E-mail</th>
-                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">{dict.member.memberSince}</th>
+                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">{dict.member.memberSince || (lang === 'en' ? 'Member since' : 'Členem od')}</th>
                       <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400"></th>
                     </tr>
                   </thead>
@@ -1250,7 +1253,7 @@ export default function ClenskaSekcePage() {
                         <td className="px-6 py-4 font-bold text-stone-700">{m.last_name}</td>
                         <td className="px-6 py-4 text-stone-500 font-medium">{m.email}</td>
                         <td className="px-6 py-4 text-stone-400 text-sm font-medium">
-                          {m.member_since ? new Date(m.member_since).toLocaleDateString() : '-'}
+                          {m.member_since ? new Date(m.member_since).toLocaleDateString(lang === 'en' ? 'en-US' : 'cs-CZ') : '-'}
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
@@ -1302,7 +1305,7 @@ export default function ClenskaSekcePage() {
                     <div className="flex-grow min-w-0">
                       <h3 className="font-black text-stone-900 text-lg mb-1 truncate">{blog.title}</h3>
                       <div className="flex items-center gap-3">
-                        <span className="text-[10px] text-stone-400 font-black uppercase tracking-widest">{new Date(blog.created_at).toLocaleDateString()}</span>
+                        <span className="text-[10px] text-stone-400 font-black uppercase tracking-widest">{new Date(blog.created_at).toLocaleDateString(lang === 'en' ? 'en-US' : 'cs-CZ')}</span>
                         <span className="w-1 h-1 bg-stone-300 rounded-full"></span>
                         <span className="text-[10px] text-blue-600 font-black uppercase tracking-widest">{blog.category}</span>
                       </div>
@@ -1310,7 +1313,7 @@ export default function ClenskaSekcePage() {
                     <ArrowLeft size={20} className="text-stone-300 group-hover:text-blue-600 transition rotate-180 shrink-0" />
                   </Link>
                 )) : (
-                  <div className="col-span-full py-12 text-center text-stone-400 italic font-medium">{dict.member.noArticles}</div>
+                  <div className="col-span-full py-12 text-center text-stone-400 italic font-medium">{dict.member.noArticles || (lang === 'en' ? 'No articles found.' : 'Žádné články nenalezeny.')}</div>
                 )}
               </div>
             </MemberPanel>
@@ -1350,8 +1353,45 @@ export default function ClenskaSekcePage() {
                       type="email"
                       disabled
                       value={user.email}
-                      className="w-full bg-stone-100 border-none rounded-2xl px-5 py-4 font-bold text-stone-400 cursor-not-allowed"
+                      className="w-full bg-stone-100 border-none rounded-2xl px-5 py-4 font-bold text-stone-500 opacity-70 cursor-not-allowed"
                     />
+                    <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest px-1 mt-2">{dict.member.emailHelp || (lang === 'en' ? 'Email cannot be changed.' : 'E-mail nelze změnit.')}</p>
+                  </div>
+
+                  <div className="pt-6 border-t border-stone-100">
+                    <h3 className="font-bold text-stone-900 mb-4">{lang === 'en' ? 'Email preferences' : 'E-mailové preference'}</h3>
+                    <div className="space-y-3">
+                      <label className="flex items-start gap-3 cursor-pointer group">
+                        <div className="relative flex items-start">
+                          <input type="checkbox" className="peer sr-only" checked={true} disabled />
+                          <div className="w-5 h-5 border-2 border-stone-300 rounded bg-stone-100 peer-checked:bg-stone-300 peer-checked:border-stone-300 transition flex items-center justify-center">
+                            <span className="text-white text-xs font-bold">✓</span>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="font-bold text-stone-700 text-sm">{lang === 'en' ? 'Transactional emails' : 'Transakční e-maily'}</p>
+                          <p className="text-xs text-stone-400">{lang === 'en' ? 'Required for account operations (applications, payments, password reset).' : 'Nutné pro fungování účtu (přihlášky, platby, obnova hesla).'}</p>
+                        </div>
+                      </label>
+
+                      <label className="flex items-start gap-3 cursor-pointer group">
+                        <div className="relative flex items-start pt-0.5">
+                          <input 
+                            type="checkbox" 
+                            className="peer sr-only" 
+                            checked={editProfile.marketing_consent !== false}
+                            onChange={(e) => setEditProfile({...editProfile, marketing_consent: e.target.checked})}
+                          />
+                          <div className="w-5 h-5 border-2 border-stone-300 rounded peer-checked:bg-green-600 peer-checked:border-green-600 transition flex items-center justify-center">
+                            <span className="text-white text-xs font-bold opacity-0 peer-checked:opacity-100">✓</span>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="font-bold text-stone-900 text-sm group-hover:text-green-700 transition">{lang === 'en' ? 'News & Events (Newsletter)' : 'Novinky a akce (Newsletter)'}</p>
+                          <p className="text-xs text-stone-500">{lang === 'en' ? 'Stay updated with our latest news and upcoming events.' : 'Dostávejte informace o novinkách a nadcházejících akcích spolku.'}</p>
+                        </div>
+                      </label>
+                    </div>
                   </div>
                   <div>
                     <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 mb-2 block">
@@ -1373,17 +1413,9 @@ export default function ClenskaSekcePage() {
                     currentUrl={profile?.avatar_url}
                     onUploaded={(url: string) => setProfile({ ...profile, avatar_url: url })}
                   />
-
-                  <div className="pt-4">
-                    <button 
-                      type="submit"
-                      disabled={isSavingProfile}
-                      className="w-full py-4 bg-green-600 text-white rounded-2xl font-bold hover:bg-green-700 transition shadow-lg shadow-green-600/20 flex items-center justify-center gap-2"
-                    >
-                      {isSavingProfile ? <InlinePulse className="bg-white/80" size={14} /> : <ShieldCheck size={20} />}
-                      {dict.member.saveChanges}
-                    </button>
-                  </div>
+                  <button type="submit" disabled={isSavingProfile} className="w-full bg-green-600 text-white font-bold py-4 rounded-2xl hover:bg-green-700 transition shadow-lg shadow-green-600/20 disabled:opacity-50">
+                    {isSavingProfile ? (dict.member.saving || (lang === 'en' ? 'Saving...' : 'Ukládám...')) : (dict.member.saveProfile || (lang === 'en' ? 'Save changes' : 'Uložit změny'))}
+                  </button>
                 </form>
               </MemberPanel>
               <MemberPanel className="p-10 mt-8">
@@ -1709,12 +1741,22 @@ export default function ClenskaSekcePage() {
                   <div className="grid md:grid-cols-2 gap-3">
                     <button
                       type="button"
-                      onClick={downloadGdprExport}
+                      onClick={() => downloadGdprExport('json')}
                       className="w-full py-4 bg-white text-stone-700 rounded-2xl font-bold hover:bg-stone-50 transition border border-stone-200 flex items-center justify-center gap-2"
                     >
                       <Download size={18} />
-                      {ms.gdprDownload || (lang === 'en' ? 'Download export' : 'Stáhnout export')}
+                      {ms.gdprDownload || (lang === 'en' ? 'Download JSON' : 'Stáhnout JSON')}
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => downloadGdprExport('pdf')}
+                      className="w-full py-4 bg-white text-stone-700 rounded-2xl font-bold hover:bg-stone-50 transition border border-stone-200 flex items-center justify-center gap-2"
+                    >
+                      <FileText size={18} />
+                      {lang === 'en' ? 'Download PDF' : 'Stáhnout PDF'}
+                    </button>
+                  </div>
+                  <div className="pt-4 border-t border-stone-100">
                     <button
                       type="button"
                       onClick={requestGdprDelete}

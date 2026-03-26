@@ -4,7 +4,8 @@ import React, { useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Youtube from '@tiptap/extension-youtube';
-import { Bold, Italic, List, ListOrdered, Quote, Undo, Redo, Youtube as YoutubeIcon, Smile } from 'lucide-react';
+import Link from '@tiptap/extension-link';
+import { Bold, Italic, List, ListOrdered, Quote, Undo, Redo, Youtube as YoutubeIcon, Link as LinkIcon, Unlink } from 'lucide-react';
 
 interface EditorProps {
   value: string;
@@ -26,6 +27,10 @@ const TiptapEditor = ({ value, onChange }: EditorProps) => {
         width: 480,
         height: 320,
       }) as any,
+      Link.configure({
+        openOnClick: false,
+        autolink: true,
+      }),
     ],
     content: value,
     immediatelyRender: false,
@@ -55,6 +60,21 @@ const TiptapEditor = ({ value, onChange }: EditorProps) => {
         src: url,
       });
     }
+  };
+
+  const setLink = () => {
+    const previousUrl = editor.getAttributes('link').href;
+    const url = window.prompt('URL odkazu:', previousUrl);
+    
+    // Zrušení odkazu pokud se vloží prázdné nebo storno
+    if (url === null) return;
+    if (url === '') {
+      editor.chain().focus().extendMarkRange('link').unsetLink().run();
+      return;
+    }
+    
+    // Update/Set odkaz
+    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
   };
 
   return (
@@ -96,6 +116,24 @@ const TiptapEditor = ({ value, onChange }: EditorProps) => {
           className={`p-2 rounded hover:bg-stone-100 ${editor.isActive('blockquote') ? 'text-green-600 bg-green-50' : 'text-stone-500'}`}
         >
           <Quote size={18} />
+        </button>
+        <div className="w-px h-6 bg-stone-200 mx-1 self-center" />
+        <button
+          type="button"
+          onClick={setLink}
+          className={`p-2 rounded hover:bg-stone-100 ${editor.isActive('link') ? 'text-blue-600 bg-blue-50' : 'text-stone-500'}`}
+          title="Vložit odkaz"
+        >
+          <LinkIcon size={18} />
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().unsetLink().run()}
+          disabled={!editor.isActive('link')}
+          className="p-2 rounded hover:bg-stone-100 text-stone-500 disabled:opacity-30"
+          title="Zrušit odkaz"
+        >
+          <Unlink size={18} />
         </button>
         <div className="w-px h-6 bg-stone-200 mx-1 self-center" />
         <button

@@ -36,27 +36,38 @@ export async function POST(req: Request) {
     const supabase = getServerSupabase();
     const existing = await supabase
       .from('newsletter_subscriptions')
-      .select('id,email,categories,consent')
+      .select('id,email,categories,consent,preferences')
       .eq('email', email)
       .limit(1)
       .maybeSingle();
     if (existing.error) throw existing.error;
 
+    // Pokud uživatel už existuje, ale neposlal nové kategorie, zachováme původní
+    const finalCategories = body?.categories ? categories : (existing.data?.categories || ['all']);
+    // Preference: "marketing" a "transactional"
+    const prefs = body?.preferences || existing.data?.preferences || { marketing: true, transactional: true };
+
     if (existing.data?.id) {
       const up = await supabase
         .from('newsletter_subscriptions')
-        .update({ categories, consent: true, source })
+        .update({ categories: finalCategories, preferences: prefs, consent: true, source })
         .eq('id', existing.data.id);
       if (up.error) throw up.error;
       return NextResponse.json({ ok: true, status: 'updated' });
     }
 
-    const ins = await supabase.from('newsletter_subscriptions').insert([{ email, categories, consent: true, source }]);
+    const ins = await supabase.from('newsletter_subscriptions').insert([{ 
+      email, 
+      categories: finalCategories, 
+      preferences: prefs,
+      consent: true, 
+      source 
+    }]);
     if (ins.error) {
       if (ins.error.code === '23505') {
         const up = await supabase
           .from('newsletter_subscriptions')
-          .update({ categories, consent: true, source })
+          .update({ categories: finalCategories, preferences: prefs, consent: true, source })
           .eq('email', email);
         if (up.error) throw up.error;
         return NextResponse.json({ ok: true, status: 'updated' });

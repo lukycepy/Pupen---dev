@@ -37,8 +37,9 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
     alternates: {
       canonical,
       languages: {
-        'cs-CZ': '/cs',
-        'en-US': '/en',
+        'cs': 'https://pupen.org/cs',
+        'en': 'https://pupen.org/en',
+        'x-default': 'https://pupen.org/cs'
       },
     },
     openGraph: {

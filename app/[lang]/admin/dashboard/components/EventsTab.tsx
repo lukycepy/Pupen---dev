@@ -282,6 +282,7 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      setModalOpen(false);
       showToast(dict.admin.confirmDeleteSuccess || 'Smazáno', 'success');
     },
     onError: (err: any) => {
@@ -350,8 +351,14 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
 
   const exportRSVP = async (eventId: string, eventTitle: string) => {
     const { data, error } = await supabase.from('rsvp').select('*').eq('event_id', eventId);
-    if (error) return alert(error.message);
-    if (!data || data.length === 0) return alert(dict.admin.noParticipants || 'Žádní účastníci');
+    if (error) {
+      showToast(error.message, 'error');
+      return;
+    }
+    if (!data || data.length === 0) {
+      showToast(dict.admin.noParticipants || 'Žádní účastníci', 'warning');
+      return;
+    }
 
     const csv = [
       [dict.admin.labelName || 'Jméno', 'Email', dict.admin.labelDateReceived || 'Datum přihlášení'],
