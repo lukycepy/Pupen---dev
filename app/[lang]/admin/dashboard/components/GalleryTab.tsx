@@ -20,7 +20,6 @@ export default function GalleryTab({ dict, uploadImage }: { dict: any, uploadIma
   const [modalOpen, setModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState({ title: '', message: '', onConfirm: () => {} });
 
-  // 1. Fetch Albums
   const { data: albums = [], isLoading: loadingAlbums } = useQuery({
     queryKey: ['gallery_albums'],
     queryFn: async () => {
@@ -30,7 +29,6 @@ export default function GalleryTab({ dict, uploadImage }: { dict: any, uploadIma
     }
   });
 
-  // 2. Fetch Photos for active album
   const { data: photos = [], isLoading: loadingPhotos } = useQuery({
     queryKey: ['gallery_photos', activeAlbumId],
     queryFn: async () => {
@@ -42,7 +40,6 @@ export default function GalleryTab({ dict, uploadImage }: { dict: any, uploadIma
     enabled: !!activeAlbumId
   });
 
-  // Mutations
   const createAlbumMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from('gallery_albums').insert([newAlbum]);
@@ -103,7 +100,6 @@ export default function GalleryTab({ dict, uploadImage }: { dict: any, uploadIma
         const { error } = await supabase.from('gallery_photos').insert(inserts);
         if (error) throw error;
 
-        // Nastavit cover_image_url albu, pokud ještě nemá
         const album = albums.find(a => a.id === activeAlbumId);
         if (album && !album.cover_image_url) {
            await supabase.from('gallery_albums').update({ cover_image_url: uploadedUrls[0] }).eq('id', activeAlbumId);

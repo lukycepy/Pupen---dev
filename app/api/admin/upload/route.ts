@@ -4,7 +4,7 @@ import { getServerSupabase } from '@/lib/supabase-server';
 
 export async function POST(req: Request) {
   try {
-    const { profile } = await requireAdmin(req);
+    const { user, profile } = await requireAdmin(req);
 
     const form = await req.formData();
     const file = form.get('file');
@@ -30,9 +30,8 @@ export async function POST(req: Request) {
     });
     if (upload.error) throw upload.error;
 
-    // Log the upload action
     await supabase.from('admin_logs').insert([{
-      admin_email: profile.email || 'admin',
+      admin_email: user.email || 'admin',
       admin_name: 'Admin API',
       action: 'UPLOAD_FILE',
       target_id: path,

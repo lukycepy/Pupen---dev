@@ -27,9 +27,8 @@ export async function GET(req: Request) {
     if ((rsvpRes as any).error) throw (rsvpRes as any).error;
 
     const badgesRes = await supabase.from('user_badges').select('*, gamification_badges(*)').eq('user_id', user.id);
-  const applicationsRes = await supabase.from('member_applications').select('*').eq('email', email);
+    const applicationsRes = await supabase.from('member_applications').select('*').eq('email', email);
     
-    // Log the action
     await supabase.from('admin_logs').insert([{
       admin_email: user.email || 'system',
       admin_name: 'GDPR Export',
@@ -38,7 +37,7 @@ export async function GET(req: Request) {
       details: { format: 'json', type: 'gdpr_all', exportedBy: user.id }
     }]);
 
-    const payload = {prefsRes = await supabase
+    const prefsRes = await supabase
       .from('admin_logs')
       .select('created_at, details')
       .eq('action', 'USER_EMAIL_PREFS')

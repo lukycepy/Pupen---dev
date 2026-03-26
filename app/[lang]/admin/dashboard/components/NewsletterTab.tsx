@@ -13,6 +13,8 @@ export default function NewsletterTab({ dict }: { dict: any }) {
   const [subscribers, setSubscribers] = useState<any[]>([]);
   const [drafts, setDrafts] = useState<any[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
+  const [roles, setRoles] = useState<any[]>([]);
+  const [sentCampaigns, setSentCampaigns] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   
@@ -20,6 +22,7 @@ export default function NewsletterTab({ dict }: { dict: any }) {
   const [composeSubject, setComposeSubject] = useState('');
   const [composeHtml, setComposeHtml] = useState('');
   const [composeCats, setComposeCats] = useState<string[]>(['all']);
+  const [composeRoleIds, setComposeRoleIds] = useState<string[]>([]);
   
   const [sending, setSending] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -41,22 +44,28 @@ export default function NewsletterTab({ dict }: { dict: any }) {
         const token = data.session?.access_token;
         if (!token) throw new Error('Unauthorized');
         
-        const [subsRes, draftsRes, tplRes] = await Promise.all([
+        const [subsRes, draftsRes, tplRes, rolesRes, historyRes] = await Promise.all([
           fetch('/api/admin/newsletter/subscribers', { headers: { Authorization: `Bearer ${token}` } }),
           fetch('/api/admin/newsletter/drafts', { headers: { Authorization: `Bearer ${token}` } }),
-          fetch('/api/admin/newsletter/templates', { headers: { Authorization: `Bearer ${token}` } })
+          fetch('/api/admin/newsletter/templates', { headers: { Authorization: `Bearer ${token}` } }),
+          fetch('/api/admin/newsletter/roles', { headers: { Authorization: `Bearer ${token}` } }),
+          fetch('/api/admin/newsletter/history', { headers: { Authorization: `Bearer ${token}` } })
         ]);
 
         const [subsJson, draftsJson, tplJson] = await Promise.all([
           subsRes.json().catch(() => ({})),
           draftsRes.json().catch(() => ({})),
-          tplRes.json().catch(() => ({}))
+          tplRes.json().catch(() => ({})),
         ]);
+        const rolesJson: any = rolesRes.ok ? await rolesRes.json().catch(() => ({})) : {};
+        const historyJson: any = historyRes.ok ? await historyRes.json().catch(() => ({})) : {};
 
         if (!isMounted) return;
         setSubscribers(Array.isArray(subsJson?.subscribers) ? subsJson.subscribers : []);
         setDrafts(Array.isArray(draftsJson?.drafts) ? draftsJson.drafts : []);
         setTemplates(Array.isArray(tplJson?.templates) ? tplJson.templates : []);
+        setRoles(Array.isArray(rolesJson?.roles) ? rolesJson.roles : []);
+        setSentCampaigns(Array.isArray(historyJson?.campaigns) ? historyJson.campaigns : []);
       } catch (err: any) {
         showToast(err.message, 'error');
       } finally {
@@ -96,6 +105,15 @@ export default function NewsletterTab({ dict }: { dict: any }) {
     }
   };
 
+  const toggleComposeRole = (id: string) => {
+    if (!id) return;
+    if (composeRoleIds.includes(id)) {
+      setComposeRoleIds(composeRoleIds.filter((x) => x !== id));
+    } else {
+      setComposeRoleIds([...composeRoleIds, id]);
+    }
+  };
+
   const sendNewsletter = async () => {
     setSending(true);
     try {
@@ -105,20 +123,24 @@ export default function NewsletterTab({ dict }: { dict: any }) {
       const res = await fetch('/api/admin/newsletter/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ subject: composeSubject, html: composeHtml, categories: composeCats, draftId: activeDraftId }),
+        body: JSON.stringify({ subject: composeSubject, html: composeHtml, categories: composeCats, roleIds: composeRoleIds, draftId: activeDraftId }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error || 'Chyba');
       showToast(`Newsletter odeslán: ${json?.sent || 0}/${json?.recipients || 0}`, 'success');
       
-      // Obnovit drafty
-      const draftsRes = await fetch('/api/admin/newsletter/drafts', { headers: { Authorization: `Bearer ${token}` } });
-      const draftsJson = await draftsRes.json().catch(() => ({}));
+      const [draftsRes, historyRes] = await Promise.all([
+        fetch('/api/admin/newsletter/drafts', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/admin/newsletter/history', { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+      const [draftsJson, historyJson] = await Promise.all([draftsRes.json().catch(() => ({})), historyRes.json().catch(() => ({}))]);
       setDrafts(Array.isArray(draftsJson?.drafts) ? draftsJson.drafts : []);
+      setSentCampaigns(Array.isArray(historyJson?.campaigns) ? historyJson.campaigns : []);
       
       setComposeSubject('');
       setComposeHtml('');
       setComposeCats(['all']);
+      setComposeRoleIds([]);
       setActiveDraftId(null);
     } catch (e: any) {
       showToast(e?.message || 'Chyba', 'error');
@@ -157,24 +179,27 @@ export default function NewsletterTab({ dict }: { dict: any }) {
     setModalOpen(true);
   };
 
-  const handleExport = () => {
-    if (subscribers.length === 0) return;
-
-    const csvContent = [
-      ['Email', 'Kategorie', 'Datum přihlášení'],
-      ...subscribers.map(s => [
-        s.email, 
-        s.categories?.join('; ') || 'all', 
-        new Date(s.created_at).toLocaleString()
-      ])
-    ].map(e => e.join(',')).join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'newsletter_subscribers.csv');
-    link.click();
+  const handleExport = async () => {
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
+      const res = await fetch('/api/admin/newsletter/export', { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json?.error || 'Chyba exportu');
+      }
+      const csv = await res.text();
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'newsletter_subscribers.csv');
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      showToast(e?.message || 'Chyba', 'error');
+    }
   };
 
   const saveDraft = async () => {
@@ -328,6 +353,23 @@ export default function NewsletterTab({ dict }: { dict: any }) {
                 ))}
               </div>
             </div>
+            {roles.length > 0 && (
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">Segment</div>
+                <div className="flex flex-wrap gap-2">
+                  {roles.map((r: any) => (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => toggleComposeRole(String(r.id))}
+                      className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${composeRoleIds.includes(String(r.id)) ? 'bg-stone-900 text-white border-stone-900' : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50'}`}
+                    >
+                      {r.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="text-xs text-stone-500 font-medium">
               HTML se odešle tak, jak ho vložíš.
             </div>
@@ -452,83 +494,118 @@ export default function NewsletterTab({ dict }: { dict: any }) {
       )}
 
       {view === 'history' && (
-        <div className="grid md:grid-cols-2 gap-12 animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="space-y-6">
             <h3 className="text-xl font-black flex items-center gap-3">
-              <History className="text-amber-500" />
-              Uložené drafty
+              <History className="text-green-600" />
+              Odeslané kampaně
             </h3>
-            <div className="space-y-4">
-              {drafts.length === 0 ? (
-                <div className="p-8 text-center bg-stone-50 rounded-2xl border border-dashed border-stone-200 text-stone-400 font-bold">
-                  Žádné drafty
-                </div>
-              ) : (
-                drafts.map(d => (
-                  <div key={d.id} className="bg-white p-6 rounded-2xl border border-stone-100 shadow-sm hover:shadow-md transition group">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h4 className="font-bold text-stone-900">{d.subject}</h4>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 mt-1">Aktualizováno {new Date(d.updated_at).toLocaleString()}</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <button onClick={() => loadDraft(d)} className="p-2 bg-stone-100 text-stone-600 rounded-lg hover:bg-stone-200 transition" title="Načíst k úpravě">
-                          <Edit2 size={16} />
-                        </button>
-                        <button onClick={async () => {
-                          if (!confirm('Smazat draft?')) return;
-                          const { data } = await supabase.auth.getSession();
-                          await fetch(`/api/admin/newsletter/drafts/${d.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${data.session?.access_token}` } });
-                          setDrafts(drafts.filter(x => x.id !== d.id));
-                          showToast('Draft smazán', 'success');
-                        }} className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition">
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {d.target_categories?.map((c: string) => (
-                        <span key={c} className="text-[9px] font-black uppercase tracking-widest bg-stone-50 text-stone-500 px-2 py-0.5 rounded-full border border-stone-100">
-                          {c}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+            {sentCampaigns.length === 0 ? (
+              <div className="p-8 text-center bg-stone-50 rounded-2xl border border-dashed border-stone-200 text-stone-400 font-bold">
+                Zatím nebyla odeslána žádná kampaň
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+                <table className="w-full text-left">
+                  <thead className="bg-stone-50 border-b">
+                    <tr className="text-[10px] font-black uppercase tracking-widest text-stone-400">
+                      <th className="px-6 py-4">Předmět</th>
+                      <th className="px-6 py-4">Odesláno</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-stone-50">
+                    {sentCampaigns.map((c: any) => (
+                      <tr key={c.id} className="hover:bg-stone-50/50 transition">
+                        <td className="px-6 py-4 font-bold text-stone-900">{c.subject || '(bez předmětu)'}</td>
+                        <td className="px-6 py-4 text-xs text-stone-500 font-medium">
+                          {c.sent_at ? new Date(c.sent_at).toLocaleString() : '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
-          <div className="space-y-6">
-            <h3 className="text-xl font-black flex items-center gap-3">
-              <FileText className="text-blue-500" />
-              Šablony kampaní
-            </h3>
-            <div className="space-y-4">
-              {templates.length === 0 ? (
-                <div className="p-8 text-center bg-stone-50 rounded-2xl border border-dashed border-stone-200 text-stone-400 font-bold">
-                  Žádné šablony
-                </div>
-              ) : (
-                templates.map(t => (
-                  <div key={t.id} className="bg-white p-6 rounded-2xl border border-stone-100 shadow-sm hover:shadow-md transition group">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h4 className="font-bold text-stone-900">{t.name}</h4>
-                        <p className="text-xs text-stone-500 mt-1">{t.subject}</p>
+          <div className="grid md:grid-cols-2 gap-12">
+            <div className="space-y-6">
+              <h3 className="text-xl font-black flex items-center gap-3">
+                <History className="text-amber-500" />
+                Uložené drafty
+              </h3>
+              <div className="space-y-4">
+                {drafts.length === 0 ? (
+                  <div className="p-8 text-center bg-stone-50 rounded-2xl border border-dashed border-stone-200 text-stone-400 font-bold">
+                    Žádné drafty
+                  </div>
+                ) : (
+                  drafts.map(d => (
+                    <div key={d.id} className="bg-white p-6 rounded-2xl border border-stone-100 shadow-sm hover:shadow-md transition group">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h4 className="font-bold text-stone-900">{d.subject}</h4>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 mt-1">Aktualizováno {new Date(d.updated_at).toLocaleString()}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button onClick={() => loadDraft(d)} className="p-2 bg-stone-100 text-stone-600 rounded-lg hover:bg-stone-200 transition" title="Načíst k úpravě">
+                            <Edit2 size={16} />
+                          </button>
+                          <button onClick={async () => {
+                            if (!confirm('Smazat draft?')) return;
+                            const { data } = await supabase.auth.getSession();
+                            await fetch(`/api/admin/newsletter/drafts/${d.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${data.session?.access_token}` } });
+                            setDrafts(drafts.filter(x => x.id !== d.id));
+                            showToast('Draft smazán', 'success');
+                          }} className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition">
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex gap-2">
-                        <button onClick={() => loadTemplate(t)} className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition" title="Použít šablonu">
-                          <Copy size={16} />
-                        </button>
+                      <div className="flex flex-wrap gap-2">
+                        {d.target_categories?.map((c: string) => (
+                          <span key={c} className="text-[9px] font-black uppercase tracking-widest bg-stone-50 text-stone-500 px-2 py-0.5 rounded-full border border-stone-100">
+                            {c}
+                          </span>
+                        ))}
                       </div>
                     </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <h3 className="text-xl font-black flex items-center gap-3">
+                <FileText className="text-blue-500" />
+                Šablony kampaní
+              </h3>
+              <div className="space-y-4">
+                {templates.length === 0 ? (
+                  <div className="p-8 text-center bg-stone-50 rounded-2xl border border-dashed border-stone-200 text-stone-400 font-bold">
+                    Žádné šablony
                   </div>
-                ))
-              )}
-              <button className="w-full p-4 border-2 border-dashed border-stone-200 rounded-2xl text-stone-400 font-bold hover:bg-stone-50 hover:border-stone-300 transition flex items-center justify-center gap-2">
-                <Plus size={20} /> Vytvořit novou šablonu
-              </button>
+                ) : (
+                  templates.map(t => (
+                    <div key={t.id} className="bg-white p-6 rounded-2xl border border-stone-100 shadow-sm hover:shadow-md transition group">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h4 className="font-bold text-stone-900">{t.name}</h4>
+                          <p className="text-xs text-stone-500 mt-1">{t.subject}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button onClick={() => loadTemplate(t)} className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition" title="Použít šablonu">
+                            <Copy size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+                <button className="w-full p-4 border-2 border-dashed border-stone-200 rounded-2xl text-stone-400 font-bold hover:bg-stone-50 hover:border-stone-300 transition flex items-center justify-center gap-2">
+                  <Plus size={20} /> Vytvořit novou šablonu
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -100,7 +100,7 @@
 - [x] Fix missing profiles columns (schema cache errors).
 - [x] Fix missing events.description (schema cache errors).
 - [x] Backfill description z HTML polí.
-- [ ] Přepínání locale v route /[lang] .
+- [x] Přepínání locale v route /[lang] .
 - [x] Home hero fallback na lokální obrázek.
 - [x] O nás hero lokální obrázek.
 - [x] O nás hero ořez “výš”.
@@ -252,18 +252,18 @@
 - [x] Double opt-in newsletter (nápad).
 - [x] Unsubscribe link v newsletteru (nápad).
 - [x] Preference center pro newsletter (nápad).
-- [ ] Segmentace newsletter dle role (nápad).
+- [x] Segmentace newsletter dle role (nápad).
 - [ ] A/B subject test (nápad).
 - [x] Template editor newsletteru (nápad).
 - [x] Uložení draftů newsletteru (nápad).
-- [ ] Historie odeslaných newsletterů (nápad).
+- [x] Historie odeslaných newsletterů (nápad).
 - [ ] Statistiky open rate (nápad).
 - [ ] Statistiky click rate (nápad).
 - [ ] UTM tagging linků (nápad).
 - [ ] Editor rich text pro newsletter (nápad).
 - [ ] Přílohy v newsletteru (nápad).
 - [ ] Bezpečná sanitizace HTML (nápad).
-- [ ] CSP hlavičky (nápad).
+- [x] CSP hlavičky (nápad).
 - [x] Security log endpoint.
 - [x] Admin view security logs (nápad).
 - [x] GDPR “export includes everything” (nápad).
@@ -446,8 +446,8 @@
 - [x] Team page cards (existuje).
 - [x] Team role popisy (existuje).
 - [x] Team social links (existuje)..
-- [ ] Fotky týmu z adminu (nápad).
-- [ ] Galerie upload z adminu (nápad).
+- [x] Fotky týmu z adminu (nápad).
+- [x] Galerie upload z adminu (nápad).
 - [ ] Moderace galerie (nápad).
 - [ ] Komprese galerie (nápad).
 - [ ] Lazy load galerie (nápad).

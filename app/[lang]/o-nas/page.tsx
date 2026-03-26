@@ -254,7 +254,6 @@ export default function AboutPage() {
           </div>
         </div>
 
-        {/* --- TIMELINE --- */}
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold mb-4">{dict.timelineTitle || 'Důležité milníky'}</h2>
@@ -264,10 +263,7 @@ export default function AboutPage() {
           <div className="relative border-l-4 border-green-100 ml-6 md:ml-12 space-y-12 pb-8">
             {dict.timeline?.map((item: any, i: number) => (
               <div key={i} className="relative pl-8 md:pl-12 group">
-                {/* Dot */}
                 <div className="absolute -left-[14px] top-1 w-6 h-6 bg-white border-4 border-green-500 rounded-full group-hover:scale-125 group-hover:bg-green-100 transition duration-300"></div>
-                
-                {/* Content */}
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-stone-100 hover:shadow-lg transition duration-300">
                   <span className="inline-block px-3 py-1 bg-green-50 text-green-700 font-black uppercase tracking-widest text-xs rounded-lg mb-3">
                     {item.year}
