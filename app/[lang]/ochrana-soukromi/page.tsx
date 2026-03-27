@@ -145,7 +145,17 @@ export default async function PrivacyPage({ params }: { params: Promise<{ lang: 
                 {dict.rightsTitle}
               </h2>
               <div className="text-stone-600 leading-relaxed text-lg bg-stone-50 p-8 rounded-[2rem] border border-stone-100 italic">
-                {dict.rightsText}
+                {Array.isArray(dict.rightsList) && dict.rightsList.length > 0 ? (
+                  <ul className="list-disc pl-6 space-y-2 not-italic">
+                    {dict.rightsList.map((item: string, idx: number) => (
+                      <li key={idx} className="font-medium">
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  dict.rightsText
+                )}
               </div>
             </section>
           )}

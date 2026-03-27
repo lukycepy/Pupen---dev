@@ -71,7 +71,15 @@ export default async function PrivacyPrintPage({ params }: { params: Promise<{ l
           {dict.rightsTitle && (
             <>
               <h2>{dict.rightsTitle}</h2>
-              <p>{dict.rightsText}</p>
+              {Array.isArray(dict.rightsList) && dict.rightsList.length > 0 ? (
+                <ul>
+                  {dict.rightsList.map((x: string, i: number) => (
+                    <li key={i}>{x}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p>{dict.rightsText}</p>
+              )}
             </>
           )}
         </div>
@@ -83,4 +91,3 @@ export default async function PrivacyPrintPage({ params }: { params: Promise<{ l
     </div>
   );
 }
-
