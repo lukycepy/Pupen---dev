@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 
+export const dynamic = 'force-dynamic';
+
 const SITE_CONFIG_ID = Number(process.env.SITE_CONFIG_ID || 1);
 
 const defaultPages: Record<string, any> = {
@@ -90,7 +92,7 @@ export async function GET() {
 
     if (!!row.maintenance_enabled && ended) {
       try {
-        await supabase
+        const { error: updateError } = await supabase
           .from('site_public_config')
           .update({
             maintenance_enabled: false,
@@ -99,7 +101,14 @@ export async function GET() {
             updated_at: new Date().toISOString(),
           })
           .eq('id', configId);
-      } catch {}
+        if (updateError) {
+          console.error('Auto-disable maintenance failed:', updateError);
+        } else {
+          row.maintenance_enabled = false;
+        }
+      } catch (e) {
+        console.error('Auto-disable maintenance error:', e);
+      }
     }
 
     const homeRow = row.home && typeof row.home === 'object' ? row.home : {};

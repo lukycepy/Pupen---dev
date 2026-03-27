@@ -54,20 +54,3 @@ CREATE POLICY "Public read gallery_photos" ON public.gallery_photos FOR SELECT
     USING (EXISTS (SELECT 1 FROM public.gallery_albums WHERE id = album_id AND is_public = true));
 CREATE POLICY "Admin all gallery_photos" ON public.gallery_photos FOR ALL TO authenticated
     USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND (profiles.is_admin = true OR profiles.can_manage_admins = true)));
-
--- Triggers for schema cache
-CREATE OR REPLACE FUNCTION notify_schema_change() RETURNS TRIGGER AS $$
-BEGIN
-  NOTIFY pgrst, 'reload schema';
-  RETURN NULL;
-END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS tr_team_members_schema_change ON public.team_members;
-CREATE TRIGGER tr_team_members_schema_change AFTER CREATE OR ALTER OR DROP ON public.team_members FOR EACH STATEMENT EXECUTE FUNCTION notify_schema_change();
-
-DROP TRIGGER IF EXISTS tr_gallery_albums_schema_change ON public.gallery_albums;
-CREATE TRIGGER tr_gallery_albums_schema_change AFTER CREATE OR ALTER OR DROP ON public.gallery_albums FOR EACH STATEMENT EXECUTE FUNCTION notify_schema_change();
-
-DROP TRIGGER IF EXISTS tr_gallery_photos_schema_change ON public.gallery_photos;
-CREATE TRIGGER tr_gallery_photos_schema_change AFTER CREATE OR ALTER OR DROP ON public.gallery_photos FOR EACH STATEMENT EXECUTE FUNCTION notify_schema_change();

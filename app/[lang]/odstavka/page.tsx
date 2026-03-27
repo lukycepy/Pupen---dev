@@ -136,7 +136,8 @@ export default function MaintenancePage() {
     walk(doc.body);
 
     const linkifyTextNodes = (node: Node) => {
-      const hasLink = (node as any).querySelector ? (node as any).querySelector('a') : null;
+      const isElement = node.nodeType === Node.ELEMENT_NODE;
+      const hasLink = isElement && typeof (node as any).querySelector === 'function' ? (node as Element).querySelector('a') : null;
       if (hasLink) return;
       const walker = doc.createTreeWalker(node, NodeFilter.SHOW_TEXT);
       const targets: Text[] = [];

@@ -39,9 +39,3 @@ CREATE POLICY "Admin delete error_logs"
 CREATE POLICY "Public insert error_logs" 
     ON public.error_logs FOR INSERT 
     WITH CHECK (true);
-
--- Trigger to invalidate schema cache
-DROP TRIGGER IF EXISTS tr_error_logs_schema_change ON public.error_logs;
-CREATE TRIGGER tr_error_logs_schema_change
-  AFTER CREATE OR ALTER OR DROP ON public.error_logs
-  FOR EACH STATEMENT EXECUTE FUNCTION notify_schema_change();

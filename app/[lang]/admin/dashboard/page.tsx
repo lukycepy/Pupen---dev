@@ -64,7 +64,7 @@ const GodModeTab = dynamic<any>(() => import('./components/GodModeTab'), { loadi
 const BadgesTab = dynamic<any>(() => import('./components/BadgesTab'), { loading: () => <SkeletonTabContent /> });
 const ErrorLogsTab = dynamic<any>(() => import('./components/ErrorLogsTab'), { loading: () => <SkeletonTabContent /> });
 const WebhooksTab = dynamic<any>(() => import('./components/WebhooksTab'), { loading: () => <SkeletonTabContent /> });
-const TeamTab = dynamic<any>(() => import('./components/TeamTab'), { loading: () => <SkeletonTabContent /> });
+
 
 import { useToast } from '@/app/context/ToastContext';
 import Skeleton, { SkeletonTabContent } from '@/app/[lang]/components/Skeleton';
@@ -562,9 +562,7 @@ export default function AdminDashboard() {
               <BadgesTab dict={dict} uploadImage={uploadImage} />
             )}
 
-            {activeTab === 'team' && permissions.can_manage_admins && (
-              <TeamTab dict={dict} uploadImage={uploadImage} />
-            )}
+
 
             {activeTab === 'faq' && canView('faq') && (
               <FAQTab dict={dict} readOnly={!canEdit('faq')} />
@@ -627,7 +625,7 @@ export default function AdminDashboard() {
             )}
 
             {activeTab === 'board' && permissions.can_manage_admins && (
-              <BoardTab dict={dict} />
+              <BoardTab dict={dict} uploadImage={uploadImage} />
             )}
 
             {activeTab === 'documents' && canView('documents') && (

@@ -43,14 +43,3 @@ CREATE POLICY "Admin all drafts"
             WHERE profiles.id = auth.uid() AND (profiles.is_admin = true OR profiles.can_manage_admins = true)
         )
     );
-
--- Trigger to invalidate schema cache
-DROP TRIGGER IF EXISTS tr_newsletter_ext_schema_change ON public.newsletter_templates;
-CREATE TRIGGER tr_newsletter_ext_schema_change
-  AFTER CREATE OR ALTER OR DROP ON public.newsletter_templates
-  FOR EACH STATEMENT EXECUTE FUNCTION notify_schema_change();
-
-DROP TRIGGER IF EXISTS tr_newsletter_ext_schema_change_2 ON public.newsletter_drafts;
-CREATE TRIGGER tr_newsletter_ext_schema_change_2
-  AFTER CREATE OR ALTER OR DROP ON public.newsletter_drafts
-  FOR EACH STATEMENT EXECUTE FUNCTION notify_schema_change();

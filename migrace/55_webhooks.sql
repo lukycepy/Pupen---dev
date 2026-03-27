@@ -20,9 +20,3 @@ CREATE POLICY "Admin full access webhooks"
             WHERE profiles.id = auth.uid() AND (profiles.is_admin = true OR profiles.can_manage_admins = true)
         )
     );
-
--- Trigger to invalidate schema cache
-DROP TRIGGER IF EXISTS tr_webhooks_schema_change ON public.webhooks;
-CREATE TRIGGER tr_webhooks_schema_change
-  AFTER CREATE OR ALTER OR DROP ON public.webhooks
-  FOR EACH STATEMENT EXECUTE FUNCTION notify_schema_change();

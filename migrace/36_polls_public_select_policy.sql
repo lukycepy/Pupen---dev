@@ -7,6 +7,8 @@ WHERE is_active IS DISTINCT FROM COALESCE(is_active, active);
 
 DROP POLICY IF EXISTS polls_select ON public.polls;
 DROP POLICY IF EXISTS poll_options_select ON public.poll_options;
+DROP POLICY IF EXISTS polls_select_public ON public.polls;
+DROP POLICY IF EXISTS poll_options_select_public ON public.poll_options;
 
 CREATE POLICY polls_select_public
   ON public.polls
@@ -27,4 +29,3 @@ CREATE POLICY poll_options_select_public
         AND (p.ends_at IS NULL OR p.ends_at > now())
     )
   );
-

@@ -52,21 +52,3 @@ CREATE POLICY "Admin all user_badges"
             WHERE profiles.id = auth.uid() AND (profiles.is_admin = true OR profiles.can_manage_admins = true)
         )
     );
-
--- Trigger to invalidate schema cache
-CREATE OR REPLACE FUNCTION notify_schema_change() RETURNS TRIGGER AS $$
-BEGIN
-  NOTIFY pgrst, 'reload schema';
-  RETURN NULL;
-END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS tr_gamification_badges_schema_change ON public.gamification_badges;
-CREATE TRIGGER tr_gamification_badges_schema_change
-  AFTER CREATE OR ALTER OR DROP ON public.gamification_badges
-  FOR EACH STATEMENT EXECUTE FUNCTION notify_schema_change();
-
-DROP TRIGGER IF EXISTS tr_user_badges_schema_change ON public.user_badges;
-CREATE TRIGGER tr_user_badges_schema_change
-  AFTER CREATE OR ALTER OR DROP ON public.user_badges
-  FOR EACH STATEMENT EXECUTE FUNCTION notify_schema_change();

@@ -60,7 +60,6 @@ export function buildAdminMenuGroups(dict: any, permissions: any): AdminMenuGrou
         { id: 'events', label: dict.admin.tabEvents, icon: Calendar, visible: canView('events') },
         { id: 'blog', label: dict.admin.tabNews, icon: FileText, visible: canView('news') },
         { id: 'gallery', label: dict.admin.tabGallery || 'Galerie', icon: ImageIcon, visible: canView('gallery') },
-        { id: 'team', label: 'Tým', icon: Users, visible: permissions.can_manage_admins },
         { id: 'archive', label: dict.admin.tabArchive || 'Archiv', icon: Archive, visible: canView('archive') },
         { id: 'banners', label: dict.admin.tabBanners || 'Bannery', icon: Tag, visible: canView('banners') },
         { id: 'faq', label: dict.admin.tabFaq, icon: HelpCircle, visible: canView('faq') },

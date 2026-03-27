@@ -1,5 +1,7 @@
 DO $$
 BEGIN
+  DROP POLICY IF EXISTS newsletter_subscriptions_admin_write ON public.newsletter_subscriptions;
+
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='newsletter_subscriptions' AND policyname='newsletter_subscriptions_admin_select'
   ) THEN
@@ -18,11 +20,11 @@ BEGIN
   END IF;
 
   IF NOT EXISTS (
-    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='newsletter_subscriptions' AND policyname='newsletter_subscriptions_admin_write'
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='newsletter_subscriptions' AND policyname='newsletter_subscriptions_admin_update'
   ) THEN
-    CREATE POLICY newsletter_subscriptions_admin_write
+    CREATE POLICY newsletter_subscriptions_admin_update
       ON public.newsletter_subscriptions
-      FOR UPDATE, DELETE
+      FOR UPDATE
       TO authenticated
       USING (
         EXISTS (
@@ -33,6 +35,23 @@ BEGIN
         )
       )
       WITH CHECK (
+        EXISTS (
+          SELECT 1 FROM public.profiles p
+          WHERE p.id = auth.uid()
+            AND p.is_admin = true
+            AND (p.can_manage_admins = true)
+        )
+      );
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='newsletter_subscriptions' AND policyname='newsletter_subscriptions_admin_delete'
+  ) THEN
+    CREATE POLICY newsletter_subscriptions_admin_delete
+      ON public.newsletter_subscriptions
+      FOR DELETE
+      TO authenticated
+      USING (
         EXISTS (
           SELECT 1 FROM public.profiles p
           WHERE p.id = auth.uid()
@@ -67,4 +86,3 @@ BEGIN
       );
   END IF;
 END $$;
-

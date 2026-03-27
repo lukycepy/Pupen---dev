@@ -14,18 +14,54 @@
     "tools": {
       "dropdownTitle": "Nástroje",
       "dropdownSub": "Vše, co student FAPPZ potřebuje.",
-      "lostFound": { "title": "Ztráty a nálezy", "sub": "ISIC, klíče, věci" },
-      "sos": { "title": "SOS pro prváky", "sub": "Rychlé kontakty" },
-      "subjects": { "title": "Předměty", "sub": "Recenze a info" },
-      "schedule": { "title": "Harmonogram", "sub": "Akademický rok" },
-      "guide": { "title": "Průvodce", "sub": "Pro prváky" },
-      "partners": { "title": "Parťáci", "sub": "Kdo nás podporuje" },
-      "discounts": { "title": "Slevy", "sub": "Výhody pro členy" },
-      "hours": { "title": "Otevírací doby", "sub": "Kdy je kde otevřeno" },
-      "blog": { "title": "Blog", "sub": "Články a postřehy" },
-      "quizzes": { "title": "Kvízy", "sub": "Otestuj se" },
-      "jobs": { "title": "Kariéra", "sub": "Práce a stáže" },
-      "faq": { "title": "FAQ", "sub": "Časté dotazy" }
+      "lostFound": {
+        "title": "Ztráty a nálezy",
+        "sub": "ISIC, klíče, věci"
+      },
+      "sos": {
+        "title": "SOS pro prváky",
+        "sub": "Rychlé kontakty"
+      },
+      "subjects": {
+        "title": "Předměty",
+        "sub": "Recenze a info"
+      },
+      "schedule": {
+        "title": "Harmonogram",
+        "sub": "Akademický rok"
+      },
+      "guide": {
+        "title": "Průvodce",
+        "sub": "Pro prváky"
+      },
+      "partners": {
+        "title": "Parťáci",
+        "sub": "Kdo nás podporuje"
+      },
+      "discounts": {
+        "title": "Slevy",
+        "sub": "Výhody pro členy"
+      },
+      "hours": {
+        "title": "Otevírací doby",
+        "sub": "Kdy je kde otevřeno"
+      },
+      "blog": {
+        "title": "Blog",
+        "sub": "Články a postřehy"
+      },
+      "quizzes": {
+        "title": "Kvízy",
+        "sub": "Otestuj se"
+      },
+      "jobs": {
+        "title": "Kariéra",
+        "sub": "Práce a stáže"
+      },
+      "faq": {
+        "title": "FAQ",
+        "sub": "Časté dotazy"
+      }
     },
     "join": "Přidej se",
     "memberPortal": "Členský portál",
@@ -81,11 +117,26 @@
     "badge": "Roadmap",
     "title": "Co plánujeme dál",
     "subtitle": "Lehký veřejný přehled. Priority se mohou měnit.",
-    "statuses": { "planned": "Plán", "idea": "Nápad" },
+    "statuses": {
+      "planned": "Plán",
+      "idea": "Nápad"
+    },
     "items": [
-      { "title": "Členská mapka kontaktů", "desc": "Mapa členů (pouze pro členy).", "status": "planned" },
-      { "title": "Offline mode pro SOS", "desc": "QR vstup + offline fallback.", "status": "planned" },
-      { "title": "A/B test předmětů newsletteru", "desc": "Zlepšení open-rate přes experimenty.", "status": "idea" }
+      {
+        "title": "Členská mapka kontaktů",
+        "desc": "Mapa členů (pouze pro členy).",
+        "status": "planned"
+      },
+      {
+        "title": "Offline mode pro SOS",
+        "desc": "QR vstup + offline fallback.",
+        "status": "planned"
+      },
+      {
+        "title": "A/B test předmětů newsletteru",
+        "desc": "Zlepšení open-rate přes experimenty.",
+        "status": "idea"
+      }
     ]
   },
   "changelogPage": {
@@ -115,10 +166,22 @@
     "title": "Základy první pomoci",
     "subtitle": "Rychlý tahák pro akce. V akutním ohrožení vždy volejte tísňovou linku.",
     "cards": [
-      { "title": "Tísňová linka", "text": "112, 155 (záchranka), 158 (policie), 150 (hasiči)." },
-      { "title": "Bezvědomí", "text": "Zkontroluj dýchání, volej pomoc, stabilizovaná poloha pokud dýchá." },
-      { "title": "Krvácení", "text": "Tlakový obvaz, zvednout končetinu, při masivním krvácení volej pomoc." },
-      { "title": "Horko / dehydratace", "text": "Přesun do stínu, malé doušky vody, ochlazuj, sleduj stav." }
+      {
+        "title": "Tísňová linka",
+        "text": "112, 155 (záchranka), 158 (policie), 150 (hasiči)."
+      },
+      {
+        "title": "Bezvědomí",
+        "text": "Zkontroluj dýchání, volej pomoc, stabilizovaná poloha pokud dýchá."
+      },
+      {
+        "title": "Krvácení",
+        "text": "Tlakový obvaz, zvednout končetinu, při masivním krvácení volej pomoc."
+      },
+      {
+        "title": "Horko / dehydratace",
+        "text": "Přesun do stínu, malé doušky vody, ochlazuj, sleduj stav."
+      }
     ],
     "footerNote": "Pokud si nejsi jistý/á, volej tísňovou linku."
   },
@@ -338,7 +401,7 @@
     "teamTitle": "Tváře spolku",
     "teamSubtitle": "Lidé, kteří to táhnou a nespí, aby se akce povedly.",
     "joinUs": "Přidej se k nám",
-    "rolePresident": "Předsedkyně spolku", 
+    "rolePresident": "Předsedkyně spolku",
     "descPresident": "predsedkyne@pupen.org",
     "roleVice": "Místopředsedkyně",
     "descVice": "Kreativní duše. Má na starosti sociální sítě a vizuální stránku akcí.",
@@ -353,11 +416,31 @@
     "storyP3": "I když se členové mění, duch Pupenu zůstává stejný. Jsme otevření všem, kdo chtějí přiložit ruku k dlu nebo se jen pobavit.",
     "timelineTitle": "Důležité milníky",
     "timeline": [
-      { "year": "2007", "title": "Založení spolku", "desc": "Parta nadšenců z FAPPZ uspořádala první neoficiální grilovačku." },
-      { "year": "2010", "title": "První velká akce", "desc": "Podařilo se nám zorganizovat první ročník legendárního seznamováku pro prváky." },
-      { "year": "2015", "title": "Oficiální klubovna", "desc": "Získali jsme vlastní zázemí přímo na fakultě. Místo, kde vznikají ty nejlepší nápady." },
-      { "year": "2020", "title": "Přes 100 aktivních členů", "desc": "Rozrostli jsme se do obřích rozměrů. Pupen začal fungovat jako dobře promazaný stroj." },
-      { "year": "Současnost", "title": "Inovujeme", "desc": "Digitalizujeme spolek, spouštíme nový web a rozšiřujeme aktivity i do dalších oblastí." }
+      {
+        "year": "2007",
+        "title": "Založení spolku",
+        "desc": "Parta nadšenců z FAPPZ uspořádala první neoficiální grilovačku."
+      },
+      {
+        "year": "2010",
+        "title": "První velká akce",
+        "desc": "Podařilo se nám zorganizovat první ročník legendárního seznamováku pro prváky."
+      },
+      {
+        "year": "2015",
+        "title": "Oficiální klubovna",
+        "desc": "Získali jsme vlastní zázemí přímo na fakultě. Místo, kde vznikají ty nejlepší nápady."
+      },
+      {
+        "year": "2020",
+        "title": "Přes 100 aktivních členů",
+        "desc": "Rozrostli jsme se do obřích rozměrů. Pupen začal fungovat jako dobře promazaný stroj."
+      },
+      {
+        "year": "Současnost",
+        "title": "Inovujeme",
+        "desc": "Digitalizujeme spolek, spouštíme nový web a rozšiřujeme aktivity i do dalších oblastí."
+      }
     ]
   },
   "categories": {
@@ -441,27 +524,27 @@
     "btnSave": "Uložit do archivu"
   },
   "books": {
-      "title": "Burza učebnic",
-      "subtitle": "Dejte učebnicím druhý život. Kupujte a prodávejte mezi studenty.",
-      "sellBtn": "Prodat knihu",
-      "searchPlaceholder": "Hledat podle názvu nebo autora...",
-      "empty": "Zatím tu nejsou žádné knihy.",
-      "sellerContact": "Kontakt na prodejce",
-      "addBook": "Prodat knihu",
-      "newAd": "Nový inzerát",
-      "bookTitle": "Název učebnice",
-      "author": "Autor",
-      "price": "Cena (Kč)",
-      "contact": "Kontakt (IG/Email)",
-      "saveSuccess": "Inzerát odeslán ke schválení",
-      "btnSave": "Odeslat inzerát",
-      "status": "Stav",
-      "sold": "Prodáno",
-      "active": "Aktivní",
-      "pending": "Čeká na schválení",
-      "priceLabel": "Kč",
-      "contactPlaceholder": "@tvuj_ig nebo email"
-    },
+    "title": "Burza učebnic",
+    "subtitle": "Dejte učebnicím druhý život. Kupujte a prodávejte mezi studenty.",
+    "sellBtn": "Prodat knihu",
+    "searchPlaceholder": "Hledat podle názvu nebo autora...",
+    "empty": "Zatím tu nejsou žádné knihy.",
+    "sellerContact": "Kontakt na prodejce",
+    "addBook": "Prodat knihu",
+    "newAd": "Nový inzerát",
+    "bookTitle": "Název učebnice",
+    "author": "Autor",
+    "price": "Cena (Kč)",
+    "contact": "Kontakt (IG/Email)",
+    "saveSuccess": "Inzerát odeslán ke schválení",
+    "btnSave": "Odeslat inzerát",
+    "status": "Stav",
+    "sold": "Prodáno",
+    "active": "Aktivní",
+    "pending": "Čeká na schválení",
+    "priceLabel": "Kč",
+    "contactPlaceholder": "@tvuj_ig nebo email"
+  },
   "gallery": {
     "title": "Fotogalerie",
     "subtitle": "Nahlédněte do atmosféry našich akcí skrze objektiv fotoaparátu.",
@@ -642,33 +725,66 @@
   "cookiesPage": {
     "backToHome": "Zpět na domovskou stránku",
     "title": "Zásady používání cookies",
-    "intro": "Naše webové stránky používají cookies a obdobné technologie (např. localStorage) pro zajištění funkčnosti, bezpečnosti a – pokud nám k tomu dáte souhlas – také pro anonymní měření návštěvnosti.",
+    "intro": "Naše webové stránky využívají soubory cookies a obdobné technologie (např. localStorage) k zajištění správného fungování webu, analýze návštěvnosti a personalizaci obsahu. Tyto zásady popisují, jak a proč tyto technologie používáme, a jaká máte práva dle Zákona o elektronických komunikacích a GDPR.",
     "whatAreCookiesTitle": "Co jsou cookies?",
-    "whatAreCookiesText": "Cookies jsou malé textové soubory, které webová stránka ukládá do prohlížeče. Slouží například k udržení přihlášení, zabezpečení, zapamatování nastavení a v některých případech i k měření návštěvnosti. Podobně funguje i webové úložiště (localStorage/sessionStorage).",
+    "whatAreCookiesText": "Cookies jsou malé textové soubory, které se při návštěvě webu ukládají do vašeho zařízení (počítač, tablet, smartphone). Pomáhají nám pamatovat si vaše preference (např. přihlášení, jazyk) a sledovat anonymizované statistiky o používání webu. Obdobně fungují i lokální úložiště v prohlížeči.",
     "typesTitle": "Jaké typy cookies využíváme?",
     "necessaryTitle": "Nezbytné cookies",
-    "necessaryDesc": "Zajišťují základní funkce a bezpečnost (např. přihlášení, autorizaci, ochranu proti zneužití, navigaci a stav některých funkcí). Bez nich web nemůže správně fungovat.",
+    "necessaryDesc": "Tyto cookies jsou nezbytné pro správné fungování webu (např. přihlášení do členské sekce, bezpečnost, uložení vašich preferencí o cookies). Dle zákona k nim nepotřebujeme váš souhlas a nelze je vypnout.",
     "prefTitle": "Preferenční cookies",
-    "prefDesc": "Umožňují webu zapamatovat si vaše nastavení, například zvolený jazyk nebo oblíbené slevy.",
+    "prefDesc": "Tyto cookies nám umožňují pamatovat si vaše volby (např. zvolený jazyk, zobrazení určitých prvků UI). Spouštíme je pouze na základě vašeho předchozího souhlasu. Jejich platnost je maximálně 1 rok.",
     "statsTitle": "Analytické cookies",
-    "statsDesc": "Pomáhají nám pochopit, jak web používáte, abychom ho mohli vylepšovat. Tyto nástroje spouštíme až po vašem souhlasu v cookie liště.",
+    "statsDesc": "Slouží k anonymnímu měření návštěvnosti a analýze chování uživatelů na webu (např. které stránky jsou nejnavštěvovanější). Tyto nástroje třetích stran (např. Google Analytics) aktivujeme výhradně po vašem výslovném souhlasu. Platnost těchto cookies je maximálně 13 měsíců.",
     "manageTitle": "Jak změnit nastavení?",
-    "manageText": "Souhlas můžete kdykoliv změnit ve svém prohlížeči (smazáním dat webu) nebo přes cookie lištu při další návštěvě. V nastavení prohlížeče můžete cookies blokovat nebo mazat, což může ovlivnit funkčnost přihlášení a některých částí webu.",
+    "manageText": "Svůj souhlas můžete kdykoliv změnit nebo odvolat pomocí tlačítka pro nastavení cookies v patičce webu. Pokud si přejete smazat již uložené cookies, můžete tak učinit přímo v nastavení vašeho webového prohlížeče. Vezměte prosím na vědomí, že blokování nezbytných cookies může omezit funkčnost webu.",
     "lastUpdated": "Naposledy aktualizováno: Březen 2026"
   },
   "tools": {
     "dropdownTitle": "Nástroje",
-    "subjects": { "title": "Hodnocení předmětů", "sub": "Recenze výuky" },
-    "schedule": { "title": "Harmonogram", "sub": "Termíny roku" },
-    "guide": { "title": "Průvodce prváka", "sub": "Jak přežít" },
-    "partners": { "title": "Parťáci na sport", "sub": "Najdi kámoše" },
-    "discounts": { "title": "ISIC Slevy", "sub": "Ušetři v Suchdole" },
-    "hours": { "title": "Otevírací doby", "sub": "Kdy mají open?" },
-    "blog": { "title": "Studentský blog", "sub": "Příběhy studentů" },
-    "quizzes": { "title": "Kvízy", "sub": "Otestuj se" },
-    "jobs": { "title": "Kariéra", "sub": "Práce a stáže" },
-    "faq": { "title": "FAQ", "sub": "Časté dotazy" },
-    "qr": { "title": "QR Generátor", "sub": "Tvorba kódů" }
+    "subjects": {
+      "title": "Hodnocení předmětů",
+      "sub": "Recenze výuky"
+    },
+    "schedule": {
+      "title": "Harmonogram",
+      "sub": "Termíny roku"
+    },
+    "guide": {
+      "title": "Průvodce prváka",
+      "sub": "Jak přežít"
+    },
+    "partners": {
+      "title": "Parťáci na sport",
+      "sub": "Najdi kámoše"
+    },
+    "discounts": {
+      "title": "ISIC Slevy",
+      "sub": "Ušetři v Suchdole"
+    },
+    "hours": {
+      "title": "Otevírací doby",
+      "sub": "Kdy mají open?"
+    },
+    "blog": {
+      "title": "Studentský blog",
+      "sub": "Příběhy studentů"
+    },
+    "quizzes": {
+      "title": "Kvízy",
+      "sub": "Otestuj se"
+    },
+    "jobs": {
+      "title": "Kariéra",
+      "sub": "Práce a stáže"
+    },
+    "faq": {
+      "title": "FAQ",
+      "sub": "Časté dotazy"
+    },
+    "qr": {
+      "title": "QR Generátor",
+      "sub": "Tvorba kódů"
+    }
   },
   "admin": {
     "budget": {
@@ -746,13 +862,10 @@
     "btnUpdateEvent": "Aktualizovat akci",
     "btnSavePost": "Publikovat novinku",
     "btnUpdatePost": "Aktualizovat novinku",
-
     "btnUpdateBanner": "Aktualizovat banner",
-
     "btnUpdatePartner": "Aktualizovat partnera",
     "btnSaveFaq": "Uložit dotaz",
     "btnUpdateFaq": "Aktualizovat dotaz",
-
     "btnUpdateHours": "Aktualizovat otevírací dobu",
     "btnSaveAsset": "Uložit majetek",
     "btnUpdateAsset": "Aktualizovat majetek",
@@ -762,7 +875,6 @@
     "btnUpdateGuide": "Aktualizovat sekci",
     "btnSaveMapPoint": "Uložit bod",
     "btnUpdateMapPoint": "Aktualizovat bod",
-
     "btnUploading": "Nahrávám...",
     "btnCancel": "Zrušit",
     "btnDelete": "Smazat",
@@ -829,12 +941,12 @@
       "saveSuccess": "Nastavení plateb uloženo"
     },
     "readOnly": "Pouze pro čtení",
-     "confirmDeleteEventTitle": "Smazat akci?",
-     "confirmDeleteEvent": "Opravdu chcete tuto akci trvale smazat? Tato operace je nevratná.",
-      "confirmDeletePostTitle": "Smazat článek?",
-      "confirmDeletePost": "Opravdu chcete tento článek trvale smazat?",
-     "bulkDeleteTitle": "Smazat vybrané?",
-     "bulkDeleteConfirm": "Opravdu chcete smazat {count} vybraných akcí?",
+    "confirmDeleteEventTitle": "Smazat akci?",
+    "confirmDeleteEvent": "Opravdu chcete tuto akci trvale smazat? Tato operace je nevratná.",
+    "confirmDeletePostTitle": "Smazat článek?",
+    "confirmDeletePost": "Opravdu chcete tento článek trvale smazat?",
+    "bulkDeleteTitle": "Smazat vybrané?",
+    "bulkDeleteConfirm": "Opravdu chcete smazat {count} vybraných akcí?",
     "bulkDeleteSuccess": "Vybrané položky smazány",
     "labelCapacity": "Kapacita (volitelné)",
     "placeholderCapacity": "Bez limitu",
@@ -877,7 +989,6 @@
     "labelQuestion": "Otázka",
     "labelAnswer": "Odpověď",
     "labelOrder": "Pořadí",
-
     "listFaq": "Seznam FAQ",
     "alertStatusUpdated": "Status aktualizován",
     "appDetail": "Detail přihlášky",
@@ -951,9 +1062,9 @@
     "backToHome": "Zpět na domovskou stránku",
     "badgeLabel": "Ochrana soukromí",
     "title": "Zásady ochrany osobních údajů (GDPR)",
-    "intro": "Vážíme si vaší důvěry. Níže popisujeme, jaké osobní údaje zpracováváme, proč je zpracováváme, jak dlouho je uchováváme a jaká máte práva. Osobní údaje zpracováváme zejména na základě plnění smlouvy (členství/registrace), plnění právních povinností a oprávněného zájmu; v některých případech na základě souhlasu (např. marketing, analytika).",
+    "intro": "Vaše soukromí je pro nás důležité. Zpracováváme vaše osobní údaje v souladu s Nařízením Evropského parlamentu a Rady (EU) 2016/679 (GDPR) a zákonem č. 110/2019 Sb., o zpracování osobních údajů.",
     "controllerTitle": "1. Správce osobních údajů",
-    "controllerText": "Správcem je Studentský spolek Pupen, z.s., IČO: 22694498, zapsaný u Městského soudu v Praze, sp. zn. L 18291, se sídlem Kamýcká 129, Suchdol, 165 00 Praha (dále jen „Správce“).",
+    "controllerText": "Správcem osobních údajů je Studentský spolek Pupen, z.s., IČO: 22694498, se sídlem Kamýcká 129, Suchdol, 165 00 Praha, zapsaný ve spolkovém rejstříku vedeném Městským soudem v Praze, sp. zn. L 18291 (dále jen „Správce“).",
     "controllerContactPrefix": "Pro dotazy ohledně ochrany soukromí nás kontaktujte na:",
     "controllerEmail": "gdpr@pupen.org",
     "scopeTitle": "2. Rozsah zpracovávaných údajů",
@@ -970,8 +1081,8 @@
       "Další údaje nezbytné pro chod spolku"
     ],
     "purposeTitle": "3. Účel a doba zpracování",
-    "purposeText": "Údaje zpracováváme pro vedení evidence členů, správu účtů, registrace na akce, komunikaci, zabezpečení webu, vyřízení požadavků a pro plnění účelu spolku. Pokud nám udělíte souhlas, můžeme údaje využít i pro marketingové účely (např. zveřejnění fotek z akcí).",
-    "retentionText": "Údaje uchováváme po dobu nezbytně nutnou pro daný účel. U členských účtů typicky po dobu členství a následně po přiměřenou dobu pro obranu právních nároků. Účetní a daňové doklady uchováváme dle zákonných lhůt.",
+    "purposeText": "Vaše osobní údaje zpracováváme na základě: a) Plnění smlouvy (členství, registrace na akce, nákup vstupenek). b) Plnění právních povinností (účetnictví, daně). c) Oprávněného zájmu (bezpečnost webu, ochrana majetku, informování o činnosti). d) Souhlasu (zasílání marketingových sdělení a newsletteru, analytika).",
+    "retentionText": "Osobní údaje uchováváme po dobu trvání členství či služby a následně po dobu nezbytnou pro ochranu právních nároků (zpravidla 3 roky). Účetní a daňové doklady uchováváme po dobu stanovenou příslušnými zákony (až 10 let).",
     "recipientsTitle": "4. Komu data předáváme?",
     "recipientsList": [
       "Česká zemědělská univerzita v Praze (např. pro výplatu stipendií)",
@@ -988,12 +1099,13 @@
     "rightsTitle": "6. Vaše práva",
     "rightsIntro": "Dle GDPR máte právo na:",
     "rightsList": [
-      "Přístup ke svým údajům a informaci o jejich zpracování",
-      "Opravu nebo doplnění nepřesných údajů",
-      "Výmaz údajů („právo být zapomenut“)",
-      "Omezení zpracování a přenositelnost údajů",
-      "Vznesení námitky proti zpracování",
-      "Podání stížnosti u Úřadu pro ochranu osobních údajů (www.uoou.cz)"
+      "Právo na přístup ke svým údajům a kopii dat",
+      "Právo na opravu nepřesných údajů",
+      "Právo na výmaz (právo být zapomenut), pokud pominul důvod zpracování",
+      "Právo na omezení zpracování a přenositelnost údajů",
+      "Právo vznést námitku proti zpracování na základě oprávněného zájmu",
+      "Právo odvolat udělený souhlas",
+      "Právo podat stížnost u Úřadu pro ochranu osobních údajů (www.uoou.cz)"
     ],
     "lastUpdated": "Naposledy aktualizováno: Březen 2026"
   },
@@ -1001,18 +1113,20 @@
     "backToHome": "Zpět na domovskou stránku",
     "badgeLabel": "Právní informace",
     "title": "Všeobecné obchodní podmínky",
-    "intro": "Tyto podmínky upravují používání webu pupen.org a některých souvisejících služeb poskytovaných Studentským spolkem Pupen, z.s. (dále jen „Spolek“). Používáním webu souhlasíte s těmito podmínkami v aktuálním znění.",
+    "intro": "Tyto Všeobecné obchodní podmínky (dále jen „VOP“) upravují práva a povinnosti mezi Studentským spolkem Pupen, z.s. (dále jen „Spolek“) a uživateli webových stránek pupen.org (dále jen „Uživatel“). Používáním webu s těmito VOP souhlasíte.",
     "membershipTitle": "1. Členství a služby",
-    "membershipText": "Web slouží k informování o aktivitách Spolku, registraci na akce a správě členských výhod. Některé části webu jsou přístupné pouze po přihlášení pro oficiální členy Spolku.",
+    "membershipText": "Některé části webu jsou dostupné pouze registrovaným členům Spolku. Uživatel je povinen uvádět při registraci pravdivé údaje a chránit své přihlašovací údaje. Spolek si vyhrazuje právo omezit nebo zrušit uživatelský účet v případě porušení VOP nebo stanov Spolku.",
     "registrationTitle": "2. Registrace na akce",
-    "registrationText": "Registrace na akce prostřednictvím RSVP formuláře může být závazná dle popisu konkrétní akce. U digitálních vstupenek je uživatel povinen se při vstupu prokázat platným QR kódem a respektovat pokyny pořadatelů.",
+    "registrationText": "Při registraci na akce či nákupu digitálních vstupenek se uzavírá smlouva distančním způsobem dle zákona č. 89/2012 Sb., občanský zákoník. V případě placených akcí jsou storno podmínky uvedeny vždy u konkrétní akce. Uživatel (spotřebitel) bere na vědomí, že dle § 1837 písm. j) občanského zákoníku nelze odstoupit od smlouvy o poskytnutí služeb spojených s volným časem, pokud jsou poskytovány v určeném termínu.",
     "contentTitle": "3. Ochrana autorských práv",
-    "contentText": "Veškerý obsah na webu (texty, fotografie, loga) je majetkem Spolku nebo jeho partnerů. Jakékoliv šíření bez předchozího souhlasu je zakázáno.",
+    "contentText": "Veškerý obsah webu (texty, fotografie, grafika, zdrojový kód) je chráněn autorským právem Spolku nebo třetích stran. Jakékoliv kopírování, šíření nebo komerční využití bez předchozího písemného souhlasu Spolku je přísně zakázáno.",
     "disclaimerTitle": "4. Odpovědnost",
     "disclaimerText": "Web poskytujeme „tak jak je“. Spolek nenese odpovědnost za nedostupnost webu, škody vzniklé jeho používáním ani za obsah externích odkazů (partneři, ISIC slevy apod.).",
     "oauthTitle": "Přihlášení a zabezpečení účtu",
     "oauthText": "Web může umožnit přihlášení přes externího poskytovatele (např. Google) nebo použití passkey (WebAuthn) jako bezpečnostního ověření. Tyto možnosti jsou volitelné; zpracováváme pouze nezbytné údaje pro vytvoření a správu účtu a zabezpečení přístupu.",
-    "lastUpdated": "Naposledy aktualizováno: Březen 2026"
+    "lastUpdated": "Naposledy aktualizováno: Březen 2026",
+    "liabilityTitle": "4. Odpovědnost a závěrečná ustanovení",
+    "liabilityText": "Spolek nenese odpovědnost za výpadky webu způsobené technickými problémy či vyšší mocí. Spolek nenese odpovědnost za obsah vložený uživateli (např. komentáře, recenze, inzeráty), ale vyhrazuje si právo takový obsah moderovat či smazat. Vztahy neupravené těmito VOP se řídí právním řádem České republiky."
   },
   "member": {
     "tabDashboard": "Nástěnka",
@@ -1206,8 +1320,7 @@
     "moreInfo": "Více informací",
     "writeArticle": "Napsat nový článek",
     "statusLabel": "Status",
-    "callSupport": "Zavolat podpoře"
-    ,
+    "callSupport": "Zavolat podpoře",
     "googleLinkUnsupported": "Propojení Google není v této instalaci dostupné.",
     "securityLogFailed": "Nepodařilo se uložit auditní záznam."
   },

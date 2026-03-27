@@ -18,6 +18,22 @@ export default function Error({
 
   useEffect(() => {
     void error;
+    // Auto-reload on ChunkLoadError or similar missing module errors caused by new deployments
+    if (
+      error?.name === 'ChunkLoadError' ||
+      error?.message?.toLowerCase().includes('failed to load chunk') ||
+      error?.message?.toLowerCase().includes('dynamically imported module') ||
+      error?.message?.toLowerCase().includes('fetch dynamically imported module')
+    ) {
+      if (typeof window !== 'undefined') {
+        const reloaded = sessionStorage.getItem('chunk_reloaded');
+        if (!reloaded) {
+          sessionStorage.setItem('chunk_reloaded', 'true');
+          window.location.reload();
+          return;
+        }
+      }
+    }
   }, [error]);
 
   const title = lang === 'en' ? 'Something went wrong' : 'Něco se pokazilo';

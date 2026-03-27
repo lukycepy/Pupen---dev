@@ -258,9 +258,9 @@ BEGIN
         )
       );
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='messages' AND policyname='messages_admin_write') THEN
-    CREATE POLICY messages_admin_write ON public.messages
-      FOR UPDATE, DELETE TO authenticated
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='messages' AND policyname='messages_admin_update') THEN
+    CREATE POLICY messages_admin_update ON public.messages
+      FOR UPDATE TO authenticated
       USING (
         EXISTS (
           SELECT 1 FROM public.profiles p
@@ -268,6 +268,16 @@ BEGIN
         )
       )
       WITH CHECK (
+        EXISTS (
+          SELECT 1 FROM public.profiles p
+          WHERE p.id = auth.uid() AND p.is_admin = true AND (p.can_edit_messages = true OR p.can_manage_admins = true)
+        )
+      );
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='messages' AND policyname='messages_admin_delete') THEN
+    CREATE POLICY messages_admin_delete ON public.messages
+      FOR DELETE TO authenticated
+      USING (
         EXISTS (
           SELECT 1 FROM public.profiles p
           WHERE p.id = auth.uid() AND p.is_admin = true AND (p.can_edit_messages = true OR p.can_manage_admins = true)
