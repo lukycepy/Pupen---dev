@@ -8,7 +8,6 @@ import { getDictionary } from '@/lib/get-dictionary';
 import Link from 'next/link';
 import InlinePulse from '@/app/components/InlinePulse';
 import PasswordField from '@/app/components/PasswordField';
-import { evaluatePassword, passwordScoreLabel } from '@/lib/auth/password-policy';
 
 export default function LoginPage() {
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
@@ -58,13 +57,15 @@ export default function LoginPage() {
   useEffect(() => {
     if (!turnstileSiteKey) return;
     const w: any = window as any;
+    let cancelled = false;
     const render = () => {
+      if (cancelled) return;
       const el = document.getElementById('turnstile-login');
       if (!el) return;
       if ((el as any).__rendered) return;
       if (!w.turnstile) return;
       (el as any).__rendered = true;
-      w.turnstile.render('#turnstile-login', {
+      w.turnstile.render(el, {
         sitekey: turnstileSiteKey,
         callback: (t: string) => setCaptchaToken(String(t || '')),
         'expired-callback': () => setCaptchaToken(''),
@@ -74,13 +75,18 @@ export default function LoginPage() {
 
     if (w.turnstile) {
       render();
-      return;
+      return () => {
+        cancelled = true;
+      };
     }
 
     const existing = document.querySelector('script[data-turnstile="1"]') as HTMLScriptElement | null;
     if (existing) {
       existing.addEventListener('load', render);
-      return () => existing.removeEventListener('load', render);
+      return () => {
+        cancelled = true;
+        existing.removeEventListener('load', render);
+      };
     }
 
     const s = document.createElement('script');
@@ -90,7 +96,10 @@ export default function LoginPage() {
     s.dataset.turnstile = '1';
     s.addEventListener('load', render);
     document.head.appendChild(s);
-    return () => s.removeEventListener('load', render);
+    return () => {
+      cancelled = true;
+      s.removeEventListener('load', render);
+    };
   }, [turnstileSiteKey]);
 
   useEffect(() => {
@@ -190,13 +199,29 @@ export default function LoginPage() {
 
     try {
       const factorsRes = await mfaAny.listFactors?.();
-      const factors = factorsRes?.data?.totp || factorsRes?.data?.all || [];
-      const verified = Array.isArray(factors) ? factors.find((f: any) => f?.status === 'verified') : null;
-      if (!verified?.id) {
+      const totp = factorsRes?.data?.totp || [];
+      const all = factorsRes?.data?.all || [];
+      const webauthn = factorsRes?.data?.webauthn || (Array.isArray(all) ? all.filter((f: any) => f?.factor_type === 'webauthn') : []);
+      const verifiedWeb = Array.isArray(webauthn) ? webauthn.find((f: any) => f?.status === 'verified') : null;
+      const verifiedTotp = Array.isArray(totp) ? totp.find((f: any) => f?.status === 'verified') : null;
+
+      if (verifiedWeb?.id && mfaAny?.webauthn?.authenticate) {
+        try {
+          const r = await mfaAny.webauthn.authenticate({ factorId: String(verifiedWeb.id) });
+          if (r?.error) throw r.error;
+          return true;
+        } catch (e: any) {
+          setError(e?.message || (lang === 'cs' ? 'Admin účet vyžaduje 2FA.' : 'Admin accounts require 2FA.'));
+          setLoading(false);
+          return false;
+        }
+      }
+
+      if (!verifiedTotp?.id) {
         await startAdminMfaEnroll();
         return false;
       }
-      const factorId = String(verified.id);
+      const factorId = String(verifiedTotp.id);
       const ch = await mfaAny.challenge?.({ factorId });
       const challengeId = String(ch?.data?.id || ch?.data?.challengeId || '');
       if (!challengeId) throw new Error('Challenge failed');
@@ -413,8 +438,9 @@ export default function LoginPage() {
     }
   };
 
-  const handleApple = async () => {
+  const handlePasskey = async () => {
     setError('');
+    setInfo('');
     setLoading(true);
     try {
       try {
@@ -438,12 +464,52 @@ export default function LoginPage() {
         }
       } catch {}
 
-      const origin = window.location.origin;
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'apple',
-        options: { redirectTo: `${origin}/${lang}/login` },
-      });
-      if (error) throw error;
+      const emailValue = String(email || '').trim();
+      if (!emailValue) {
+        setError(lang === 'cs' ? 'Zadejte e-mail.' : 'Enter your email.');
+        setLoading(false);
+        return;
+      }
+
+      const { data, error: loginError } = await supabase.auth.signInWithPassword({ email: emailValue, password });
+      if (loginError) {
+        setError((dict?.auth?.login?.loginError as string) || (lang === 'cs' ? 'Chyba přihlášení. Zkontrolujte údaje.' : 'Login error. Please check your credentials.'));
+        setLoading(false);
+        return;
+      }
+
+      if ((data as any)?.mfa && !(data as any)?.session) {
+        const anyData: any = data as any;
+        const factors = anyData?.mfa?.factors || anyData?.mfa?.availableFactors || [];
+        const web = Array.isArray(factors) ? factors.find((f: any) => f?.factor_type === 'webauthn' || f?.type === 'webauthn') : null;
+        const factorId = String(anyData?.mfa?.factorId || web?.id || factors?.[0]?.id || '');
+        const authAny: any = supabase.auth as any;
+        if (web && authAny?.mfa?.webauthn?.authenticate) {
+          const r = await authAny.mfa.webauthn.authenticate({ factorId });
+          if (r?.error) throw r.error;
+          const { data: sessionData } = await supabase.auth.getSession();
+          const user = sessionData.session?.user;
+          if (!user) throw new Error('Unauthorized');
+          const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
+          await handleRedirect(profile, user.email || undefined, 'passkey');
+          return;
+        }
+
+        if (!factorId) throw new Error((dict?.auth?.login?.mfaRequired as string) || (lang === 'cs' ? 'Vyžadováno 2FA.' : '2FA required.'));
+        const ch = await authAny?.mfa?.challenge?.({ factorId });
+        const challengeId = String(ch?.data?.id || ch?.data?.challengeId || '');
+        if (!challengeId) throw new Error((dict?.auth?.login?.mfaRequired as string) || (lang === 'cs' ? 'Vyžadováno 2FA.' : '2FA required.'));
+        setMfa({ factorId, challengeId });
+        setLoading(false);
+        return;
+      }
+
+      if ((data as any)?.user) {
+        const u: any = (data as any).user;
+        const { data: profile } = await supabase.from('profiles').select('*').eq('id', u.id).maybeSingle();
+        await handleRedirect(profile, u.email, 'passkey');
+        return;
+      }
     } catch (e: any) {
       setError(e?.message || (lang === 'cs' ? 'Chyba' : 'Error'));
       setLoading(false);
@@ -668,28 +734,6 @@ export default function LoginPage() {
                     autoComplete="current-password"
                   />
                 </div>
-                {password ? (
-                  <div className="pt-2">
-                    {(() => {
-                      const r = evaluatePassword(password, { email });
-                      const score = r.score;
-                      const label = passwordScoreLabel(score, lang === 'en' ? 'en' : 'cs');
-                      const pct = (score / 4) * 100;
-                      const bar = score <= 1 ? 'bg-red-500' : score === 2 ? 'bg-amber-500' : score === 3 ? 'bg-green-500' : 'bg-green-600';
-                      return (
-                        <>
-                          <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">
-                            <span>{lang === 'cs' ? 'Síla hesla' : 'Password strength'}</span>
-                            <span className="text-stone-500">{label}</span>
-                          </div>
-                          <div className="mt-2 h-2 bg-stone-200 rounded-full overflow-hidden">
-                            <div className={`h-2 ${bar}`} style={{ width: `${pct}%` }} />
-                          </div>
-                        </>
-                      );
-                    })()}
-                  </div>
-                ) : null}
               </div>
               <div className="flex items-center justify-end">
                 <Link href={`/${lang}/forgot`} className="text-stone-400 text-xs font-bold hover:text-green-600 transition">
@@ -745,11 +789,11 @@ export default function LoginPage() {
               </button>
               <button
                 type="button"
-                onClick={handleApple}
+                onClick={handlePasskey}
                 disabled={loading}
                 className="w-full bg-white text-stone-700 py-4 rounded-2xl font-black uppercase tracking-widest text-xs border border-stone-200 hover:bg-stone-50 transition disabled:opacity-50"
               >
-                {lang === 'cs' ? 'Pokračovat s Apple' : 'Continue with Apple'}
+                {lang === 'cs' ? 'Přihlásit se passkey' : 'Sign in with passkey'}
               </button>
               {universitySsoProvider ? (
                 <button

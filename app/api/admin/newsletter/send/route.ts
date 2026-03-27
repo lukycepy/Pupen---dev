@@ -24,15 +24,21 @@ function matchesCategories(subCats: any, targetCats: string[]) {
   return c.some((x) => targetCats.includes(x));
 }
 
-async function sendWithConcurrency<T>(items: T[], worker: (item: T) => Promise<void>, concurrency: number, delayMs: number = 0) {
+async function sendWithConcurrency<T>(
+  items: T[],
+  worker: (item: T) => Promise<'sent' | 'queued'>,
+  concurrency: number,
+  delayMs: number = 0,
+) {
   const queue = [...items];
-  const results: { ok: number; failed: number } = { ok: 0, failed: 0 };
+  const results: { sent: number; queued: number; failed: number } = { sent: 0, queued: 0, failed: 0 };
   const runners = Array.from({ length: Math.max(1, Math.min(concurrency, items.length || 1)) }).map(async () => {
     while (queue.length) {
       const item = queue.shift() as T;
       try {
-        await worker(item);
-        results.ok += 1;
+        const r = await worker(item);
+        if (r === 'queued') results.queued += 1;
+        else results.sent += 1;
       } catch {
         results.failed += 1;
       }
@@ -89,12 +95,11 @@ export async function POST(req: Request) {
       recipients = recipients.filter((e: string) => allowed.has(e));
     }
 
-    if (!recipients.length) return NextResponse.json({ ok: true, sent: 0, failed: 0 });
+    if (!recipients.length) return NextResponse.json({ ok: true, sent: 0, queued: 0, failed: 0, recipients: 0 });
 
     const transporter = await getMailerWithSettings();
     const from = await getSenderFromSettings();
     
-    // Získáme URL pro odhlášení
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://pupen.org';
 
     const createdAt = new Date().toISOString();
@@ -117,7 +122,6 @@ export async function POST(req: Request) {
     if (ins.error) throw ins.error;
     const campaignId = String((ins.data as any)?.id || '');
 
-    let queued = 0;
     // Povolíme maximálně 3 paralelní požadavky a po každém e-mailu ve frontě počkáme 100ms
     // Zabrání to rate limitingu od SMTP providera (např. SendGrid, AWS SES, Resend)
     const sendRes = await sendWithConcurrency(
@@ -133,12 +137,12 @@ export async function POST(req: Request) {
             : '';
         const chosenSubject = abEnabled ? (variant === 'a' ? subjectA : subjectB) : subject;
 
-        // Přidáme unsubscribe link specifický pro příjemce
-        const unsubUrl = `${baseUrl}/unsubscribe?email=${encodeURIComponent(to)}`;
+        const unsubPageUrl = `${baseUrl}/unsubscribe?email=${encodeURIComponent(to)}`;
+        const unsubApiUrl = `${baseUrl}/api/newsletter/unsubscribe?email=${encodeURIComponent(to)}`;
         const emailVars = { 
           subject: chosenSubject, 
           html, 
-          unsubLink: unsubUrl,
+          unsubLink: unsubPageUrl,
           variant,
         };
         
@@ -153,7 +157,6 @@ export async function POST(req: Request) {
           variant,
         });
         
-        // Přidáme List-Unsubscribe hlavičku
         const r = await sendMailWithQueueFallback({
           transporter,
           supabase,
@@ -163,23 +166,18 @@ export async function POST(req: Request) {
             to, 
             subject: wrappedSubject, 
             html: trackedHtml,
-            attachments: attachments.map((a: any) => ({
-              filename: a.name,
-              path: a.url
-            })),
+            attachments: attachments
+              .map((a: any) => ({ filename: a?.name, path: a?.url }))
+              .filter((a: any) => typeof a?.filename === 'string' && a.filename && typeof a?.path === 'string' && a.path),
             headers: {
-              'List-Unsubscribe': `<${unsubUrl}>`,
+              'List-Unsubscribe': `<${unsubApiUrl}>`,
               'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
             }
           },
         });
-        if (!r.ok) {
-          if (r.queued) {
-            queued += 1;
-            return;
-          }
-          throw r.error;
-        }
+        if (r.ok) return 'sent';
+        if (r.queued) return 'queued';
+        throw r.error;
       },
       3,   // concurrency
       100  // delayMs
@@ -199,12 +197,12 @@ export async function POST(req: Request) {
           admin_name: user.user_metadata?.full_name || user.email || 'admin',
           action: 'NEWSLETTER_SENT',
           target_id: campaignId || null,
-          details: { categories, roleIds, utmCampaign: campaignId, sent: sendRes.ok, queued, failed: sendRes.failed, recipients: recipients.length },
+          details: { categories, roleIds, utmCampaign: campaignId, sent: sendRes.sent, queued: sendRes.queued, failed: sendRes.failed, recipients: recipients.length },
         },
       ])
       .throwOnError();
 
-    return NextResponse.json({ ok: true, sent: sendRes.ok, queued, failed: sendRes.failed, recipients: recipients.length });
+    return NextResponse.json({ ok: true, sent: sendRes.sent, queued: sendRes.queued, failed: sendRes.failed, recipients: recipients.length });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
   }

@@ -21,11 +21,13 @@ export default function CookieBanner({ lang, dict }: { lang: string, dict: any }
 
   const handleAccept = () => {
     localStorage.setItem('cookie-consent', 'accepted');
+    window.dispatchEvent(new Event('cookie-consent-changed'));
     setIsVisible(false);
   };
 
   const handleDecline = () => {
     localStorage.setItem('cookie-consent', 'declined');
+    window.dispatchEvent(new Event('cookie-consent-changed'));
     setIsVisible(false);
   };
 

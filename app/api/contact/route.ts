@@ -83,7 +83,7 @@ export async function POST(req: Request) {
         const transporter = await getMailerWithSettings();
         const from = await getSenderFromSettings();
         
-        await sendMailWithQueueFallback({
+        const r = await sendMailWithQueueFallback({
           transporter,
           supabase,
           meta: { kind: 'notification' },
@@ -103,6 +103,7 @@ export async function POST(req: Request) {
             ` 
           },
         });
+        if (!r.ok && !r.queued) throw r.error;
       }
     } catch (notifyErr) {
       console.error('Failed to send admin notification:', notifyErr);
@@ -120,12 +121,13 @@ export async function POST(req: Request) {
     const transporter = await getMailerWithSettings();
     const from = await getSenderFromSettings();
 
-    await sendMailWithQueueFallback({
+    const r = await sendMailWithQueueFallback({
       transporter,
       supabase,
       meta: { kind: 'contact' },
       message: { from, to: routingEmail, replyTo: email, subject: mailSubject, html },
     });
+    if (!r.ok && !r.queued) throw r.error;
 
     // Trigger webhook asynchronously
     triggerWebhooks('new_message', { name, email, subject, message });

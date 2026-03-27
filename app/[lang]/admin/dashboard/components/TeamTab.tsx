@@ -10,10 +10,18 @@ import AdminPanel from './ui/AdminPanel';
 import { useToast } from '../../../../context/ToastContext';
 import Image from 'next/image';
 import Papa from 'papaparse';
+import { supabase } from '@/lib/supabase';
 
 export default function TeamTab({ dict, uploadImage }: { dict: any, uploadImage: (file: File, bucket: string) => Promise<string> }) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+
+  const getToken = async () => {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token || null;
+    if (!token) throw new Error('Unauthorized');
+    return token;
+  };
   
   const [isEditing, setIsEditing] = useState<any>(null);
   const [formData, setFormData] = useState({ 
@@ -26,7 +34,8 @@ export default function TeamTab({ dict, uploadImage }: { dict: any, uploadImage:
   const { data: team = [], isLoading } = useQuery({
     queryKey: ['team_members'],
     queryFn: async () => {
-      const res = await fetch('/api/admin/team');
+      const token = await getToken();
+      const res = await fetch('/api/admin/team', { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       return data.team || [];
@@ -37,9 +46,10 @@ export default function TeamTab({ dict, uploadImage }: { dict: any, uploadImage:
     mutationFn: async (data: any) => {
       const url = data.id ? `/api/admin/team/${data.id}` : '/api/admin/team';
       const method = data.id ? 'PUT' : 'POST';
+      const token = await getToken();
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(data)
       });
       const json = await res.json();
@@ -56,7 +66,8 @@ export default function TeamTab({ dict, uploadImage }: { dict: any, uploadImage:
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/admin/team/${id}`, { method: 'DELETE' });
+      const token = await getToken();
+      const res = await fetch(`/api/admin/team/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) {
         const json = await res.json();
         throw new Error(json.error);
@@ -93,9 +104,10 @@ export default function TeamTab({ dict, uploadImage }: { dict: any, uploadImage:
       skipEmptyLines: true,
       complete: async (results) => {
         try {
+          const token = await getToken();
           const res = await fetch('/api/admin/team/import', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
             body: JSON.stringify({ rows: results.data })
           });
           const json = await res.json();

@@ -23,7 +23,9 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     if (error) throw error;
     return NextResponse.json({ member: data });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const msg = String(error?.message || 'Error');
+    const status = msg === 'Unauthorized' ? 401 : msg === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: msg }, { status });
   }
 }
 
@@ -45,6 +47,8 @@ export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }
     if (error) throw error;
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const msg = String(error?.message || 'Error');
+    const status = msg === 'Unauthorized' ? 401 : msg === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: msg }, { status });
   }
 }

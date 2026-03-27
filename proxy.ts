@@ -18,53 +18,32 @@ const siteCache: { value: SiteConfig | null; atMs: number } =
   (globalThis as any).__PUPEN_SITE_CONFIG_CACHE__ || { value: null, atMs: 0 };
 (globalThis as any).__PUPEN_SITE_CONFIG_CACHE__ = siteCache;
 
-async function loadConfig(): Promise<SiteConfig> {
+async function loadConfig(origin: string): Promise<SiteConfig> {
   const now = Date.now();
   if (siteCache.value && now - siteCache.atMs < 30_000) return siteCache.value;
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anon) {
+  try {
+    const res = await fetch(new URL('/api/site-config', origin || 'http://localhost').toString(), {
+      cache: 'no-store',
+    } as any);
+    const json = (await res.json().catch(() => ({}))) as any;
+    const cfg = (json?.config && typeof json.config === 'object' ? json.config : {}) as any;
+    const value: SiteConfig = {
+      maintenance_enabled: !!cfg.maintenance_enabled,
+      maintenance_start_at: cfg.maintenance_start_at ?? null,
+      maintenance_end_at: cfg.maintenance_end_at ?? null,
+      maintenance_active: !!cfg.maintenance_active,
+      pages: (cfg.pages && typeof cfg.pages === 'object' ? cfg.pages : {}) as any,
+    };
+    siteCache.value = value;
+    siteCache.atMs = now;
+    return value;
+  } catch {
     const fallback = { maintenance_enabled: false, pages: {} };
     siteCache.value = fallback;
     siteCache.atMs = now;
     return fallback;
   }
-
-  const configId = Number.isFinite(SITE_CONFIG_ID) && SITE_CONFIG_ID >= 1 ? SITE_CONFIG_ID : 1;
-  const res = await fetch(`${url}/rest/v1/site_public_config?id=eq.${configId}&select=maintenance_enabled,maintenance_start_at,maintenance_end_at,pages`, {
-    headers: {
-      apikey: anon,
-      Authorization: `Bearer ${anon}`,
-      Accept: 'application/json',
-    },
-  });
-
-  if (!res.ok) {
-    const fallback = { maintenance_enabled: false, pages: {} };
-    siteCache.value = fallback;
-    siteCache.atMs = now;
-    return fallback;
-  }
-
-  const data = (await res.json().catch(() => [])) as any[];
-  const row = Array.isArray(data) ? data[0] : null;
-  const startAt = row?.maintenance_start_at ? String(row.maintenance_start_at) : null;
-  const endAt = row?.maintenance_end_at ? String(row.maintenance_end_at) : null;
-  const startMs = startAt ? Date.parse(startAt) : null;
-  const endMs = endAt ? Date.parse(endAt) : null;
-  const windowAllows = (!startMs || now >= startMs) && (!endMs || now < endMs);
-  const ended = !!endMs && now >= endMs;
-  const value: SiteConfig = {
-    maintenance_enabled: !!row?.maintenance_enabled && !ended,
-    maintenance_start_at: startAt,
-    maintenance_end_at: endAt,
-    maintenance_active: !!row?.maintenance_enabled && !ended && windowAllows,
-    pages: (row?.pages && typeof row.pages === 'object' ? row.pages : {}) as any,
-  };
-  siteCache.value = value;
-  siteCache.atMs = now;
-  return value;
 }
 
 export function proxy(request: NextRequest) {
@@ -90,7 +69,7 @@ export function proxy(request: NextRequest) {
   const currentLocale = pathname.split('/')[1];
   if (locales.includes(currentLocale)) {
     return (async () => {
-      const cfg = await loadConfig();
+      const cfg = await loadConfig(request.nextUrl.origin);
 
       const normalized = pathname.replace(/^\//, '');
       const allowDuringMaintenance = new Set([

@@ -1,4 +1,4 @@
-const CACHE = 'pupen-sw-v1';
+const CACHE = 'pupen-sw-v2';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -27,6 +27,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith('/api')) return;
+  if (url.pathname === '/sw.js') return;
 
   event.respondWith(
     caches.match(req).then((cached) => {
@@ -40,8 +41,6 @@ self.addEventListener('fetch', (event) => {
             url.pathname.endsWith('.webp') ||
             url.pathname.endsWith('.svg') ||
             url.pathname.endsWith('.ico') ||
-            url.pathname.endsWith('.css') ||
-            url.pathname.endsWith('.js') ||
             url.pathname === '/manifest.json';
 
           if (isStatic && res && res.status === 200) {
@@ -56,4 +55,3 @@ self.addEventListener('fetch', (event) => {
     }),
   );
 });
-

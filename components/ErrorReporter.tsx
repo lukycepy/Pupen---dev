@@ -4,9 +4,33 @@ import { useEffect } from 'react';
 
 export function ErrorReporter() {
   useEffect(() => {
+    const maybeRecoverFromChunkError = async (message: string) => {
+      const m = String(message || '');
+      if (!/(ChunkLoadError|Loading chunk|CSS chunk)/i.test(m)) return false;
+      try {
+        if (window.sessionStorage.getItem('chunk-recover') === '1') return false;
+        window.sessionStorage.setItem('chunk-recover', '1');
+      } catch {}
+      try {
+        if ('serviceWorker' in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map((r) => r.unregister()));
+        }
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((k) => caches.delete(k)));
+        }
+      } catch {}
+      try {
+        window.location.reload();
+      } catch {}
+      return true;
+    };
+
     const handleError = (event: ErrorEvent) => {
       // Ignore ResizeObserver loop limit exceeded (harmless and common)
       if (event.message === 'ResizeObserver loop limit exceeded') return;
+      maybeRecoverFromChunkError(event.message);
 
       fetch('/api/log/error', {
         method: 'POST',
@@ -25,12 +49,14 @@ export function ErrorReporter() {
     };
 
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const msg = String(event.reason?.message || event.reason || 'Unhandled Promise Rejection');
+      maybeRecoverFromChunkError(msg);
       fetch('/api/log/error', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           level: 'error',
-          message: event.reason?.message || 'Unhandled Promise Rejection',
+          message: msg,
           stack: event.reason?.stack || null,
           url: window.location.href,
           user_agent: navigator.userAgent

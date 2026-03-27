@@ -38,22 +38,26 @@ export async function POST(req: Request) {
       lang,
     });
 
-    await sendMailWithQueueFallback({
+    const r = await sendMailWithQueueFallback({
       transporter,
       supabase,
       meta: { kind: 'application_status', status },
       message: { from, to: email, subject, html },
     });
+    if (!r.ok && !r.queued) throw r.error;
 
-    await supabase.from('admin_logs').insert([
-      {
-        admin_email: user.email || 'admin',
-        admin_name: user.user_metadata?.full_name || user.email || 'admin',
-        action: 'APPLICATION_STATUS_EMAIL_SENT',
-        target_id: String(applicationId),
-        details: { email, status },
-      },
-    ]);
+    await supabase
+      .from('admin_logs')
+      .insert([
+        {
+          admin_email: user.email || 'admin',
+          admin_name: user.user_metadata?.full_name || user.email || 'admin',
+          action: 'APPLICATION_STATUS_EMAIL_SENT',
+          target_id: String(applicationId),
+          details: { email, status, queued: !r.ok && !!r.queued },
+        },
+      ])
+      .throwOnError();
 
     return NextResponse.json({ ok: true });
   } catch (e: any) {

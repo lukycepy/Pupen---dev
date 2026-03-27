@@ -8,7 +8,7 @@ import PasswordField from '@/app/components/PasswordField';
 import Link from 'next/link';
 import { getDictionary } from '@/lib/get-dictionary';
 import { supabase } from '@/lib/supabase';
-import { evaluatePassword } from '@/lib/auth/password-policy';
+import { evaluatePassword, passwordScoreLabel } from '@/lib/auth/password-policy';
 
 export default function ResetPasswordClient({ lang }: { lang: string }) {
   const search = useSearchParams();
@@ -130,6 +130,28 @@ export default function ResetPasswordClient({ lang }: { lang: string }) {
                 buttonClassName="hidden"
                 autoComplete="new-password"
               />
+              {password ? (
+                <div className="pt-2">
+                  {(() => {
+                    const r = evaluatePassword(password);
+                    const score = r.score;
+                    const label = passwordScoreLabel(score, lang === 'en' ? 'en' : 'cs');
+                    const pct = (score / 4) * 100;
+                    const bar = score <= 1 ? 'bg-red-500' : score === 2 ? 'bg-amber-500' : score === 3 ? 'bg-green-500' : 'bg-green-600';
+                    return (
+                      <>
+                        <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">
+                          <span>{lang === 'cs' ? 'Síla hesla' : 'Password strength'}</span>
+                          <span className="text-stone-500">{label}</span>
+                        </div>
+                        <div className="mt-2 h-2 bg-stone-200 rounded-full overflow-hidden">
+                          <div className={`h-2 ${bar}`} style={{ width: `${pct}%` }} />
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              ) : null}
             </div>
             <div className="space-y-1">
               <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">

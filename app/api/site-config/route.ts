@@ -119,7 +119,7 @@ export async function GET() {
       quick_links: Array.isArray(memberPortalRow.quick_links) ? memberPortalRow.quick_links : defaultMemberPortal.quick_links,
     };
 
-    return NextResponse.json({
+    const out = NextResponse.json({
       ok: true,
       config: {
         maintenance_enabled: !!row.maintenance_enabled && !ended,
@@ -136,8 +136,10 @@ export async function GET() {
         updated_at: row.updated_at || null,
       },
     });
+    out.headers.set('Cache-Control', 'no-store');
+    return out;
   } catch {
-    return NextResponse.json({
+    const out = NextResponse.json({
       ok: true,
       config: {
         maintenance_enabled: false,
@@ -154,5 +156,7 @@ export async function GET() {
         updated_at: null,
       },
     });
+    out.headers.set('Cache-Control', 'no-store');
+    return out;
   }
 }

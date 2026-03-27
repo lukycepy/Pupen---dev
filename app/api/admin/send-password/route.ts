@@ -63,12 +63,12 @@ export async function POST(req: Request) {
           admin_name: 'Uživatelé',
           action: 'USER_PASSWORD_SENT',
           target_id: String(email),
-          details: { email },
+          details: { email, queued: !sendRes.ok && sendRes.queued === true },
         },
       ]);
     } catch {}
 
-    return NextResponse.json({ success: true, queued: sendRes.ok ? false : true });
+    return NextResponse.json({ success: true, queued: !sendRes.ok && sendRes.queued === true });
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || 'Error' }, { status: 500 });
   }

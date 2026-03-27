@@ -8,34 +8,6 @@ import { Users, Heart, Beer, Target, ArrowRight, Linkedin, Instagram, Mail, Phon
 import { getDictionary } from '@/lib/get-dictionary';
 import { supabase } from '@/lib/supabase';
 
-// --- DATA: Tým (zůstávají v poli, ale texty lze také přeložit v dict) ---
-const teamMembers = [
-  {
-    name: "Barbora Säcklová",
-    email: "predsedkyne@pupen.org",
-    roleKey: "rolePresident",
-    descKey: "descPresident",
-    image: "/img/barbora.jpg",
-    instagram: "https://www.instagram.com/flu.snow/"
-  },
-  {
-    name: "Karolina Burdová",
-    email: "coord@pupen.org",
-    roleKey: "roleEvent",
-    descKey: "descEvent",
-    image: "/img/karolina.jpg",
-    instagram: "https://www.instagram.com/karolina_burdova"
-  },
-  {
-    name: "Lukáš Čepelák",
-    email: "tech@pupen.org",
-    roleKey: "roleTech",
-    descKey: "descTech",
-    image: "/img/lukas.jpg",
-    instagram: "https://www.instagram.com/luky_cepy/"
-  }
-];
-
 export default function AboutPage() {
   const params = useParams();
   const lang = (params?.lang as string) || 'cs';
@@ -161,8 +133,13 @@ export default function AboutPage() {
             </Link>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {(dynamicTeam.length > 0 ? dynamicTeam : teamMembers).map((member, index) => (
+          {dynamicTeam.length === 0 ? (
+            <div className="bg-white rounded-xl border border-stone-200 p-10 text-center text-stone-500 font-medium">
+              {lang === 'en' ? 'Team content is being prepared.' : 'Obsah týmu připravujeme.'}
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {dynamicTeam.map((member, index) => (
               <div key={member.id || index} className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition duration-300 flex flex-col">
                 <div className="h-64 overflow-hidden relative bg-stone-100 flex-shrink-0">
                   {member.image || member.image_url ? (
@@ -201,7 +178,7 @@ export default function AboutPage() {
                 <div className="p-5 flex-grow flex flex-col">
                   <h3 className="font-bold text-lg text-stone-900 leading-tight mb-1">{member.name}</h3>
                   <p className="text-green-600 text-xs font-black uppercase tracking-widest mb-3">
-                    {member.roleKey ? dict[member.roleKey] : member.role}
+                    {member.role}
                   </p>
                   
                   {member.bio && (
@@ -224,6 +201,7 @@ export default function AboutPage() {
               </div>
             ))}
           </div>
+          )}
         </div>
       </div>
 

@@ -20,6 +20,7 @@ export type EnqueueEmailInput = {
   replyTo?: string;
   meta?: EmailQueueMeta;
   maxAttempts?: number;
+  lastError?: string;
 };
 
 export async function enqueueEmailSend(input: EnqueueEmailInput, supabase?: any) {
@@ -34,6 +35,7 @@ export async function enqueueEmailSend(input: EnqueueEmailInput, supabase?: any)
         subject: input.subject,
         html: input.html,
         meta: input.meta || {},
+        last_error: input.lastError || null,
         max_attempts: typeof input.maxAttempts === 'number' ? input.maxAttempts : 5,
         attempt_count: 0,
         next_attempt_at: new Date().toISOString(),
@@ -66,6 +68,7 @@ export async function sendMailWithQueueFallback(opts: {
     });
     return { ok: true as const };
   } catch (e: any) {
+    const lastError = e?.message ? String(e.message) : String(e);
     const enq = await enqueueEmailSend(
       {
         to: opts.message.to,
@@ -73,11 +76,11 @@ export async function sendMailWithQueueFallback(opts: {
         replyTo: opts.message.replyTo,
         subject: opts.message.subject,
         html: opts.message.html,
-        meta: { ...(opts.meta || {}), last_error: e?.message || String(e) },
+        meta: { ...(opts.meta || {}), last_error: lastError },
+        lastError,
       },
       opts.supabase,
     );
-    return { ok: false as const, queued: enq.ok === true, error: e };
+    return { ok: false as const, queued: enq.ok === true, error: e, enqueue: enq };
   }
 }
-

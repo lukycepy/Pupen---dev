@@ -25,8 +25,9 @@ export async function POST(req: Request) {
     const from = await getSenderFromSettings();
     
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://pupen.org';
-    const unsubUrl = `${baseUrl}/unsubscribe?email=${encodeURIComponent(testEmail)}`;
-    const emailVars = { subject, html, unsubLink: unsubUrl };
+    const unsubPageUrl = `${baseUrl}/unsubscribe?email=${encodeURIComponent(testEmail)}`;
+    const unsubApiUrl = `${baseUrl}/api/newsletter/unsubscribe?email=${encodeURIComponent(testEmail)}`;
+    const emailVars = { subject, html, unsubLink: unsubPageUrl };
     
     const { html: wrappedHtml, subject: wrappedSubject } = await renderEmailTemplateWithDbOverride('newsletter', emailVars);
     const trackedHtml = addUtmToEmailHtml(wrappedHtml, { baseUrl, campaign: 'preview', source: 'newsletter', medium: 'email', email: testEmail });
@@ -40,12 +41,11 @@ export async function POST(req: Request) {
         to: testEmail, 
         subject: `[PREVIEW] ${wrappedSubject}`, 
         html: trackedHtml,
-        attachments: attachments.map((a: any) => ({
-          filename: a.name,
-          path: a.url
-        })),
+        attachments: attachments
+          .map((a: any) => ({ filename: a?.name, path: a?.url }))
+          .filter((a: any) => typeof a?.filename === 'string' && a.filename && typeof a?.path === 'string' && a.path),
         headers: {
-          'List-Unsubscribe': `<${unsubUrl}>`,
+          'List-Unsubscribe': `<${unsubApiUrl}>`,
           'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
         }
       },

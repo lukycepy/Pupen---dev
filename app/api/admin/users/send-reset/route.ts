@@ -51,12 +51,13 @@ export async function POST(req: Request) {
     const { subject, html } = await renderEmailTemplateWithDbOverride('password_reset', { email, resetUrl, lang });
     const transporter = await getMailerWithSettings();
     const from = await getSenderFromSettings();
-    await sendMailWithQueueFallback({
+    const r = await sendMailWithQueueFallback({
       transporter,
       supabase,
       meta: { kind: 'password_reset' },
       message: { from, to: email, subject, html },
     });
+    if (!r.ok && !r.queued) throw r.error;
 
     await supabase
       .from('admin_logs')
@@ -66,7 +67,7 @@ export async function POST(req: Request) {
           admin_name: user.user_metadata?.full_name || user.email || 'admin',
           action: 'USER_PASSWORD_RESET_SENT',
           target_id: String((gen.data as any)?.user?.id || email),
-          details: { email },
+          details: { email, queued: !r.ok && !!r.queued },
         },
       ])
       .throwOnError();

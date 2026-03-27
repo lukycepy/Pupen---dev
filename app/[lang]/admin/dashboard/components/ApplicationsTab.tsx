@@ -23,6 +23,8 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
   const [saveAsDefaultSignature, setSaveAsDefaultSignature] = useState(true);
   const [rejectionReason, setRejectionReason] = useState('');
   const [decisionMembershipType, setDecisionMembershipType] = useState<'regular' | 'external'>('regular');
+  const [showExcluded, setShowExcluded] = useState(false);
+  const [excludedReason, setExcludedReason] = useState('');
 
   const isEn = (dict?.lang || 'cs') === 'en';
 
@@ -44,6 +46,7 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
     const mt = selectedApp.membership_type === 'external' ? 'external' : 'regular';
     setDecisionMembershipType(mt);
     setRejectionReason(selectedApp.rejection_reason || '');
+    setExcludedReason(selectedApp.excluded_reason || '');
     setChairSignature('');
     setUseStoredSignature(true);
   }, [selectedApp]);
@@ -56,14 +59,94 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
   const { data: applications = [], isLoading } = useQuery({
     queryKey: ['applications'],
     queryFn: async () => {
-      const { data } = await supabase.from('applications').select('*').order('created_at', { ascending: false });
-      return data || [];
+      const appsRes = await supabase.from('applications').select('*').order('created_at', { ascending: false });
+      const apps = appsRes.data || [];
+
+      try {
+        const docsRes = await supabase
+          .from('member_documents')
+          .select('id,member_id,created_at,updated_at,bucket,path,original_name')
+          .eq('kind', 'application_scan')
+          .order('updated_at', { ascending: false });
+        if (docsRes.error) throw docsRes.error;
+
+        const docs = Array.isArray(docsRes.data) ? docsRes.data : [];
+        const memberIds = Array.from(new Set(docs.map((d: any) => String(d.member_id || '')).filter(Boolean)));
+        if (!memberIds.length) return apps;
+
+        const [profRes, adminRes] = await Promise.all([
+          supabase.from('profiles').select('id,email,first_name,last_name').in('id', memberIds as any),
+          supabase.from('member_admin_profile').select('member_id,phone,address,application_received_at').in('member_id', memberIds as any),
+        ]);
+        const profiles = Array.isArray(profRes.data) ? profRes.data : [];
+        const adminProfiles = Array.isArray(adminRes.data) ? adminRes.data : [];
+
+        const profileById = new Map<string, any>(profiles.map((p: any) => [String(p.id), p]));
+        const adminById = new Map<string, any>(adminProfiles.map((p: any) => [String(p.member_id), p]));
+
+        const manual = docs.map((d: any) => {
+          const memberId = String(d.member_id || '');
+          const p = profileById.get(memberId) || {};
+          const ap = adminById.get(memberId) || {};
+          const first_name = String(p.first_name || '').trim();
+          const last_name = String(p.last_name || '').trim();
+          const full_name = `${first_name} ${last_name}`.trim() || String(p.email || '').split('@')[0] || '—';
+          const created_at = ap.application_received_at || d.updated_at || d.created_at || new Date().toISOString();
+          return {
+            id: `manual-${String(d.id || memberId)}`,
+            created_at,
+            updated_at: created_at,
+            status: 'manual',
+            membership_type: null,
+            first_name: first_name || null,
+            last_name: last_name || null,
+            full_name,
+            name: full_name,
+            email: String(p.email || '').trim().toLowerCase() || null,
+            phone: ap.phone || null,
+            address: ap.address || null,
+            gdpr_consent: null,
+            university_email: null,
+            field_of_study: null,
+            study_year: null,
+            signed_on: null,
+            applicant_signature: null,
+            signature_data_url: null,
+            chairwoman_signature: null,
+            rejection_reason: null,
+            decided_at: null,
+            decided_by_email: null,
+            decision_membership_type: null,
+            motivation: null,
+            __source: 'manual_scan',
+            __scan: {
+              bucket: String(d.bucket || ''),
+              path: String(d.path || ''),
+              original_name: String(d.original_name || ''),
+            },
+          };
+        });
+
+        return [...manual, ...apps].sort((a: any, b: any) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+      } catch {
+        return apps;
+      }
     }
   });
 
+  const visibleApplications = useMemo(() => {
+    return applications.filter((a: any) => {
+      if (a?.__source === 'manual_scan') return true;
+      if (showExcluded) return true;
+      return !a?.excluded_at;
+    });
+  }, [applications, showExcluded]);
+
   const selectedPendingIds = useMemo(() => {
-    return applications.filter((a: any) => a?.status === 'pending' && selectedIds[String(a.id)]).map((a: any) => String(a.id));
-  }, [applications, selectedIds]);
+    return visibleApplications
+      .filter((a: any) => a?.__source !== 'manual_scan' && !a?.excluded_at && a?.status === 'pending' && selectedIds[String(a.id)])
+      .map((a: any) => String(a.id));
+  }, [selectedIds, visibleApplications]);
 
   const toggleSelected = (id: string) => {
     setSelectedIds((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -128,6 +211,25 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
     onError: (err: any) => showToast(err.message, 'error')
   });
 
+  const excludeMutation = useMutation({
+    mutationFn: async ({ id, exclude, reason }: any) => {
+      const { data } = await supabase.auth.getSession();
+      const byEmail = data.session?.user?.email || null;
+      if (!byEmail) throw new Error('Unauthorized');
+      const payload = exclude
+        ? { excluded_at: new Date().toISOString(), excluded_by_email: byEmail, excluded_reason: String(reason || '').trim() || null }
+        : { excluded_at: null, excluded_by_email: null, excluded_reason: null };
+      const { error } = await supabase.from('applications').update(payload).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['applications'] });
+      setSelectedIds({});
+      showToast(isEn ? 'Updated.' : 'Hotovo.', 'success');
+    },
+    onError: (err: any) => showToast(err.message, 'error')
+  });
+
   if (isLoading) return <SkeletonTabContent />;
 
   const bulkApprove = async () => {
@@ -150,18 +252,65 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
   const bulkReject = async () => {
     if (!confirm('Opravdu odmítnout vybrané přihlášky?')) return;
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token || null;
+      if (!token) throw new Error('Unauthorized');
       const res = await fetch('/api/admin/applications/bulk-reject', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ ids: selectedPendingIds })
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Chyba');
       queryClient.invalidateQueries({ queryKey: ['applications'] });
       setSelectedIds({});
-      showToast(`Odmítnuto ${data.count} přihlášek`, 'success');
+      showToast(`Odmítnuto ${Number(json?.count || 0)} přihlášek`, 'success');
     } catch (e: any) {
       showToast(e.message, 'error');
+    }
+  };
+
+  const openManualScan = async (app: any) => {
+    try {
+      const bucket = String(app?.__scan?.bucket || '');
+      const path = String(app?.__scan?.path || '');
+      if (!bucket || !path) throw new Error(isEn ? 'Missing scan file.' : 'Chybí sken.');
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token || null;
+      if (!token) throw new Error('Unauthorized');
+      const res = await fetch('/api/admin/storage/signed-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ bucket, path, expiresIn: 300 }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Chyba');
+      const url = String(json?.signedUrl || '');
+      if (!url) throw new Error(isEn ? 'Missing URL.' : 'Chybí URL.');
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (e: any) {
+      showToast(e?.message || 'Chyba', 'error');
+    }
+  };
+
+  const openApplicationPdf = async (applicationId: string) => {
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token || null;
+      if (!token) throw new Error('Unauthorized');
+      const res = await fetch(`/api/admin/applications/export-pdf?id=${encodeURIComponent(applicationId)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j?.error || 'Chyba');
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank', 'noopener,noreferrer');
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    } catch (e: any) {
+      showToast(e?.message || 'Chyba', 'error');
     }
   };
 
@@ -191,17 +340,26 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
                 </button>
               </>
             ) : null}
+            <button
+              type="button"
+              onClick={() => setShowExcluded((v) => !v)}
+              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition ${
+                showExcluded ? 'bg-stone-900 text-white border-stone-900' : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-50'
+              }`}
+            >
+              {isEn ? (showExcluded ? 'Hide excluded' : 'Show excluded') : (showExcluded ? 'Skrýt vyloučené' : 'Zobrazit vyloučené')}
+            </button>
             <div className="flex items-center gap-2 px-4 py-2 bg-stone-50 rounded-xl border border-stone-100">
               <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
               <span className="text-[10px] font-black uppercase tracking-widest text-stone-500">
-                {applications.filter((a: any) => a.status === 'pending').length} k vyřízení
+                {visibleApplications.filter((a: any) => a?.__source !== 'manual_scan' && !a?.excluded_at && a.status === 'pending').length} k vyřízení
               </span>
             </div>
           </div>
         }
       />
 
-      {applications.length === 0 ? (
+      {visibleApplications.length === 0 ? (
         <AdminEmptyState
           icon={FileText}
           title={dict.admin.emptyApplications || 'Žádné přihlášky'}
@@ -209,7 +367,7 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
         />
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {applications.map((app: any) => (
+          {visibleApplications.map((app: any) => (
           <div 
             key={app.id} 
             onClick={() => setSelectedApp(app)}
@@ -224,7 +382,7 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
                 {String(app.full_name || app.name || '').split(' ').filter(Boolean).map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() || '—'}
               </div>
               <div className="flex items-center gap-2">
-                {app.status === 'pending' ? (
+                {app.__source !== 'manual_scan' && !app.excluded_at && app.status === 'pending' ? (
                   <button
                     type="button"
                     onClick={(e) => {
@@ -237,11 +395,21 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
                   </button>
                 ) : null}
                 <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm ${
+                  app.excluded_at ? 'bg-stone-200 text-stone-700' :
                   app.status === 'approved' ? 'bg-green-100 text-green-700' : 
                   app.status === 'rejected' ? 'bg-red-100 text-red-700' : 
+                  app.status === 'manual' ? 'bg-stone-100 text-stone-700' :
                   'bg-amber-100 text-amber-700'
                 }`}>
-                  {app.status === 'approved' ? 'Schváleno' : app.status === 'rejected' ? 'Odmítnuto' : 'Čeká'}
+                  {app.excluded_at
+                    ? (isEn ? 'Excluded' : 'Vyloučeno')
+                    : app.status === 'approved'
+                      ? 'Schváleno'
+                      : app.status === 'rejected'
+                        ? 'Odmítnuto'
+                        : app.status === 'manual'
+                          ? (isEn ? 'Manual' : 'Ruční')
+                          : 'Čeká'}
                 </span>
               </div>
             </div>
@@ -249,7 +417,7 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
             <div className="flex items-center gap-3 mb-6">
               <p className="text-[10px] text-stone-400 font-black uppercase tracking-widest flex items-center gap-1"><Clock size={12} /> {new Date(app.created_at).toLocaleDateString()}</p>
               <span className="w-1 h-1 bg-stone-200 rounded-full"></span>
-              <p className="text-[10px] text-stone-400 font-black uppercase tracking-widest truncate max-w-[100px]">{app.email.split('@')[0]}</p>
+              <p className="text-[10px] text-stone-400 font-black uppercase tracking-widest truncate max-w-[100px]">{String(app.email || '').split('@')[0] || '—'}</p>
             </div>
             {(app.membership_type || app.university_email || app.field_of_study || app.study_year) ? (
               <div className="bg-stone-50/50 p-4 rounded-2xl border border-stone-50 group-hover:bg-white transition-all">
@@ -277,17 +445,27 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
                 </div>
                 <div>
                   <h2 className="text-2xl font-black text-stone-900 tracking-tight">{dict.admin.appDetail || 'Detail přihlášky'}</h2>
-                  <p className="text-stone-400 text-[10px] font-black uppercase tracking-widest mt-0.5">ID: {selectedApp.id.substring(0, 8)}</p>
+                  <p className="text-stone-400 text-[10px] font-black uppercase tracking-widest mt-0.5">ID: {String(selectedApp.id || '').slice(0, 8)}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <a 
-                  href={`/api/admin/applications/export-pdf?id=${selectedApp.id}`}
-                  target="_blank"
-                  className="flex items-center gap-2 px-4 py-3 bg-white border border-stone-200 text-stone-700 rounded-xl hover:bg-stone-50 transition text-[10px] font-black uppercase tracking-widest shadow-sm"
-                >
-                  <Download size={14} /> Export PDF
-                </a>
+                {selectedApp.__source === 'manual_scan' ? (
+                  <button
+                    type="button"
+                    onClick={() => openManualScan(selectedApp)}
+                    className="flex items-center gap-2 px-4 py-3 bg-white border border-stone-200 text-stone-700 rounded-xl hover:bg-stone-50 transition text-[10px] font-black uppercase tracking-widest shadow-sm"
+                  >
+                    <Download size={14} /> {isEn ? 'Open scan' : 'Otevřít sken'}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => openApplicationPdf(String(selectedApp.id || ''))}
+                    className="flex items-center gap-2 px-4 py-3 bg-white border border-stone-200 text-stone-700 rounded-xl hover:bg-stone-50 transition text-[10px] font-black uppercase tracking-widest shadow-sm"
+                  >
+                    <Download size={14} /> Export PDF
+                  </button>
+                )}
                 <button onClick={() => setSelectedApp(null)} className="p-3 hover:bg-stone-100 rounded-2xl transition text-stone-400 hover:text-stone-900">
                   <XCircle size={28} />
                 </button>
@@ -397,14 +575,21 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
                       <h3 className="text-sm font-black uppercase tracking-widest">{dict.admin.applicantSignature || 'Podpis žadatele'}</h3>
                     </div>
                     <div className="rounded-[2.5rem] border border-stone-100 bg-white shadow-sm p-8 flex items-center justify-center">
-                      <Image
-                        src={selectedApp.applicant_signature || selectedApp.signature_data_url}
-                        alt="Podpis"
-                        width={640}
-                        height={220}
-                        className="max-w-full h-auto mix-blend-multiply"
-                        unoptimized
-                      />
+                      {(() => {
+                        const src = selectedApp.applicant_signature || selectedApp.signature_data_url;
+                        return typeof src === 'string' && src ? (
+                          <Image
+                            src={src}
+                            alt="Podpis"
+                            width={640}
+                            height={220}
+                            className="max-w-full h-auto mix-blend-multiply"
+                            unoptimized
+                          />
+                        ) : (
+                          <div className="text-stone-400 font-bold text-sm">{dict.admin.missingSignature || (isEn ? 'Missing signature' : 'Chybí podpis')}</div>
+                        );
+                      })()}
                     </div>
                   </section>
                 </div>
@@ -412,7 +597,21 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
                 <div className="lg:col-span-5 space-y-8">
                   <div className="relative bg-stone-900 text-white p-10 rounded-[3rem] shadow-xl sticky top-0 overflow-hidden">
                     <div className="absolute right-0 top-0 h-full w-2 bg-green-600/90" />
-                    {selectedApp.status === 'pending' ? (
+                    {selectedApp.__source === 'manual_scan' ? (
+                      <div className="text-center py-6 space-y-6">
+                        <div>
+                          <h3 className="text-2xl font-black mb-1">{isEn ? 'Manual application' : 'Ruční přihláška'}</h3>
+                          <p className="text-stone-400 text-xs font-medium">{isEn ? 'This record comes from a manually uploaded scan.' : 'Tento záznam pochází z ručně nahraného skenu.'}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => openManualScan(selectedApp)}
+                          className="w-full bg-white text-stone-900 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-stone-100 transition"
+                        >
+                          {isEn ? 'Open scan' : 'Otevřít sken'}
+                        </button>
+                      </div>
+                    ) : selectedApp.status === 'pending' ? (
                       <div className="space-y-8">
                         <div>
                           <h3 className="text-2xl font-black mb-1">{dict.admin.decision || 'Rozhodnutí'}</h3>
@@ -455,6 +654,35 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
                             className="w-full bg-stone-800 border-none rounded-2xl p-5 text-sm font-bold focus:ring-2 focus:ring-red-500 transition placeholder:text-stone-600 text-white"
                             placeholder={dict.admin.rejectionPlaceholder || 'Proč byla přihláška zamítnuta?'}
                           />
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-stone-500 px-1">{isEn ? 'Exclusion (internal)' : 'Vyloučení (interní)'}</label>
+                          <textarea
+                            value={excludedReason}
+                            onChange={(e) => setExcludedReason(e.target.value)}
+                            className="w-full bg-stone-800 border-none rounded-2xl p-5 text-sm font-bold focus:ring-2 focus:ring-stone-400 transition placeholder:text-stone-600 text-white"
+                            placeholder={isEn ? 'Reason (optional)' : 'Důvod (volitelné)'}
+                          />
+                          {selectedApp.excluded_at ? (
+                            <button
+                              type="button"
+                              disabled={excludeMutation.isPending}
+                              onClick={() => excludeMutation.mutate({ id: selectedApp.id, exclude: false })}
+                              className="w-full rounded-2xl px-5 py-4 text-[10px] font-black uppercase tracking-widest border border-stone-700 bg-stone-800 text-stone-200 hover:bg-stone-700 transition disabled:opacity-50"
+                            >
+                              {isEn ? 'Restore' : 'Zrušit vyloučení'}
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled={excludeMutation.isPending}
+                              onClick={() => excludeMutation.mutate({ id: selectedApp.id, exclude: true, reason: excludedReason })}
+                              className="w-full rounded-2xl px-5 py-4 text-[10px] font-black uppercase tracking-widest border border-stone-700 bg-stone-800 text-stone-200 hover:bg-stone-700 transition disabled:opacity-50"
+                            >
+                              {isEn ? 'Exclude' : 'Vyloučit'}
+                            </button>
+                          )}
                         </div>
 
                         <div className="space-y-3">
@@ -530,7 +758,7 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
                         <div className="grid grid-cols-2 gap-4 pt-4">
                           <button 
                             onClick={() => updateStatusMutation.mutate({ id: selectedApp.id, status: 'approved', signature: effectiveSignature, decisionType: decisionMembershipType })}
-                            disabled={!effectiveSignature || updateStatusMutation.isPending}
+                            disabled={!effectiveSignature || updateStatusMutation.isPending || !!selectedApp.excluded_at}
                             className="bg-green-600 text-white py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-green-500 disabled:opacity-50 transition-all flex flex-col items-center justify-center gap-2 shadow-lg shadow-green-900/40"
                           >
                             <CheckCircle size={24} />
@@ -538,7 +766,7 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
                           </button>
                           <button 
                             onClick={() => updateStatusMutation.mutate({ id: selectedApp.id, status: 'rejected', signature: effectiveSignature, reason: rejectionReason, decisionType: decisionMembershipType })}
-                            disabled={!effectiveSignature || updateStatusMutation.isPending}
+                            disabled={!effectiveSignature || updateStatusMutation.isPending || !!selectedApp.excluded_at}
                             className="bg-red-600 text-white py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-red-500 disabled:opacity-50 transition-all flex flex-col items-center justify-center gap-2 shadow-lg shadow-red-900/40"
                           >
                             <XCircle size={24} />
@@ -603,17 +831,59 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
                           </div>
                         )}
 
+                        <div className="p-6 bg-black/30 rounded-[2rem] border border-stone-800/70">
+                          <div className="text-[10px] font-black uppercase tracking-widest text-stone-500">{isEn ? 'Exclusion (internal)' : 'Vyloučení (interní)'}</div>
+                          {selectedApp.excluded_at ? (
+                            <div className="mt-3 text-xs font-black text-white/90">
+                              {isEn ? 'Excluded' : 'Vyloučeno'} • {new Date(selectedApp.excluded_at).toLocaleString(isEn ? 'en-GB' : 'cs-CZ')}
+                            </div>
+                          ) : (
+                            <div className="mt-3 text-xs font-black text-white/70">{isEn ? 'Not excluded' : 'Nevyloučeno'}</div>
+                          )}
+                          <div className="mt-4 space-y-3">
+                            <textarea
+                              value={excludedReason}
+                              onChange={(e) => setExcludedReason(e.target.value)}
+                              className="w-full bg-stone-800 border-none rounded-2xl p-5 text-sm font-bold focus:ring-2 focus:ring-stone-400 transition placeholder:text-stone-600 text-white"
+                              placeholder={isEn ? 'Reason (optional)' : 'Důvod (volitelné)'}
+                            />
+                            {selectedApp.excluded_at ? (
+                              <button
+                                type="button"
+                                disabled={excludeMutation.isPending}
+                                onClick={() => excludeMutation.mutate({ id: selectedApp.id, exclude: false })}
+                                className="w-full rounded-2xl px-5 py-4 text-[10px] font-black uppercase tracking-widest border border-stone-700 bg-stone-800 text-stone-200 hover:bg-stone-700 transition disabled:opacity-50"
+                              >
+                                {isEn ? 'Restore' : 'Zrušit vyloučení'}
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                disabled={excludeMutation.isPending}
+                                onClick={() => excludeMutation.mutate({ id: selectedApp.id, exclude: true, reason: excludedReason })}
+                                className="w-full rounded-2xl px-5 py-4 text-[10px] font-black uppercase tracking-widest border border-stone-700 bg-stone-800 text-stone-200 hover:bg-stone-700 transition disabled:opacity-50"
+                              >
+                                {isEn ? 'Exclude' : 'Vyloučit'}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
                         <div className="pt-8 border-t border-stone-800">
                           <span className="text-[10px] font-black uppercase tracking-widest text-stone-500 block mb-4">{dict.admin.chairwomanSignature || 'Podpis předsedy'}</span>
                           <div className="bg-white rounded-[2rem] p-6 shadow-inner">
-                            <Image 
-                              src={selectedApp.chairwoman_signature} 
-                              alt={isEn ? 'Chair signature' : 'Podpis předsedy'} 
-                              width={400} 
-                              height={150} 
-                              className="w-full h-auto mix-blend-multiply" 
-                              unoptimized
-                            />
+                            {typeof selectedApp.chairwoman_signature === 'string' && selectedApp.chairwoman_signature ? (
+                              <Image 
+                                src={selectedApp.chairwoman_signature} 
+                                alt={isEn ? 'Chair signature' : 'Podpis předsedy'} 
+                                width={400} 
+                                height={150} 
+                                className="w-full h-auto mix-blend-multiply" 
+                                unoptimized
+                              />
+                            ) : (
+                              <div className="text-stone-500 font-bold text-sm">{dict.admin.missingSignature || (isEn ? 'Missing signature' : 'Chybí podpis')}</div>
+                            )}
                           </div>
                         </div>
                       </div>
