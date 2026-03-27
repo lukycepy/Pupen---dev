@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
-import { getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer';
+import { getMailerWithSettingsOrQueueTransporter, getSenderFromSettings } from '@/lib/email/mailer';
 import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
 import { sendMailWithQueueFallback } from '@/lib/email/queue';
 import { addUtmToEmailHtml } from '@/lib/email/utm';
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     if (!subject || !html || !testEmail) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
 
     const supabase = getServerSupabase();
-    const transporter = await getMailerWithSettings();
+    const transporter = await getMailerWithSettingsOrQueueTransporter();
     const from = await getSenderFromSettings();
     
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://pupen.org';

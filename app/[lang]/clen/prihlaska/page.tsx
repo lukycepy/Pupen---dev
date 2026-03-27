@@ -23,22 +23,41 @@ export default function MyApplicationPage() {
     queryKey: ['member_my_application'],
     queryFn: async () => {
       const { data: session } = await supabase.auth.getSession();
-      const email = session.session?.user?.email;
-      if (!email) return { email: null, application: null };
-      const res = await supabase
-        .from('applications')
-        .select('*')
-        .eq('email', email)
-        .order('created_at', { ascending: false })
-        .limit(1);
-      if (res.error) throw res.error;
-      return { email, application: res.data?.[0] || null };
+      const token = session.session?.access_token;
+      if (!token) return { email: null, application: null };
+      const res = await fetch('/api/member/my-application', { headers: { Authorization: `Bearer ${token}` } });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Chyba');
+      return { email: session.session?.user?.email || null, application: json?.application || null };
     },
   });
 
   const application = data?.application;
 
   const print = () => window.print();
+  const downloadPdf = async () => {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const token = session.session?.access_token;
+      if (!token) throw new Error(isEn ? 'Unauthorized' : 'Nepřihlášen');
+      const res = await fetch('/api/member/my-application/pdf', { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json?.error || 'Chyba');
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `prihlaska_${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      print();
+    }
+  };
   const isEn = lang === 'en';
 
   const statusLabel =
@@ -55,15 +74,13 @@ export default function MyApplicationPage() {
           : 'Čeká';
 
   const membershipTypeLabel =
-    application?.membership_type === 'regular'
+    application?.membership_type !== 'external'
       ? isEn
         ? 'Regular'
         : 'Řádné'
-      : application?.membership_type === 'external'
-        ? isEn
-          ? 'External'
-          : 'Externí'
-        : '—';
+      : isEn
+        ? 'External'
+        : 'Externí';
 
   return (
     <div className="min-h-screen bg-stone-50 font-sans p-6">
@@ -76,14 +93,24 @@ export default function MyApplicationPage() {
             <ArrowLeft size={16} />
             {isEn ? 'Back' : 'Zpět'}
           </Link>
-          <button
-            type="button"
-            onClick={print}
-            className="inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
-          >
-            <Download size={16} />
-            {isEn ? 'Print / Save PDF' : 'Tisk / Uložit PDF'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={print}
+              className="inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
+            >
+              <Download size={16} />
+              {isEn ? 'Print / Save PDF' : 'Tisk / Uložit PDF'}
+            </button>
+            <button
+              type="button"
+              onClick={downloadPdf}
+              className="inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest bg-green-600 text-white hover:bg-green-700 transition"
+            >
+              <Download size={16} />
+              {isEn ? 'Download PDF' : 'Stáhnout PDF'}
+            </button>
+          </div>
         </div>
 
         <div className="bg-white rounded-[3rem] border border-stone-100 shadow-sm p-10 md:p-16">

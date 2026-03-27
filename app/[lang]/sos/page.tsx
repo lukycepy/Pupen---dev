@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Siren, Phone, Mail, Link as LinkIcon, ShieldAlert, Download, QrCode } from 'lucide-react';
 import InlinePulse from '@/app/components/InlinePulse';
@@ -94,20 +95,22 @@ export default function SosPage() {
         </div>
 
         <div className="mt-6 flex flex-wrap items-center gap-3">
-          <a
+          <Link
             href="/api/sos/export?format=vcf"
+            prefetch={false}
             className="inline-flex items-center gap-2 bg-stone-900 text-white px-5 py-3 rounded-2xl font-bold text-sm hover:bg-stone-800 transition"
           >
             <Download size={18} />
             {t.exportVcard || 'Export vCard'}
-          </a>
-          <a
+          </Link>
+          <Link
             href="/api/sos/export?format=csv"
+            prefetch={false}
             className="inline-flex items-center gap-2 bg-white text-stone-700 px-5 py-3 rounded-2xl font-bold text-sm hover:bg-stone-50 transition border border-stone-200"
           >
             <Download size={18} />
             {t.exportCsv || 'Export CSV'}
-          </a>
+          </Link>
           <button
             type="button"
             onClick={() => setQrOpen(true)}

@@ -45,7 +45,7 @@ export async function POST(req: Request) {
 
     let bytes: any = originalBytes;
     let contentType = file.type || 'application/octet-stream';
-    let path = `${user.id}/${Date.now()}-avatar.webp`;
+    const path = `${user.id}/${Date.now()}-avatar.webp`;
     let avifPath: string | null = null;
     let avifPublicUrl: string | null = null;
 

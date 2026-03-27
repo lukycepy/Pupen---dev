@@ -57,90 +57,23 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
   }, [chairSignature, storedSignature, useStoredSignature]);
 
   const { data: applications = [], isLoading } = useQuery({
-    queryKey: ['applications'],
+    queryKey: ['applications', showExcluded],
     queryFn: async () => {
-      const appsRes = await supabase.from('applications').select('*').order('created_at', { ascending: false });
-      const apps = appsRes.data || [];
-
-      try {
-        const docsRes = await supabase
-          .from('member_documents')
-          .select('id,member_id,created_at,updated_at,bucket,path,original_name')
-          .eq('kind', 'application_scan')
-          .order('updated_at', { ascending: false });
-        if (docsRes.error) throw docsRes.error;
-
-        const docs = Array.isArray(docsRes.data) ? docsRes.data : [];
-        const memberIds = Array.from(new Set(docs.map((d: any) => String(d.member_id || '')).filter(Boolean)));
-        if (!memberIds.length) return apps;
-
-        const [profRes, adminRes] = await Promise.all([
-          supabase.from('profiles').select('id,email,first_name,last_name').in('id', memberIds as any),
-          supabase.from('member_admin_profile').select('member_id,phone,address,application_received_at').in('member_id', memberIds as any),
-        ]);
-        const profiles = Array.isArray(profRes.data) ? profRes.data : [];
-        const adminProfiles = Array.isArray(adminRes.data) ? adminRes.data : [];
-
-        const profileById = new Map<string, any>(profiles.map((p: any) => [String(p.id), p]));
-        const adminById = new Map<string, any>(adminProfiles.map((p: any) => [String(p.member_id), p]));
-
-        const manual = docs.map((d: any) => {
-          const memberId = String(d.member_id || '');
-          const p = profileById.get(memberId) || {};
-          const ap = adminById.get(memberId) || {};
-          const first_name = String(p.first_name || '').trim();
-          const last_name = String(p.last_name || '').trim();
-          const full_name = `${first_name} ${last_name}`.trim() || String(p.email || '').split('@')[0] || '—';
-          const created_at = ap.application_received_at || d.updated_at || d.created_at || new Date().toISOString();
-          return {
-            id: `manual-${String(d.id || memberId)}`,
-            created_at,
-            updated_at: created_at,
-            status: 'manual',
-            membership_type: null,
-            first_name: first_name || null,
-            last_name: last_name || null,
-            full_name,
-            name: full_name,
-            email: String(p.email || '').trim().toLowerCase() || null,
-            phone: ap.phone || null,
-            address: ap.address || null,
-            gdpr_consent: null,
-            university_email: null,
-            field_of_study: null,
-            study_year: null,
-            signed_on: null,
-            applicant_signature: null,
-            signature_data_url: null,
-            chairwoman_signature: null,
-            rejection_reason: null,
-            decided_at: null,
-            decided_by_email: null,
-            decision_membership_type: null,
-            motivation: null,
-            __source: 'manual_scan',
-            __scan: {
-              bucket: String(d.bucket || ''),
-              path: String(d.path || ''),
-              original_name: String(d.original_name || ''),
-            },
-          };
-        });
-
-        return [...manual, ...apps].sort((a: any, b: any) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
-      } catch {
-        return apps;
-      }
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
+      const res = await fetch(`/api/admin/applications?includeExcluded=${showExcluded ? '1' : '0'}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Chyba');
+      return Array.isArray(json?.applications) ? json.applications : [];
     }
   });
 
   const visibleApplications = useMemo(() => {
-    return applications.filter((a: any) => {
-      if (a?.__source === 'manual_scan') return true;
-      if (showExcluded) return true;
-      return !a?.excluded_at;
-    });
-  }, [applications, showExcluded]);
+    return applications;
+  }, [applications]);
 
   const selectedPendingIds = useMemo(() => {
     return visibleApplications
@@ -164,15 +97,22 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
           setStoredSignature(signature);
         }
       }
-      const { error } = await supabase.from('applications').update({
-        status,
-        chairwoman_signature: signature,
-        rejection_reason: reason,
-        decision_membership_type: decisionType,
-        decided_at: new Date().toISOString(),
-        decided_by_email: decidedByEmail,
-      }).eq('id', id);
-      if (error) throw error;
+      if (!token) throw new Error('Unauthorized');
+      const res = await fetch('/api/admin/applications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          id,
+          status,
+          chairwoman_signature: signature,
+          rejection_reason: reason,
+          decision_membership_type: decisionType,
+          decided_at: new Date().toISOString(),
+          decided_by_email: decidedByEmail,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Chyba');
 
       if (status === 'approved') {
         const prev = applications.find((a: any) => a.id === id);
@@ -216,11 +156,18 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
       const { data } = await supabase.auth.getSession();
       const byEmail = data.session?.user?.email || null;
       if (!byEmail) throw new Error('Unauthorized');
+      const token = data.session?.access_token || null;
+      if (!token) throw new Error('Unauthorized');
       const payload = exclude
         ? { excluded_at: new Date().toISOString(), excluded_by_email: byEmail, excluded_reason: String(reason || '').trim() || null }
         : { excluded_at: null, excluded_by_email: null, excluded_reason: null };
-      const { error } = await supabase.from('applications').update(payload).eq('id', id);
-      if (error) throw error;
+      const res = await fetch('/api/admin/applications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ id, ...payload }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Chyba');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['applications'] });
@@ -531,7 +478,7 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
                         <GraduationCap size={20} className="text-blue-600" />
                         <h3 className="text-sm font-black uppercase tracking-widest">{dict.recruitment?.labelFieldOfStudy || 'Studium'}</h3>
                       </div>
-                      {selectedApp.membership_type === 'regular' ? (
+                      {selectedApp.membership_type !== 'external' ? (
                         <div className="grid sm:grid-cols-2 gap-8">
                           <div className="space-y-1">
                             <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest">

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
-import { getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer';
+import { getMailerWithSettingsOrQueueTransporter, getSenderFromSettings } from '@/lib/email/mailer';
 import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
 import { requireAdmin } from '@/lib/server-auth';
 import { sendMailWithQueueFallback } from '@/lib/email/queue';
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
       if (data?.bank_account) bankAccount = String(data.bank_account);
     } catch {}
 
-    const transporter = await getMailerWithSettings();
+    const transporter = await getMailerWithSettingsOrQueueTransporter();
     const from = await getSenderFromSettings();
 
     const { subject, html } = await renderEmailTemplateWithDbOverride('ticket', {

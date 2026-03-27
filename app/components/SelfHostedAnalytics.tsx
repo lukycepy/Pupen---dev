@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 
 export default function SelfHostedAnalytics() {
   const pathname = usePathname() || '';
-  if (pathname.includes('/admin') || pathname.includes('/clen')) return null;
+  const blocked = pathname.includes('/admin') || pathname.includes('/clen');
 
   const provider = String(process.env.NEXT_PUBLIC_ANALYTICS_PROVIDER || '').trim().toLowerCase();
   const src = String(process.env.NEXT_PUBLIC_ANALYTICS_SCRIPT_URL || '').trim();
@@ -32,8 +32,9 @@ export default function SelfHostedAnalytics() {
     sync();
     window.addEventListener('cookie-consent-changed', sync as any);
     return () => window.removeEventListener('cookie-consent-changed', sync as any);
-  }, [consent]);
+  }, []);
 
+  if (blocked) return null;
   if (!src) return null;
   if (!allowed) return null;
 

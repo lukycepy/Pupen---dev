@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
 export default function UnsubscribeClient() {
@@ -58,11 +59,10 @@ export default function UnsubscribeClient() {
           </button>
         )}
 
-        <a href="/" className="mt-8 inline-block text-stone-400 font-bold hover:text-stone-900 transition text-sm">
+        <Link href="/" className="mt-8 inline-block text-stone-400 font-bold hover:text-stone-900 transition text-sm">
           Zpět na web
-        </a>
+        </Link>
       </div>
     </div>
   );
 }
-

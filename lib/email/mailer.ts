@@ -120,6 +120,23 @@ export async function getMailerWithSettings() {
   return getMailer();
 }
 
+export function createQueueOnlyTransporter(err?: any) {
+  const e = err instanceof Error ? err : new Error('Email not configured');
+  return {
+    sendMail: async () => {
+      throw e;
+    },
+  };
+}
+
+export async function getMailerWithSettingsOrQueueTransporter() {
+  try {
+    return await getMailerWithSettings();
+  } catch (e: any) {
+    return createQueueOnlyTransporter(e);
+  }
+}
+
 export async function getMailerDebugInfoWithSettings() {
   const settings = await getEmailSettingsCached().catch(() => null);
   if (settings?.smtp) return getMailerDebugInfo(settings.smtp);

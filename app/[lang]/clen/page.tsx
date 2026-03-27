@@ -598,6 +598,31 @@ export default function ClenskaSekcePage() {
     router.replace(`/${lang}/login`);
   };
 
+  const downloadMyApplicationPdf = async () => {
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
+      const res = await fetch('/api/member/my-application/pdf', { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json?.error || 'Chyba');
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `prihlaska_${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      showToast(lang === 'en' ? 'Downloaded.' : 'Staženo.', 'success');
+    } catch (e: any) {
+      showToast(e?.message || 'Chyba', 'error');
+    }
+  };
+
   // Načtení dat (Queries)
   const { data: internalDocs = [] } = useQuery({
     queryKey: ['internal_docs'],
@@ -621,14 +646,13 @@ export default function ClenskaSekcePage() {
     queryKey: ['member_my_application', user?.email],
     enabled: !!user?.email,
     queryFn: async () => {
-      const res = await supabase
-        .from('applications')
-        .select('*')
-        .eq('email', user.email)
-        .order('created_at', { ascending: false })
-        .limit(1);
-      if (res.error) throw res.error;
-      return res.data?.[0] || null;
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) return null;
+      const res = await fetch('/api/member/my-application', { headers: { Authorization: `Bearer ${token}` } });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Chyba');
+      return json?.application || null;
     },
   });
 
@@ -708,7 +732,7 @@ export default function ClenskaSekcePage() {
   });
 
   if (loading || !dict) return (
-    <div className="min-h-screen bg-stone-50 lg:pl-72">
+    <div className="min-h-screen bg-gradient-to-b from-stone-50 to-stone-100/40 lg:pl-72">
       {/* Sidebar Skeleton */}
       <div className="hidden lg:block fixed left-0 top-0 bottom-0 w-72 bg-white border-r border-stone-100 p-8 space-y-10">
         <Skeleton className="h-10 w-32 rounded-xl" />
@@ -855,12 +879,22 @@ export default function ClenskaSekcePage() {
                         </p>
                       </div>
                     </div>
-                    <Link
-                      href={`/${lang}/clen/prihlaska`}
-                      className="flex items-center gap-2 px-6 py-3 bg-white text-stone-600 rounded-xl font-bold text-xs hover:bg-stone-100 transition shadow-sm border border-stone-100"
-                    >
-                      <Download size={14} /> {dict.member.downloadApp || (lang === 'en' ? 'Open / Print' : 'Otevřít / Tisk')}
-                    </Link>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <button
+                        type="button"
+                        onClick={downloadMyApplicationPdf}
+                        disabled={!myApplication}
+                        className="flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-green-700 transition disabled:opacity-50"
+                      >
+                        <Download size={14} /> {lang === 'en' ? 'Download PDF' : 'Stáhnout PDF'}
+                      </button>
+                      <Link
+                        href={`/${lang}/clen/prihlaska`}
+                        className="flex items-center justify-center gap-2 px-6 py-3 bg-white text-stone-700 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-stone-100 transition shadow-sm border border-stone-100"
+                      >
+                        <FileText size={14} /> {dict.member.downloadApp || (lang === 'en' ? 'Open / Print' : 'Otevřít / Tisk')}
+                      </Link>
+                    </div>
                   </div>
                 </div>
 

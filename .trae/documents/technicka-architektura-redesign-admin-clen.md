@@ -28,9 +28,10 @@ graph TD
 
 ## 2.Technology Description
 - Frontend: Next.js@16 + React@19 + tailwindcss@4 + lucide-react
-- Backend: Next.js Route Handlers (Node runtime) + nodemailer + zod
+- Backend: Next.js Route Handlers (Node runtime) + nodemailer + zod + pdf-lib
 - Data/State: @tanstack/react-query + react-hook-form
-- Backend service: Supabase (Auth + PostgreSQL + Storage)
+- Backend service: Supabase (Auth + PostgreSQL + Storage)  
+  - Storage: ukládání generovaných PDF přihlášek (pokud se negenerují on-the-fly)
 
 ## 3.Route definitions
 | Route | Purpose |
@@ -38,8 +39,11 @@ graph TD
 | /[lang]/login | Přihlášení a směrování dle role |
 | /[lang]/admin | Vstup do adminu (redirect na login) |
 | /[lang]/admin/dashboard | Pupen Control – sjednocený admin dashboard |
-| /[lang]/clen | Členský portál |
-| /[lang]/clen/prihlaska | Přihláška do členství |
+| /[lang]/admin/prihlasky | Admin: seznam/detail přihlášek + stažení PDF |
+| /[lang]/admin/queue | Admin: zobrazení/úpravy Queue |
+| /[lang]/admin/newslettery | Admin: správa a odesílání newsletterů + logy |
+| /[lang]/clen | Členský portál (/clen) |
+| /[lang]/clen/prihlaska | Přihláška do členství (vstup + stav + PDF) |
 
 ## 4.API definitions (If it includes backend services)
 ### 4.1 Core API
@@ -52,6 +56,18 @@ GET  /api/admin/promo/rules
 POST /api/admin/promo/rules/set
 POST /api/admin/refunds/update
 GET  /api/admin/refunds/logs
+
+GET  /api/admin/prihlasky
+PATCH /api/admin/prihlasky/:id
+GET  /api/admin/prihlasky/:id/pdf
+
+GET  /api/admin/queue
+PATCH /api/admin/queue/:id
+POST /api/admin/queue/:id/retry
+
+POST /api/admin/newsletter/send
+GET  /api/admin/newsletter/logs
+POST /api/admin/newsletter/retry
 ```
 Komunikace a GDPR (příklady)
 ```
@@ -108,6 +124,10 @@ Konceptuálně (s důrazem na role/opr.)
 erDiagram
   PROFILE ||--o{ ADMIN_AUDIT_LOG : "writes"
   PROFILE ||--o{ MEMBERSHIP_APPLICATION : "submits"
+  MEMBERSHIP_APPLICATION ||--o| MEMBERSHIP_APPLICATION_PDF : "has"
+  PROFILE ||--o{ QUEUE_ITEM : "creates"
+  PROFILE ||--o{ NEWSLETTER_CAMPAIGN : "creates"
+  NEWSLETTER_CAMPAIGN ||--o{ NEWSLETTER_DELIVERY : "delivers"
 
   PROFILE {
     uuid id
@@ -121,6 +141,41 @@ erDiagram
     uuid profile_id
     string status
     datetime created_at
+    datetime updated_at
+  }
+
+  MEMBERSHIP_APPLICATION_PDF {
+    uuid id
+    uuid application_id
+    string storage_path
+    datetime generated_at
+  }
+
+  QUEUE_ITEM {
+    uuid id
+    string type
+    string status
+    int attempts
+    string last_error
+    datetime run_after
+    datetime created_at
+  }
+
+  NEWSLETTER_CAMPAIGN {
+    uuid id
+    string subject
+    string status
+    datetime scheduled_at
+    datetime created_at
+  }
+
+  NEWSLETTER_DELIVERY {
+    uuid id
+    uuid campaign_id
+    string recipient_email
+    string status
+    string last_error
+    datetime sent_at
   }
 
   ADMIN_AUDIT_LOG {

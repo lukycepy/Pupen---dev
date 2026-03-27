@@ -14,9 +14,9 @@ Cílem redesignu je roztřídit moduly, zjednodušit UI, zlepšit použitelnost 
 ### 2.2 Feature Module
 Požadavky sestávají z těchto hlavních stránek:
 1. **Přihlášení**: přihlášení, obnova přístupu, routování do admin/člen.
-2. **Pupen Control (Admin dashboard)**: jednotná navigace, modulové skupiny, práce s obsahem a provozem, přehled a logy.
-3. **Členská sekce (Portál člena)**: přehled člena, členský obsah/výhody, profil.
-4. **Přihláška do členství**: vyplnění a odeslání přihlášky, stav žádosti.
+2. **Pupen Control (Admin dashboard)**: jednotná navigace, modulové skupiny, oprava přihlášek + stažení PDF přihlášky, zobrazení/úpravy Queue, oprava odesílání newsletterů.
+3. **Členská sekce (Portál člena)**: přehled člena, členský obsah/výhody, profil, stažení PDF vlastní přihlášky (je-li dostupné).
+4. **Přihláška do členství**: vyplnění a odeslání přihlášky, stav žádosti, stažení PDF po odeslání (pokud je generováno).
 
 ### 2.3 Page Details
 | Page Name | Module Name | Feature description |
@@ -26,6 +26,9 @@ Požadavky sestávají z těchto hlavních stránek:
 | Pupen Control (Admin dashboard) | Roztřídění modulů (taxonomie) | Seskupit existující moduly do 5–7 jasných kategorií (např. Obsah, Komunita, Provoz, Finance, Governance, Systém) a sjednotit názvy, ikony a popisky. |
 | Pupen Control (Admin dashboard) | Jednotné UI vzory | Sjednotit layout „seznam → detail“, formuláře (validace, povinná pole, ukládání), akce (primární/sekundární), potvrzovací dialogy, prázdné stavy a načítání. |
 | Pupen Control (Admin dashboard) | Efektivní správa | Umožnit rychlé vytvoření/úpravu/smazání položek v rámci existujících modulů, podporovat filtrování a vyhledávání v seznamech, zobrazit stav publikace/platnosti, zobrazit audit/technické logy tam, kde už existují. |
+| Pupen Control (Admin dashboard) | Přihlášky (opravy + PDF) | Zobrazit seznam přihlášek, otevřít detail, opravit/uložit údaje, změnit stav, stáhnout PDF přihlášky. |
+| Pupen Control (Admin dashboard) | Queue (zobrazení/úpravy) | Zobrazit položky ve frontě, filtrovat/sortovat, upravit stav/parametry, ručně spustit nebo retry, zobrazit poslední chybu. |
+| Pupen Control (Admin dashboard) | Newslettery (odesílání) | Spustit odeslání newsletteru, sledovat průběh, zobrazit chyby a umožnit retry neúspěšných položek. |
 | Pupen Control (Admin dashboard) | Profil a odhlášení | Zobrazit profil admina, umožnit úpravu základních údajů, odhlásit se. |
 | Členská sekce (Portál člena) | Členský přehled | Zobrazit „dashboard“ člena (status členství, rychlé odkazy na členské funkce), jasně oddělit veřejné vs. členské části. |
 | Členská sekce (Portál člena) | Členský obsah a výhody | Zobrazit členské stránky/funkce dostupné členům (např. slevy, akce, dokumenty) v konzistentní navigaci a srozumitelných kartách. |
@@ -33,7 +36,7 @@ Požadavky sestávají z těchto hlavních stránek:
 | Přihláška do členství | Formulář a stav | Umožnit vyplnit a odeslat přihlášku, zobrazit potvrzení a stav žádosti; admin následně žádost zpracuje v rámci existujícího modulu pro přihlášky. |
 
 ## 3. Core Process
-**Tok administrátora**: Přihlásíš se → systém vyhodnotí oprávnění → otevře se Pupen Control → v levém menu zvolíš kategorii a modul → pracuješ v jednotném vzoru „seznam/detail“ → uložíš změny → případně ověříš logy/preview → odhlásíš se.
+**Tok administrátora**: Přihlásíš se → systém vyhodnotí oprávnění → otevře se Pupen Control → v levém menu zvolíš modul (Přihlášky / Queue / Newslettery) → pracuješ v jednotném vzoru „seznam/detail“ (oprava údajů, stažení PDF, úprava queue, spuštění/oprava odesílání) → uložíš změny → ověříš logy/chyby → odhlásíš se.
 
 **Tok člena**: Přihlásíš se → otevře se Členská sekce → z přehledu přejdeš na členský obsah/výhody → případně upravíš profil → odhlásíš se.
 

@@ -21,12 +21,13 @@ export async function GET(req: Request) {
   const supabase = getServerSupabase();
 
   try {
+    const transporter = await getMailerWithSettings();
+
     const claim = await supabase.rpc('email_queue_claim', { max_rows: limit, worker_id: workerId });
     if (claim.error) throw claim.error;
     const jobs: any[] = Array.isArray(claim.data) ? claim.data : [];
     if (!jobs.length) return NextResponse.json({ ok: true, processed: 0 });
 
-    const transporter = await getMailerWithSettings();
     let ok = 0;
     let retried = 0;
     let dead = 0;
@@ -101,4 +102,3 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
   }
 }
-

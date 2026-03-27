@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
-import { getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer';
+import { getMailerWithSettingsOrQueueTransporter, getSenderFromSettings } from '@/lib/email/mailer';
 import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
 import { sendMailWithQueueFallback } from '@/lib/email/queue';
 
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     const status = String(app?.status || 'pending');
     const reason = String(app?.rejection_reason || app?.decision_reason || '').trim();
 
-    const transporter = await getMailerWithSettings();
+    const transporter = await getMailerWithSettingsOrQueueTransporter();
     const from = await getSenderFromSettings();
     const { subject, html } = await renderEmailTemplateWithDbOverride('application_status', {
       toEmail: email,

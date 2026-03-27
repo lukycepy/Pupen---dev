@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getClientIp, rateLimit } from '@/lib/rate-limit';
 import { getServerSupabase } from '@/lib/supabase-server';
-import { getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer';
+import { getMailerWithSettingsOrQueueTransporter, getSenderFromSettings } from '@/lib/email/mailer';
 import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
 import { sendMailWithQueueFallback } from '@/lib/email/queue';
 import { triggerWebhooks } from '@/lib/webhook';
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
         const adminEmailsSet = new Set(adminProfiles.map(p => p.email).filter(Boolean));
         adminEmailsSet.add(routingEmail);
         const adminEmails = Array.from(adminEmailsSet).join(',');
-        const transporter = await getMailerWithSettings();
+        const transporter = await getMailerWithSettingsOrQueueTransporter();
         const from = await getSenderFromSettings();
         
         const r = await sendMailWithQueueFallback({
@@ -118,7 +118,7 @@ export async function POST(req: Request) {
       messageId: ins.data?.id,
     });
 
-    const transporter = await getMailerWithSettings();
+    const transporter = await getMailerWithSettingsOrQueueTransporter();
     const from = await getSenderFromSettings();
 
     const r = await sendMailWithQueueFallback({

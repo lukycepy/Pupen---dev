@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createHash } from 'crypto';
 import { getServerSupabase } from '@/lib/supabase-server';
-import { getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer';
+import { getMailerWithSettingsOrQueueTransporter, getSenderFromSettings } from '@/lib/email/mailer';
 import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
 import { getClientIp, rateLimit } from '@/lib/rate-limit';
 import { sendMailWithQueueFallback } from '@/lib/email/queue';
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
     if (!resetUrl) return NextResponse.json({ ok: true });
 
     const { subject, html } = await renderEmailTemplateWithDbOverride('password_reset', { email, resetUrl, lang });
-    const transporter = await getMailerWithSettings();
+    const transporter = await getMailerWithSettingsOrQueueTransporter();
     const from = await getSenderFromSettings();
 
     try {

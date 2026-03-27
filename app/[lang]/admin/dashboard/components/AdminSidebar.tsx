@@ -44,9 +44,13 @@ const SidebarContent = ({
     queryKey: ['applications_pending_count'],
     enabled: appsVisible,
     queryFn: async () => {
-      const res = await supabase.from('applications').select('*', { count: 'exact', head: true }).eq('status', 'pending');
-      if (res.error) throw res.error;
-      return Number(res.count || 0);
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) return 0;
+      const res = await fetch('/api/admin/applications?pendingCount=1', { headers: { Authorization: `Bearer ${token}` } });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Chyba');
+      return Number(json?.count || 0);
     },
   });
   const pendingAppsCount = pendingAppsQuery.data ?? 0;

@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     // musíme vypsat soubory a filtrovat.
     
     const bucketsToClean = ['images', 'documents']; // V praxi bychom mohli mít 'temp'
-    let totalDeleted = 0;
+    const totalDeleted = 0;
     const deletedFiles: string[] = [];
     
     // Pro ukázku implementujeme smazání osiřelých souborů z bucketů

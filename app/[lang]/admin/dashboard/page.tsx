@@ -46,6 +46,7 @@ const EmailSettingsTab = dynamic<any>(() => import('./components/EmailSettingsTa
 const EmailTemplatesTab = dynamic<any>(() => import('./components/EmailTemplatesTab'), { loading: () => <SkeletonTabContent /> });
 const PaymentSettingsTab = dynamic<any>(() => import('./components/PaymentSettingsTab'), { loading: () => <SkeletonTabContent /> });
 const NewsletterTab = dynamic<any>(() => import('./components/NewsletterTab'), { loading: () => <SkeletonTabContent /> });
+const QueueTab = dynamic<any>(() => import('./components/QueueTab'), { loading: () => <SkeletonTabContent /> });
 const ContentLibraryTab = dynamic<any>(() => import('./components/ContentLibraryTab'), { loading: () => <SkeletonTabContent /> });
 const InvoicesTab = dynamic<any>(() => import('./components/InvoicesTab'), { loading: () => <SkeletonTabContent /> });
 const OgPreviewTab = dynamic<any>(() => import('./components/OgPreviewTab'), { loading: () => <SkeletonTabContent /> });
@@ -377,7 +378,7 @@ export default function AdminDashboard() {
   );
 
   return (
-    <div className="min-h-screen bg-stone-50 font-sans lg:pl-72">
+    <div className="min-h-screen bg-gradient-to-b from-stone-50 to-stone-100/40 font-sans lg:pl-72">
       <AdminSidebar 
         lang={lang}
         dict={dict}
@@ -677,6 +678,10 @@ export default function AdminDashboard() {
 
             {activeTab === 'newsletter' && canView('newsletter') && (
               <NewsletterTab dict={dict} />
+            )}
+
+            {activeTab === 'queue' && permissions.can_manage_admins && (
+              <QueueTab dict={dict} />
             )}
 
             {activeTab === 'email_settings' && canView('email_settings') && (

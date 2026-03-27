@@ -41,6 +41,20 @@
   - Konzistence modulů:
     - Stejná struktura: Nadpis modulu, krátký popis, toolbar (filtr/sort/export pokud existuje), seznam, detail.
 
+### Admin moduly – doplnění pro „Přihlášky / Queue / Newslettery“
+- Přihlášky:
+  - List (Table): sloupce ID, jméno/email, stav, datum, „PDF“ ikona; filtry dle stavu + fulltext.
+  - Detail (Drawer/Panel): editace polí přihlášky, změna stavu, audit/validace chyb; CTA „Uložit“.
+  - Akce: „Stáhnout PDF“ (primární sekundární akce v headeru detailu), případně „Regenerovat PDF“ jen pokud už existuje.
+- Queue:
+  - List (Table): type, status, run_after, attempts, last_error; filtry (status/type) + „Zobrazit jen chybové“.
+  - Detail: editace status/run_after (povoleno jen adminům), read-only payload (pokud existuje).
+  - Akce: „Retry“, „Pozastavit“, „Označit jako hotovo“ (vše s confirm dialogem).
+- Newslettery:
+  - List: kampaně (subject, status, scheduled_at, created_at).
+  - Detail: náhled obsahu (pokud existuje), tlačítko „Odeslat / Spustit“, log odesílání + chybové položky.
+  - Akce: „Retry neúspěšných“ + jasný progress stav (např. progress bar, počty).
+
 ---
 
 ## 3) Členská sekce (Portál člena)
@@ -49,9 +63,10 @@
 - Page structure: přehledové sekce nad sebou.
 - Sekce a komponenty:
   - Header: pozdrav + status členství (badge) + rychlé odkazy.
+  - „Moje přihláška“ (nově kvůli PDF): karta se stavem přihlášky + CTA „Stáhnout PDF přihlášky“ (disabled s tooltipem, pokud PDF není k dispozici).
   - „Výhody a obsah“: grid karet (Slevy, Akce, Dokumenty…) s jasnými popisy.
   - Profil: základní údaje, tlačítko „Upravit“ (modal nebo samostatný panel).
-  - Notifikace: prostor pro systémová sdělení (např. změna stavu členství).
+  - Notifikace: prostor pro systémová sdělení (např. změna stavu členství, problém s přihláškou).
 - Responsivita: karty do 1 sloupce, akce v sticky spodní liště jen pokud je potřeba.
 
 ---
@@ -61,6 +76,6 @@
 - Layout: dvousloupec (na desktopu) – vlevo formulář, vpravo „co bude dál“.
 - Sekce a komponenty:
   - Form: logické bloky (Osobní údaje, Souhlasy, Doplňující info), průběžné ukládání není vyžadované.
-  - Potvrzení: po odeslání zobrazit summary + stav (např. „Odesláno“).
+  - Potvrzení: po odeslání zobrazit summary + stav (např. „Odesláno“) a sekundární CTA „Stáhnout PDF přihlášky“ (pokud je PDF generováno ihned).
   - Stav žádosti: jednoduchá timeline (Odesláno → Zpracování → Schváleno/Zamítnuto).
 - Přístupnost: jasné popisky, error summary nahoře, klávesová navigace.

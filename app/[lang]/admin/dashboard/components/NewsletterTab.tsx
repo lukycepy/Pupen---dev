@@ -177,7 +177,10 @@ export default function NewsletterTab({ dict }: { dict: any }) {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error || 'Chyba');
-      showToast(`Newsletter odeslán: ${json?.sent || 0}/${json?.recipients || 0}`, 'success');
+      showToast(
+        `Newsletter: odesláno ${json?.sent || 0}, ve frontě ${json?.queued || 0}, selhalo ${json?.failed || 0} (celkem ${json?.recipients || 0})`,
+        'success'
+      );
       
       const [draftsRes, historyRes] = await Promise.all([
         fetch('/api/admin/newsletter/drafts', { headers: { Authorization: `Bearer ${token}` } }),

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getMailerDebugInfoWithSettings, getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer';
+import { getMailerDebugInfoWithSettings, getMailerWithSettingsOrQueueTransporter, getSenderFromSettings } from '@/lib/email/mailer';
 import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
 import { sendMailWithQueueFallback } from '@/lib/email/queue';
 import { requireAdmin } from '@/lib/server-auth';
@@ -15,7 +15,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing email or password' }, { status: 400 });
     }
 
-    const transporter = await getMailerWithSettings();
+    const transporter = await getMailerWithSettingsOrQueueTransporter();
     const from = await getSenderFromSettings();
     const { subject, html } = await renderEmailTemplateWithDbOverride('admin_password', { email, password, firstName });
 
