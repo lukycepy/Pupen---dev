@@ -1,7 +1,0 @@
-- [x] QR generátor podporuje text, logo a styly; export funguje.
-- [x] Purge logů je dostupný jen pro superadmina a zapisuje audit.
-- [x] U člena lze uložit sken přihlášky a ručně doplnit data; změny se logují.
-- [x] Admin UI a členská sekce mají sjednocené komponenty a čitelné formuláře/modaly.
-- [x] ToS/Privacy/Cookies stránky jsou bez zdvojeného obsahu a správně lokalizované.
-- [x] Lokalizace je konzistentní (bez duplicit a chybějících klíčů).
-- [x] Úklid kódu/souborů nevede k regresím; build a klíčové flow projdou.

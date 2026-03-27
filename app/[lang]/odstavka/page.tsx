@@ -28,7 +28,7 @@ export default function MaintenancePage() {
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const res = await fetch('/api/site-config');
+      const res = await fetch('/api/site-config', { cache: 'no-store' });
       const json = await res.json().catch(() => ({}));
       const config = json?.config || null;
       if (mounted) setCfg(config);
@@ -95,7 +95,8 @@ export default function MaintenancePage() {
     const doc = parser.parseFromString(html, 'text/html');
     const allowedTags = new Set(['A', 'B', 'STRONG', 'I', 'EM', 'U', 'BR', 'P', 'DIV', 'SPAN', 'UL', 'OL', 'LI', 'H1', 'H2', 'H3', 'H4', 'BLOCKQUOTE']);
 
-    const walk = (node: Node) => {
+    const walk = (node: any) => {
+      if (!node) return;
       if (node.nodeType === Node.ELEMENT_NODE) {
         const el = node as HTMLElement;
         const tag = el.tagName.toUpperCase();
@@ -130,12 +131,14 @@ export default function MaintenancePage() {
         }
       }
 
-      for (const child of Array.from(node.childNodes)) walk(child);
+      const children = Array.from(node.childNodes || []);
+      for (const child of children) walk(child);
     };
 
     walk(doc.body);
 
-    const linkifyTextNodes = (node: Node) => {
+    const linkifyTextNodes = (node: any) => {
+      if (!node) return;
       const isElement = node.nodeType === Node.ELEMENT_NODE;
       const hasLink = isElement && typeof (node as any).querySelector === 'function' ? (node as Element).querySelector('a') : null;
       if (hasLink) return;

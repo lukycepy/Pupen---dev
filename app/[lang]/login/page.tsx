@@ -132,8 +132,25 @@ export default function LoginPage() {
       const res = await authAny.mfa.enroll({ factorType: 'totp' });
       if (res?.error) throw res.error;
       const factorId = String(res?.data?.id || '');
-      const uri = String(res?.data?.totp?.uri || res?.data?.totp?.qr_code || '');
-      if (!factorId || !uri) throw new Error('Enroll failed');
+      const rawUri = String(res?.data?.totp?.uri || res?.data?.totp?.qr_code || '');
+      if (!factorId || !rawUri) throw new Error('Enroll failed');
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const account = String(sessionData.session?.user?.email || email || '').trim();
+
+      let uri = rawUri;
+      try {
+        const u = new URL(rawUri);
+        if (u.protocol === 'otpauth:') {
+          const type = u.hostname || 'totp';
+          u.searchParams.set('issuer', 'Pupen.org');
+          const label = account ? `Pupen.org:${account}` : 'Pupen.org';
+          u.pathname = `/${type}/${encodeURIComponent(label)}`;
+          uri = u.toString();
+        }
+      } catch {
+        uri = rawUri;
+      }
       setAdminMfaFactorId(factorId);
       const QRCode: any = await import('qrcode');
       const qr = await QRCode.toDataURL(uri, { margin: 1, width: 320 });

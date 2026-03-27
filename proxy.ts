@@ -14,14 +14,7 @@ type SiteConfig = {
   pages: Record<string, { enabled?: boolean; navbar?: boolean; tools?: boolean }>;
 };
 
-const siteCache: { value: SiteConfig | null; atMs: number } =
-  (globalThis as any).__PUPEN_SITE_CONFIG_CACHE__ || { value: null, atMs: 0 };
-(globalThis as any).__PUPEN_SITE_CONFIG_CACHE__ = siteCache;
-
 async function loadConfig(origin: string): Promise<SiteConfig> {
-  const now = Date.now();
-  if (siteCache.value && now - siteCache.atMs < 30_000) return siteCache.value;
-
   try {
     const res = await fetch(new URL('/api/site-config', origin || 'http://localhost').toString(), {
       cache: 'no-store',
@@ -35,13 +28,9 @@ async function loadConfig(origin: string): Promise<SiteConfig> {
       maintenance_active: !!cfg.maintenance_active,
       pages: (cfg.pages && typeof cfg.pages === 'object' ? cfg.pages : {}) as any,
     };
-    siteCache.value = value;
-    siteCache.atMs = now;
     return value;
   } catch {
     const fallback = { maintenance_enabled: false, pages: {} };
-    siteCache.value = fallback;
-    siteCache.atMs = now;
     return fallback;
   }
 }
@@ -63,7 +52,10 @@ export function proxy(request: NextRequest) {
     const inferredLocale = prefersCs ? 'cs' : prefersEn ? 'en' : defaultLocale;
     const locale = cookieLocale && locales.includes(cookieLocale) ? cookieLocale : inferredLocale;
 
-    return NextResponse.redirect(new URL(`/${locale}${pathname === '/' ? '' : pathname}`, request.url));
+    const res = NextResponse.redirect(new URL(`/${locale}${pathname === '/' ? '' : pathname}`, request.url));
+    res.headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate');
+    res.headers.set('x-middleware-cache', 'no-cache');
+    return res;
   }
 
   const currentLocale = pathname.split('/')[1];
@@ -86,22 +78,31 @@ export function proxy(request: NextRequest) {
       if (cfg.maintenance_active && !isAllowed) {
         const url = request.nextUrl.clone();
         url.pathname = `/${currentLocale}/odstavka`;
-        const res = NextResponse.rewrite(url);
-        res.headers.set('Cache-Control', 'no-store');
+        const res = NextResponse.redirect(url, 307);
+        res.headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate');
+        res.headers.set('x-middleware-cache', 'no-cache');
         return res;
       }
 
       if (normalized === `${currentLocale}/odstavka` && !cfg.maintenance_active) {
-        return NextResponse.redirect(new URL(`/${currentLocale}`, request.url));
+        const res = NextResponse.redirect(new URL(`/${currentLocale}`, request.url));
+        res.headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate');
+        res.headers.set('x-middleware-cache', 'no-cache');
+        return res;
       }
 
       const parts = pathname.split('/').filter(Boolean);
       const slug = parts.length >= 2 ? parts[1] : null;
       if (slug && cfg.pages?.[slug]?.enabled === false) {
-        return NextResponse.redirect(new URL(`/${currentLocale}`, request.url));
+        const res = NextResponse.redirect(new URL(`/${currentLocale}`, request.url));
+        res.headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate');
+        res.headers.set('x-middleware-cache', 'no-cache');
+        return res;
       }
 
       const response = NextResponse.next();
+      response.headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate');
+      response.headers.set('x-middleware-cache', 'no-cache');
       const cookieLocale = request.cookies.get(COOKIE_NAME)?.value;
 
       if (cookieLocale !== currentLocale) {

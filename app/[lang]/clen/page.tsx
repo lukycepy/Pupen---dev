@@ -477,7 +477,17 @@ export default function ClenskaSekcePage() {
       showToast(lang === 'en' ? 'Passkey added.' : 'Passkey přidán.', 'success');
       await logSecurityEvent('PASSKEY_REGISTERED', {});
     } catch (e: any) {
-      showToast(e?.message || 'Chyba', 'error');
+      const msg = String(e?.message || 'Chyba');
+      if (msg.toLowerCase().includes('mfa enroll is disabled for webauthn')) {
+        showToast(
+          lang === 'en'
+            ? 'Passkeys are disabled in Supabase (Auth → MFA → WebAuthn).'
+            : 'Passkeys nejsou povolené v Supabase (Auth → MFA → WebAuthn).',
+          'error',
+        );
+      } else {
+        showToast(msg, 'error');
+      }
     } finally {
       setPasskeysLoading(false);
     }
@@ -513,8 +523,26 @@ export default function ClenskaSekcePage() {
       const res = await authAny.mfa.enroll({ factorType: 'totp' });
       if (res?.error) throw res.error;
       const factorId = String(res?.data?.id || '');
-      const uri = String(res?.data?.totp?.uri || res?.data?.totp?.qr_code || '');
-      if (!factorId || !uri) throw new Error('Enroll failed');
+      const rawUri = String(res?.data?.totp?.uri || res?.data?.totp?.qr_code || '');
+      if (!factorId || !rawUri) throw new Error('Enroll failed');
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const account = String(sessionData.session?.user?.email || '').trim();
+
+      let uri = rawUri;
+      try {
+        const u = new URL(rawUri);
+        if (u.protocol === 'otpauth:') {
+          const type = u.hostname || 'totp';
+          u.searchParams.set('issuer', 'Pupen.org');
+          const label = account ? `Pupen.org:${account}` : 'Pupen.org';
+          u.pathname = `/${type}/${encodeURIComponent(label)}`;
+          uri = u.toString();
+        }
+      } catch {
+        uri = rawUri;
+      }
+
       setMfaFactorId(factorId);
       setMfaEnrollUri(uri);
       const QRCode: any = await import('qrcode');

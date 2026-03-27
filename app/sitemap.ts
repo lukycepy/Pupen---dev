@@ -1,8 +1,9 @@
 import { MetadataRoute } from 'next';
 import { createClient } from '@supabase/supabase-js';
+import { getPublicBaseUrl } from '@/lib/public-base-url';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = 'https://pupen.org';
+  const baseUrl = getPublicBaseUrl();
 
   // Fetch all posts and events
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;

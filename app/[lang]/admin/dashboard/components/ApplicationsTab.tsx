@@ -177,6 +177,27 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
     onError: (err: any) => showToast(err.message, 'error')
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async ({ id }: { id: string }) => {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token || null;
+      if (!token) throw new Error('Unauthorized');
+      const res = await fetch('/api/admin/applications', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ id }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Chyba');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['applications'] });
+      setSelectedApp(null);
+      showToast(isEn ? 'Deleted.' : 'Smazáno.', 'success');
+    },
+    onError: (err: any) => showToast(err.message, 'error'),
+  });
+
   if (isLoading) return <SkeletonTabContent />;
 
   const bulkApprove = async () => {
@@ -413,6 +434,19 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
                     <Download size={14} /> Export PDF
                   </button>
                 )}
+                {selectedApp.__source !== 'manual_scan' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!confirm(isEn ? 'Really delete this application?' : 'Opravdu smazat tuto přihlášku?')) return;
+                      deleteMutation.mutate({ id: String(selectedApp.id) });
+                    }}
+                    disabled={deleteMutation.isPending}
+                    className="flex items-center gap-2 px-4 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition text-[10px] font-black uppercase tracking-widest shadow-sm disabled:opacity-50"
+                  >
+                    {isEn ? 'Delete' : 'Smazat'}
+                  </button>
+                )}
                 <button onClick={() => setSelectedApp(null)} className="p-3 hover:bg-stone-100 rounded-2xl transition text-stone-400 hover:text-stone-900">
                   <XCircle size={28} />
                 </button>
@@ -468,8 +502,8 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
                         <p className="text-sm font-bold text-stone-700">{selectedApp.membership_type === 'external' ? 'Externí' : 'Řádné'}</p>
                       </div>
                       <div className="space-y-1">
-                        <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest">{dict.recruitment?.labelSignedOn || 'V dne'}</p>
-                        <p className="text-sm font-bold text-stone-700">{selectedApp.signed_on || (selectedApp.created_at ? new Date(selectedApp.created_at).toLocaleDateString('cs-CZ') : '-')}</p>
+                        <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest">{dict.recruitment?.labelSubmittedAt || 'Datum podání'}</p>
+                        <p className="text-sm font-bold text-stone-700">{selectedApp.created_at ? new Date(selectedApp.created_at).toLocaleDateString('cs-CZ') : '-'}</p>
                       </div>
                     </div>
 

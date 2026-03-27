@@ -161,3 +161,25 @@ export async function PATCH(req: Request) {
   }
 }
 
+export async function DELETE(req: Request) {
+  try {
+    const { profile } = await requireAdmin(req);
+    if (!profile?.is_admin && !profile?.can_manage_admins) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const body = await req.json().catch(() => ({}));
+    const id = String(body?.id || '').trim();
+    if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
+    if (id.startsWith('manual-')) return NextResponse.json({ error: 'Manual application cannot be deleted here' }, { status: 400 });
+
+    const supabase = getServerSupabase();
+    const res = await supabase.from('applications').delete().eq('id', id);
+    if (res.error) throw res.error;
+    return NextResponse.json({ ok: true });
+  } catch (e: any) {
+    const msg = String(e?.message || 'Error');
+    const status = msg === 'Unauthorized' ? 401 : msg === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: msg }, { status });
+  }
+}

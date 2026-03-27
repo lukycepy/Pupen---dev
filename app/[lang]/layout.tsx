@@ -11,12 +11,14 @@ import CookieBanner from './components/CookieBanner'
 import Banner from './components/Banner'
 import FAQWidget from './components/FAQWidget'
 import ErrorReporter from '../components/ErrorReporter'
+import { getPublicBaseUrl } from '@/lib/public-base-url';
 
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
   const { lang } = await params;
   const locale = lang === 'en' ? 'en_US' : 'cs_CZ';
   const canonical = `/${lang}`;
   const ogImage = '/img/prezentace_pupen.jpg';
+  const baseUrl = getPublicBaseUrl();
 
   return {
     title: {
@@ -24,7 +26,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
       template: '%s | Studentský spolek Pupen, z.s.',
     },
     description: 'Oficiální web Studentského spolku Pupen, z.s. na FAPPZ ČZU.',
-    metadataBase: new URL('https://pupen.org'),
+    metadataBase: new URL(baseUrl),
     keywords: ['Pupen', 'FAPPZ', 'ČZU', 'spolek', 'studenti', 'Suchdol'],
     authors: [{ name: 'Studentský spolek Pupen, z.s.' }],
     creator: 'Studentský spolek Pupen, z.s.',
@@ -37,15 +39,15 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
     alternates: {
       canonical,
       languages: {
-        'cs': 'https://pupen.org/cs',
-        'en': 'https://pupen.org/en',
-        'x-default': 'https://pupen.org/cs'
+        'cs': `${baseUrl}/cs`,
+        'en': `${baseUrl}/en`,
+        'x-default': `${baseUrl}/cs`
       },
     },
     openGraph: {
       title: 'Studentský spolek Pupen | FAPPZ ČZU',
       description: 'Přidej se k nám a zažij nejlepší studentská léta na ČZU.',
-      url: `https://pupen.org${canonical}`,
+      url: `${baseUrl}${canonical}`,
       siteName: 'Studentský spolek Pupen, z.s.',
       locale,
       type: 'website',

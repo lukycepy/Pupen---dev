@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { buildCalendarIcs, escapeIcsText, foldIcsLine, formatIcsDateUtc, stripHtmlToText } from '@/lib/calendar/ics';
+import { getPublicBaseUrl, getPublicHost } from '@/lib/public-base-url';
 
 function addHours(date: Date, hours: number) {
   const d = new Date(date);
@@ -12,6 +13,8 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const lang = url.searchParams.get('lang') === 'en' ? 'en' : 'cs';
   const nowIso = new Date().toISOString();
+  const baseUrl = getPublicBaseUrl();
+  const host = getPublicHost();
 
   const res = await supabase
     .from('events')
@@ -34,11 +37,11 @@ export async function GET(req: Request) {
     const loc = lang === 'en' && ev?.location_en ? ev.location_en : ev?.location || '';
     const descHtml = lang === 'en' ? (ev?.description_html_en || ev?.description_html || ev?.description_en || ev?.description) : (ev?.description_html || ev?.description || '');
     const desc = stripHtmlToText(descHtml);
-    const urlEvent = `https://pupen.org/${lang}/akce/${ev.id}`;
+    const urlEvent = `${baseUrl}/${lang}/akce/${ev.id}`;
 
     const lines = [
       'BEGIN:VEVENT',
-      foldIcsLine(`UID:${ev.id}@pupen.org`),
+      foldIcsLine(`UID:${ev.id}@${host}`),
       `DTSTAMP:${dtstamp}`,
       `DTSTART:${formatIcsDateUtc(start)}`,
       `DTEND:${formatIcsDateUtc(end)}`,
@@ -66,4 +69,3 @@ export async function GET(req: Request) {
     },
   });
 }
-

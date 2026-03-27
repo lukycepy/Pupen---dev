@@ -1,6 +1,8 @@
 import { MetadataRoute } from 'next';
+import { getPublicBaseUrl } from '@/lib/public-base-url';
 
 export default function robots(): MetadataRoute.Robots {
+  const baseUrl = getPublicBaseUrl();
   return {
     rules: [
       {
@@ -19,7 +21,6 @@ export default function robots(): MetadataRoute.Robots {
         ],
       },
     ],
-    sitemap: 'https://pupen.org/sitemap.xml',
+    sitemap: `${baseUrl}/sitemap.xml`,
   };
 }
-

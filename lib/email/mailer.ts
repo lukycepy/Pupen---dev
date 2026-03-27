@@ -8,6 +8,7 @@ export type MailerConfig = {
   port?: number;
   secure?: boolean;
   tlsRejectUnauthorized?: boolean;
+  tlsCaPem?: string;
 };
 
 export function getMailerDebugInfo(config?: MailerConfig) {
@@ -62,6 +63,13 @@ export function getMailer(config?: MailerConfig) {
         ? process.env.SMTP_TLS_REJECT_UNAUTHORIZED !== 'false'
         : true;
 
+  const tlsCaPem =
+    typeof config?.tlsCaPem === 'string' && config.tlsCaPem.trim()
+      ? config.tlsCaPem.trim()
+      : process.env.SMTP_TLS_CA_PEM
+        ? String(process.env.SMTP_TLS_CA_PEM).trim()
+        : '';
+
   if (!host || !user || !pass) {
     throw new Error('Email not configured');
   }
@@ -71,7 +79,7 @@ export function getMailer(config?: MailerConfig) {
     port,
     secure,
     auth: { user, pass },
-    tls: { rejectUnauthorized: tlsRejectUnauthorized, servername: host },
+    tls: { rejectUnauthorized: tlsRejectUnauthorized, servername: host, ...(tlsCaPem ? { ca: tlsCaPem } : {}) },
     connectionTimeout: 12_000,
     greetingTimeout: 12_000,
     socketTimeout: 18_000,
@@ -100,9 +108,25 @@ async function getEmailSettingsCached() {
         ? undefined
         : String(data?.smtp_secure || '') === 'true';
 
+  const smtp_tls_reject_unauthorized =
+    typeof (data as any)?.smtp_tls_reject_unauthorized === 'boolean'
+      ? (data as any).smtp_tls_reject_unauthorized
+      : (data as any)?.smtp_tls_reject_unauthorized == null
+        ? undefined
+        : String((data as any).smtp_tls_reject_unauthorized || '') === 'true';
+  const smtp_tls_ca_pem = (data as any)?.smtp_tls_ca_pem ? String((data as any).smtp_tls_ca_pem) : '';
+
   const smtp =
     smtp_host && smtp_user && smtp_pass
-      ? { host: smtp_host, user: smtp_user, pass: smtp_pass, port: smtp_port, secure: smtp_secure }
+      ? {
+          host: smtp_host,
+          user: smtp_user,
+          pass: smtp_pass,
+          port: smtp_port,
+          secure: smtp_secure,
+          tlsRejectUnauthorized: smtp_tls_reject_unauthorized,
+          tlsCaPem: smtp_tls_ca_pem,
+        }
       : null;
 
   cachedSettings = {

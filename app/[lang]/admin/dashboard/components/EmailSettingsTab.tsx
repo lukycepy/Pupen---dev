@@ -18,6 +18,8 @@ export default function EmailSettingsTab({ dict }: { dict: any }) {
     smtp_user: 'info@pupen.org',
     smtp_pass: '',
     smtp_secure: false,
+    smtp_tls_reject_unauthorized: true,
+    smtp_tls_ca_pem: '',
     imap_host: 'imap.pupen.org',
     imap_port: 993,
     imap_user: 'info@pupen.org',
@@ -146,6 +148,39 @@ export default function EmailSettingsTab({ dict }: { dict: any }) {
                 onChange={e => setSettings({...settings, smtp_pass: e.target.value})}
                 className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
               />
+            </div>
+
+            <div className="flex items-center justify-between bg-stone-50 rounded-2xl border border-stone-100 px-5 py-4">
+              <div className="min-w-0">
+                <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">Ověřovat certifikát</div>
+                <div className="text-xs font-bold text-stone-600 mt-1 truncate">
+                  {settings.smtp_tls_reject_unauthorized ? 'Zapnuto (doporučeno).' : 'Vypnuto (nedoporučeno).'}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSettings({ ...settings, smtp_tls_reject_unauthorized: !settings.smtp_tls_reject_unauthorized })}
+                className={`shrink-0 rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-widest border transition ${
+                  settings.smtp_tls_reject_unauthorized
+                    ? 'bg-green-600 text-white border-green-600'
+                    : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-100'
+                }`}
+              >
+                {settings.smtp_tls_reject_unauthorized ? 'Zapnuto' : 'Vypnuto'}
+              </button>
+            </div>
+
+            <div>
+              <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">TLS CA (PEM)</label>
+              <textarea
+                value={settings.smtp_tls_ca_pem || ''}
+                onChange={e => setSettings({ ...settings, smtp_tls_ca_pem: e.target.value })}
+                placeholder="-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----"
+                className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition min-h-[120px]"
+              />
+              <div className="mt-2 text-xs font-bold text-stone-500">
+                Pokud SMTP padá na „unable to verify the first certificate“, vlož sem CA chain (PEM).
+              </div>
             </div>
           </div>
         </AdminPanel>

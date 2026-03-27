@@ -59,7 +59,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
     let mounted = true;
     (async () => {
       try {
-        const res = await fetch('/api/site-config');
+        const res = await fetch('/api/site-config', { cache: 'no-store' });
         const json = await res.json().catch(() => ({}));
         const pages = json?.config?.pages;
         if (mounted && pages && typeof pages === 'object') setSitePages(pages);
@@ -94,6 +94,20 @@ export default function Navbar({ lang, dict }: NavbarProps) {
     setIsToolsOpen(false);
     setIsUserMenuOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const prevBody = document.body.style.overflow;
+    const prevHtml = document.documentElement.style.overflow;
+    if (isMenuOpen) {
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+    }
+    return () => {
+      document.body.style.overflow = prevBody;
+      document.documentElement.style.overflow = prevHtml;
+    };
+  }, [isMenuOpen]);
 
   // Search logic
   useEffect(() => {
@@ -581,12 +595,12 @@ export default function Navbar({ lang, dict }: NavbarProps) {
       {/* MOBILNÍ MENU */}
       {isMenuOpen && (
         <div 
-          className="lg:hidden fixed inset-0 top-16 bg-white z-[9998] animate-in slide-in-from-top-10 duration-500 overflow-y-auto"
+          className="lg:hidden fixed inset-x-0 bottom-0 top-16 h-[calc(100dvh-4rem)] bg-white z-[9998] animate-in slide-in-from-top-10 duration-500 overflow-y-auto overscroll-contain"
           role="dialog"
           aria-modal="true"
           aria-label="Mobilní navigace"
         >
-          <div className="flex flex-col p-8 space-y-6 font-black uppercase tracking-[0.2em] text-stone-700">
+          <div className="flex flex-col p-5 sm:p-8 space-y-5 text-stone-800 pb-[max(2rem,env(safe-area-inset-bottom))]">
             {/* MOBILNÍ SEARCH */}
             <div className="relative mb-4">
               <Search className="absolute left-4 top-3.5 text-stone-500" size={20} />
@@ -596,19 +610,117 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={searchPlaceholder}
                 className="w-full bg-stone-100 border-none rounded-2xl pl-12 pr-4 py-4 text-sm font-bold focus:ring-2 focus:ring-green-500 transition-all outline-none"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (searchQuery.trim().length >= 2) {
+                      window.location.href = `/${lang}/search?q=${encodeURIComponent(searchQuery.trim())}`;
+                      setIsMenuOpen(false);
+                    }
+                  }
+                }}
               />
               {isSearching && <InlinePulse className="absolute right-5 top-5 bg-stone-300" size={14} />}
             </div>
 
-            <Link href={`/${lang}`} onClick={() => setIsMenuOpen(false)} className={`flex items-center gap-4 text-lg ${pathname === `/${lang}` ? 'text-green-600' : ''}`}>
+            {searchQuery.trim().length >= 2 && !isSearching && (
+              <div className="bg-stone-50 border border-stone-100 rounded-2xl p-4">
+                {(searchResults.events.length > 0 ||
+                  searchResults.posts.length > 0 ||
+                  searchResults.faqs.length > 0 ||
+                  searchResults.guide.length > 0 ||
+                  searchResults.discounts.length > 0 ||
+                  searchResults.books.length > 0 ||
+                  searchResults.archive.length > 0) ? (
+                  <div className="space-y-4">
+                    {searchResults.events.length > 0 && (
+                      <div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">Akce</div>
+                        <div className="space-y-1">
+                          {searchResults.events.slice(0, 3).map((ev: any) => (
+                            <Link
+                              key={ev.id}
+                              href={`/${lang}/akce/${ev.id}`}
+                              onClick={() => setIsMenuOpen(false)}
+                              className="block rounded-xl px-3 py-2 bg-white border border-stone-100 hover:border-green-200 hover:bg-green-50 transition"
+                            >
+                              <div className="text-sm font-bold text-stone-800 truncate">{ev.title}</div>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {searchResults.posts.length > 0 && (
+                      <div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">Novinky</div>
+                        <div className="space-y-1">
+                          {searchResults.posts.slice(0, 3).map((po: any) => (
+                            <Link
+                              key={po.id}
+                              href={`/${lang}/novinky/${po.id}`}
+                              onClick={() => setIsMenuOpen(false)}
+                              className="block rounded-xl px-3 py-2 bg-white border border-stone-100 hover:border-green-200 hover:bg-green-50 transition"
+                            >
+                              <div className="text-sm font-bold text-stone-800 truncate">{po.title}</div>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {searchResults.faqs.length > 0 && (
+                      <div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">FAQ</div>
+                        <div className="space-y-1">
+                          {searchResults.faqs.slice(0, 3).map((f: any) => (
+                            <Link
+                              key={f.id}
+                              href={`/${lang}/faq?q=${encodeURIComponent(searchQuery.trim())}`}
+                              onClick={() => setIsMenuOpen(false)}
+                              className="block rounded-xl px-3 py-2 bg-white border border-stone-100 hover:border-green-200 hover:bg-green-50 transition"
+                            >
+                              <div className="text-sm font-bold text-stone-800 truncate">{f.question}</div>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <Link
+                      href={`/${lang}/search?q=${encodeURIComponent(searchQuery.trim())}`}
+                      onClick={() => setIsMenuOpen(false)}
+                      className="block text-center text-[10px] font-black uppercase tracking-widest text-green-700 hover:text-green-800"
+                    >
+                      {lang === 'en' ? 'View all results' : 'Zobrazit všechny výsledky'}
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="text-center text-xs font-bold text-stone-400 uppercase tracking-widest py-2">
+                    {dict?.searchNoResults || (lang === 'en' ? 'No results' : 'Nic nenalezeno')}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <Link href={`/${lang}`} onClick={() => setIsMenuOpen(false)} className={`flex items-center gap-4 text-base font-black uppercase tracking-[0.12em] ${pathname === `/${lang}` ? 'text-green-600' : ''}`}>
               {dict?.home || (lang === 'en' ? 'Home' : 'Domů')}
             </Link>
-            <Link href={`/${lang}/akce`} onClick={() => setIsMenuOpen(false)} className={`flex items-center gap-4 text-lg ${pathname.includes('/akce') ? 'text-green-600' : ''}`}>
-              {dict?.events || (lang === 'en' ? 'Events' : 'Akce')}
-            </Link>
-            <Link href={`/${lang}/novinky`} onClick={() => setIsMenuOpen(false)} className={`flex items-center gap-4 text-lg ${pathname.includes('/novinky') ? 'text-green-600' : ''}`}>
-              {dict?.news || (lang === 'en' ? 'News' : 'Novinky')}
-            </Link>
+            {isPageEnabled('akce') && showInNavbar('akce') && (
+              <Link
+                href={`/${lang}/akce`}
+                onClick={() => setIsMenuOpen(false)}
+                className={`flex items-center gap-4 text-base font-black uppercase tracking-[0.12em] ${pathname.includes('/akce') ? 'text-green-600' : ''}`}
+              >
+                {dict?.events || (lang === 'en' ? 'Events' : 'Akce')}
+              </Link>
+            )}
+            {isPageEnabled('novinky') && showInNavbar('novinky') && (
+              <Link
+                href={`/${lang}/novinky`}
+                onClick={() => setIsMenuOpen(false)}
+                className={`flex items-center gap-4 text-base font-black uppercase tracking-[0.12em] ${pathname.includes('/novinky') ? 'text-green-600' : ''}`}
+              >
+                {dict?.news || (lang === 'en' ? 'News' : 'Novinky')}
+              </Link>
+            )}
             
             <div className="py-4 border-y border-stone-100">
               <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-6">
@@ -620,7 +732,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                     key={tool.href}
                     href={`/${lang}${tool.href}`} 
                     onClick={() => setIsMenuOpen(false)} 
-                    className="text-[10px] font-black text-stone-700 hover:text-green-600 flex items-center gap-3"
+                    className="text-[11px] font-black text-stone-700 hover:text-green-600 flex items-center gap-3"
                   >
                     <span className="text-stone-400">{tool.icon}</span>
                     {dict?.tools?.[tool.key]?.title}
@@ -629,12 +741,24 @@ export default function Navbar({ lang, dict }: NavbarProps) {
               </div>
             </div>
 
-            <Link href={`/${lang}/o-nas`} onClick={() => setIsMenuOpen(false)} className={`flex items-center gap-4 text-lg ${pathname.includes('/o-nas') ? 'text-green-600' : ''}`}>
-              {dict?.about || (lang === 'en' ? 'About' : 'O nás')}
-            </Link>
-            <Link href={`/${lang}/kontakt`} onClick={() => setIsMenuOpen(false)} className={`flex items-center gap-4 text-lg ${pathname.includes('/kontakt') ? 'text-green-600' : ''}`}>
-              {dict?.contact || (lang === 'en' ? 'Contact' : 'Kontakt')}
-            </Link>
+            {isPageEnabled('o-nas') && showInNavbar('o-nas') && (
+              <Link
+                href={`/${lang}/o-nas`}
+                onClick={() => setIsMenuOpen(false)}
+                className={`flex items-center gap-4 text-base font-black uppercase tracking-[0.12em] ${pathname.includes('/o-nas') ? 'text-green-600' : ''}`}
+              >
+                {dict?.about || (lang === 'en' ? 'About' : 'O nás')}
+              </Link>
+            )}
+            {isPageEnabled('kontakt') && showInNavbar('kontakt') && (
+              <Link
+                href={`/${lang}/kontakt`}
+                onClick={() => setIsMenuOpen(false)}
+                className={`flex items-center gap-4 text-base font-black uppercase tracking-[0.12em] ${pathname.includes('/kontakt') ? 'text-green-600' : ''}`}
+              >
+                {dict?.contact || (lang === 'en' ? 'Contact' : 'Kontakt')}
+              </Link>
+            )}
 
             {userProfile && (
               <button 
@@ -642,7 +766,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                   await supabase.auth.signOut();
                   window.location.href = `/${lang}/login`;
                 }}
-                className="flex items-center gap-4 text-lg text-red-500"
+                className="flex items-center gap-4 text-base font-black uppercase tracking-[0.12em] text-red-600"
               >
                 <LogOut size={20} /> {lang === 'cs' ? 'Odhlásit se' : 'Log out'}
               </button>
@@ -652,7 +776,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
               <Link 
                 href={`/${lang}/login`} 
                 onClick={() => setIsMenuOpen(false)}
-                className="flex items-center gap-4 text-lg text-stone-400"
+                className="flex items-center gap-4 text-base font-black uppercase tracking-[0.12em] text-stone-500"
               >
                 <LockIcon size={20} /> {dict?.memberLogin}
               </Link>

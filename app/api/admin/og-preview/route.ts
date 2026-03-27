@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/server-auth';
+import { getPublicBaseUrl, getPublicHost } from '@/lib/public-base-url';
 
 function allowedHost(hostname: string) {
-  if (hostname === 'pupen.org' || hostname.endsWith('.pupen.org')) return true;
+  const baseHost = getPublicHost();
+  if (hostname === baseHost || hostname.endsWith(`.${baseHost}`)) return true;
   if (hostname === 'localhost' || hostname === '127.0.0.1') return true;
   return false;
 }
@@ -31,7 +33,7 @@ export async function GET(req: Request) {
 
     let target: URL;
     try {
-      target = new URL(urlParam, 'https://pupen.org');
+      target = new URL(urlParam, getPublicBaseUrl());
     } catch {
       return NextResponse.json({ error: 'Invalid url' }, { status: 400 });
     }

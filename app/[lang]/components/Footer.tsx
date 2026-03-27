@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Leaf, Instagram, Facebook, Mail, MapPin, ArrowRight, CheckCircle } from 'lucide-react';
@@ -16,7 +16,32 @@ export default function Footer({ lang, dict }: FooterProps) {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [sitePages, setSitePages] = useState<Record<string, any> | null>(null);
+  const [instagramUrl, setInstagramUrl] = useState<string>('https://instagram.com/pupenfappz/');
   const pathname = usePathname();
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await fetch('/api/site-config', { cache: 'no-store' });
+        const json = await res.json().catch(() => ({}));
+        const pages = json?.config?.pages;
+        const ig = json?.config?.home?.instagram?.url;
+        if (mounted && pages && typeof pages === 'object') setSitePages(pages);
+        if (mounted && typeof ig === 'string' && ig.trim()) setInstagramUrl(ig.trim());
+      } catch {}
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const isPageEnabled = (slug: string) => {
+    const cfg = sitePages?.[slug];
+    if (!cfg) return true;
+    return cfg.enabled !== false;
+  };
 
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,19 +101,25 @@ export default function Footer({ lang, dict }: FooterProps) {
                 </Link>
               </li>
               <li>
-                <Link href={`/${lang}/akce`} className="hover:text-green-500 transition duration-300 flex items-center gap-2">
-                  {t.events || (lang === 'en' ? 'Events' : 'Akce')}
-                </Link>
+                {isPageEnabled('akce') && (
+                  <Link href={`/${lang}/akce`} className="hover:text-green-500 transition duration-300 flex items-center gap-2">
+                    {t.events || (lang === 'en' ? 'Events' : 'Akce')}
+                  </Link>
+                )}
               </li>
               <li>
-                <Link href={`/${lang}/o-nas`} className="hover:text-green-500 transition duration-300 flex items-center gap-2">
-                  {t.about || (lang === 'en' ? 'About' : 'O nás')}
-                </Link>
+                {isPageEnabled('o-nas') && (
+                  <Link href={`/${lang}/o-nas`} className="hover:text-green-500 transition duration-300 flex items-center gap-2">
+                    {t.about || (lang === 'en' ? 'About' : 'O nás')}
+                  </Link>
+                )}
               </li>
               <li>
-                <Link href={`/${lang}/kontakt`} className="hover:text-green-500 transition duration-300 flex items-center gap-2">
-                  {t.contact || (lang === 'en' ? 'Contact' : 'Kontakt')}
-                </Link>
+                {isPageEnabled('kontakt') && (
+                  <Link href={`/${lang}/kontakt`} className="hover:text-green-500 transition duration-300 flex items-center gap-2">
+                    {t.contact || (lang === 'en' ? 'Contact' : 'Kontakt')}
+                  </Link>
+                )}
               </li>
             </ul>
           </div>
@@ -149,10 +180,10 @@ export default function Footer({ lang, dict }: FooterProps) {
             </form>
 
             <div className="flex gap-4">
-              <a href="https://instagram.com/pupenfappz/" target="_blank" className="bg-stone-800 p-2.5 rounded-full hover:bg-green-600 hover:text-white transition duration-300">
+              <a href={instagramUrl} target="_blank" rel="noopener noreferrer" className="bg-stone-800 p-2.5 rounded-full hover:bg-green-600 hover:text-white transition duration-300">
                 <Instagram size={20} />
               </a>
-              <a href="https://facebook.com/pupenfappz/" target="_blank" className="bg-stone-800 p-2.5 rounded-full hover:bg-green-600 hover:text-white transition duration-300">
+              <a href="https://facebook.com/pupenfappz/" target="_blank" rel="noopener noreferrer" className="bg-stone-800 p-2.5 rounded-full hover:bg-green-600 hover:text-white transition duration-300">
                 <Facebook size={20} />
               </a>
             </div>
@@ -162,17 +193,31 @@ export default function Footer({ lang, dict }: FooterProps) {
         {/* SPODNÍ ČÁST FOOTERU */}
         <div className="pt-8 border-t border-stone-800 flex flex-col md:flex-row justify-between items-center gap-4 text-xs">
           <p>© {new Date().getFullYear()} Studentský spolek Pupen, z.s. {t.rights || ''}</p>
-          <div className="flex gap-6">
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
             <Link href={`/${lang}/ochrana-soukromi`} className="hover:text-white transition">{t.privacy || (lang === 'en' ? 'Privacy' : 'Soukromí')}</Link>
             <Link href={`/${lang}/tos`} className="hover:text-white transition">{t.tos || (lang === 'en' ? 'Terms' : 'Podmínky')}</Link>
             <Link href={`/${lang}/cookies`} className="hover:text-white transition">{t.cookies || (lang === 'en' ? 'Cookies' : 'Cookies')}</Link>
-            <Link href={`/${lang}/support`} className="hover:text-white transition">{t.support || (lang === 'en' ? 'Support' : 'Podpora')}</Link>
-            <Link href={`/${lang}/roadmap`} className="hover:text-white transition">{t.roadmap || 'Roadmap'}</Link>
-            <Link href={`/${lang}/changelog`} className="hover:text-white transition">{t.changelog || 'Changelog'}</Link>
-            <Link href={`/${lang}/prvni-pomoc`} className="hover:text-white transition">{t.firstAid || (lang === 'en' ? 'First aid' : 'První pomoc')}</Link>
-            <Link href={`/${lang}/bezpecnost`} className="hover:text-white transition">{t.safety || (lang === 'en' ? 'Safety' : 'Bezpečnost')}</Link>
-            <Link href={`/${lang}/vybor`} className="hover:text-white transition">{t.board || (lang === 'en' ? 'Board' : 'Výbor')}</Link>
-            <Link href={`/${lang}/vyrocni-zpravy`} className="hover:text-white transition">{t.annualReports || (lang === 'en' ? 'Annual reports' : 'Výroční zprávy')}</Link>
+            {isPageEnabled('support') && (
+              <Link href={`/${lang}/support`} className="hover:text-white transition">{t.support || (lang === 'en' ? 'Support' : 'Podpora')}</Link>
+            )}
+            {isPageEnabled('roadmap') && (
+              <Link href={`/${lang}/roadmap`} className="hover:text-white transition">{t.roadmap || 'Roadmap'}</Link>
+            )}
+            {isPageEnabled('changelog') && (
+              <Link href={`/${lang}/changelog`} className="hover:text-white transition">{t.changelog || 'Changelog'}</Link>
+            )}
+            {isPageEnabled('prvni-pomoc') && (
+              <Link href={`/${lang}/prvni-pomoc`} className="hover:text-white transition">{t.firstAid || (lang === 'en' ? 'First aid' : 'První pomoc')}</Link>
+            )}
+            {isPageEnabled('bezpecnost') && (
+              <Link href={`/${lang}/bezpecnost`} className="hover:text-white transition">{t.safety || (lang === 'en' ? 'Safety' : 'Bezpečnost')}</Link>
+            )}
+            {isPageEnabled('vybor') && (
+              <Link href={`/${lang}/vybor`} className="hover:text-white transition">{t.board || (lang === 'en' ? 'Board' : 'Výbor')}</Link>
+            )}
+            {isPageEnabled('vyrocni-zpravy') && (
+              <Link href={`/${lang}/vyrocni-zpravy`} className="hover:text-white transition">{t.annualReports || (lang === 'en' ? 'Annual reports' : 'Výroční zprávy')}</Link>
+            )}
           </div>
         </div>
       </div>
