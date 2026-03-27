@@ -71,15 +71,23 @@ export default async function PrivacyPrintPage({ params }: { params: Promise<{ l
           {dict.rightsTitle && (
             <>
               <h2>{dict.rightsTitle}</h2>
-              {Array.isArray(dict.rightsList) && dict.rightsList.length > 0 ? (
-                <ul>
-                  {dict.rightsList.map((x: string, i: number) => (
-                    <li key={i}>{x}</li>
-                  ))}
-                </ul>
-              ) : (
-                <p>{dict.rightsText}</p>
-              )}
+              {dict.rightsIntro && <p>{dict.rightsIntro}</p>}
+              <ul>
+                {(Array.isArray(dict.rightsList) && dict.rightsList.length > 0
+                  ? dict.rightsList
+                  : [
+                      'Právo na přístup ke svým údajům a kopii dat',
+                      'Právo na opravu nepřesných údajů',
+                      'Právo na výmaz (právo být zapomenut), pokud pominul důvod zpracování',
+                      'Právo na omezení zpracování a přenositelnost údajů',
+                      'Právo vznést námitku proti zpracování na základě oprávněného zájmu',
+                      'Právo odvolat udělený souhlas',
+                      'Právo podat stížnost u Úřadu pro ochranu osobních údajů (www.uoou.cz)',
+                    ]
+                ).map((x: string, i: number) => (
+                  <li key={i}>{x}</li>
+                ))}
+              </ul>
             </>
           )}
         </div>

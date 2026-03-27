@@ -13,6 +13,7 @@ export default function LoginPage() {
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
   const universitySsoProvider = process.env.NEXT_PUBLIC_UNIVERSITY_SSO_PROVIDER || '';
   const universitySsoLabel = process.env.NEXT_PUBLIC_UNIVERSITY_SSO_LABEL || '';
+  const googleAuthEnabled = process.env.NEXT_PUBLIC_ENABLE_GOOGLE_AUTH === 'true';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [mfa, setMfa] = useState<{ factorId: string; challengeId: string } | null>(null);
@@ -419,6 +420,7 @@ export default function LoginPage() {
   };
 
   const handleGoogle = async () => {
+    if (!googleAuthEnabled) return;
     setError('');
     setLoading(true);
     try {
@@ -796,14 +798,16 @@ export default function LoginPage() {
 
           {!mfa && (
             <div className="space-y-3">
-              <button
-                type="button"
-                onClick={handleGoogle}
-                disabled={loading}
-                className="w-full bg-white text-stone-700 py-4 rounded-2xl font-black uppercase tracking-widest text-xs border border-stone-200 hover:bg-stone-50 transition disabled:opacity-50"
-              >
-                {t.google || (lang === 'cs' ? 'Pokračovat s Google' : 'Continue with Google')}
-              </button>
+              {googleAuthEnabled ? (
+                <button
+                  type="button"
+                  onClick={handleGoogle}
+                  disabled={loading}
+                  className="w-full bg-white text-stone-700 py-4 rounded-2xl font-black uppercase tracking-widest text-xs border border-stone-200 hover:bg-stone-50 transition disabled:opacity-50"
+                >
+                  {t.google || (lang === 'cs' ? 'Pokračovat s Google' : 'Continue with Google')}
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={handlePasskey}

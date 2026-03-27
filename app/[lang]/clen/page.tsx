@@ -132,10 +132,13 @@ export default function ClenskaSekcePage() {
   const [mfaEnrollUri, setMfaEnrollUri] = useState<string>('');
   const [mfaEnrollQr, setMfaEnrollQr] = useState<string>('');
   const [mfaVerifyCode, setMfaVerifyCode] = useState('');
+  const [mfaDisableOpen, setMfaDisableOpen] = useState(false);
+  const [mfaDisableCode, setMfaDisableCode] = useState('');
   const [googleBusy, setGoogleBusy] = useState(false);
   const [passkeysLoading, setPasskeysLoading] = useState(false);
   const [passkeyFriendlyName, setPasskeyFriendlyName] = useState('');
   const [passkeyFactors, setPasskeyFactors] = useState<any[]>([]);
+  const googleAuthEnabled = process.env.NEXT_PUBLIC_ENABLE_GOOGLE_AUTH === 'true';
   const logSecurityEvent = async (event: string, details?: any) => {
     try {
       const { data } = await supabase.auth.getSession();
@@ -466,6 +469,16 @@ export default function ClenskaSekcePage() {
       showToast(lang === 'en' ? 'Passkeys are not supported.' : 'Passkeys nejsou podporované.', 'error');
       return;
     }
+    if (typeof window !== 'undefined') {
+      if (!window.isSecureContext) {
+        showToast(lang === 'en' ? 'Passkeys require HTTPS.' : 'Passkeys vyžadují HTTPS.', 'error');
+        return;
+      }
+      if (!(window as any).PublicKeyCredential) {
+        showToast(lang === 'en' ? 'Passkeys are not supported in this browser.' : 'V tomto prohlížeči nejsou passkeys podporované.', 'error');
+        return;
+      }
+    }
     setPasskeysLoading(true);
     try {
       await logSecurityEvent('PASSKEY_REGISTER_START', {});
@@ -485,6 +498,8 @@ export default function ClenskaSekcePage() {
             : 'Passkeys nejsou povolené v Supabase (Auth → MFA → WebAuthn).',
           'error',
         );
+      } else if (msg.toLowerCase().includes('notallowederror') || msg.toLowerCase().includes('not allowed')) {
+        showToast(lang === 'en' ? 'Passkey action was cancelled.' : 'Akce passkey byla zrušena.', 'error');
       } else {
         showToast(msg, 'error');
       }
@@ -504,7 +519,12 @@ export default function ClenskaSekcePage() {
       showToast(lang === 'en' ? 'Passkey removed.' : 'Passkey odebrán.', 'success');
       await logSecurityEvent('PASSKEY_REMOVED', {});
     } catch (e: any) {
-      showToast(e?.message || 'Chyba', 'error');
+      const msg = String(e?.message || 'Chyba');
+      if (msg.toLowerCase().includes('aal2')) {
+        showToast(lang === 'en' ? 'Verify 2FA code to remove passkey.' : 'Pro odebrání passkey nejdřív ověř 2FA kódem.', 'error');
+      } else {
+        showToast(msg, 'error');
+      }
     } finally {
       setPasskeysLoading(false);
     }
@@ -580,12 +600,28 @@ export default function ClenskaSekcePage() {
   };
 
   const disableMfa = async () => {
+    if (!mfaEnabled || !mfaFactorId) return;
+    setMfaDisableCode('');
+    setMfaDisableOpen(true);
+  };
+
+  const confirmDisableMfa = async () => {
     const authAny: any = supabase.auth as any;
-    if (!authAny?.mfa?.unenroll || !mfaFactorId) return;
+    if (!authAny?.mfa?.unenroll || !authAny?.mfa?.challenge || !authAny?.mfa?.verify || !mfaFactorId) return;
+    const code = String(mfaDisableCode || '').trim();
+    if (!code) return;
     setMfaLoading(true);
     try {
+      const ch = await authAny.mfa.challenge({ factorId: mfaFactorId });
+      const challengeId = String(ch?.data?.id || ch?.data?.challengeId || '');
+      if (!challengeId) throw new Error('Challenge failed');
+      const v = await authAny.mfa.verify({ factorId: mfaFactorId, challengeId, code });
+      if (v?.error) throw v.error;
+
       const res = await authAny.mfa.unenroll({ factorId: mfaFactorId });
       if (res?.error) throw res.error;
+      setMfaDisableOpen(false);
+      setMfaDisableCode('');
       setMfaEnrollUri('');
       setMfaEnrollQr('');
       setMfaVerifyCode('');
@@ -600,6 +636,7 @@ export default function ClenskaSekcePage() {
   };
 
   const linkGoogle = async () => {
+    if (!googleAuthEnabled) return;
     setGoogleBusy(true);
     try {
       const origin = window.location.origin;
@@ -1660,7 +1697,8 @@ export default function ClenskaSekcePage() {
 
                     {mfaEnrollQr ? (
                       <div className="mt-6 grid md:grid-cols-2 gap-6 items-start">
-                        <div className="bg-white border border-stone-100 rounded-2xl p-4 flex items-center justify-center">
+                        <div className="bg-white border border-stone-100 rounded-2xl p-6 flex flex-col items-center justify-center gap-4">
+                          <img src="/logo.png" alt="Pupen" className="h-10 w-10 object-contain" />
                           <img src={mfaEnrollQr} alt="2FA QR" className="w-full max-w-[260px]" />
                         </div>
                         <div className="space-y-4">
@@ -1767,29 +1805,66 @@ export default function ClenskaSekcePage() {
                     </div>
                   </div>
 
-                  <div className="bg-stone-50 border border-stone-100 rounded-[2rem] p-6">
-                    <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">
-                      {ms.googleTitle || (lang === 'en' ? 'Google account' : 'Google účet')}
+                  {googleAuthEnabled && (
+                    <div className="bg-stone-50 border border-stone-100 rounded-[2rem] p-6">
+                      <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">
+                        {ms.googleTitle || (lang === 'en' ? 'Google account' : 'Google účet')}
+                      </div>
+                      <div className="mt-2 text-sm text-stone-600 font-medium">
+                        {ms.googleSubtitle ||
+                          (lang === 'en'
+                            ? 'Link your Google account to sign in with Google.'
+                            : 'Propojte Google účet pro přihlašování přes Google.')}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={linkGoogle}
+                        disabled={googleBusy}
+                        className="mt-4 w-full py-4 bg-white text-stone-700 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-stone-200 hover:bg-stone-50 transition disabled:opacity-50"
+                      >
+                        {googleBusy
+                          ? (ms.redirecting || (lang === 'en' ? 'Redirecting...' : 'Přesměrovávám...'))
+                          : (ms.googleLink || (lang === 'en' ? 'Link Google' : 'Propojit Google'))}
+                      </button>
                     </div>
-                    <div className="mt-2 text-sm text-stone-600 font-medium">
-                      {ms.googleSubtitle ||
-                        (lang === 'en'
-                          ? 'Link your Google account to sign in with Google.'
-                          : 'Propojte Google účet pro přihlašování přes Google.')}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={linkGoogle}
-                      disabled={googleBusy}
-                      className="mt-4 w-full py-4 bg-white text-stone-700 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-stone-200 hover:bg-stone-50 transition disabled:opacity-50"
-                    >
-                      {googleBusy
-                        ? (ms.redirecting || (lang === 'en' ? 'Redirecting...' : 'Přesměrovávám...'))
-                        : (ms.googleLink || (lang === 'en' ? 'Link Google' : 'Propojit Google'))}
-                    </button>
-                  </div>
+                  )}
                 </div>
               </MemberPanel>
+              {mfaDisableOpen && (
+                <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                  <div className="w-full max-w-md bg-white rounded-[2rem] border border-stone-100 shadow-2xl p-6">
+                    <div className="text-sm font-black text-stone-900">{lang === 'en' ? 'Disable 2FA' : 'Vypnout 2FA'}</div>
+                    <div className="mt-2 text-xs font-bold text-stone-500">
+                      {lang === 'en' ? 'Enter your 6-digit code to confirm.' : 'Pro potvrzení zadejte 6místný kód z aplikace.'}
+                    </div>
+                    <input
+                      value={mfaDisableCode}
+                      onChange={(e) => setMfaDisableCode(e.target.value)}
+                      inputMode="numeric"
+                      className="mt-4 w-full bg-stone-50 border border-stone-200 rounded-2xl px-5 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 outline-none transition"
+                      placeholder="123456"
+                    />
+                    <div className="mt-4 grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setMfaDisableOpen(false)}
+                        disabled={mfaLoading}
+                        className="w-full py-4 bg-white text-stone-700 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-stone-200 hover:bg-stone-50 transition disabled:opacity-50"
+                      >
+                        {lang === 'en' ? 'Cancel' : 'Zrušit'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={confirmDisableMfa}
+                        disabled={mfaLoading || !String(mfaDisableCode || '').trim()}
+                        className="w-full py-4 bg-red-600 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-red-700 transition disabled:opacity-50"
+                      >
+                        {mfaLoading ? (lang === 'en' ? 'Loading...' : 'Načítám...') : (lang === 'en' ? 'Disable' : 'Vypnout')}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
               <MemberPanel className="p-10 mt-8">
                 <h2 className="text-2xl font-black mb-6 flex items-center gap-3">
                   <Mail className="text-stone-900" /> {ms.emailPrefsTitle || (lang === 'en' ? 'Email preferences' : 'E-mail preference')}

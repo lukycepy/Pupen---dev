@@ -145,17 +145,25 @@ export default async function PrivacyPage({ params }: { params: Promise<{ lang: 
                 {dict.rightsTitle}
               </h2>
               <div className="text-stone-600 leading-relaxed text-lg bg-stone-50 p-8 rounded-[2rem] border border-stone-100 italic">
-                {Array.isArray(dict.rightsList) && dict.rightsList.length > 0 ? (
-                  <ul className="list-disc pl-6 space-y-2 not-italic">
-                    {dict.rightsList.map((item: string, idx: number) => (
-                      <li key={idx} className="font-medium">
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  dict.rightsText
-                )}
+                {dict.rightsIntro && <p className="not-italic mb-4">{dict.rightsIntro}</p>}
+                <ul className="list-disc pl-6 space-y-2 not-italic">
+                  {(Array.isArray(dict.rightsList) && dict.rightsList.length > 0
+                    ? dict.rightsList
+                    : [
+                        'Právo na přístup ke svým údajům a kopii dat',
+                        'Právo na opravu nepřesných údajů',
+                        'Právo na výmaz (právo být zapomenut), pokud pominul důvod zpracování',
+                        'Právo na omezení zpracování a přenositelnost údajů',
+                        'Právo vznést námitku proti zpracování na základě oprávněného zájmu',
+                        'Právo odvolat udělený souhlas',
+                        'Právo podat stížnost u Úřadu pro ochranu osobních údajů (www.uoou.cz)',
+                      ]
+                  ).map((item: string, idx: number) => (
+                    <li key={idx} className="font-medium">
+                      {item}
+                    </li>
+                  ))}
+                </ul>
               </div>
             </section>
           )}
