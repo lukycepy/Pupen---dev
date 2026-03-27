@@ -5,6 +5,7 @@ import { AlertTriangle, X } from 'lucide-react';
 import InlinePulse from '@/app/components/InlinePulse';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/app/context/ToastContext';
+import Portal from '@/app/components/ui/Portal';
 
 export default function ReportModal({
   open,
@@ -68,32 +69,21 @@ export default function ReportModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[10003] flex items-center justify-center p-6">
-      <button
-        type="button"
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-        aria-label="Zavřít"
-      />
-      <div className="relative w-full max-w-lg bg-white rounded-[2.5rem] border border-stone-100 shadow-2xl overflow-hidden">
-        <div className="p-6 border-b border-stone-100 flex items-center justify-between">
-          <div className="min-w-0">
-            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">
-              {lang === 'en' ? 'Report' : 'Nahlásit'}
+    <Portal>
+      <div className="fixed inset-0 z-[10003] flex items-center justify-center p-6">
+        <button type="button" className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} aria-label="Zavřít" />
+        <div className="relative w-full max-w-lg bg-white rounded-[2.5rem] border border-stone-100 shadow-2xl overflow-hidden">
+          <div className="p-6 border-b border-stone-100 flex items-center justify-between">
+            <div className="min-w-0">
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">{lang === 'en' ? 'Report' : 'Nahlásit'}</div>
+              <div className="font-black text-stone-900 truncate">{targetLabel || targetId}</div>
             </div>
-            <div className="font-black text-stone-900 truncate">{targetLabel || targetId}</div>
+            <button type="button" onClick={onClose} className="p-2 rounded-xl hover:bg-stone-50 transition text-stone-400" aria-label="Zavřít">
+              <X size={18} />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 rounded-xl hover:bg-stone-50 transition text-stone-400"
-            aria-label="Zavřít"
-          >
-            <X size={18} />
-          </button>
-        </div>
 
-        <div className="p-8 space-y-5">
+          <div className="p-8 space-y-5">
           <div className="bg-stone-50 border border-stone-100 rounded-2xl p-4">
             <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">
               {lang === 'en' ? 'Reason' : 'Důvod'}
@@ -142,8 +132,9 @@ export default function ReportModal({
               {lang === 'en' ? 'Cancel' : 'Zrušit'}
             </button>
           </div>
+          </div>
         </div>
       </div>
-    </div>
+    </Portal>
   );
 }

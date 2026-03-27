@@ -37,6 +37,8 @@ export function getMailerDebugInfo(config?: MailerConfig) {
     portHint:
       port === 586
         ? 'Port 586 je neobvyklý (často se používá 587 pro STARTTLS).'
+        : port === 993
+          ? 'Port 993 je IMAP (ne SMTP). Pro SMTP použij typicky 465 nebo 587.'
         : port === 465
           ? 'Port 465 obvykle vyžaduje secure=true (implicitní TLS).'
           : port === 587
@@ -72,6 +74,10 @@ export function getMailer(config?: MailerConfig) {
 
   if (!host || !user || !pass) {
     throw new Error('Email not configured');
+  }
+
+  if ([993, 995, 143].includes(port)) {
+    throw new Error(`Invalid SMTP port ${port}. This is typically an IMAP port. Use 465 or 587.`);
   }
 
   return nodemailer.createTransport({

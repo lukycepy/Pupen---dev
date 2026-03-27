@@ -72,14 +72,25 @@ export async function GET(req: Request) {
       );
 
     const [eventsRes, postsRes, faqsRes, booksRes, discountsRes, guideRes, archiveResPrimary] = await Promise.all([
-      supabase
-        .from('events')
-        .select('id,title,title_en,date,location,image_url,published_at')
-        .not('published_at', 'is', null)
-        .lte('published_at', nowIso)
-        .or(`title.ilike.%${q}%,title_en.ilike.%${q}%`)
-        .order('date', { ascending: true })
-        .limit(limit),
+      (async () => {
+        const run = (withMemberFilter: boolean) => {
+          let q1 = supabase
+            .from('events')
+            .select('id,title,title_en,date,location,image_url,published_at')
+            .not('published_at', 'is', null)
+            .lte('published_at', nowIso)
+            .or(`title.ilike.%${q}%,title_en.ilike.%${q}%`)
+            .order('date', { ascending: true })
+            .limit(limit);
+          if (withMemberFilter) q1 = q1.eq('is_member_only', false);
+          return q1;
+        };
+        let res = await run(true);
+        if (res?.error && /is_member_only/i.test(res.error.message) && /schema cache/i.test(res.error.message)) {
+          res = await run(false);
+        }
+        return res;
+      })(),
       supabase
         .from('posts')
         .select('id,title,title_en,excerpt,excerpt_en,category,image_url,published_at')

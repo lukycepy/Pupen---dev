@@ -32,6 +32,14 @@ function drawRoundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: n
   ctx.closePath();
 }
 
+function truncateToWidth(ctx: CanvasRenderingContext2D, text: string, maxWidth: number) {
+  let t = text;
+  while (ctx.measureText(t).width > maxWidth && t.length > 3) {
+    t = `${t.slice(0, -4)}…`;
+  }
+  return t;
+}
+
 export default function QrDesigner({ initialText, initialCaption, title, subtitle, onToast }: Props) {
   const [text, setText] = React.useState(initialText || 'https://pupen.org');
   const [caption, setCaption] = React.useState(initialCaption || '');
@@ -42,6 +50,7 @@ export default function QrDesigner({ initialText, initialCaption, title, subtitl
   const [margin, setMargin] = React.useState(2);
   const [logoFile, setLogoFile] = React.useState<File | null>(null);
   const [logoUrl, setLogoUrl] = React.useState<string>('');
+  const [logoDataUrl, setLogoDataUrl] = React.useState<string>('');
   const [pngUrl, setPngUrl] = React.useState<string>('');
   const [isGenerating, setIsGenerating] = React.useState(false);
 
@@ -54,11 +63,22 @@ export default function QrDesigner({ initialText, initialCaption, title, subtitl
   React.useEffect(() => {
     if (!logoFile) {
       setLogoUrl('');
+      setLogoDataUrl('');
       return;
     }
+    let canceled = false;
     const url = URL.createObjectURL(logoFile);
     setLogoUrl(url);
-    return () => URL.revokeObjectURL(url);
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (canceled) return;
+      setLogoDataUrl(typeof reader.result === 'string' ? reader.result : '');
+    };
+    reader.readAsDataURL(logoFile);
+    return () => {
+      canceled = true;
+      URL.revokeObjectURL(url);
+    };
   }, [logoFile]);
 
   const generatePng = React.useCallback(async () => {
@@ -125,10 +145,7 @@ export default function QrDesigner({ initialText, initialCaption, title, subtitl
         const maxWidth = qrSize - 140;
         const line1 = caption.trim();
         ctx.font = '800 44px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto';
-        let textToDraw = line1;
-        while (ctx.measureText(textToDraw).width > maxWidth && textToDraw.length > 3) {
-          textToDraw = `${textToDraw.slice(0, -4)}…`;
-        }
+        const textToDraw = truncateToWidth(ctx, line1, maxWidth);
         ctx.fillText(textToDraw, qrSize / 2, qrSize + captionHeight / 2);
         ctx.restore();
       }
@@ -164,19 +181,107 @@ export default function QrDesigner({ initialText, initialCaption, title, subtitl
   };
 
   const downloadSvg = async () => {
-    if (logoUrl || (showCaption && caption.trim())) {
-      onToast?.('SVG export je dostupný jen bez loga a popisku', 'info');
-      return;
-    }
     try {
+      const value = String(text || '').trim();
+      if (!value) {
+        onToast?.('Zadej text/URL', 'error');
+        return;
+      }
       const { default: QRCode } = await import('qrcode');
-      const svg = await QRCode.toString(String(text || '').trim(), {
+      const hasLogo = Boolean(logoUrl);
+      const svg = await QRCode.toString(value, {
         type: 'svg',
         margin,
-        errorCorrectionLevel: 'M',
+        errorCorrectionLevel: hasLogo ? 'H' : 'M',
         color: { dark, light },
       });
-      const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(svg, 'image/svg+xml');
+      const svgEl = doc.documentElement;
+      svgEl.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+      svgEl.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+
+      const width = Number.parseFloat(svgEl.getAttribute('width') || '') || 1000;
+      const height = Number.parseFloat(svgEl.getAttribute('height') || '') || 1000;
+      const extraCaption = showCaption && caption.trim() ? Math.round(width * 0.14) : 0;
+
+      svgEl.setAttribute('width', String(width));
+      svgEl.setAttribute('height', String(height + extraCaption));
+      const viewBox = svgEl.getAttribute('viewBox');
+      if (!viewBox) {
+        svgEl.setAttribute('viewBox', `0 0 ${width} ${height + extraCaption}`);
+      } else {
+        const parts = viewBox.split(/\s+/).map((p) => Number.parseFloat(p));
+        if (parts.length === 4 && Number.isFinite(parts[2]) && Number.isFinite(parts[3])) {
+          svgEl.setAttribute('viewBox', `0 0 ${parts[2]} ${parts[3] + extraCaption}`);
+        }
+      }
+
+      if (hasLogo) {
+        const logoHref = logoDataUrl || logoUrl;
+        if (logoHref) {
+          const logoSize = Math.round(width * 0.22);
+          const pad = Math.round(width * 0.03);
+          const x = Math.round((width - logoSize) / 2);
+          const y = Math.round((height - logoSize) / 2);
+          const bg = doc.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          bg.setAttribute('x', String(x - pad));
+          bg.setAttribute('y', String(y - pad));
+          bg.setAttribute('width', String(logoSize + pad * 2));
+          bg.setAttribute('height', String(logoSize + pad * 2));
+          bg.setAttribute('rx', String(Math.round(pad * 0.9)));
+          bg.setAttribute('ry', String(Math.round(pad * 0.9)));
+          bg.setAttribute('fill', '#ffffff');
+          svgEl.appendChild(bg);
+
+          const imageEl = doc.createElementNS('http://www.w3.org/2000/svg', 'image');
+          imageEl.setAttribute('x', String(x));
+          imageEl.setAttribute('y', String(y));
+          imageEl.setAttribute('width', String(logoSize));
+          imageEl.setAttribute('height', String(logoSize));
+          imageEl.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+          imageEl.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', logoHref);
+          imageEl.setAttribute('href', logoHref);
+          svgEl.appendChild(imageEl);
+        }
+      }
+
+      if (extraCaption) {
+        const rect = doc.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        rect.setAttribute('x', '0');
+        rect.setAttribute('y', String(height));
+        rect.setAttribute('width', String(width));
+        rect.setAttribute('height', String(extraCaption));
+        rect.setAttribute('fill', light);
+        svgEl.appendChild(rect);
+
+        const fontSize = Math.max(18, Math.min(64, Math.round(width * 0.044)));
+        const maxWidth = width - Math.round(width * 0.14);
+        const measureCanvas = document.createElement('canvas');
+        const mctx = measureCanvas.getContext('2d');
+        let textToDraw = caption.trim();
+        if (mctx) {
+          mctx.font = `800 ${fontSize}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
+          textToDraw = truncateToWidth(mctx, textToDraw, maxWidth);
+        } else if (textToDraw.length > 60) {
+          textToDraw = `${textToDraw.slice(0, 57)}…`;
+        }
+
+        const textEl = doc.createElementNS('http://www.w3.org/2000/svg', 'text');
+        textEl.setAttribute('x', String(width / 2));
+        textEl.setAttribute('y', String(height + extraCaption / 2));
+        textEl.setAttribute('fill', '#0c0a09');
+        textEl.setAttribute('font-size', String(fontSize));
+        textEl.setAttribute('font-weight', '800');
+        textEl.setAttribute('font-family', 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto');
+        textEl.setAttribute('text-anchor', 'middle');
+        textEl.setAttribute('dominant-baseline', 'middle');
+        textEl.textContent = textToDraw;
+        svgEl.appendChild(textEl);
+      }
+
+      const serialized = `<?xml version="1.0" encoding="UTF-8"?>\n${new XMLSerializer().serializeToString(svgEl)}`;
+      const blob = new Blob([serialized], { type: 'image/svg+xml;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -332,7 +437,7 @@ export default function QrDesigner({ initialText, initialCaption, title, subtitl
       <div className="bg-white p-10 rounded-[3rem] shadow-2xl border border-stone-100 flex flex-col items-center justify-center text-center">
         <div className="mb-8 p-6 bg-stone-50 rounded-[2.5rem] border border-stone-100 shadow-inner">
           {pngUrl ? (
-            <img src={pngUrl} alt="QR" className="w-64 h-64 md:w-80 md:h-80" />
+            <img src={pngUrl} alt="QR" className="w-64 h-auto md:w-80" />
           ) : (
             <div className="w-64 h-64 md:w-80 md:h-80 bg-white rounded-3xl border border-stone-100" />
           )}
@@ -363,4 +468,3 @@ export default function QrDesigner({ initialText, initialCaption, title, subtitl
     </div>
   );
 }
-

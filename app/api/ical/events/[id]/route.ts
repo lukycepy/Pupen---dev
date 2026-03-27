@@ -17,12 +17,22 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   const baseUrl = getPublicBaseUrl();
   const host = getPublicHost();
 
-  const res = await supabase
-    .from('events')
-    .select('id,title,title_en,description_html,description_html_en,description,description_en,location,location_en,date,end_date,published_at')
-    .eq('id', id)
-    .lte('published_at', nowIso)
-    .maybeSingle();
+  const select =
+    'id,title,title_en,description_html,description_html_en,description,description_en,location,location_en,date,end_date,published_at';
+  const run = (withMemberFilter: boolean) => {
+    let q = supabase
+      .from('events')
+      .select(select)
+      .eq('id', id)
+      .lte('published_at', nowIso);
+    if (withMemberFilter) q = q.eq('is_member_only', false);
+    return q.maybeSingle();
+  };
+
+  let res = await run(true);
+  if (res.error && /is_member_only/i.test(res.error.message) && /schema cache/i.test(res.error.message)) {
+    res = await run(false);
+  }
 
   if (res.error) return NextResponse.json({ error: res.error.message }, { status: 500 });
   const ev: any = res.data;

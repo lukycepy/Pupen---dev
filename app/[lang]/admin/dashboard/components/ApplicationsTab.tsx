@@ -11,6 +11,7 @@ import { SkeletonTabContent } from '../../../components/Skeleton';
 import AdminModuleHeader from './ui/AdminModuleHeader';
 import AdminEmptyState from './ui/AdminEmptyState';
 import { Download } from 'lucide-react';
+import Portal from '@/app/components/ui/Portal';
 
 export default function ApplicationsTab({ dict }: { dict: any }) {
   const queryClient = useQueryClient();
@@ -404,8 +405,9 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
       )}
 
       {selectedApp && (
-        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-300">
-          <div className="bg-white w-full max-w-5xl max-h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-500">
+        <Portal>
+          <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-300">
+            <div className="bg-white w-full max-w-5xl max-h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-500">
             <div className="p-8 border-b border-stone-100 flex justify-between items-center bg-stone-50/30">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-green-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-green-600/20">
@@ -873,8 +875,9 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
                 </div>
               </div>
             </div>
+            </div>
           </div>
-        </div>
+        </Portal>
       )}
     </div>
   );

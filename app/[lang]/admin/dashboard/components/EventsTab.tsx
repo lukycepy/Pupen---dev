@@ -20,6 +20,19 @@ const Editor = dynamic(() => import('../../../components/Editor'), {
   loading: () => <div className="h-[200px] w-full bg-stone-50 animate-pulse rounded-xl border border-dashed border-stone-200" />
 });
 
+function htmlToText(html: string) {
+  const s = String(html || '').trim();
+  if (!s) return '';
+  if (typeof window !== 'undefined') {
+    try {
+      const div = document.createElement('div');
+      div.innerHTML = s;
+      return (div.textContent || div.innerText || '').replace(/\s+/g, ' ').trim();
+    } catch {}
+  }
+  return s.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 interface EventsTabProps {
   dict: any;
   events: any[];
@@ -191,6 +204,8 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
   const location = watch('location');
   const category = watch('category');
   const isMemberOnly = watch('is_member_only');
+  const publishedAt = watch('published_at');
+  const isDraft = !String(publishedAt || '').trim();
 
   const seo = seoSuggestions({
     title: title || '',
@@ -221,13 +236,19 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
         time: data.time,
         location: data.location,
         category: data.category,
-        description: data.description || null,
-        description_en: data.description_en || null,
+        description_html: (data.description || '').trim() ? String(data.description) : null,
+        description_html_en: (data.description_en || '').trim() ? String(data.description_en) : null,
+        description: (data.description || '').trim() ? htmlToText(String(data.description)) : null,
+        description_en: (data.description_en || '').trim() ? htmlToText(String(data.description_en)) : null,
         image_url: imageUrl,
         published_at: data.published_at && data.published_at !== "" ? new Date(data.published_at).toISOString() : null,
         capacity: (data.capacity === "" || data.capacity === null || isNaN(data.capacity)) ? null : Number(data.capacity),
         ticket_sale_end: data.ticket_sale_end && data.ticket_sale_end !== "" ? new Date(data.ticket_sale_end).toISOString() : null,
         is_member_only: !!data.is_member_only
+      };
+      const withoutTicketSaleEnd = () => {
+        const { ticket_sale_end: _drop, ...rest } = payload as any;
+        return rest;
       };
 
       if (editingEvent?.id) {
@@ -246,7 +267,15 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
           console.error('Failed to save version:', vErr);
         }
 
-        const { error } = await supabase.from('events').update(payload).eq('id', editingEvent.id);
+        let { error } = await supabase.from('events').update(payload).eq('id', editingEvent.id);
+        if (
+          error &&
+          /ticket_sale_end/i.test(error.message) &&
+          /(schema cache|does not exist|column)/i.test(error.message)
+        ) {
+          const retry = await supabase.from('events').update(withoutTicketSaleEnd()).eq('id', editingEvent.id);
+          error = retry.error;
+        }
         if (error) throw error;
         
         try {
@@ -255,7 +284,16 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
           console.error('Failed to log admin action:', logErr);
         }
       } else {
-        const { data: newEvent, error } = await supabase.from('events').insert([payload]).select().single();
+        let { data: newEvent, error } = await supabase.from('events').insert([payload]).select().single();
+        if (
+          error &&
+          /ticket_sale_end/i.test(error.message) &&
+          /(schema cache|does not exist|column)/i.test(error.message)
+        ) {
+          const retry = await supabase.from('events').insert([withoutTicketSaleEnd()]).select().single();
+          newEvent = retry.data;
+          error = retry.error;
+        }
         if (error) throw error;
         
         try {
@@ -316,8 +354,8 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
       time: event.time,
       location: event.location,
       category: event.category,
-      description: event.description || '',
-      description_en: event.description_en || '',
+      description: event.description_html || event.description || '',
+      description_en: event.description_html_en || event.description_en || '',
       published_at: event.published_at ? new Date(event.published_at).toISOString().slice(0, 16) : '',
       capacity: event.capacity ?? '',
       ticket_sale_end: event.ticket_sale_end ? new Date(event.ticket_sale_end).toISOString().slice(0, 16) : '',
@@ -440,8 +478,26 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.admin.labelPublishedAt || 'Datum zveřejnění'}</label>
-                    <input {...register('published_at')} type="datetime-local" className="w-full border-none p-4 rounded-2xl outline-none ring-1 ring-stone-100 focus:ring-2 focus:ring-green-500 bg-stone-50/50 font-bold text-stone-700 transition" />
+                    <div className="flex items-center justify-between gap-3">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.admin.labelPublishedAt || 'Datum zveřejnění'}</label>
+                      <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-stone-500">
+                        <input
+                          type="checkbox"
+                          checked={isDraft}
+                          onChange={(e) => {
+                            if (e.target.checked) setValue('published_at', '');
+                          }}
+                          className="w-4 h-4 accent-green-600 rounded border-stone-300"
+                        />
+                        {dict.admin.labelDraft || 'Koncept'}
+                      </label>
+                    </div>
+                    <input
+                      {...register('published_at')}
+                      type="datetime-local"
+                      disabled={isDraft}
+                      className="w-full border-none p-4 rounded-2xl outline-none ring-1 ring-stone-100 focus:ring-2 focus:ring-green-500 bg-stone-50/50 font-bold text-stone-700 transition disabled:opacity-50"
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.admin.labelTicketSaleEnd || 'Konec prodeje'}</label>
@@ -451,7 +507,7 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.admin.labelDate}</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Den konání</label>
                     <input {...register('date')} type="date" className={`w-full border-none p-4 rounded-2xl outline-none ring-1 ring-stone-100 focus:ring-2 focus:ring-green-500 bg-stone-50/50 font-bold text-stone-700 transition ${errors.date ? 'ring-red-500 focus:ring-red-500' : ''}`} />
                   </div>
                   <div className="space-y-1.5">
@@ -723,7 +779,7 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
                           <div className="flex items-center gap-2 mb-1">
                             <p className="font-black text-stone-900 text-base truncate">{event.title}</p>
                             {event.is_member_only && (
-                              <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-[8px] font-black uppercase tracking-tighter">MEMBER</span>
+                              <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-[8px] font-black uppercase tracking-tighter">ČLEN</span>
                             )}
                             {getPublishState(event) === 'published' && (
                               <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-[8px] font-black uppercase tracking-tighter">
@@ -737,7 +793,7 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
                             )}
                             {getPublishState(event) === 'draft' && (
                               <span className="px-1.5 py-0.5 bg-stone-200 text-stone-700 rounded text-[8px] font-black uppercase tracking-tighter">
-                                DRAFT
+                                KONCEPT
                               </span>
                             )}
                           </div>
@@ -789,7 +845,7 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
                         <button 
                           onClick={() => exportRSVP(event.id, event.title)} 
                           className="p-2.5 text-stone-400 hover:text-green-600 hover:bg-green-50 rounded-xl transition-all" 
-                          title="Export RSVP"
+                          title="Export účastníků"
                         >
                           <Download size={18} />
                         </button>

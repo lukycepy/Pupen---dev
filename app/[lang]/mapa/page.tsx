@@ -91,6 +91,26 @@ export default function MapaPage({ params }: { params: Promise<{ lang: string }>
     setMapZoom(18);
   };
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const sp = new URLSearchParams(window.location.search);
+    const pointId = sp.get('point') || '';
+    const query = sp.get('q') || '';
+    if (!points.length) return;
+    if (pointId) {
+      const found = points.find((p: any) => String(p.id) === String(pointId));
+      if (found) handlePointSelect(found);
+      return;
+    }
+    if (query) {
+      const q = query.toLowerCase();
+      const found = points.find(
+        (p: any) => String(p.name || '').toLowerCase().includes(q) || String(p.name_en || '').toLowerCase().includes(q),
+      );
+      if (found) handlePointSelect(found);
+    }
+  }, [points]);
+
   if (!dict) return (
     <div className="min-h-screen bg-stone-50 py-24 px-6">
       <div className="max-w-7xl mx-auto">

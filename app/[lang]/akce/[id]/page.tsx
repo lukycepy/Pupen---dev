@@ -3,6 +3,8 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getDictionary } from '@/lib/get-dictionary';
+import { getPublicBaseUrl } from '@/lib/public-base-url';
+import sanitizeHtml from 'sanitize-html';
 import ScrollProgressBar from '../../components/ScrollProgressBar';
 import SocialShareInline from '@/app/components/SocialShareInline';
 import { ArrowLeft, Calendar, Clock, MapPin, Navigation, Ticket } from 'lucide-react';
@@ -16,6 +18,39 @@ function addHours(date: Date, hours: number) {
   const d = new Date(date);
   d.setHours(d.getHours() + hours);
   return d;
+}
+
+async function getPublicEvent(id: string, nowIso: string) {
+  const run = (withMemberFilter: boolean) => {
+    let q = supabase.from('events').select('*').eq('id', id).lte('published_at', nowIso);
+    if (withMemberFilter) q = q.eq('is_member_only', false);
+    return q.maybeSingle();
+  };
+  let res = await run(true);
+  if (res.error && /is_member_only/i.test(res.error.message) && /schema cache/i.test(res.error.message)) {
+    res = await run(false);
+  }
+  return res.data;
+}
+
+async function isMapaEnabled() {
+  const { data } = await supabase.from('site_public_config').select('pages').limit(1).maybeSingle();
+  const pages = (data as any)?.pages || {};
+  return pages?.mapa?.enabled !== false;
+}
+
+async function getMapPointForLocation(location: string) {
+  const loc = String(location || '').trim();
+  if (!loc) return null;
+  const tokens = loc.split(/[,]/).map((s) => s.trim()).filter(Boolean);
+  const first = tokens[0] || loc;
+  const lastToken = loc.split(/\s+/).filter(Boolean).slice(-1)[0] || '';
+  const { data } = await supabase
+    .from('campus_map_points')
+    .select('id')
+    .or(`name.ilike.%${first}%,building_code.ilike.%${lastToken}%`)
+    .limit(1);
+  return data?.[0] || null;
 }
 
 function parseTimeline(description: string) {
@@ -40,7 +75,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { lang, id } = await params;
   const now = new Date().toISOString();
-  const { data: event } = await supabase.from('events').select('*').eq('id', id).lte('published_at', now).maybeSingle();
+  const event = await getPublicEvent(id, now);
   if (!event) return {};
 
   const title = lang === 'en' && event.title_en ? event.title_en : event.title;
@@ -48,7 +83,8 @@ export async function generateMetadata({
     (lang === 'en' ? (event.description_en || event.description) : event.description) ||
     (lang === 'en' ? 'Event by Pupen.' : 'Akce pořádaná spolkem Pupen.');
 
-  const url = `https://pupen.org/${lang}/akce/${id}`;
+  const baseUrl = getPublicBaseUrl();
+  const url = `${baseUrl}/${lang}/akce/${id}`;
 
   return {
     title,
@@ -74,12 +110,24 @@ export default async function EventDetailPage({ params }: { params: Promise<{ la
   const dict = await getDictionary(lang);
 
   const now = new Date().toISOString();
-  const { data: event } = await supabase.from('events').select('*').eq('id', id).lte('published_at', now).maybeSingle();
+  const event = await getPublicEvent(id, now);
   if (!event) return notFound();
 
   const title = lang === 'en' && event.title_en ? event.title_en : event.title;
-  const description = (lang === 'en' ? (event.description_en || event.description) : event.description) || '';
-  const timeline = description ? parseTimeline(description) : [];
+  const descriptionText = (lang === 'en' ? (event.description_en || event.description) : event.description) || '';
+  const descriptionHtmlRaw =
+    lang === 'en'
+      ? event.description_html_en || event.description_html || ''
+      : event.description_html || '';
+  const descriptionHtml = descriptionHtmlRaw
+    ? sanitizeHtml(String(descriptionHtmlRaw), {
+        allowedTags: ['a', 'b', 'strong', 'i', 'em', 'u', 'br', 'p', 'div', 'span', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'blockquote'],
+        allowedAttributes: { a: ['href', 'target', 'rel'], '*': ['class'] },
+        allowedSchemes: ['http', 'https', 'mailto', 'tel'],
+        allowProtocolRelative: false,
+      })
+    : '';
+  const timeline = descriptionText ? parseTimeline(descriptionText) : [];
 
   const location = event.location || '';
   const googleMaps = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(location)}`;
@@ -88,9 +136,18 @@ export default async function EventDetailPage({ params }: { params: Promise<{ la
 
   const start = event.date ? new Date(event.date) : null;
   const end = event.end_date ? new Date(event.end_date) : start ? addHours(start, 2) : null;
+  const baseUrl = getPublicBaseUrl();
+  const canRegister = Number(event.capacity || 0) > 0;
+  const mapEnabled = await isMapaEnabled();
+  const mapPoint = mapEnabled ? await getMapPointForLocation(location) : null;
+  const mapaUrl = mapEnabled
+    ? mapPoint
+      ? `/${lang}/mapa?point=${encodeURIComponent(String(mapPoint.id))}`
+      : `/${lang}/mapa?q=${encodeURIComponent(location)}`
+    : '';
   const googleCalUrl =
     start && end
-      ? `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${encodeURIComponent(`${formatGoogleCalDateUtc(start)}/${formatGoogleCalDateUtc(end)}`)}&details=${encodeURIComponent(description || '')}&location=${encodeURIComponent(location)}&sprop=website:${encodeURIComponent(`https://pupen.org/${lang}/akce/${event.id}`)}`
+      ? `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${encodeURIComponent(`${formatGoogleCalDateUtc(start)}/${formatGoogleCalDateUtc(end)}`)}&details=${encodeURIComponent(descriptionText || '')}&location=${encodeURIComponent(location)}&sprop=website:${encodeURIComponent(`${baseUrl}/${lang}/akce/${event.id}`)}`
       : '';
   const icsUrl = `/api/ical/events/${event.id}?lang=${lang}`;
 
@@ -108,13 +165,15 @@ export default async function EventDetailPage({ params }: { params: Promise<{ la
             {lang === 'en' ? 'Back to events' : 'Zpět na akce'}
           </Link>
 
-          <Link
-            href={`/${lang}/akce?rsvp=1#event-${event.id}`}
-            className="inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-green-200 bg-green-600 text-white hover:bg-green-700 transition shadow-lg shadow-green-600/20"
-          >
-            <Ticket size={16} />
-            {lang === 'en' ? 'Register' : 'Registrovat'}
-          </Link>
+          {canRegister ? (
+            <Link
+              href={`/${lang}/akce?rsvp=1#event-${event.id}`}
+              className="inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-green-200 bg-green-600 text-white hover:bg-green-700 transition shadow-lg shadow-green-600/20"
+            >
+              <Ticket size={16} />
+              {lang === 'en' ? 'Register' : 'Registrovat'}
+            </Link>
+          ) : null}
         </div>
 
         <div className="bg-white border border-stone-100 shadow-sm rounded-[3rem] p-10 md:p-16">
@@ -156,12 +215,17 @@ export default async function EventDetailPage({ params }: { params: Promise<{ la
                 <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-4">
                   {lang === 'en' ? 'About' : 'O akci'}
                 </div>
-                {description ? (
-                  <div className="prose prose-stone max-w-none prose-p:leading-relaxed prose-headings:font-black prose-headings:tracking-tight prose-a:text-green-600">
-                    {description.split('\n').map((p: string, idx: number) =>
-                      p.trim() ? <p key={idx}>{p}</p> : null
-                    )}
-                  </div>
+                {descriptionHtml || descriptionText ? (
+                  descriptionHtml ? (
+                    <div
+                      className="prose prose-stone max-w-none prose-p:leading-relaxed prose-headings:font-black prose-headings:tracking-tight prose-a:text-green-600"
+                      dangerouslySetInnerHTML={{ __html: descriptionHtml }}
+                    />
+                  ) : (
+                    <div className="prose prose-stone max-w-none prose-p:leading-relaxed prose-headings:font-black prose-headings:tracking-tight prose-a:text-green-600">
+                      {descriptionText.split('\n').map((p: string, idx: number) => (p.trim() ? <p key={idx}>{p}</p> : null))}
+                    </div>
+                  )
                 ) : (
                   <div className="text-stone-400 font-bold uppercase tracking-widest text-xs">
                     {lang === 'en' ? 'No description yet.' : 'Zatím bez popisu.'}
@@ -194,6 +258,15 @@ export default async function EventDetailPage({ params }: { params: Promise<{ la
                   {lang === 'en' ? 'Location' : 'Místo'}
                 </div>
                 <div className="space-y-3">
+                  {mapaUrl ? (
+                    <Link
+                      href={mapaUrl}
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
+                    >
+                      <MapPin size={16} />
+                      {lang === 'en' ? 'Our map' : 'Naše mapa'}
+                    </Link>
+                  ) : null}
                   <a
                     href={googleMaps}
                     target="_blank"
@@ -229,13 +302,15 @@ export default async function EventDetailPage({ params }: { params: Promise<{ la
                   {lang === 'en' ? 'Quick actions' : 'Rychlé akce'}
                 </div>
                 <div className="space-y-3">
-                  <Link
-                    href={`/${lang}/akce?rsvp=1#event-${event.id}`}
-                    className="w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-green-200 bg-green-600 text-white hover:bg-green-700 transition shadow-lg shadow-green-600/20"
-                  >
-                    <Ticket size={16} />
-                    {lang === 'en' ? 'Register' : 'Registrovat'}
-                  </Link>
+                  {canRegister ? (
+                    <Link
+                      href={`/${lang}/akce?rsvp=1#event-${event.id}`}
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-green-200 bg-green-600 text-white hover:bg-green-700 transition shadow-lg shadow-green-600/20"
+                    >
+                      <Ticket size={16} />
+                      {lang === 'en' ? 'Register' : 'Registrovat'}
+                    </Link>
+                  ) : null}
                   <Link
                     href={`/${lang}/akce#event-${event.id}`}
                     className="w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
@@ -251,7 +326,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ la
                       className="w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
                     >
                       <Calendar size={16} />
-                      {lang === 'en' ? 'Add to Google Calendar' : 'Přidat do Google Calendar'}
+                      {lang === 'en' ? 'Add to Google Calendar' : 'Přidat do Kalendáře Google'}
                     </a>
                   ) : null}
                   <a

@@ -725,14 +725,21 @@ export default function ClenskaSekcePage() {
     queryKey: ['member_events'],
     enabled: !!user,
     queryFn: async () => {
-      const { data } = await supabase
-        .from('events')
-        .select('*')
-        .eq('is_member_only', true)
-        .gte('date', new Date().toISOString().split('T')[0])
-        .order('date', { ascending: true })
-        .limit(100);
-      return data || [];
+      const run = (withMemberFilter: boolean) => {
+        let q = supabase
+          .from('events')
+          .select('*')
+          .gte('date', new Date().toISOString().split('T')[0])
+          .order('date', { ascending: true })
+          .limit(100);
+        if (withMemberFilter) q = q.eq('is_member_only', true);
+        return q;
+      };
+      let res = await run(true);
+      if (res.error && /is_member_only/i.test(res.error.message) && /schema cache/i.test(res.error.message)) {
+        res = await run(false);
+      }
+      return res.data || [];
     }
   });
 

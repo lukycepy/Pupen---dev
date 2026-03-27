@@ -13,8 +13,23 @@ import InlinePulse from '@/app/components/InlinePulse';
 import SocialShareMenu from '@/app/components/SocialShareMenu';
 import CopyButton from '@/app/components/CopyButton';
 
-const CATEGORY_KEYS = ["Vše", "Párty", "Vzdělávání", "Výlet", "Zábava"];
+const DEFAULT_CATEGORY_KEYS = ['Vše', 'Párty', 'Vzdělávání', 'Výlet', 'Zábava'];
 const RSVP_DRAFT_KEY = 'pupen_rsvp_draft_v1';
+
+function stripHtmlToText(s: string) {
+  return String(s || '')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getEventExcerpt(ev: any, lang: string) {
+  const raw = lang === 'en' && ev?.description_en ? ev.description_en : ev?.description;
+  const html = lang === 'en' && ev?.description_html_en ? ev.description_html_en : ev?.description_html;
+  const base = raw || html || '';
+  const str = String(base || '');
+  return str.includes('<') ? stripHtmlToText(str) : str;
+}
 
 export default function AkcePage() {
   const params = useParams();
@@ -151,11 +166,21 @@ export default function AkcePage() {
 
         const nowIso = new Date().toISOString();
         const now = new Date();
-        const { data, error: supabaseError } = await supabase
-          .from('events')
-          .select('*, rsvp(id, status, expires_at, attendees)')
-          .lte('published_at', nowIso) 
-          .order('date', { ascending: true });
+        const run = (withMemberFilter: boolean) => {
+          let q = supabase
+            .from('events')
+            .select('*, rsvp(id, status, expires_at, attendees)')
+            .lte('published_at', nowIso)
+            .order('date', { ascending: true });
+          if (withMemberFilter) q = q.eq('is_member_only', false);
+          return q;
+        };
+        let { data, error: supabaseError } = await run(true);
+        if (supabaseError && /is_member_only/i.test(supabaseError.message) && /schema cache/i.test(supabaseError.message)) {
+          const retry = await run(false);
+          data = retry.data;
+          supabaseError = retry.error;
+        }
         
         if (supabaseError) throw supabaseError;
 
@@ -190,8 +215,8 @@ export default function AkcePage() {
         const params = new URLSearchParams(window.location.search);
         if (params.get('rsvp') === '1' && window.location.hash?.startsWith('#event-')) {
           const eventId = window.location.hash.replace('#event-', '');
-          const exists = (eventsWithCounts || []).some((e: any) => String(e.id) === String(eventId));
-          if (exists) setRsvpOpen(eventId);
+          const found = (eventsWithCounts || []).find((e: any) => String(e.id) === String(eventId));
+          if (found && Number(found.capacity || 0) > 0) setRsvpOpen(eventId);
         }
       } catch (err: any) {
         console.error("Chyba při načítání dat:", err?.message || err);
@@ -324,7 +349,7 @@ export default function AkcePage() {
       } else if (status === 'reserved') {
         showToast(lang === 'cs' ? 'Rezervace vytvořena. Čeká na platbu.' : 'Reservation created. Waiting for payment.', 'info');
       } else {
-        showToast(globalDict?.newsPage?.rsvpSuccess || 'Díky! Těšíme se.', 'success');
+        showToast(globalDict?.eventsPage?.rsvpSuccess || 'Díky! Těšíme se.', 'success');
       }
 
       setEvents((prev) =>
@@ -366,6 +391,7 @@ export default function AkcePage() {
     : events.filter(e => e.category === activeCategory);
 
   if (!dict) return null;
+  const categoryKeys = Object.keys(dict.categories || {}).length > 0 ? Object.keys(dict.categories) : DEFAULT_CATEGORY_KEYS;
 
   return (    <div className="min-h-screen bg-stone-50 pt-24 pb-32">
       <div className="max-w-7xl mx-auto px-6">
@@ -384,7 +410,7 @@ export default function AkcePage() {
                 href={`/api/ical/events?lang=${lang}`}
                 className="inline-flex items-center gap-2 rounded-2xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
               >
-                {lang === 'en' ? 'iCal feed' : 'iCal feed'}
+                {lang === 'en' ? 'iCal feed' : 'Odběr iCal'}
               </a>
               <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-stone-100">
                 <button 
@@ -404,7 +430,7 @@ export default function AkcePage() {
           </div>
 
           <div className="flex gap-3 mt-12 overflow-x-auto pb-4 no-scrollbar">
-            {CATEGORY_KEYS.map(cat => (
+            {categoryKeys.map(cat => (
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
@@ -462,7 +488,7 @@ export default function AkcePage() {
                       )}
                     </div>
                     <h3 className="text-xl sm:text-2xl font-black text-stone-900 mb-3 sm:mb-4 group-hover:text-green-600 transition line-clamp-2 leading-tight">{lang === 'en' && event.title_en ? event.title_en : event.title}</h3>
-                    <p className="text-stone-500 text-xs sm:text-sm mb-6 sm:mb-8 line-clamp-3 leading-relaxed flex-grow">{lang === 'en' && event.description_en ? event.description_en : event.description}</p>
+                    <p className="text-stone-500 text-xs sm:text-sm mb-6 sm:mb-8 line-clamp-3 leading-relaxed flex-grow">{getEventExcerpt(event, lang)}</p>
                     
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between pt-6 sm:pt-8 border-t border-stone-50 gap-4 mt-auto">
                       {event.capacity && event.capacity > 0 ? (
@@ -473,11 +499,11 @@ export default function AkcePage() {
                         >
                           {event.ticket_sale_end && new Date(event.ticket_sale_end) < new Date() 
                             ? (lang === 'cs' ? 'Prodej ukončen' : 'Sale ended')
-                            : event.is_full ? (lang === 'cs' ? 'Zapsat se na waitlist' : 'Join waitlist') : dict.rsvpBtn} <ArrowRight size={14} />
+                            : event.is_full ? (lang === 'cs' ? 'Přidat se na čekací listinu' : 'Join waitlist') : dict.rsvpBtn} <ArrowRight size={14} />
                         </button>
                       ) : (
                         <div className="text-stone-300 font-black uppercase tracking-widest text-[9px] sm:text-[10px] py-2 sm:py-0">
-                          {lang === 'cs' ? 'Vstup volný' : 'Free entry'}
+                          {lang === 'cs' ? 'Vstup zdarma' : 'Free entry'}
                         </div>
                       )}
                       <div className="flex justify-center sm:justify-end gap-2">
@@ -592,7 +618,7 @@ export default function AkcePage() {
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Kontaktní E-mail</label>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Kontaktní e‑mail</label>
                         <input 
                           type="email"
                           required

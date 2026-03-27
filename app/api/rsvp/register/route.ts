@@ -86,11 +86,24 @@ export async function POST(req: Request) {
       return err('RSVP_BLACKLISTED', 403);
     }
 
-    const { data: event, error: evErr } = await supabase
-      .from('events')
-      .select('id, title, capacity, ticket_sale_end, is_member_only')
-      .eq('id', eventId)
-      .single();
+    const loadEvent = async (withTicketSaleEnd: boolean) => {
+      const select = withTicketSaleEnd
+        ? 'id, title, capacity, ticket_sale_end, is_member_only'
+        : 'id, title, capacity, is_member_only';
+      return supabase.from('events').select(select).eq('id', eventId).single();
+    };
+    let first: any = await loadEvent(true);
+    let event: any = first.data;
+    let evErr: any = first.error;
+    if (
+      evErr &&
+      /ticket_sale_end/i.test(evErr.message) &&
+      /(schema cache|does not exist|column)/i.test(evErr.message)
+    ) {
+      const retry: any = await loadEvent(false);
+      event = retry.data;
+      evErr = retry.error;
+    }
     if (evErr || !event) return err('RSVP_EVENT_NOT_FOUND', 404);
 
     const now = new Date();
@@ -377,20 +390,32 @@ export async function POST(req: Request) {
     const qrToken = Math.random().toString(36).substring(2, 15).toUpperCase();
     const expiresAt = status === 'reserved' ? new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString() : null;
 
-    const ins = await supabase.from('rsvp').insert([
-      {
-        event_id: eventId,
-        name: cleanName,
-        email: cleanEmail,
-        status,
-        payment_method: method,
-        attendees: attendeeNames,
-        qr_code: qrToken,
-        expires_at: expiresAt,
-      },
-    ]).select('id').single();
+    const baseRow: any = {
+      event_id: eventId,
+      name: cleanName,
+      email: cleanEmail,
+      status,
+      payment_method: method,
+      attendees: attendeeNames,
+      qr_token: qrToken,
+      qr_code: qrToken,
+      expires_at: expiresAt,
+    };
+
+    const tryInsert = async (row: any) => supabase.from('rsvp').insert([row]).select('id').single();
+    let ins: any = await tryInsert(baseRow);
+    if (
+      ins?.error &&
+      /(qr_code|qr_token)/i.test(ins.error.message) &&
+      /(schema cache|does not exist|column)/i.test(ins.error.message)
+    ) {
+      const row2: any = { ...baseRow };
+      if (/qr_code/i.test(ins.error.message)) delete row2.qr_code;
+      if (/qr_token/i.test(ins.error.message)) delete row2.qr_token;
+      ins = await tryInsert(row2);
+    }
     if (ins.error) throw ins.error;
-    const rsvpId = String((ins.data as any)?.id || '');
+    const rsvpId = String(ins.data?.id || '');
 
     if (promo) {
       try {

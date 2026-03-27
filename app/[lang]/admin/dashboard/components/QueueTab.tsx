@@ -7,6 +7,7 @@ import { useToast } from '@/app/context/ToastContext';
 import AdminModuleHeader from './ui/AdminModuleHeader';
 import AdminEmptyState from './ui/AdminEmptyState';
 import { AlertTriangle, Clock, Inbox, RefreshCw, Save, Search, X } from 'lucide-react';
+import Portal from '@/app/components/ui/Portal';
 
 type View = 'queue' | 'dead';
 
@@ -352,8 +353,9 @@ export default function QueueTab({ dict }: { dict: any }) {
       )}
 
       {selected && (
-        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-300">
-          <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col">
+        <Portal>
+          <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-300">
+            <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col">
             <div className="p-8 border-b border-stone-100 flex items-center justify-between bg-stone-50/40">
               <div>
                 <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{title}</div>
@@ -506,8 +508,9 @@ export default function QueueTab({ dict }: { dict: any }) {
                 </div>
               </div>
             </div>
+            </div>
           </div>
-        </div>
+        </Portal>
       )}
     </div>
   );

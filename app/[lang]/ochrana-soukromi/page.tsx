@@ -144,9 +144,9 @@ export default async function PrivacyPage({ params }: { params: Promise<{ lang: 
                 <Shield size={24} className="text-green-600" />
                 {dict.rightsTitle}
               </h2>
-              <div className="text-stone-600 leading-relaxed text-lg bg-stone-50 p-8 rounded-[2rem] border border-stone-100 italic">
-                {dict.rightsIntro && <p className="not-italic mb-4">{dict.rightsIntro}</p>}
-                <ul className="list-disc pl-6 space-y-2 not-italic">
+              <div className="bg-stone-50 border border-stone-100 rounded-[2rem] p-8">
+                {dict.rightsIntro ? <p className="text-stone-600 leading-relaxed text-lg mb-6">{dict.rightsIntro}</p> : null}
+                <div className="grid gap-3">
                   {(Array.isArray(dict.rightsList) && dict.rightsList.length > 0
                     ? dict.rightsList
                     : [
@@ -158,12 +158,29 @@ export default async function PrivacyPage({ params }: { params: Promise<{ lang: 
                         'Právo odvolat udělený souhlas',
                         'Právo podat stížnost u Úřadu pro ochranu osobních údajů (www.uoou.cz)',
                       ]
-                  ).map((item: string, idx: number) => (
-                    <li key={idx} className="font-medium">
-                      {item}
-                    </li>
-                  ))}
-                </ul>
+                  ).map((item: string, idx: number) => {
+                    const hasUoou = /www\.uoou\.cz/i.test(item);
+                    return (
+                      <div key={idx} className="flex items-start gap-3 bg-white border border-stone-100 rounded-2xl p-4">
+                        <div className="mt-0.5 text-green-600">
+                          <CheckCircle size={18} />
+                        </div>
+                        <div className="text-stone-700 font-medium leading-relaxed">
+                          {hasUoou ? (
+                            <>
+                              {item.replace(/\s*\(www\.uoou\.cz\)\s*/i, ' ')}
+                              <Link href="https://www.uoou.cz" target="_blank" rel="noopener noreferrer" className="text-green-600 font-black">
+                                www.uoou.cz
+                              </Link>
+                            </>
+                          ) : (
+                            item
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </section>
           )}

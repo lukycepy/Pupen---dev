@@ -19,7 +19,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ? supabase.from('posts').select('id, published_at').not('published_at', 'is', null).lte('published_at', now)
       : Promise.resolve({ data: [] as any[] } as any),
     supabase
-      ? supabase.from('events').select('id, published_at').not('published_at', 'is', null).lte('published_at', now)
+      ? (async () => {
+          const run = (withMemberFilter: boolean) => {
+            let q = supabase
+              .from('events')
+              .select('id, published_at')
+              .not('published_at', 'is', null)
+              .lte('published_at', now);
+            if (withMemberFilter) q = q.eq('is_member_only', false);
+            return q;
+          };
+          let res = await run(true);
+          if (res?.error && /is_member_only/i.test(res.error.message) && /schema cache/i.test(res.error.message)) {
+            res = await run(false);
+          }
+          return res;
+        })()
       : Promise.resolve({ data: [] as any[] } as any),
   ]);
 

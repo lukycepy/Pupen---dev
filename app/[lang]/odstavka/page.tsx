@@ -91,8 +91,11 @@ export default function MaintenancePage() {
   };
 
   const sanitizeAndLinkifyHtml = (html: string) => {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
+    try {
+      if (typeof DOMParser === 'undefined') return linkifyPlain(html);
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      if (!doc?.body) return linkifyPlain(html);
     const allowedTags = new Set(['A', 'B', 'STRONG', 'I', 'EM', 'U', 'BR', 'P', 'DIV', 'SPAN', 'UL', 'OL', 'LI', 'H1', 'H2', 'H3', 'H4', 'BLOCKQUOTE']);
 
     const walk = (node: any) => {
@@ -170,6 +173,9 @@ export default function MaintenancePage() {
 
     linkifyTextNodes(doc.body);
     return doc.body.innerHTML;
+    } catch {
+      return linkifyPlain(html);
+    }
   };
 
   const bodyHtml = isProbablyHtml(body) ? sanitizeAndLinkifyHtml(body) : linkifyPlain(body);

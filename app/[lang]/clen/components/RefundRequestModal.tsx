@@ -5,6 +5,7 @@ import { AlertCircle, RefreshCcw, X } from 'lucide-react';
 import InlinePulse from '@/app/components/InlinePulse';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/app/context/ToastContext';
+import Portal from '@/app/components/ui/Portal';
 
 export default function RefundRequestModal({
   open,
@@ -84,9 +85,10 @@ export default function RefundRequestModal({
   if (!open || !rsvp) return null;
 
   return (
-    <div className="fixed inset-0 z-[10003] flex items-center justify-center p-6">
-      <button type="button" className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} aria-label="Zavřít" />
-      <div className="relative w-full max-w-2xl bg-white rounded-[2.5rem] border border-stone-100 shadow-2xl overflow-hidden">
+    <Portal>
+      <div className="fixed inset-0 z-[10003] flex items-center justify-center p-6">
+        <button type="button" className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} aria-label="Zavřít" />
+        <div className="relative w-full max-w-2xl bg-white rounded-[2.5rem] border border-stone-100 shadow-2xl overflow-hidden">
         <div className="p-6 border-b border-stone-100 flex items-center justify-between">
           <div className="min-w-0">
             <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">
@@ -163,7 +165,7 @@ export default function RefundRequestModal({
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </Portal>
   );
 }
-
