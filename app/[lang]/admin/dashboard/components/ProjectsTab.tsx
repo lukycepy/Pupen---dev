@@ -7,6 +7,7 @@ import { FolderKanban, Plus, Save, Search, X, CheckCircle } from 'lucide-react';
 import InlinePulse from '@/app/components/InlinePulse';
 import { useToast } from '@/app/context/ToastContext';
 import { logAdminAction } from '@/lib/admin-logger';
+import Portal from '@/app/components/ui/Portal';
 
 export default function ProjectsTab({
   currentUser,
@@ -234,6 +235,7 @@ export default function ProjectsTab({
       </div>
 
       {createOpen && (
+        <Portal>
         <div className="fixed inset-0 z-[10003] flex items-center justify-center p-6">
           <button type="button" className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setCreateOpen(false)} aria-label="Zavřít" />
           <div className="relative w-full max-w-2xl bg-white rounded-[2.5rem] border border-stone-100 shadow-2xl overflow-hidden">
@@ -284,9 +286,11 @@ export default function ProjectsTab({
             </div>
           </div>
         </div>
+        </Portal>
       )}
 
       {editOpen && (
+        <Portal>
         <div className="fixed inset-0 z-[10003] flex items-center justify-center p-6">
           <button type="button" className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setEditOpen(null)} aria-label="Zavřít" />
           <div className="relative w-full max-w-2xl bg-white rounded-[2.5rem] border border-stone-100 shadow-2xl overflow-hidden">
@@ -368,8 +372,8 @@ export default function ProjectsTab({
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   );
 }
-

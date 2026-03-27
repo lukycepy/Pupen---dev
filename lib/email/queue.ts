@@ -5,6 +5,19 @@ function isSchemaCacheMissingTable(e: any) {
   return msg.includes('Could not find the table') && msg.includes('in the schema cache');
 }
 
+function normalizeError(e: any) {
+  const err = e || {};
+  return {
+    message: String(err.message || err),
+    name: err.name ? String(err.name) : '',
+    code: err.code ? String(err.code) : '',
+    command: err.command ? String(err.command) : '',
+    responseCode: typeof err.responseCode === 'number' ? err.responseCode : null,
+    response: err.response ? String(err.response) : '',
+    stack: err.stack ? String(err.stack) : '',
+  };
+}
+
 export type EmailQueueMeta = {
   kind?: string;
   template_key?: string;
@@ -68,7 +81,8 @@ export async function sendMailWithQueueFallback(opts: {
     });
     return { ok: true as const };
   } catch (e: any) {
-    const lastError = e?.message ? String(e.message) : String(e);
+    const info = normalizeError(e);
+    const lastError = info.message;
     const enq = await enqueueEmailSend(
       {
         to: opts.message.to,
@@ -76,7 +90,7 @@ export async function sendMailWithQueueFallback(opts: {
         replyTo: opts.message.replyTo,
         subject: opts.message.subject,
         html: opts.message.html,
-        meta: { ...(opts.meta || {}), last_error: lastError },
+        meta: { ...(opts.meta || {}), last_error: lastError, enqueue_error: info },
         lastError,
       },
       opts.supabase,

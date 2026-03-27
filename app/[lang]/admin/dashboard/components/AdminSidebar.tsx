@@ -13,6 +13,7 @@ import {
 import { buildAdminMenuGroups } from './adminMenu';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
+import Portal from '@/app/components/ui/Portal';
 
 interface AdminSidebarProps {
   lang: string;
@@ -210,12 +211,14 @@ export default function AdminSidebar({
 
       {/* SIDEBAR MOBILE OVERLAY */}
       {isMobileOpen && (
-        <div className="lg:hidden fixed inset-0 z-[100] flex">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsMobileOpen(false)} />
-          <div className="relative w-72 h-full animate-in slide-in-from-left duration-300">
-            <SidebarContent {...commonProps} />
+        <Portal>
+          <div className="lg:hidden fixed inset-0 z-[100] flex">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsMobileOpen(false)} />
+            <div className="relative w-72 h-full animate-in slide-in-from-left duration-300">
+              <SidebarContent {...commonProps} />
+            </div>
           </div>
-        </div>
+        </Portal>
       )}
     </>
   );

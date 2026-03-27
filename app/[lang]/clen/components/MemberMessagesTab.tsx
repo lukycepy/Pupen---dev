@@ -6,6 +6,7 @@ import InlinePulse from '@/app/components/InlinePulse';
 import ConfirmModal from '@/app/components/ConfirmModal';
 import { useToast } from '@/app/context/ToastContext';
 import { Mail, Plus, Search, Send, X, AlertTriangle, ShieldAlert, ShieldCheck } from 'lucide-react';
+import Portal from '@/app/components/ui/Portal';
 
 type Thread = {
   threadId: string;
@@ -408,16 +409,17 @@ export default function MemberMessagesTab({ lang }: { lang: string }) {
       </div>
 
       {newOpen && (
-        <div className="fixed inset-0 z-[10003] flex items-center justify-center p-6">
-          <button type="button" className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setNewOpen(false)} aria-label="Zavřít" />
-          <div className="relative w-full max-w-xl bg-white rounded-[2.5rem] border border-stone-100 shadow-2xl overflow-hidden">
-            <div className="p-6 border-b border-stone-100 flex items-center justify-between">
-              <div className="font-black text-stone-900">{lang === 'en' ? 'Start new message' : 'Nová zpráva'}</div>
-              <button type="button" onClick={() => setNewOpen(false)} className="p-2 rounded-xl hover:bg-stone-50 transition text-stone-400" aria-label="Zavřít">
-                <X size={18} />
-              </button>
-            </div>
-            <div className="p-8 space-y-4">
+        <Portal>
+          <div className="fixed inset-0 z-[10003] flex items-center justify-center p-6">
+            <button type="button" className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setNewOpen(false)} aria-label="Zavřít" />
+            <div className="relative w-full max-w-xl bg-white rounded-[2.5rem] border border-stone-100 shadow-2xl overflow-hidden">
+              <div className="p-6 border-b border-stone-100 flex items-center justify-between">
+                <div className="font-black text-stone-900">{lang === 'en' ? 'Start new message' : 'Nová zpráva'}</div>
+                <button type="button" onClick={() => setNewOpen(false)} className="p-2 rounded-xl hover:bg-stone-50 transition text-stone-400" aria-label="Zavřít">
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="p-8 space-y-4">
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-300" size={18} />
                 <input
@@ -462,9 +464,10 @@ export default function MemberMessagesTab({ lang }: { lang: string }) {
                   ))}
                 </div>
               )}
+              </div>
             </div>
           </div>
-        </div>
+        </Portal>
       )}
     </div>
   );

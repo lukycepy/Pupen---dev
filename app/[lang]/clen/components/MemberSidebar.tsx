@@ -8,6 +8,7 @@ import {
   Settings, LogOut, ShieldCheck, ChevronRight, Menu, X, 
   Mail, Bell, QrCode, Ticket, FolderKanban, BarChart3, ScrollText, ChevronDown, Award
 } from 'lucide-react';
+import Portal from '@/app/components/ui/Portal';
 
 interface MemberSidebarProps {
   lang: string;
@@ -226,12 +227,14 @@ export default function MemberSidebar({
 
       {/* SIDEBAR MOBILE OVERLAY */}
       {isMobileOpen && (
-        <div className="lg:hidden fixed inset-0 z-[100] flex">
-          <div className="absolute inset-0 bg-stone-900/40 backdrop-blur-sm" onClick={() => setIsMobileOpen(false)} />
-          <div className="relative w-72 h-full animate-in slide-in-from-left duration-300 shadow-2xl">
-            <SidebarContent {...commonProps} />
+        <Portal>
+          <div className="lg:hidden fixed inset-0 z-[100] flex">
+            <div className="absolute inset-0 bg-stone-900/40 backdrop-blur-sm" onClick={() => setIsMobileOpen(false)} />
+            <div className="relative w-72 h-full animate-in slide-in-from-left duration-300 shadow-2xl">
+              <SidebarContent {...commonProps} />
+            </div>
           </div>
-        </div>
+        </Portal>
       )}
     </>
   );

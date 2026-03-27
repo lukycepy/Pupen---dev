@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { Image as ImageIcon, Calendar, ArrowLeft, Maximize2, X } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import Portal from '@/app/components/ui/Portal';
 
 export default function GaleriePage() {
   const params = useParams();
@@ -275,23 +276,25 @@ export default function GaleriePage() {
 
       {/* Lightbox */}
       {selectedImage && (
-        <div className="fixed inset-0 bg-stone-900/95 z-[200] flex items-center justify-center p-4 animate-in fade-in duration-300">
-          <button 
-            onClick={() => setSelectedImage(null)}
-            className="absolute top-8 right-8 text-white/50 hover:text-white transition p-2"
-          >
-            <X size={40} />
-          </button>
-          <div className="relative w-full max-w-6xl aspect-[3/2]">
-            {isSafeImageSrc(String(selectedImage ?? '')) ? (
-              String(selectedImage).startsWith('http') ? (
-                <img src={String(selectedImage)} alt="" className="absolute inset-0 w-full h-full object-contain" referrerPolicy="no-referrer" />
-              ) : (
-                <Image src={selectedImage} alt="" fill className="object-contain" />
-              )
-            ) : null}
+        <Portal>
+          <div className="fixed inset-0 bg-stone-900/95 z-[200] flex items-center justify-center p-4 animate-in fade-in duration-300">
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="absolute top-8 right-8 text-white/50 hover:text-white transition p-2"
+            >
+              <X size={40} />
+            </button>
+            <div className="relative w-full max-w-6xl aspect-[3/2]">
+              {isSafeImageSrc(String(selectedImage ?? '')) ? (
+                String(selectedImage).startsWith('http') ? (
+                  <img src={String(selectedImage)} alt="" className="absolute inset-0 w-full h-full object-contain" referrerPolicy="no-referrer" />
+                ) : (
+                  <Image src={selectedImage} alt="" fill className="object-contain" />
+                )
+              ) : null}
+            </div>
           </div>
-        </div>
+        </Portal>
       )}
     </div>
   );

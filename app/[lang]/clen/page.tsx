@@ -21,6 +21,7 @@ import MemberPanel from './components/ui/MemberPanel';
 import PasswordField from '@/app/components/PasswordField';
 import AddressAutocomplete from '@/app/components/AddressAutocomplete';
 import ConfirmModal from '@/app/components/ConfirmModal';
+import Portal from '@/app/components/ui/Portal';
 import { evaluatePassword, passwordScoreLabel } from '@/lib/auth/password-policy';
 
 const MemberCard = dynamic<any>(() => import('./components/MemberCard'), { loading: () => <SkeletonTabContent /> });
@@ -1838,39 +1839,41 @@ export default function ClenskaSekcePage() {
                 </div>
               </MemberPanel>
               {mfaDisableOpen && (
-                <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-                  <div className="w-full max-w-md bg-white rounded-[2rem] border border-stone-100 shadow-2xl p-6">
-                    <div className="text-sm font-black text-stone-900">{lang === 'en' ? 'Disable 2FA' : 'Vypnout 2FA'}</div>
-                    <div className="mt-2 text-xs font-bold text-stone-500">
-                      {lang === 'en' ? 'Enter your 6-digit code to confirm.' : 'Pro potvrzení zadejte 6místný kód z aplikace.'}
-                    </div>
-                    <input
-                      value={mfaDisableCode}
-                      onChange={(e) => setMfaDisableCode(e.target.value)}
-                      inputMode="numeric"
-                      className="mt-4 w-full bg-stone-50 border border-stone-200 rounded-2xl px-5 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 outline-none transition"
-                      placeholder="123456"
-                    />
-                    <div className="mt-4 grid grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setMfaDisableOpen(false)}
-                        disabled={mfaLoading}
-                        className="w-full py-4 bg-white text-stone-700 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-stone-200 hover:bg-stone-50 transition disabled:opacity-50"
-                      >
-                        {lang === 'en' ? 'Cancel' : 'Zrušit'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={confirmDisableMfa}
-                        disabled={mfaLoading || !String(mfaDisableCode || '').trim()}
-                        className="w-full py-4 bg-red-600 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-red-700 transition disabled:opacity-50"
-                      >
-                        {mfaLoading ? (lang === 'en' ? 'Loading...' : 'Načítám...') : (lang === 'en' ? 'Disable' : 'Vypnout')}
-                      </button>
+                <Portal>
+                  <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                    <div className="w-full max-w-md bg-white rounded-[2rem] border border-stone-100 shadow-2xl p-6">
+                      <div className="text-sm font-black text-stone-900">{lang === 'en' ? 'Disable 2FA' : 'Vypnout 2FA'}</div>
+                      <div className="mt-2 text-xs font-bold text-stone-500">
+                        {lang === 'en' ? 'Enter your 6-digit code to confirm.' : 'Pro potvrzení zadejte 6místný kód z aplikace.'}
+                      </div>
+                      <input
+                        value={mfaDisableCode}
+                        onChange={(e) => setMfaDisableCode(e.target.value)}
+                        inputMode="numeric"
+                        className="mt-4 w-full bg-stone-50 border border-stone-200 rounded-2xl px-5 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 outline-none transition"
+                        placeholder="123456"
+                      />
+                      <div className="mt-4 grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setMfaDisableOpen(false)}
+                          disabled={mfaLoading}
+                          className="w-full py-4 bg-white text-stone-700 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-stone-200 hover:bg-stone-50 transition disabled:opacity-50"
+                        >
+                          {lang === 'en' ? 'Cancel' : 'Zrušit'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={confirmDisableMfa}
+                          disabled={mfaLoading || !String(mfaDisableCode || '').trim()}
+                          className="w-full py-4 bg-red-600 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-red-700 transition disabled:opacity-50"
+                        >
+                          {mfaLoading ? (lang === 'en' ? 'Loading...' : 'Načítám...') : (lang === 'en' ? 'Disable' : 'Vypnout')}
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </Portal>
               )}
               <MemberPanel className="p-10 mt-8">
                 <h2 className="text-2xl font-black mb-6 flex items-center gap-3">

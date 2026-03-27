@@ -7,9 +7,10 @@ interface CountdownWidgetProps {
   targetDate: string; // ISO string
   title: string;
   lang: string;
+  showPrefix?: boolean;
 }
 
-export default function CountdownWidget({ targetDate, title, lang }: CountdownWidgetProps) {
+export default function CountdownWidget({ targetDate, title, lang, showPrefix = true }: CountdownWidgetProps) {
   const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
 
   useEffect(() => {
@@ -45,7 +46,9 @@ export default function CountdownWidget({ targetDate, title, lang }: CountdownWi
           <Clock className="animate-pulse" size={24} />
         </div>
         <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80">{lang === 'cs' ? 'Blíží se' : 'Upcoming'}</p>
+          {showPrefix ? (
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80">{lang === 'cs' ? 'Blíží se' : 'Upcoming'}</p>
+          ) : null}
           <h3 className="text-xl font-bold leading-none">{title}</h3>
         </div>
       </div>

@@ -89,6 +89,12 @@ export default function QueueTab({ dict }: { dict: any }) {
     },
   });
 
+  const errorInfo = (detail as any)?.meta?.last_error || (selected as any)?.meta?.last_error || (detail as any)?.meta?.enqueue_error;
+  const errorHint =
+    String(detail?.last_error || selected?.last_error || '').toLowerCase().includes('timeout')
+      ? 'Tip: Connection timeout obvykle znamená blokovaný outbound SMTP port / firewall nebo špatný host.'
+      : '';
+
   const updateMutation = useMutation({
     mutationFn: async (payload: { id: string; patch: any }) => {
       const { data } = await supabase.auth.getSession();
@@ -498,7 +504,16 @@ export default function QueueTab({ dict }: { dict: any }) {
                   <div className="bg-stone-50 border border-stone-100 rounded-2xl p-5">
                     <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">Last error</div>
                     <div className="text-xs font-bold text-stone-700 break-words">{String(detail?.last_error || detail?.final_error || selected.last_error || selected.final_error || '—')}</div>
+                    {errorHint ? <div className="mt-2 text-[10px] font-black uppercase tracking-widest text-stone-400">{errorHint}</div> : null}
                   </div>
+                  {errorInfo ? (
+                    <div className="bg-stone-50 border border-stone-100 rounded-2xl p-5">
+                      <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">Diagnostika</div>
+                      <div className="text-xs font-mono text-stone-700 whitespace-pre-wrap break-words rounded-xl bg-white border border-stone-100 p-4">
+                        {JSON.stringify(errorInfo, null, 2)}
+                      </div>
+                    </div>
+                  ) : null}
                   <div className="bg-stone-50 border border-stone-100 rounded-2xl p-5">
                     <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">HTML (preview)</div>
                     <div className="text-xs font-mono text-stone-700 whitespace-pre-wrap max-h-48 overflow-auto rounded-xl bg-white border border-stone-100 p-4">

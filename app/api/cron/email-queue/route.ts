@@ -10,6 +10,29 @@ function backoffSeconds(attempt: number) {
   return 12 * 60 * 60;
 }
 
+function normalizeError(e: any) {
+  const err = e || {};
+  return {
+    message: String(err.message || err),
+    name: err.name ? String(err.name) : '',
+    code: err.code ? String(err.code) : '',
+    command: err.command ? String(err.command) : '',
+    responseCode: typeof err.responseCode === 'number' ? err.responseCode : null,
+    response: err.response ? String(err.response) : '',
+    stack: err.stack ? String(err.stack) : '',
+  };
+}
+
+function isPermanentSmtpError(info: ReturnType<typeof normalizeError>) {
+  if (info.code === 'EAUTH') return true;
+  if (info.responseCode === 535) return true;
+  const m = info.message.toLowerCase();
+  if (m.includes('auth') && m.includes('fail')) return true;
+  if (m.includes('invalid') && m.includes('login')) return true;
+  if (m.includes('invalid smtp port')) return true;
+  return false;
+}
+
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const secret = url.searchParams.get('secret') || '';
@@ -27,6 +50,37 @@ export async function GET(req: Request) {
     if (claim.error) throw claim.error;
     const jobs: any[] = Array.isArray(claim.data) ? claim.data : [];
     if (!jobs.length) return NextResponse.json({ ok: true, processed: 0 });
+
+    try {
+      if (typeof (transporter as any)?.verify === 'function') {
+        await (transporter as any).verify();
+      }
+    } catch (e: any) {
+      const info = normalizeError(e);
+      const errMsg = info.message;
+      const nextAt = new Date(Date.now() + backoffSeconds(1) * 1000).toISOString();
+      await Promise.all(
+        jobs.map((j) => {
+          const id = String(j.id || '');
+          const meta = j?.meta && typeof j.meta === 'object' ? j.meta : {};
+          const meta2 = { ...meta, last_error: info };
+          return supabase
+            .from('email_send_queue')
+            .update({
+              status: 'retry',
+              attempt_count: Number(j.attempt_count || 0) + 1,
+              last_error: errMsg,
+              meta: meta2,
+              next_attempt_at: nextAt,
+              locked_at: null,
+              locked_by: null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', id);
+        }),
+      );
+      return NextResponse.json({ ok: false, processed: jobs.length, okCount: 0, retried: jobs.length, dead: 0, error: errMsg });
+    }
 
     let ok = 0;
     let retried = 0;
@@ -55,9 +109,12 @@ export async function GET(req: Request) {
         ok += 1;
       } catch (e: any) {
         const nextAttempt = attemptCount + 1;
-        const errMsg = e?.message || String(e);
+        const info = normalizeError(e);
+        const errMsg = info.message;
+        const meta = j?.meta && typeof j.meta === 'object' ? j.meta : {};
+        const meta2 = { ...meta, last_error: info };
 
-        if (nextAttempt >= maxAttempts) {
+        if (isPermanentSmtpError(info) || nextAttempt >= maxAttempts) {
           try {
             await supabase.from('email_send_dead_letters').insert([
               {
@@ -67,7 +124,7 @@ export async function GET(req: Request) {
                 reply_to: replyTo || null,
                 subject,
                 html,
-                meta: j.meta || {},
+                meta: meta2,
                 attempt_count: nextAttempt,
                 max_attempts: maxAttempts,
                 final_error: errMsg,
@@ -87,6 +144,7 @@ export async function GET(req: Request) {
             status: 'retry',
             attempt_count: nextAttempt,
             last_error: errMsg,
+            meta: meta2,
             next_attempt_at: nextAt,
             locked_at: null,
             locked_by: null,

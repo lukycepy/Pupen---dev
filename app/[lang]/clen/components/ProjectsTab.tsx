@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import InlinePulse from '@/app/components/InlinePulse';
 import { useToast } from '@/app/context/ToastContext';
 import { FolderKanban, Plus, Send, X } from 'lucide-react';
+import Portal from '@/app/components/ui/Portal';
 
 export default function ProjectsTab({ lang }: { lang: string }) {
   const { showToast } = useToast();
@@ -192,6 +193,7 @@ export default function ProjectsTab({ lang }: { lang: string }) {
       </div>
 
       {joinOpen && (
+        <Portal>
         <div className="fixed inset-0 z-[10003] flex items-center justify-center p-6">
           <button
             type="button"
@@ -251,9 +253,11 @@ export default function ProjectsTab({ lang }: { lang: string }) {
             </div>
           </div>
         </div>
+        </Portal>
       )}
 
       {createOpen && (
+        <Portal>
         <div className="fixed inset-0 z-[10003] flex items-center justify-center p-6">
           <button
             type="button"
@@ -336,8 +340,8 @@ export default function ProjectsTab({ lang }: { lang: string }) {
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   );
 }
-

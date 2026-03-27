@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { MessageCircle, Send, Facebook, X as XIcon, Share2 } from 'lucide-react';
 import CopyButton from './CopyButton';
+import Portal from './ui/Portal';
 
 function buildLinks(title: string, url: string) {
   const text = `${title}\n${url}`;
@@ -48,12 +49,14 @@ export default function SocialShareMenu({
 
       {open && (
         <>
-          <button
-            type="button"
-            className="fixed inset-0 z-[10000]"
-            onClick={() => setOpen(false)}
-            aria-label="Zavřít sdílení"
-          />
+          <Portal>
+            <button
+              type="button"
+              className="fixed inset-0 z-[10000]"
+              onClick={() => setOpen(false)}
+              aria-label="Zavřít sdílení"
+            />
+          </Portal>
           <div className="absolute right-0 mt-3 z-[10001] w-64 bg-white border border-stone-100 shadow-2xl rounded-2xl p-3">
             <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 mb-2">
               Sdílet

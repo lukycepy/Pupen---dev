@@ -52,6 +52,7 @@ export default function MaintenancePage() {
     lang === 'en'
       ? cfg?.maintenance_body_en || 'We are improving the website. Please try again later.'
       : cfg?.maintenance_body_cs || 'Právě vylepšujeme web. Zkuste to prosím později.';
+  const otherLang = lang === 'en' ? 'cs' : 'en';
 
   const startAt = cfg?.maintenance_start_at ? new Date(String(cfg.maintenance_start_at)) : null;
   const endAt = cfg?.maintenance_end_at ? new Date(String(cfg.maintenance_end_at)) : null;
@@ -68,6 +69,23 @@ export default function MaintenancePage() {
   }, [cfg, isActive, lang, router]);
 
   const isProbablyHtml = (s: string) => /<\/?[a-z][\s\S]*>/i.test(s);
+
+  const decodeHtmlEntities = (s: string) => {
+    let str = String(s || '');
+    try {
+      const ta = document.createElement('textarea');
+      for (let i = 0; i < 3; i += 1) {
+        if (!str.includes('&')) break;
+        ta.innerHTML = str;
+        const next = ta.value;
+        if (next === str) break;
+        str = next;
+      }
+      return str;
+    } catch {
+      return str;
+    }
+  };
 
   const escapeHtml = (s: string) =>
     s
@@ -178,7 +196,8 @@ export default function MaintenancePage() {
     }
   };
 
-  const bodyHtml = isProbablyHtml(body) ? sanitizeAndLinkifyHtml(body) : linkifyPlain(body);
+  const decodedBody = decodeHtmlEntities(body);
+  const bodyHtml = isProbablyHtml(decodedBody) ? sanitizeAndLinkifyHtml(decodedBody) : linkifyPlain(decodedBody);
 
   return (
     <>
@@ -193,6 +212,14 @@ export default function MaintenancePage() {
       `}</style>
     <div className="min-h-screen bg-gradient-to-b from-white via-stone-50 to-white flex items-center justify-center px-6 py-20">
       <div className="w-full max-w-3xl">
+        <div className="flex items-center justify-end mb-6">
+          <Link
+            href={`/${otherLang}/odstavka`}
+            className="inline-flex items-center justify-center rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
+          >
+            {otherLang.toUpperCase()}
+          </Link>
+        </div>
         <div className="flex flex-col items-center text-center mb-10">
           <div className="relative h-16 w-16 sm:h-20 sm:w-20 overflow-hidden rounded-full border border-stone-100 bg-white shadow-sm">
             <Image src="/logo.png" alt="Logo Pupen" fill className="object-cover" />
@@ -207,7 +234,7 @@ export default function MaintenancePage() {
           </div>
           <h1 className="mt-4 text-4xl sm:text-5xl font-black text-stone-900 tracking-tight">{title}</h1>
           <div
-            className="mt-4 text-stone-600 font-medium leading-relaxed max-w-2xl prose prose-stone prose-a:text-green-700 prose-a:font-bold prose-a:underline prose-p:my-3 prose-ul:my-3 prose-li:my-1"
+            className="mt-5 max-w-2xl w-full bg-white/80 border border-stone-100 rounded-[2rem] px-7 py-6 shadow-sm text-stone-700 font-medium leading-relaxed prose prose-stone prose-a:text-green-700 prose-a:font-bold prose-a:underline prose-p:my-3 prose-ul:my-3 prose-li:my-1"
             dangerouslySetInnerHTML={{ __html: bodyHtml }}
           />
         </div>
@@ -224,23 +251,16 @@ export default function MaintenancePage() {
                     ? new Date(startMs).toISOString()
                     : new Date(now).toISOString()
               }
-              title={
-                endMs && isActive
-                  ? (lang === 'en' ? 'Maintenance ends in' : 'Odstávka skončí za')
-                  : (lang === 'en' ? 'Maintenance starts in' : 'Odstávka začne za')
-              }
+              title={lang === 'en' ? 'Maintenance ends in' : 'Odstávka skončí za'}
               lang={lang}
+              showPrefix={false}
             />
             <div className="mt-3 text-[11px] text-stone-500 font-medium">
-              {endMs && isActive
-                ? (lang === 'en'
-                    ? `Expected end: ${new Date(endMs).toLocaleString()}`
-                    : `Předpokládaný konec: ${new Date(endMs).toLocaleString('cs-CZ')}`)
-                : startMs
-                  ? (lang === 'en'
-                      ? `Planned start: ${new Date(startMs).toLocaleString()}`
-                      : `Plánovaný start: ${new Date(startMs).toLocaleString('cs-CZ')}`)
-                  : null}
+              {endMs
+                ? lang === 'en'
+                  ? `Expected end: ${new Date(endMs).toLocaleString()}`
+                  : `Předpokládaný konec: ${new Date(endMs).toLocaleString('cs-CZ')}`
+                : null}
             </div>
           </div>
         )}

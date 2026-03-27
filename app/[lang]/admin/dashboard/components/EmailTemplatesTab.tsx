@@ -49,6 +49,7 @@ export default function EmailTemplatesTab() {
   const [deleting, setDeleting] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [preview, setPreview] = useState<{ subject: string; html: string; source?: string } | null>(null);
+  const [sendDiag, setSendDiag] = useState<any>(null);
 
   const parsed = useMemo(() => {
     try {
@@ -165,11 +166,18 @@ export default function EmailTemplatesTab() {
           variables: parsed.value,
         }),
       });
+      const j = await res.json().catch(() => ({}));
+      setSendDiag(j);
       if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        throw new Error(j?.error || 'Send failed');
+        const tcpMsg =
+          j?.tcp?.ok === false
+            ? `TCP: ${String(j?.tcp?.error?.message || 'fail')} (${String(j?.tcp?.host || '')}:${String(j?.tcp?.port || '')})`
+            : '';
+        throw new Error([j?.error || 'Send failed', tcpMsg].filter(Boolean).join(' • '));
       }
-      showToast('Test e-mail odeslán', 'success');
+      const tcpOk = j?.tcp?.ok === true;
+      const verified = j?.verified === true;
+      showToast(`Test e-mail odeslán${tcpOk ? ' • TCP OK' : ''}${verified ? ' • verify OK' : ''}`, 'success');
     } catch (e: any) {
       showToast(e?.message || 'Chyba', 'error');
     } finally {
@@ -350,6 +358,19 @@ export default function EmailTemplatesTab() {
                 {sending ? <InlinePulse className="bg-white/80" size={14} /> : <Send size={16} />}
                 Odeslat test
               </button>
+              {sendDiag ? (
+                <div className="mt-3 text-xs font-bold text-stone-600">
+                  <div>
+                    SMTP: {String(sendDiag?.debug?.host || '—')}:{String(sendDiag?.debug?.port || '—')}
+                    {sendDiag?.tcp?.ok === true ? ` • TCP OK (${Number(sendDiag?.tcp?.ms || 0)} ms)` : sendDiag?.tcp ? ` • TCP FAIL` : ''}
+                  </div>
+                  {sendDiag?.tcp?.ok === false ? (
+                    <div className="mt-1 text-[10px] font-black uppercase tracking-widest text-amber-600">
+                      {String(sendDiag?.tcp?.error?.message || 'Connection failed')}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           </div>
 
