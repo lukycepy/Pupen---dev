@@ -1,6 +1,7 @@
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { PDFDocument, rgb } from 'pdf-lib';
+import { getPdfFonts } from '@/lib/pdf/fonts';
 
-function safeText(input: any, fallback = '-') {
+function asciiFallbackText(input: any, fallback = '-') {
   const s = String(input ?? '').trim();
   if (!s) return fallback;
   return s
@@ -10,6 +11,12 @@ function safeText(input: any, fallback = '-') {
     .replace(/[^a-zA-Z0-9\s.,@:+\\/-_()]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function cleanText(input: any, fallback = '-') {
+  const s = String(input ?? '').replace(/\u0000/g, '').trim();
+  if (!s) return fallback;
+  return s.replace(/\u2022/g, '•').replace(/\s+/g, ' ').trim();
 }
 
 function formatDateCs(input: any) {
@@ -66,7 +73,12 @@ function wrapLines(font: any, text: string, size: number, maxWidth: number) {
   let current = '';
   for (const w of words) {
     const next = current ? `${current} ${w}` : w;
-    const width = font.widthOfTextAtSize(next, size);
+    let width = 0;
+    try {
+      width = font.widthOfTextAtSize(next, size);
+    } catch {
+      width = font.widthOfTextAtSize(asciiFallbackText(next), size);
+    }
     if (width <= maxWidth || !current) {
       current = next;
       continue;
@@ -81,8 +93,7 @@ function wrapLines(font: any, text: string, size: number, maxWidth: number) {
 export async function buildApplicationPdfBytes(app: any) {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([595.28, 841.89]);
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const { font, fontBold } = await getPdfFonts(pdfDoc);
 
   const margin = 48;
   const width = 595.28;
@@ -92,6 +103,16 @@ export async function buildApplicationPdfBytes(app: any) {
   const gray = rgb(0.35, 0.35, 0.35);
   const light = rgb(0.92, 0.92, 0.92);
   const green = rgb(0.08, 0.6, 0.26);
+
+  const drawSafe = (text: any, opts: { x: number; y: number; size: number; font: any; color: any }) => {
+    const primary = cleanText(text, '');
+    if (!primary) return;
+    try {
+      page.drawText(primary, opts);
+    } catch {
+      page.drawText(asciiFallbackText(primary, ''), opts);
+    }
+  };
 
   const logoBytes = await loadLogoPngBytes();
   if (logoBytes) {
@@ -104,55 +125,44 @@ export async function buildApplicationPdfBytes(app: any) {
     } catch {}
   }
 
-  page.drawText(safeText('PRIHLASKA DO SPOLKU PUPEN, Z. S.'), {
-    x: margin + 74,
-    y,
-    size: 18,
-    font: fontBold,
-    color: black,
-  });
+  drawSafe('PŘIHLÁŠKA DO SPOLKU PUPEN, Z. S.', { x: margin + 74, y, size: 18, font: fontBold, color: black });
   y -= 24;
-  page.drawText(safeText('Studentsky spolek Pupen, z. s. - Kamycka 129, Suchdol, 165 00 Praha'), {
-    x: margin + 74,
-    y,
-    size: 9,
-    font,
-    color: gray,
-  });
+  drawSafe('Studentský spolek Pupen, z.s. • Kamýcká 129, Suchdol, 165 00 Praha', { x: margin + 74, y, size: 9, font, color: gray });
   y -= 12;
   page.drawLine({ start: { x: margin, y }, end: { x: width - margin, y }, thickness: 1, color: light });
   y -= 18;
 
   const section = (title: string) => {
-    page.drawText(safeText(title), { x: margin, y, size: 11, font: fontBold, color: green });
+    drawSafe(title, { x: margin, y, size: 11, font: fontBold, color: green });
     y -= 10;
     page.drawLine({ start: { x: margin, y }, end: { x: width - margin, y }, thickness: 1, color: light });
     y -= 14;
   };
 
   const row = (label: string, value: any) => {
-    page.drawText(safeText(label), { x: margin, y, size: 9, font: fontBold, color: gray });
+    drawSafe(label, { x: margin, y, size: 9, font: fontBold, color: gray });
     const valueX = margin + 180;
     const valueWidth = width - margin - valueX;
-    const valueLines = wrapLines(font, safeText(value), 11, valueWidth);
+    const rawValue = cleanText(value, '-');
+    const valueLines = wrapLines(font, rawValue, 11, valueWidth);
     for (let i = 0; i < valueLines.length; i += 1) {
-      page.drawText(safeText(valueLines[i]), { x: valueX, y: y - i * 14, size: 11, font, color: black });
+      drawSafe(valueLines[i], { x: valueX, y: y - i * 14, size: 11, font, color: black });
     }
     y -= Math.max(16, valueLines.length * 14);
   };
 
-  const firstName = safeText(app?.first_name || '');
-  const lastName = safeText(app?.last_name || '');
-  const fullName = safeText(`${firstName} ${lastName}`.trim() || app?.name || '', '-');
+  const firstName = cleanText(app?.first_name || '', '');
+  const lastName = cleanText(app?.last_name || '', '');
+  const fullName = cleanText(`${firstName} ${lastName}`.trim() || app?.name || '', '-');
   const submittedAt = (app as any)?.created_at || app?.submitted_on || '';
   const membershipType = labelMembershipType(app?.decision_membership_type || app?.membership_type);
 
   section('OSOBNÍ ÚDAJE');
-  row('Jmeno a prijmeni', fullName);
+  row('Jméno a příjmení', fullName);
   row('E-mail', app?.email || '-');
   row('Telefon', app?.phone || '-');
-  row('Typ clenstvi', membershipType);
-  row('Datum podani', formatDateCs(submittedAt) || '-');
+  row('Typ členství', membershipType);
+  row('Datum podání', formatDateCs(submittedAt) || '-');
 
   if (String(app?.membership_type || '').trim().toLowerCase() !== 'external') {
     const universityEmail = app?.university_email || '';
@@ -160,27 +170,27 @@ export async function buildApplicationPdfBytes(app: any) {
     const year = app?.study_year || '';
     if (String(universityEmail || field || year).trim()) {
       section('STUDIUM');
-      if (universityEmail) row('Univerzitni e-mail', universityEmail);
+      if (universityEmail) row('Univerzitní e-mail', universityEmail);
       if (field) row('Obor', field);
-      if (year) row('Rocnik', year);
+      if (year) row('Ročník', year);
     }
   }
 
   section('ADRESA');
-  row('Adresa bydliste', app?.address || '-');
+  row('Adresa bydliště', app?.address || '-');
 
   section('STAV');
   row('Status', labelStatus(app?.status));
   if (app?.decided_at) row('Rozhodnuto', formatDateCs(app.decided_at) || '-');
   if (app?.decided_by_email) row('Rozhodl', app.decided_by_email);
   const rejection = app?.rejection_reason || app?.decision_reason;
-  if (String(app?.status || '') === 'rejected' && rejection) row('Duvod', rejection);
+  if (String(app?.status || '') === 'rejected' && rejection) row('Důvod', rejection);
 
   const embedSig = async (label: string, dataUrl: string) => {
     const img = await embedDataUrlImage(pdfDoc, dataUrl);
     if (!img) return;
     y -= 6;
-    page.drawText(safeText(label), { x: margin, y, size: 10, font: fontBold, color: gray });
+    drawSafe(label, { x: margin, y, size: 10, font: fontBold, color: gray });
     y -= 12;
     const targetW = 260;
     const h = (img.height / img.width) * targetW;
@@ -192,7 +202,7 @@ export async function buildApplicationPdfBytes(app: any) {
   const applicantSig = String(app?.applicant_signature || app?.signature_data_url || '').trim();
   if (applicantSig) {
     try {
-      await embedSig('Podpis zadatele', applicantSig);
+      await embedSig('Podpis žadatele', applicantSig);
     } catch {}
   }
 
@@ -204,7 +214,7 @@ export async function buildApplicationPdfBytes(app: any) {
   }
 
   y = Math.max(y, 70);
-  page.drawText(safeText('V Praze, v sidle spolku Pupen, z. s.'), { x: margin, y: 60, size: 9, font, color: gray });
+  drawSafe('V Praze, v sídle spolku Studentský spolek Pupen, z.s.', { x: margin, y: 60, size: 9, font, color: gray });
 
   const pdfBytes = await pdfDoc.save();
   return Buffer.from(pdfBytes);

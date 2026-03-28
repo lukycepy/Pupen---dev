@@ -6,6 +6,7 @@ import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
 import { sendMailWithQueueFallback } from '@/lib/email/queue';
 import { addUtmToEmailHtml } from '@/lib/email/utm';
 import { sanitizeEmailHtml } from '@/lib/email/sanitize';
+import { stripHtmlToText } from '@/lib/richtext-shared';
 
 export async function POST(req: Request) {
   try {
@@ -25,9 +26,11 @@ export async function POST(req: Request) {
     const from = await getSenderFromSettings();
     
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://pupen.org';
-    const unsubPageUrl = `${baseUrl}/unsubscribe?email=${encodeURIComponent(testEmail)}`;
-    const unsubApiUrl = `${baseUrl}/api/newsletter/unsubscribe?email=${encodeURIComponent(testEmail)}`;
-    const emailVars = { subject, html, unsubLink: unsubPageUrl };
+    const preheader = stripHtmlToText(html).slice(0, 140);
+    const unsubPageUrl = `${baseUrl}/unsubscribe?email=${encodeURIComponent(testEmail)}&n=preview`;
+    const unsubApiUrl = `${baseUrl}/api/newsletter/unsubscribe?email=${encodeURIComponent(testEmail)}&reason=one_click&source=list_unsubscribe&n=preview`;
+    const preferencesLink = `${baseUrl}/unsubscribe?email=${encodeURIComponent(testEmail)}`;
+    const emailVars = { subject, preheader, html, unsubLink: unsubPageUrl, preferencesLink };
     
     const { html: wrappedHtml, subject: wrappedSubject } = await renderEmailTemplateWithDbOverride('newsletter', emailVars);
     const trackedHtml = addUtmToEmailHtml(wrappedHtml, { baseUrl, campaign: 'preview', source: 'newsletter', medium: 'email', email: testEmail });

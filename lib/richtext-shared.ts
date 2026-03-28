@@ -12,7 +12,8 @@ function decodeHtmlEntitiesOnce(input: string) {
   const s = String(input ?? '');
   return s
     .replace(/&(#x[0-9a-fA-F]+|#\d+|[a-zA-Z]+);/g, (_m, code) => {
-      const c = String(code);
+      const cRaw = String(code);
+      const c = cRaw[0] === '#' ? cRaw : cRaw.toLowerCase();
       if (c[0] === '#') {
         const isHex = c[1]?.toLowerCase() === 'x';
         const num = Number.parseInt(isHex ? c.slice(2) : c.slice(1), isHex ? 16 : 10);
@@ -61,4 +62,3 @@ export function stripHtmlToText(s: string) {
     .replace(/\s+/g, ' ')
     .trim();
 }
-

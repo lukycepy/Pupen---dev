@@ -10,6 +10,7 @@ import {
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import InlinePulse from '@/app/components/InlinePulse';
+import Portal from '@/app/components/ui/Portal';
 
 interface NavbarProps {
   lang: string;
@@ -594,13 +595,14 @@ export default function Navbar({ lang, dict }: NavbarProps) {
 
       {/* MOBILNÍ MENU */}
       {isMenuOpen && (
-        <div 
-          className="lg:hidden fixed inset-x-0 bottom-0 top-16 h-[calc(100dvh-4rem)] bg-white z-[9998] animate-in slide-in-from-top-10 duration-500 overflow-y-auto overscroll-contain"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Mobilní navigace"
-        >
-          <div className="flex flex-col p-5 sm:p-8 space-y-5 text-stone-800 pb-[max(2rem,env(safe-area-inset-bottom))]">
+        <Portal>
+          <div 
+            className="lg:hidden fixed inset-x-0 bottom-0 top-16 h-[calc(100dvh-4rem)] bg-white z-[9998] animate-in slide-in-from-top-10 duration-500 overflow-y-auto overscroll-contain"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Mobilní navigace"
+          >
+            <div className="flex flex-col p-5 sm:p-8 space-y-5 text-stone-800 pb-[max(2rem,env(safe-area-inset-bottom))]">
             {/* MOBILNÍ SEARCH */}
             <div className="relative mb-4">
               <Search className="absolute left-4 top-3.5 text-stone-500" size={20} />
@@ -791,8 +793,9 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                 {lang === 'cs' ? 'Přidej se k nám' : 'Join us'}
               </Link>
             )}
+            </div>
           </div>
-        </div>
+        </Portal>
       )}
     </nav>
   );

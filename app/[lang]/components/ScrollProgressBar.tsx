@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import Portal from '@/app/components/ui/Portal';
 
 function getProgress() {
   const doc = document.documentElement;
@@ -38,13 +39,14 @@ export default function ScrollProgressBar() {
   }, []);
 
   return (
-    <div className="fixed left-0 top-0 w-full h-[3px] z-[9999] bg-transparent">
-      <div
-        className="h-full bg-green-600 origin-left"
-        style={{ transform: `scaleX(${p})` }}
-        aria-hidden="true"
-      />
-    </div>
+    <Portal>
+      <div className="fixed left-0 top-0 w-full h-[3px] z-[9999] bg-transparent">
+        <div
+          className="h-full bg-green-600 origin-left"
+          style={{ transform: `scaleX(${p})` }}
+          aria-hidden="true"
+        />
+      </div>
+    </Portal>
   );
 }
-

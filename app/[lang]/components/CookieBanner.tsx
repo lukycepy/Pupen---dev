@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { X, Cookie, ShieldCheck, ArrowRight } from 'lucide-react';
 import { usePathname } from 'next/navigation';
+import Portal from '@/app/components/ui/Portal';
 
 export default function CookieBanner({ lang, dict }: { lang: string, dict: any }) {
   const pathname = usePathname();
@@ -34,8 +35,9 @@ export default function CookieBanner({ lang, dict }: { lang: string, dict: any }
   if (hide || !isVisible) return null;
 
   return (
-    <div className="fixed bottom-6 left-6 right-6 md:left-auto md:right-8 md:w-[420px] z-[9999] animate-in slide-in-from-bottom-10 duration-700">
-      <div className="bg-white border border-stone-100 shadow-2xl rounded-[2.5rem] p-8 relative overflow-hidden">
+    <Portal>
+      <div className="fixed bottom-6 left-6 right-6 md:left-auto md:right-8 md:w-[420px] z-[9999] animate-in slide-in-from-bottom-10 duration-700">
+        <div className="bg-white border border-stone-100 shadow-2xl rounded-[2.5rem] p-8 relative overflow-hidden">
         {/* Pozadí efekt */}
         <div className="absolute -top-10 -right-10 w-32 h-32 bg-green-50 rounded-full blur-3xl opacity-50" />
         
@@ -91,7 +93,8 @@ export default function CookieBanner({ lang, dict }: { lang: string, dict: any }
         >
           <X size={20} />
         </button>
+        </div>
       </div>
-    </div>
+    </Portal>
   );
 }

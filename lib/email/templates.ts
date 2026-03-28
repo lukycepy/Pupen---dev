@@ -81,7 +81,7 @@ export function listEmailTemplates() {
     {
       key: 'newsletter' as const,
       label: 'Newsletter',
-      variables: ['subject', 'html'],
+      variables: ['subject', 'preheader', 'html', 'unsubLink', 'preferencesLink', 'variant'],
     },
   ];
 }
@@ -131,19 +131,77 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
   if (key === 'newsletter') {
     const subjectLine = String(vars?.subject || '').trim();
     const content = String(vars?.html || '');
+    const preheader = String(vars?.preheader || '').trim();
+    const unsubLink = String(vars?.unsubLink || '').trim();
+    const preferencesLink = String(vars?.preferencesLink || '').trim();
     const subject = subjectLine ? `Pupen — ${subjectLine}` : 'Pupen — Newsletter';
-    const html = `
-      <div style="font-family: sans-serif; padding: 20px; color: #1c1917; max-width: 700px; margin: auto; border: 1px solid #e7e5e4; border-radius: 20px;">
-        <div style="text-align: center; margin-bottom: 16px;">
-          <div style="display:inline-block; padding: 6px 10px; border-radius: 999px; background: #dcfce7; color:#166534; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; font-size: 10px;">Pupen</div>
-        </div>
-        ${subjectLine ? `<h2 style="text-align:center; margin: 0 0 18px;">${escapeHtml(subjectLine)}</h2>` : ''}
-        <div>${content}</div>
-        <div style="margin-top: 24px; border-top: 1px solid #e7e5e4; padding-top: 14px; font-size: 12px; color: #78716c; text-align: center;">
-          <div>Studentský spolek Pupen, z.s.</div>
-        </div>
-      </div>
-    `;
+    const html = `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="x-apple-disable-message-reformatting" />
+    <title>${escapeHtml(subject)}</title>
+  </head>
+  <body style="margin:0; padding:0; background:#f5f5f4;">
+    <div style="display:none; max-height:0; overflow:hidden; opacity:0; color:transparent; mso-hide:all;">
+      ${escapeHtml(preheader)}
+    </div>
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f5f5f4;">
+      <tr>
+        <td align="center" style="padding:24px 12px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="640" style="width:640px; max-width:640px;">
+            <tr>
+              <td style="padding:0 0 14px 0;">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                  <tr>
+                    <td align="left" style="font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;">
+                      <div style="display:inline-block; padding:8px 12px; border-radius:999px; background:#dcfce7; color:#166534; font-weight:900; letter-spacing:0.18em; text-transform:uppercase; font-size:11px;">
+                        Pupen
+                      </div>
+                    </td>
+                    <td align="right" style="font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; font-size:12px; color:#78716c;">
+                      <a href="https://pupen.org" style="color:#16a34a; text-decoration:none; font-weight:800;">pupen.org</a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="background:#ffffff; border:1px solid #e7e5e4; border-radius:24px; overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,0.06);">
+                <div style="height:8px; background:linear-gradient(90deg, #16a34a, #22c55e);"></div>
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                  <tr>
+                    <td style="padding:28px 28px 10px 28px; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color:#1c1917;">
+                      ${subjectLine ? `<h1 style="margin:0; font-size:28px; line-height:1.15; font-weight:900; letter-spacing:-0.02em;">${escapeHtml(subjectLine)}</h1>` : ''}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 28px 26px 28px; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color:#292524; font-size:16px; line-height:1.6;">
+                      ${content}
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:16px 6px 0 6px; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color:#78716c; font-size:12px; line-height:1.5; text-align:center;">
+                <div style="margin-top:10px;">Studentský spolek Pupen, z.s.</div>
+                <div style="margin-top:8px;">
+                  ${preferencesLink ? `<a href="${escapeHtml(preferencesLink)}" style="color:#16a34a; font-weight:800; text-decoration:none;">Upravit odběr</a>` : ''}
+                  ${preferencesLink && unsubLink ? `<span style="display:inline-block; width:12px;"></span>` : ''}
+                  ${unsubLink ? `<a href="${escapeHtml(unsubLink)}" style="color:#78716c; font-weight:800; text-decoration:underline;">Zrušit odběr</a>` : ''}
+                </div>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
     return { subject, html };
   }
 

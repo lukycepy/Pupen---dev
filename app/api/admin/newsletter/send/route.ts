@@ -7,6 +7,7 @@ import { sendMailWithQueueFallback } from '@/lib/email/queue';
 import { addUtmToEmailHtml } from '@/lib/email/utm';
 import { sanitizeEmailHtml } from '@/lib/email/sanitize';
 import crypto from 'crypto';
+import { stripHtmlToText } from '@/lib/richtext-shared';
 
 function normalizeCategories(input: any): string[] {
   const arr = Array.isArray(input) ? input : [];
@@ -137,12 +138,16 @@ export async function POST(req: Request) {
             : '';
         const chosenSubject = abEnabled ? (variant === 'a' ? subjectA : subjectB) : subject;
 
-        const unsubPageUrl = `${baseUrl}/unsubscribe?email=${encodeURIComponent(to)}`;
-        const unsubApiUrl = `${baseUrl}/api/newsletter/unsubscribe?email=${encodeURIComponent(to)}`;
+        const preheader = stripHtmlToText(html).slice(0, 140);
+        const unsubPageUrl = `${baseUrl}/unsubscribe?email=${encodeURIComponent(to)}&n=${encodeURIComponent(campaignId)}${variant ? `&v=${encodeURIComponent(variant)}` : ''}`;
+        const unsubApiUrl = `${baseUrl}/api/newsletter/unsubscribe?email=${encodeURIComponent(to)}&reason=one_click&source=list_unsubscribe&n=${encodeURIComponent(campaignId)}${variant ? `&v=${encodeURIComponent(variant)}` : ''}`;
+        const preferencesLink = `${baseUrl}/unsubscribe?email=${encodeURIComponent(to)}`;
         const emailVars = { 
           subject: chosenSubject, 
+          preheader,
           html, 
           unsubLink: unsubPageUrl,
+          preferencesLink,
           variant,
         };
         

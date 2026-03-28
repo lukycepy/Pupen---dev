@@ -183,7 +183,12 @@ export default function MaintenancePage() {
   };
 
   const decodedBody = decodeHtmlEntities(body);
-  const bodyHtml = isProbablyHtml(decodedBody) ? sanitizeAndLinkifyHtml(decodedBody) : linkifyPlain(decodedBody);
+  const buildBodyHtml = (input: string) => (isProbablyHtml(input) ? sanitizeAndLinkifyHtml(input) : linkifyPlain(input));
+  let bodyHtml = buildBodyHtml(decodedBody);
+  if (bodyHtml.includes('&lt;') && /&lt;\/?[a-z]/i.test(bodyHtml)) {
+    const decodedAgain = decodeHtmlEntities(bodyHtml);
+    bodyHtml = buildBodyHtml(decodedAgain);
+  }
 
   return (
     <>

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import Portal from './ui/Portal';
 
 export default function RouteLoadingBar() {
   const pathname = usePathname();
@@ -32,13 +33,14 @@ export default function RouteLoadingBar() {
   if (!visible) return null;
 
   return (
-    <div className="fixed left-0 top-0 w-full h-[3px] z-[10000] bg-transparent">
-      <div
-        className="h-full bg-green-600 origin-left transition-transform duration-200"
-        style={{ transform: `scaleX(${progress})` }}
-        aria-hidden="true"
-      />
-    </div>
+    <Portal>
+      <div className="fixed left-0 top-0 w-full h-[3px] z-[10000] bg-transparent">
+        <div
+          className="h-full bg-green-600 origin-left transition-transform duration-200"
+          style={{ transform: `scaleX(${progress})` }}
+          aria-hidden="true"
+        />
+      </div>
+    </Portal>
   );
 }
-

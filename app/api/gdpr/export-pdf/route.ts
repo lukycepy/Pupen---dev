@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { requireMember } from '@/lib/server-auth';
 import { getClientIp, rateLimit } from '@/lib/rate-limit';
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { PDFDocument, rgb } from 'pdf-lib';
+import { getPdfFonts } from '@/lib/pdf/fonts';
 
 export async function GET(req: Request) {
   try {
@@ -24,8 +25,7 @@ export async function GET(req: Request) {
 
     const pdfDoc = await PDFDocument.create();
     let page = pdfDoc.addPage([595.28, 841.89]); // A4
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const { font, fontBold } = await getPdfFonts(pdfDoc);
     
     let y = 800;
     const margin = 50;
@@ -39,31 +39,37 @@ export async function GET(req: Request) {
 
     const drawText = (text: string, size = 12, isBold = false) => {
       checkNewPage(size + 10);
-      const safeText = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9\s.,@:\-_/()\[\]]/g, '?');
-      page.drawText(safeText, {
-        x: margin,
-        y,
-        size,
-        font: isBold ? fontBold : font,
-        color: rgb(0, 0, 0),
-      });
+      const draw = (t: string) =>
+        page.drawText(t, {
+          x: margin,
+          y,
+          size,
+          font: isBold ? fontBold : font,
+          color: rgb(0, 0, 0),
+        });
+      try {
+        draw(text);
+      } catch {
+        draw(String(text || ''));
+      }
       y -= (size + 10);
     };
 
-    drawText('GDPR Vypis Dat (Pupen)', 20, true);
+    drawText('Studentský spolek Pupen, z.s.', 12, true);
+    drawText('GDPR výpis dat', 20, true);
     y -= 20;
 
-    drawText('ZAKLADNI UDAJE PROFILU', 14, true);
-    drawText(`ID uzivatele: ${user.id}`);
+    drawText('ZÁKLADNÍ ÚDAJE PROFILU', 14, true);
+    drawText(`ID uživatele: ${user.id}`);
     drawText(`Email: ${user.email}`);
-    drawText(`Jmeno: ${profile.first_name || '-'} ${profile.last_name || '-'}`);
+    drawText(`Jméno: ${profile.first_name || '-'} ${profile.last_name || '-'}`);
     drawText(`Telefon: ${profile.phone || '-'}`);
-    drawText(`Vytvoreno: ${new Date(profile.created_at || user.created_at || Date.now()).toLocaleString('cs-CZ')}`);
+    drawText(`Vytvořeno: ${new Date(profile.created_at || user.created_at || Date.now()).toLocaleString('cs-CZ')}`);
     y -= 10;
 
-    drawText('ROLE A ODLISENI', 14, true);
+    drawText('ROLE A ODLIŠENÍ', 14, true);
     drawText(`Je admin: ${profile.is_admin ? 'Ano' : 'Ne'}`);
-    drawText(`Clenske cislo: ${profile.member_number || '-'}`);
+    drawText(`Členské číslo: ${profile.member_number || '-'}`);
     y -= 10;
 
     await supabase.from('admin_logs').insert([{
