@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Briefcase, Building2, ExternalLink, Sparkles } from 'lucide-react';
 import { getDictionary } from '@/lib/get-dictionary';
 import { SkeletonList } from '../components/Skeleton';
+import { richTextToClientHtml } from '@/lib/richtext-client';
 
 import Link from 'next/link';
 
@@ -68,9 +69,10 @@ export default function KarieraPage() {
                       </span>
                     </div>
                     <h2 className="text-3xl md:text-4xl font-black text-stone-900 mb-6 tracking-tight group-hover:text-green-600 transition">{lang === 'en' && job.title_en ? job.title_en : job.title}</h2>
-                    <p className="text-stone-600 text-lg font-medium leading-relaxed mb-8">
-                      {lang === 'en' && job.description_en ? job.description_en : job.description}
-                    </p>
+                    <div
+                      className="text-stone-600 text-lg font-medium leading-relaxed mb-8 prose prose-stone max-w-none prose-a:text-green-700 prose-a:font-black prose-a:underline"
+                      dangerouslySetInnerHTML={{ __html: richTextToClientHtml(String(lang === 'en' && job.description_en ? job.description_en : job.description || '')) }}
+                    />
                     <a 
                       href={job.link} 
                       target="_blank" 

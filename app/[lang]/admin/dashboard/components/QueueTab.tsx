@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useToast } from '@/app/context/ToastContext';
 import AdminModuleHeader from './ui/AdminModuleHeader';
 import AdminEmptyState from './ui/AdminEmptyState';
-import { AlertTriangle, Clock, Inbox, RefreshCw, Save, Search, X } from 'lucide-react';
+import { AlertTriangle, Clock, Inbox, RefreshCw, Save, Search, Trash2, Zap, X } from 'lucide-react';
 import Portal from '@/app/components/ui/Portal';
 
 type View = 'queue' | 'dead';
@@ -154,6 +154,53 @@ export default function QueueTab({ dict }: { dict: any }) {
     onError: (e: any) => showToast(e?.message || 'Chyba', 'error'),
   });
 
+  const processMutation = useMutation({
+    mutationFn: async () => {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
+      const res = await fetch('/api/admin/queue/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ limit: 50, resetStuck: true }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Chyba');
+      return json;
+    },
+    onSuccess: (json: any) => {
+      qc.invalidateQueries({ queryKey: ['admin_queue'] });
+      qc.invalidateQueries({ queryKey: ['admin_queue_summary'] });
+      showToast(
+        `Zpracováno: ${Number(json?.processed || 0)} • OK: ${Number(json?.okCount || 0)} • Retry: ${Number(json?.retried || 0)} • Dead: ${Number(json?.dead || 0)}`,
+        'success',
+      );
+    },
+    onError: (e: any) => showToast(e?.message || 'Chyba', 'error'),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (payload: { id: string; view: View }) => {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
+      const endpoint =
+        payload.view === 'dead'
+          ? `/api/admin/queue/dead/${encodeURIComponent(payload.id)}`
+          : `/api/admin/queue/${encodeURIComponent(payload.id)}`;
+      const res = await fetch(endpoint, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Chyba');
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin_queue'] });
+      qc.invalidateQueries({ queryKey: ['admin_queue_summary'] });
+      setSelected(null);
+      showToast('Smazáno', 'success');
+    },
+    onError: (e: any) => showToast(e?.message || 'Chyba', 'error'),
+  });
+
   const title = view === 'queue' ? 'E-mail fronta' : 'Dead letters';
   const desc =
     view === 'queue'
@@ -238,6 +285,16 @@ export default function QueueTab({ dict }: { dict: any }) {
                 <Clock size={14} /> {dueOnly ? 'Due: zapnuto' : 'Due: vypnuto'}
               </button>
             )}
+            {view === 'queue' ? (
+              <button
+                type="button"
+                onClick={() => processMutation.mutate()}
+                disabled={processMutation.isPending}
+                className="inline-flex items-center gap-2 px-4 py-3 rounded-2xl border border-green-200 bg-green-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-green-700 transition disabled:opacity-50 shadow-sm"
+              >
+                <Zap size={14} /> Zpracovat frontu
+              </button>
+            ) : null}
           </div>
         }
       />
@@ -469,6 +526,14 @@ export default function QueueTab({ dict }: { dict: any }) {
                         className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-green-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-green-700 transition disabled:opacity-50"
                       >
                         <RefreshCw size={14} /> Retry
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteMutation.mutate({ id: String(selected.id), view })}
+                        disabled={deleteMutation.isPending}
+                        className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-white border border-red-200 text-red-700 text-[10px] font-black uppercase tracking-widest hover:bg-red-50 transition disabled:opacity-50"
+                      >
+                        <Trash2 size={14} /> Smazat
                       </button>
                       {view === 'queue' && String(detail?.status || selected.status || '') === 'processing' && (
                         <button

@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { ArrowLeft, Calendar, Clock, Newspaper } from 'lucide-react';
 import { getDictionary } from '@/lib/get-dictionary';
 import { richTextToSafeHtml } from '@/lib/richtext-server';
+import { decodeHtmlEntitiesDeep, stripHtmlToText } from '@/lib/richtext-shared';
 import { Metadata } from 'next';
 import ScrollProgressBar from '../../components/ScrollProgressBar';
 import SocialShareInline from '@/app/components/SocialShareInline';
@@ -141,7 +142,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!post) return {};
 
   const title = lang === 'en' && post.title_en ? post.title_en : post.title;
-  const description = lang === 'en' && post.excerpt_en ? post.excerpt_en : post.excerpt;
+  const descriptionRaw = String((lang === 'en' && post.excerpt_en ? post.excerpt_en : post.excerpt) || '');
+  const description = stripHtmlToText(decodeHtmlEntitiesDeep(descriptionRaw, 3)).slice(0, 180);
   const img = typeof post.image_url === 'string' && (post.image_url.startsWith('http') || post.image_url.startsWith('/')) ? post.image_url : '';
 
   return {

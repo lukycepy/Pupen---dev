@@ -8,6 +8,8 @@ import { useQuery } from '@tanstack/react-query';
 import { BookOpen, ChevronRight, Search } from 'lucide-react';
 import { getDictionary } from '@/lib/get-dictionary';
 import { SkeletonGrid } from '../components/Skeleton';
+import { richTextToClientHtml } from '@/lib/richtext-client';
+import { stripHtmlToText } from '@/lib/richtext-shared';
 
 export default function GuidePage() {
   const params = useParams();
@@ -107,7 +109,11 @@ export default function GuidePage() {
                   </div>
                   <h3 className="text-2xl font-black text-stone-900 mb-4 group-hover:text-green-600 transition leading-tight">{article.title}</h3>
                   <p className="text-stone-500 font-medium mb-8 line-clamp-3 leading-relaxed">
-                    {article.excerpt || article.content?.substring(0, 150) + '...'}
+                    {(() => {
+                      const base = article.excerpt || article.content || '';
+                      const text = stripHtmlToText(richTextToClientHtml(String(base)));
+                      return text ? (text.length > 160 ? `${text.slice(0, 160)}…` : text) : '';
+                    })()}
                   </p>
                   <div className="mt-auto flex items-center gap-2 text-green-600 font-black uppercase tracking-widest text-xs">
                     {dict.readMore} <ChevronRight size={16} className="group-hover:translate-x-1 transition" />

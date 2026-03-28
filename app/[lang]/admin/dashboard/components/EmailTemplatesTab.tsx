@@ -363,10 +363,21 @@ export default function EmailTemplatesTab() {
                   <div>
                     SMTP: {String(sendDiag?.debug?.host || '—')}:{String(sendDiag?.debug?.port || '—')}
                     {sendDiag?.tcp?.ok === true ? ` • TCP OK (${Number(sendDiag?.tcp?.ms || 0)} ms)` : sendDiag?.tcp ? ` • TCP FAIL` : ''}
+                    {sendDiag?.tls?.ok === true ? ` • TLS OK (${Number(sendDiag?.tls?.ms || 0)} ms)` : sendDiag?.tls ? ` • TLS FAIL` : ''}
                   </div>
                   {sendDiag?.tcp?.ok === false ? (
                     <div className="mt-1 text-[10px] font-black uppercase tracking-widest text-amber-600">
                       {String(sendDiag?.tcp?.error?.message || 'Connection failed')}
+                    </div>
+                  ) : null}
+                  {sendDiag?.tls?.ok === false ? (
+                    <div className="mt-1 text-[10px] font-black uppercase tracking-widest text-amber-600">
+                      {String(sendDiag?.tls?.error?.message || 'TLS failed')}
+                    </div>
+                  ) : null}
+                  {sendDiag?.verifyError?.message ? (
+                    <div className="mt-1 text-[10px] font-black uppercase tracking-widest text-red-600">
+                      {String(sendDiag.verifyError.message)}
                     </div>
                   ) : null}
                 </div>

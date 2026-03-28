@@ -4,6 +4,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Search, Calendar, FileText, HelpCircle, BookOpen, Tag, Archive } from 'lucide-react';
 import InlinePulse from '@/app/components/InlinePulse';
+import { richTextToClientHtml } from '@/lib/richtext-client';
+import { stripHtmlToText } from '@/lib/richtext-shared';
 
 type Results = {
   events: any[];
@@ -160,7 +162,11 @@ export default function SearchClient({ lang, initialQ }: { lang: string; initial
                         </div>
                         <div className="min-w-0">
                           <div className="text-sm font-bold text-stone-700 truncate">{po.title}</div>
-                          {po.excerpt ? <div className="text-sm text-stone-500 font-medium line-clamp-1 mt-1">{po.excerpt}</div> : null}
+                          {po.excerpt ? (
+                            <div className="text-sm text-stone-500 font-medium line-clamp-1 mt-1">
+                              {stripHtmlToText(richTextToClientHtml(String(po.excerpt || '')))}
+                            </div>
+                          ) : null}
                         </div>
                       </Link>
                     ))}

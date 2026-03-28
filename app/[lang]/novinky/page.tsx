@@ -8,6 +8,8 @@ import { Calendar, ArrowRight, Tag, Newspaper, Search, Filter, ChevronLeft, Chev
 import { supabase } from '@/lib/supabase';
 import { getDictionary } from '@/lib/get-dictionary';
 import Skeleton from '../components/Skeleton';
+import { richTextToClientHtml } from '@/lib/richtext-client';
+import { stripHtmlToText } from '@/lib/richtext-shared';
 
 export default function NovinkyPage() {
   const params = useParams();
@@ -229,7 +231,9 @@ export default function NovinkyPage() {
                     <div className="flex items-center gap-3 text-[9px] font-black uppercase tracking-widest text-stone-400 mb-4">
                       <span>{new Date(post.published_at || post.created_at).toLocaleDateString(lang === 'cs' ? 'cs-CZ' : 'en-US')}</span>
                       <span className="w-1.5 h-1.5 bg-stone-200 rounded-full" />
-                      <span>{Math.ceil((post.content?.length || 0) / 1000)} {dict?.readingTime || 'min čtení'}</span>
+                      <span>
+                        {Math.ceil(stripHtmlToText(richTextToClientHtml(String(post.content || ''))).length / 1000)} {dict?.readingTime || 'min čtení'}
+                      </span>
                     </div>
                     
                     <h3 className="text-xl font-black text-stone-900 leading-tight mb-4 group-hover:text-green-600 transition-colors line-clamp-2">
@@ -237,7 +241,7 @@ export default function NovinkyPage() {
                     </h3>
                     
                     <p className="text-stone-500 text-xs mb-8 line-clamp-3 leading-relaxed font-medium">
-                      {lang === 'en' && post.excerpt_en ? post.excerpt_en : post.excerpt}
+                      {stripHtmlToText(richTextToClientHtml(String(lang === 'en' && post.excerpt_en ? post.excerpt_en : post.excerpt || '')))}
                     </p>
 
                     <div className="mt-auto flex items-center justify-between">

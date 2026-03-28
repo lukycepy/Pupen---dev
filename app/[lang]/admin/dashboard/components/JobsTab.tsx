@@ -8,6 +8,8 @@ import { useToast } from '../../../../context/ToastContext';
 import dynamic from 'next/dynamic';
 import ConfirmModal from '@/app/components/ConfirmModal';
 import { SkeletonTabContent } from '../../../components/Skeleton';
+import { richTextToClientHtml } from '@/lib/richtext-client';
+import { stripHtmlToText } from '@/lib/richtext-shared';
 
 const Editor = dynamic(() => import('../../../components/Editor'), { 
   ssr: false,
@@ -179,7 +181,7 @@ export default function JobsTab({ dict }: { dict: any }) {
                     <span className="text-[10px] font-black uppercase tracking-widest text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md">Expirace: {new Date(job.expires_at).toLocaleDateString()}</span>
                   )}
                 </div>
-                <p className="mt-2 text-stone-500 text-sm line-clamp-1">{job.description}</p>
+                <p className="mt-2 text-stone-500 text-sm line-clamp-1">{stripHtmlToText(richTextToClientHtml(String(job.description || '')))}</p>
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
