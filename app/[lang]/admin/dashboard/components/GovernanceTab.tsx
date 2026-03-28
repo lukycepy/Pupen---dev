@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/app/context/ToastContext';
 import InlinePulse from '@/app/components/InlinePulse';
 import { FileText, Plus, Save, Trash2, Edit3, CheckCircle, X, ShieldCheck, ShieldX } from 'lucide-react';
+import { richTextToClientHtml } from '@/lib/richtext-client';
 
 const Editor = dynamic(() => import('../../../components/Editor'), {
   ssr: false,
@@ -417,7 +418,7 @@ export default function GovernanceTab({ dict }: { dict: any }) {
                         {d.meeting_title ? <span className="truncate">Schůze: {d.meeting_title}</span> : null}
                       </div>
                       <div className="text-lg font-black text-stone-900 truncate">{d.title}</div>
-                      <div className="mt-3 prose prose-stone max-w-none text-stone-700" dangerouslySetInnerHTML={{ __html: d.summary_html }} />
+                      <div className="mt-3 prose prose-stone max-w-none text-stone-700" dangerouslySetInnerHTML={{ __html: richTextToClientHtml(String(d.summary_html || '')) }} />
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <button

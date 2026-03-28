@@ -8,6 +8,7 @@ import dynamic from 'next/dynamic';
 import { useToast } from '../../../../context/ToastContext';
 import ConfirmModal from '@/app/components/ConfirmModal';
 import { SkeletonTabContent } from '../../../components/Skeleton';
+import { richTextToClientHtml } from '@/lib/richtext-client';
 
 const Editor = dynamic(() => import('../../../components/Editor'), { 
   ssr: false,
@@ -261,7 +262,7 @@ export default function BannersTab({ dict, currentUser, readOnly = false }: { di
                     </div>
                     
                     <div className="flex-grow min-w-0">
-                      <div className="prose prose-sm font-bold text-stone-700 line-clamp-1 mb-1" dangerouslySetInnerHTML={{ __html: b.text }} />
+                      <div className="prose prose-sm font-bold text-stone-700 line-clamp-1 mb-1" dangerouslySetInnerHTML={{ __html: richTextToClientHtml(String(b.text || '')) }} />
                       <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-stone-400">
                         <span className="flex items-center gap-1.5"><Save size={10} /> {new Date(b.created_at).toLocaleDateString()}</span>
                         {b.link_url && <span className="flex items-center gap-1.5 text-blue-500"><Plus size={10} /> S odkazem</span>}

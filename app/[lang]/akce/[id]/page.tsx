@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { getDictionary } from '@/lib/get-dictionary';
 import { getPublicBaseUrl } from '@/lib/public-base-url';
 import sanitizeHtml from 'sanitize-html';
+import { decodeHtmlEntitiesDeep } from '@/lib/richtext-shared';
 import ScrollProgressBar from '../../components/ScrollProgressBar';
 import SocialShareInline from '@/app/components/SocialShareInline';
 import { ArrowLeft, Calendar, Clock, MapPin, Navigation, Ticket } from 'lucide-react';
@@ -119,8 +120,9 @@ export default async function EventDetailPage({ params }: { params: Promise<{ la
     lang === 'en'
       ? event.description_html_en || event.description_html || ''
       : event.description_html || '';
-  const descriptionHtml = descriptionHtmlRaw
-    ? sanitizeHtml(String(descriptionHtmlRaw), {
+  const decodedDescriptionHtmlRaw = decodeHtmlEntitiesDeep(String(descriptionHtmlRaw || ''), 3);
+  const descriptionHtml = decodedDescriptionHtmlRaw
+    ? sanitizeHtml(decodedDescriptionHtmlRaw, {
         allowedTags: ['a', 'b', 'strong', 'i', 'em', 'u', 'br', 'p', 'div', 'span', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'blockquote'],
         allowedAttributes: { a: ['href', 'target', 'rel'], '*': ['class'] },
         allowedSchemes: ['http', 'https', 'mailto', 'tel'],

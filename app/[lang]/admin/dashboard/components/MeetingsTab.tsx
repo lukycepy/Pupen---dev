@@ -7,6 +7,7 @@ import { Users, Plus, Trash2, Calendar, MapPin, Loader2, Save, X, Edit3, CheckCi
 import { useToast } from '../../../../context/ToastContext';
 import dynamic from 'next/dynamic';
 import ConfirmModal from '@/app/components/ConfirmModal';
+import { richTextToClientHtml } from '@/lib/richtext-client';
 import { SkeletonTabContent } from '../../../components/Skeleton';
 import { summarizeHtmlToBullets } from '@/lib/ai/pilot';
 
@@ -413,12 +414,15 @@ export default function MeetingsTab({ dict }: { dict: any }) {
                     return (
                       <div className="text-sm font-bold text-stone-700 bg-green-50 p-6 rounded-2xl border border-green-100 mb-4">
                         <div className="text-[10px] font-black uppercase tracking-widest text-green-700 mb-3">Shrnutí</div>
-                        <div className="prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: html }} />
+                        <div className="prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: richTextToClientHtml(html) }} />
                       </div>
                     );
                   })()}
                   
-                  <div className="prose prose-stone max-w-none text-stone-600 text-sm bg-stone-50 p-6 rounded-2xl border border-stone-100" dangerouslySetInnerHTML={{ __html: meeting.minutes }} />
+                  <div
+                    className="prose prose-stone max-w-none text-stone-600 text-sm bg-stone-50 p-6 rounded-2xl border border-stone-100"
+                    dangerouslySetInnerHTML={{ __html: richTextToClientHtml(String(meeting.minutes || '')) }}
+                  />
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">

@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { X, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { richTextToClientHtml } from '@/lib/richtext-client';
 
 export default function Banner({ lang, dict }: { lang: string, dict: any }) {
   const [banner, setBanner] = useState<any>(null);
@@ -26,6 +27,7 @@ export default function Banner({ lang, dict }: { lang: string, dict: any }) {
   if (!banner || !isVisible) return null;
 
   const text = lang === 'en' ? (banner.text_en || banner.text) : banner.text;
+  const html = richTextToClientHtml(String(text || ''));
   const linkText = lang === 'en' 
     ? (banner.link_text_en || dict?.moreInfo || 'More info') 
     : (banner.link_text || dict?.moreInfo || 'Více info');
@@ -35,7 +37,7 @@ export default function Banner({ lang, dict }: { lang: string, dict: any }) {
       <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 text-xs sm:text-sm font-bold tracking-tight">
         <div 
           className="text-center font-bold banner-rich-text"
-          dangerouslySetInnerHTML={{ __html: text }}
+          dangerouslySetInnerHTML={{ __html: html }}
         />
         {banner.link_url && (
           <Link href={banner.link_url} className="bg-white text-stone-900 hover:bg-stone-100 px-4 py-1.5 rounded-full flex items-center gap-2 transition-all duration-300 text-[10px] font-black group shadow-lg shadow-black/10 shrink-0">

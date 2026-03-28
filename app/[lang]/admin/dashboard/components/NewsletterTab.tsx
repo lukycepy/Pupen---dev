@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { Mail, Users, Send, Trash2, Download, Search, FileText, Save, History, Plus, Edit2, Loader2, Copy, Paperclip, X } from 'lucide-react';
 import { useToast } from '@/app/context/ToastContext';
 import ConfirmModal from '@/app/components/ConfirmModal';
+import { richTextToClientHtml } from '@/lib/richtext-client';
 import { SkeletonTabContent } from '@/app/[lang]/components/Skeleton';
 import TiptapEditor from '@/app/[lang]/components/Editor';
 
@@ -864,7 +865,7 @@ export default function NewsletterTab({ dict }: { dict: any }) {
                 </div>
                 <div 
                   className="prose max-w-none bg-white p-8 rounded-xl border border-stone-200 shadow-sm"
-                  dangerouslySetInnerHTML={{ __html: digestData.html }}
+                  dangerouslySetInnerHTML={{ __html: richTextToClientHtml(String(digestData.html || '')) }}
                 />
               </div>
             ) : (

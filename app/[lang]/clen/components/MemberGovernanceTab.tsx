@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import InlinePulse from '@/app/components/InlinePulse';
+import { richTextToClientHtml } from '@/lib/richtext-client';
 import { useToast } from '@/app/context/ToastContext';
 import { FileText, Gavel, ScrollText } from 'lucide-react';
 
@@ -154,7 +155,7 @@ export default function MemberGovernanceTab({ lang }: { lang: string }) {
                 {openPolicyId === p.id && (
                   <div className="p-8 border-t border-stone-100 bg-stone-50/30">
                     {p.version?.content_html ? (
-                      <div className="prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: p.version.content_html }} />
+                      <div className="prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: richTextToClientHtml(String(p.version.content_html)) }} />
                     ) : (
                       <div className="text-stone-400 italic">{lang === 'en' ? 'Missing content.' : 'Chybí obsah.'}</div>
                     )}
@@ -183,7 +184,7 @@ export default function MemberGovernanceTab({ lang }: { lang: string }) {
                           {d.decided_at ? new Date(d.decided_at).toLocaleDateString(lang === 'en' ? 'en-US' : 'cs-CZ') : ''}
                         </div>
                       </div>
-                      <div className="mt-4 prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: d.summary_html }} />
+                      <div className="mt-4 prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: richTextToClientHtml(String(d.summary_html || '')) }} />
                     </div>
                   ))}
                 </div>
@@ -195,4 +196,3 @@ export default function MemberGovernanceTab({ lang }: { lang: string }) {
     </div>
   );
 }
-

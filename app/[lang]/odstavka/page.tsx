@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import InlinePulse from '@/app/components/InlinePulse';
 import CountdownWidget from '@/app/[lang]/components/CountdownWidget';
+import { decodeHtmlEntitiesDeep } from '@/lib/richtext-shared';
 
 type SiteConfig = {
   maintenance_enabled: boolean;
@@ -70,22 +71,7 @@ export default function MaintenancePage() {
 
   const isProbablyHtml = (s: string) => /<\/?[a-z][\s\S]*>/i.test(s);
 
-  const decodeHtmlEntities = (s: string) => {
-    let str = String(s || '');
-    try {
-      const ta = document.createElement('textarea');
-      for (let i = 0; i < 3; i += 1) {
-        if (!str.includes('&')) break;
-        ta.innerHTML = str;
-        const next = ta.value;
-        if (next === str) break;
-        str = next;
-      }
-      return str;
-    } catch {
-      return str;
-    }
-  };
+  const decodeHtmlEntities = (s: string) => decodeHtmlEntitiesDeep(String(s || ''), 3);
 
   const escapeHtml = (s: string) =>
     s

@@ -9,6 +9,7 @@ import { getDictionary } from '@/lib/get-dictionary';
 import InlinePulse from '@/app/components/InlinePulse';
 import PageHeader from '@/app/components/ui/PageHeader';
 import EmptyState from '@/app/components/ui/EmptyState';
+import { richTextToClientHtml } from '@/lib/richtext-client';
 
 export default function ChangelogPage() {
   const params = useParams();
@@ -70,6 +71,7 @@ export default function ChangelogPage() {
                 const title = lang === 'en' && p.title_en ? p.title_en : p.title;
                 const excerpt = lang === 'en' && p.excerpt_en ? p.excerpt_en : p.excerpt;
                 const dt = p.published_at ? new Date(p.published_at) : p.created_at ? new Date(p.created_at) : null;
+                const excerptHtml = excerpt ? richTextToClientHtml(String(excerpt)) : '';
                 return (
                   <Link
                     key={p.id}
@@ -88,8 +90,8 @@ export default function ChangelogPage() {
                         {p.category}
                       </div>
                     </div>
-                    {excerpt ? (
-                      <div className="mt-4 text-stone-600 text-sm font-medium prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: excerpt }} />
+                    {excerptHtml ? (
+                      <div className="mt-4 text-stone-600 text-sm font-medium prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: excerptHtml }} />
                     ) : null}
                   </Link>
                 );

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowLeft, Calendar, Clock, Newspaper } from 'lucide-react';
 import { getDictionary } from '@/lib/get-dictionary';
+import { richTextToSafeHtml } from '@/lib/richtext-server';
 import { Metadata } from 'next';
 import ScrollProgressBar from '../../components/ScrollProgressBar';
 import SocialShareInline from '@/app/components/SocialShareInline';
@@ -93,7 +94,7 @@ function markdownToHtml(raw: string) {
 function toHtml(raw: string) {
   if (!raw) return '';
   const looksLikeHtml = /<\/?[a-z][\s\S]*>/i.test(raw);
-  return looksLikeHtml ? raw : markdownToHtml(raw);
+  return looksLikeHtml ? richTextToSafeHtml(raw) : markdownToHtml(raw);
 }
 
 function injectHeadingIdsAndToc(html: string) {
@@ -259,7 +260,7 @@ export default async function DetailNovinky({ params }: Props) {
               {(lang === 'en' ? (post.excerpt_en || post.excerpt) : post.excerpt) && (
                 <div 
                   className="text-2xl md:text-3xl font-bold text-stone-700 leading-tight mb-12 border-l-8 border-green-500 pl-8 py-2 rich-text-excerpt"
-                  dangerouslySetInnerHTML={{ __html: lang === 'en' && post.excerpt_en ? post.excerpt_en : post.excerpt }}
+                  dangerouslySetInnerHTML={{ __html: richTextToSafeHtml(lang === 'en' && post.excerpt_en ? post.excerpt_en : post.excerpt) }}
                 />
               )}
 

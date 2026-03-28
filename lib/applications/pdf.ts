@@ -4,9 +4,12 @@ function safeText(input: any, fallback = '-') {
   const s = String(input ?? '').trim();
   if (!s) return fallback;
   return s
+    .replace(/\u2022/g, '-')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z0-9\s.,@:\\/-_()]/g, '?');
+    .replace(/[^a-zA-Z0-9\s.,@:+\\/-_()]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function formatDateCs(input: any) {
@@ -42,6 +45,39 @@ async function embedDataUrlImage(pdf: PDFDocument, dataUrl: string) {
   return pdf.embedJpg(bytes);
 }
 
+function labelMembershipType(mt: any) {
+  const v = String(mt || '').trim().toLowerCase();
+  if (v === 'external') return 'Externi';
+  if (v === 'regular') return 'Radne';
+  return v || '-';
+}
+
+function labelStatus(status: any) {
+  const v = String(status || '').trim().toLowerCase();
+  if (v === 'approved') return 'Schvaleno';
+  if (v === 'rejected') return 'Zamitnuto';
+  if (v === 'pending') return 'Ceka';
+  return v || '-';
+}
+
+function wrapLines(font: any, text: string, size: number, maxWidth: number) {
+  const words = String(text || '').split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let current = '';
+  for (const w of words) {
+    const next = current ? `${current} ${w}` : w;
+    const width = font.widthOfTextAtSize(next, size);
+    if (width <= maxWidth || !current) {
+      current = next;
+      continue;
+    }
+    lines.push(current);
+    current = w;
+  }
+  if (current) lines.push(current);
+  return lines.length ? lines : [''];
+}
+
 export async function buildApplicationPdfBytes(app: any) {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([595.28, 841.89]);
@@ -61,23 +97,23 @@ export async function buildApplicationPdfBytes(app: any) {
   if (logoBytes) {
     try {
       const logo = await pdfDoc.embedPng(logoBytes);
-      const targetW = 54;
+      const targetW = 60;
       const s = targetW / logo.width;
       const targetH = logo.height * s;
       page.drawImage(logo, { x: margin, y: y - 10, width: targetW, height: targetH });
     } catch {}
   }
 
-  page.drawText(safeText('PŘIHLÁŠKA DO SPOLKU PUPEN, Z. S.'), {
-    x: margin + 70,
+  page.drawText(safeText('PRIHLASKA DO SPOLKU PUPEN, Z. S.'), {
+    x: margin + 74,
     y,
-    size: 16,
+    size: 18,
     font: fontBold,
     color: black,
   });
-  y -= 22;
-  page.drawText(safeText('Studentský spolek Pupen, z. s. • Kamýcká 129, Suchdol, 165 00 Praha'), {
-    x: margin + 70,
+  y -= 24;
+  page.drawText(safeText('Studentsky spolek Pupen, z. s. - Kamycka 129, Suchdol, 165 00 Praha'), {
+    x: margin + 74,
     y,
     size: 9,
     font,
@@ -96,32 +132,49 @@ export async function buildApplicationPdfBytes(app: any) {
 
   const row = (label: string, value: any) => {
     page.drawText(safeText(label), { x: margin, y, size: 9, font: fontBold, color: gray });
-    page.drawText(safeText(value), { x: margin + 160, y, size: 11, font, color: black });
-    y -= 16;
+    const valueX = margin + 180;
+    const valueWidth = width - margin - valueX;
+    const valueLines = wrapLines(font, safeText(value), 11, valueWidth);
+    for (let i = 0; i < valueLines.length; i += 1) {
+      page.drawText(safeText(valueLines[i]), { x: valueX, y: y - i * 14, size: 11, font, color: black });
+    }
+    y -= Math.max(16, valueLines.length * 14);
   };
 
   const firstName = safeText(app?.first_name || '');
   const lastName = safeText(app?.last_name || '');
   const fullName = safeText(`${firstName} ${lastName}`.trim() || app?.name || '', '-');
   const submittedAt = (app as any)?.created_at || app?.submitted_on || '';
-  const membershipType = String(app?.membership_type || '').trim() || '-';
+  const membershipType = labelMembershipType(app?.decision_membership_type || app?.membership_type);
 
   section('OSOBNÍ ÚDAJE');
-  row('Jméno a příjmení', fullName);
+  row('Jmeno a prijmeni', fullName);
   row('E-mail', app?.email || '-');
   row('Telefon', app?.phone || '-');
-  row('Typ členství', membershipType);
-  row('Datum podání', formatDateCs(submittedAt) || '-');
+  row('Typ clenstvi', membershipType);
+  row('Datum podani', formatDateCs(submittedAt) || '-');
+
+  if (String(app?.membership_type || '').trim().toLowerCase() !== 'external') {
+    const universityEmail = app?.university_email || '';
+    const field = app?.field_of_study || '';
+    const year = app?.study_year || '';
+    if (String(universityEmail || field || year).trim()) {
+      section('STUDIUM');
+      if (universityEmail) row('Univerzitni e-mail', universityEmail);
+      if (field) row('Obor', field);
+      if (year) row('Rocnik', year);
+    }
+  }
 
   section('ADRESA');
-  row('Adresa bydliště', app?.address || '-');
+  row('Adresa bydliste', app?.address || '-');
 
   section('STAV');
-  row('Status', app?.status || '-');
+  row('Status', labelStatus(app?.status));
   if (app?.decided_at) row('Rozhodnuto', formatDateCs(app.decided_at) || '-');
   if (app?.decided_by_email) row('Rozhodl', app.decided_by_email);
   const rejection = app?.rejection_reason || app?.decision_reason;
-  if (String(app?.status || '') === 'rejected' && rejection) row('Důvod', rejection);
+  if (String(app?.status || '') === 'rejected' && rejection) row('Duvod', rejection);
 
   const embedSig = async (label: string, dataUrl: string) => {
     const img = await embedDataUrlImage(pdfDoc, dataUrl);
@@ -129,7 +182,7 @@ export async function buildApplicationPdfBytes(app: any) {
     y -= 6;
     page.drawText(safeText(label), { x: margin, y, size: 10, font: fontBold, color: gray });
     y -= 12;
-    const targetW = 200;
+    const targetW = 260;
     const h = (img.height / img.width) * targetW;
     page.drawRectangle({ x: margin, y: y - h - 10, width: targetW + 16, height: h + 16, borderColor: light, borderWidth: 1, color: rgb(1, 1, 1) });
     page.drawImage(img, { x: margin + 8, y: y - h - 2, width: targetW, height: h });
@@ -139,7 +192,7 @@ export async function buildApplicationPdfBytes(app: any) {
   const applicantSig = String(app?.applicant_signature || app?.signature_data_url || '').trim();
   if (applicantSig) {
     try {
-      await embedSig('Podpis žadatele', applicantSig);
+      await embedSig('Podpis zadatele', applicantSig);
     } catch {}
   }
 
@@ -151,7 +204,7 @@ export async function buildApplicationPdfBytes(app: any) {
   }
 
   y = Math.max(y, 70);
-  page.drawText(safeText('V Praze, v sídle spolku Pupen, z. s.'), { x: margin, y: 60, size: 9, font, color: gray });
+  page.drawText(safeText('V Praze, v sidle spolku Pupen, z. s.'), { x: margin, y: 60, size: 9, font, color: gray });
 
   const pdfBytes = await pdfDoc.save();
   return Buffer.from(pdfBytes);
