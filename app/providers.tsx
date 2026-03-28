@@ -1,12 +1,17 @@
 'use client';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import React, { useState, useEffect } from 'react';
 import { ToastProvider } from './context/ToastContext';
 
+import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import RouteLoadingBar from './components/RouteLoadingBar';
+
+const ReactQueryDevtools = dynamic(
+  () => import('@tanstack/react-query-devtools').then((m) => m.ReactQueryDevtools),
+  { ssr: false },
+);
 
 function ScrollToTop() {
   const pathname = usePathname();
@@ -33,22 +38,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         <RouteLoadingBar />
         <ScrollToTop />
         {children}
-        <DevToolsWrapper />
+        {process.env.NODE_ENV === 'development' ? <ReactQueryDevtools initialIsOpen={false} /> : null}
       </ToastProvider>
     </QueryClientProvider>
   );
-}
-
-function DevToolsWrapper() {
-  const [isDev, setIsDev] = useState(false);
-  
-  useEffect(() => {
-    setIsDev(
-      window.location.hostname === 'localhost' || 
-      window.location.hostname === '127.0.0.1'
-    );
-  }, []);
-
-  if (!isDev) return null;
-  return <ReactQueryDevtools initialIsOpen={false} />;
 }
