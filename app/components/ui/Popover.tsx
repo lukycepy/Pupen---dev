@@ -100,7 +100,19 @@ export default function Popover({
 
   React.useEffect(() => {
     if (!open) return;
-    const onPointerDown = (e: MouseEvent | TouchEvent) => {
+    let shouldCloseOnClick = false;
+    const onPointerDownCapture = (e: PointerEvent) => {
+      const t = e.target as Node | null;
+      const panel = panelRef.current;
+      const anchor = anchorRef.current;
+      if (!t || !panel) return;
+      if (panel.contains(t)) return;
+      if (anchor && anchor.contains(t)) return;
+      shouldCloseOnClick = true;
+    };
+    const onDocumentClick = (e: MouseEvent) => {
+      if (!shouldCloseOnClick) return;
+      shouldCloseOnClick = false;
       const t = e.target as Node | null;
       const panel = panelRef.current;
       const anchor = anchorRef.current;
@@ -109,11 +121,12 @@ export default function Popover({
       if (anchor && anchor.contains(t)) return;
       onClose();
     };
-    document.addEventListener('mousedown', onPointerDown, true);
-    document.addEventListener('touchstart', onPointerDown, true);
+
+    document.addEventListener('pointerdown', onPointerDownCapture, true);
+    document.addEventListener('click', onDocumentClick, false);
     return () => {
-      document.removeEventListener('mousedown', onPointerDown, true);
-      document.removeEventListener('touchstart', onPointerDown, true);
+      document.removeEventListener('pointerdown', onPointerDownCapture, true);
+      document.removeEventListener('click', onDocumentClick, false);
     };
   }, [open, onClose, anchorRef]);
 
@@ -140,4 +153,3 @@ export default function Popover({
     </Portal>
   );
 }
-

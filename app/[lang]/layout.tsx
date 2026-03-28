@@ -10,7 +10,7 @@ import Footer from './components/Footer'
 import CookieBanner from './components/CookieBanner'
 import Banner from './components/Banner'
 import FAQWidget from './components/FAQWidget'
-import ErrorReporter from '../components/ErrorReporter'
+import { ErrorReporter } from '@/components/ErrorReporter';
 import { getPublicBaseUrl } from '@/lib/public-base-url';
 
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {

@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { getDictionary } from '@/lib/get-dictionary';
-import { supabase } from '@/lib/supabase';
 import { useToast } from '../../context/ToastContext';
 import SignaturePad from '../components/SignaturePad';
 import { UserPlus, CheckCircle, ArrowLeft } from 'lucide-react';
@@ -74,31 +73,34 @@ export default function PrihlaskaPage() {
       }
 
       const full_name = `${formData.first_name} ${formData.last_name}`.trim();
-      const payload: any = {
-        full_name,
-        name: full_name,
-        first_name: formData.first_name,
-        last_name: formData.last_name,
-        email: formData.email,
-        phone: formData.phone,
-        address: validatedAddress || null,
-        address_meta: validatedMeta || {},
-        address_validated_at: validatedAddress ? new Date().toISOString() : null,
-        membership_type: formData.membership_type,
-        university_email: formData.membership_type === 'regular' ? formData.university_email : null,
-        field_of_study: formData.membership_type === 'regular' ? formData.field_of_study : null,
-        study_year: formData.membership_type === 'regular' ? formData.study_year : null,
-        signed_on: formData.signed_on || null,
-        gdpr_consent: true,
-        signature_data_url: formData.applicant_signature,
-        applicant_signature: formData.applicant_signature,
-        faculty: formData.membership_type === 'regular' ? `${formData.field_of_study}, ${formData.study_year}` : null,
-        status: 'pending',
-      };
-      const ins = await supabase.from('applications').insert([payload]).select('id').single();
-      if (ins.error) throw ins.error;
-      
-      const applicationId = String(ins.data?.id || '');
+      const submitRes = await fetch('/api/applications/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          membership_type: formData.membership_type,
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          email: formData.email,
+          phone: formData.phone,
+          address: validatedAddress || null,
+          address_meta: validatedMeta || {},
+          university_email: formData.membership_type === 'regular' ? formData.university_email : null,
+          field_of_study: formData.membership_type === 'regular' ? formData.field_of_study : null,
+          study_year: formData.membership_type === 'regular' ? formData.study_year : null,
+          signed_on: formData.signed_on || null,
+          gdpr_consent: true,
+          applicant_signature: formData.applicant_signature,
+          lang,
+          hp: '',
+        }),
+      });
+      const submitJson = await submitRes.json().catch(() => ({}));
+      if (!submitRes.ok || !submitJson?.ok) {
+        throw new Error(String(submitJson?.error || 'Odeslání přihlášky selhalo.'));
+      }
+
+      const applicationId = String(submitJson?.applicationId || '').trim();
+      if (!applicationId) throw new Error('Odeslání přihlášky selhalo.');
 
       // Notify about new application
       try {
