@@ -16,6 +16,8 @@ export default function Popover({
   matchWidth = false,
   zIndex = 10001,
   panelClassName = 'bg-white border border-stone-100 shadow-2xl rounded-2xl',
+  onPanelMouseEnter,
+  onPanelMouseLeave,
 }: {
   open: boolean;
   onClose: () => void;
@@ -26,6 +28,8 @@ export default function Popover({
   matchWidth?: boolean;
   zIndex?: number;
   panelClassName?: string;
+  onPanelMouseEnter?: () => void;
+  onPanelMouseLeave?: () => void;
 }) {
   const panelRef = React.useRef<HTMLDivElement>(null);
   useTopLayer(open, onClose, panelRef, { closeOnEscape: true, lockScroll: false, initialFocus: 'first' });
@@ -138,6 +142,8 @@ export default function Popover({
         ref={panelRef}
         tabIndex={-1}
         className={panelClassName}
+        onMouseEnter={onPanelMouseEnter}
+        onMouseLeave={onPanelMouseLeave}
         style={{
           position: 'fixed',
           top: pos.top,

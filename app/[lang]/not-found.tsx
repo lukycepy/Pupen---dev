@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import NextImage from 'next/image';
 import { usePathname } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { getDictionary } from '@/lib/get-dictionary';
@@ -210,7 +210,7 @@ export default function NotFound() {
               className="relative group transition-transform hover:scale-105 duration-300"
             >
               <div className="absolute -inset-3 bg-green-100 rounded-full blur-lg opacity-40 group-hover:opacity-100 transition duration-500" />
-              <Image 
+              <NextImage 
                 src="/logo.png" 
                 alt="Logo Spolek Pupen" 
                 width={56}

@@ -76,6 +76,26 @@ export default function Navbar({ lang, dict }: NavbarProps) {
   const searchRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const toolsRef = useRef<HTMLDivElement>(null);
+  const toolsCloseTimerRef = useRef<number | null>(null);
+  const userCloseTimerRef = useRef<number | null>(null);
+
+  const cancelToolsClose = () => {
+    if (toolsCloseTimerRef.current) window.clearTimeout(toolsCloseTimerRef.current);
+    toolsCloseTimerRef.current = null;
+  };
+  const scheduleToolsClose = () => {
+    cancelToolsClose();
+    toolsCloseTimerRef.current = window.setTimeout(() => setIsToolsOpen(false), 120);
+  };
+
+  const cancelUserClose = () => {
+    if (userCloseTimerRef.current) window.clearTimeout(userCloseTimerRef.current);
+    userCloseTimerRef.current = null;
+  };
+  const scheduleUserClose = () => {
+    cancelUserClose();
+    userCloseTimerRef.current = window.setTimeout(() => setIsUserMenuOpen(false), 120);
+  };
 
   useEffect(() => {
     setIsMenuOpen(false);
@@ -219,10 +239,20 @@ export default function Navbar({ lang, dict }: NavbarProps) {
             <div 
               ref={toolsRef}
               className="relative"
+              onMouseEnter={() => {
+                cancelToolsClose();
+                setIsToolsOpen(true);
+              }}
+              onMouseLeave={() => {
+                scheduleToolsClose();
+              }}
             >
               <button 
                 type="button"
-                onClick={() => setIsToolsOpen((v) => !v)}
+                onClick={() => {
+                  cancelToolsClose();
+                  setIsToolsOpen((v) => !v);
+                }}
                 aria-haspopup="menu"
                 aria-expanded={isToolsOpen}
                 className={`flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.2em] transition-all duration-300 py-6 whitespace-nowrap ${
@@ -241,6 +271,8 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                   placement="bottom-center"
                   offset={10}
                   zIndex={10000}
+                  onPanelMouseEnter={cancelToolsClose}
+                  onPanelMouseLeave={scheduleToolsClose}
                   panelClassName="w-[520px] bg-white border border-stone-100 shadow-2xl rounded-[2.5rem] p-8 animate-in fade-in slide-in-from-top-2 duration-300"
                 >
                   <div className="grid grid-cols-2 gap-3">
@@ -501,10 +533,23 @@ export default function Navbar({ lang, dict }: NavbarProps) {
               </Link>
             </div>
 
-            <div className="relative" ref={userMenuRef}>
+            <div
+              className="relative"
+              ref={userMenuRef}
+              onMouseEnter={() => {
+                cancelUserClose();
+                setIsUserMenuOpen(true);
+              }}
+              onMouseLeave={() => {
+                scheduleUserClose();
+              }}
+            >
               <button
                 type="button"
-                onClick={() => setIsUserMenuOpen((v) => !v)}
+                onClick={() => {
+                  cancelUserClose();
+                  setIsUserMenuOpen((v) => !v);
+                }}
                 aria-haspopup="menu"
                 aria-expanded={isUserMenuOpen}
                 className="px-3 py-2.5 bg-stone-50 text-stone-500 rounded-xl hover:bg-stone-100 hover:text-stone-900 transition-all border border-stone-100 shadow-sm inline-flex items-center gap-1.5"
@@ -528,6 +573,8 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                   placement="bottom-end"
                   offset={12}
                   zIndex={10001}
+                  onPanelMouseEnter={cancelUserClose}
+                  onPanelMouseLeave={scheduleUserClose}
                   panelClassName="w-64 bg-white border border-stone-100 shadow-2xl rounded-3xl p-2"
                 >
                   {(userProfile?.is_member || userProfile?.email === 'cepelak@pupen.org') && (

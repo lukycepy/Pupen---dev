@@ -147,7 +147,8 @@ export async function POST(req: Request) {
 
     const transporter = await getMailerWithSettingsOrQueueTransporter();
     const from = await getSenderFromSettings();
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://pupen.org';
+    const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://pupen.org').replace(/\/$/, '');
+    const actionUrlPublic = `${baseUrl}/api/auth/verify?u=${encodeURIComponent(actionUrl)}`;
     const tokenSecret = process.env.APPLICATION_LINK_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
     const pdfToken = createSignedToken({ appId: applicationId, email, exp: Date.now() + 7 * 24 * 60 * 60 * 1000 }, tokenSecret);
     const pdfUrl = `${baseUrl}/api/applications/pdf?t=${encodeURIComponent(pdfToken)}`;
@@ -162,7 +163,7 @@ export async function POST(req: Request) {
     const tpl = await renderEmailTemplateWithDbOverride('application_approved_access', {
       toEmail: email,
       firstName,
-      actionUrl,
+      actionUrl: actionUrlPublic,
       pdfUrl,
       lang,
     });

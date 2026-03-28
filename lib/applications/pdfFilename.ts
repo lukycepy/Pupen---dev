@@ -9,9 +9,9 @@ export function formatApplicationPdfFileName(input: { firstName?: any; lastName?
     value
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-zA-Z0-9]+/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/(^-|-$)/g, '');
+      .replace(/[^a-zA-Z0-9]+/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/(^_|_$)/g, '');
 
   const firstSafe = sanitize(first || 'Jmeno');
   const lastSafe = sanitize(last || 'Prijmeni');
@@ -19,5 +19,5 @@ export function formatApplicationPdfFileName(input: { firstName?: any; lastName?
   const utf8 = `${base}.pdf`;
   const ascii = `${base}.pdf`;
 
-  return { utf8, ascii: ascii || `Prihlaska_Pupen_${yy}.pdf` };
+  return { utf8, ascii: ascii || `Prijmeni_Jmeno-Pupen_${yy}.pdf` };
 }
