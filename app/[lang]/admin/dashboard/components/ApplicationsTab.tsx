@@ -12,6 +12,7 @@ import AdminModuleHeader from './ui/AdminModuleHeader';
 import AdminEmptyState from './ui/AdminEmptyState';
 import { Download } from 'lucide-react';
 import Dialog from '@/app/components/ui/Dialog';
+import { formatDatePrague, formatDateTimePrague } from '@/lib/time/prague';
 
 export default function ApplicationsTab({ dict }: { dict: any }) {
   const queryClient = useQueryClient();
@@ -91,7 +92,9 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
       const { data } = await supabase.auth.getSession();
       const decidedByEmail = data.session?.user?.email || null;
       const token = data.session?.access_token || null;
-      if (saveAsDefaultSignature && signature && !storedSignature) {
+      const shouldPersistSignature =
+        saveAsDefaultSignature && signature && (!storedSignature || (!useStoredSignature && signature !== storedSignature));
+      if (shouldPersistSignature) {
         const userId = data.session?.user?.id;
         if (userId) {
           await supabase.from('profiles').update({ admin_signature_data_url: signature }).eq('id', userId);
@@ -458,7 +461,7 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
               </div>
             </div>
             
-            <div className="flex-grow overflow-y-auto p-8 lg:p-12 custom-scrollbar">
+            <div className="flex-grow min-h-0 overflow-y-auto p-8 lg:p-12 custom-scrollbar">
               <div className="grid lg:grid-cols-12 gap-12">
                 <div className="lg:col-span-7 space-y-10">
                   <section className="rounded-[2.5rem] border border-stone-100 bg-white shadow-sm p-8">
@@ -508,7 +511,7 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
                       </div>
                       <div className="space-y-1">
                         <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest">{dict.recruitment?.labelSubmittedAt || 'Datum podání'}</p>
-                        <p className="text-sm font-bold text-stone-700">{selectedApp.created_at ? new Date(selectedApp.created_at).toLocaleDateString('cs-CZ') : '-'}</p>
+                        <p className="text-sm font-bold text-stone-700">{selectedApp.created_at ? formatDatePrague(selectedApp.created_at, isEn ? 'en' : 'cs') : '-'}</p>
                       </div>
                     </div>
 
@@ -672,7 +675,7 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
                         </div>
 
                         <div className="space-y-3">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-stone-500 px-1">{dict.admin.chairwomanSignature || 'Podpis předsedkyně'}</label>
+                          <label className="text-[10px] font-black uppercase tracking-widest text-stone-500 px-1">{dict.admin.chairwomanSignature || 'Podpis předsedy'}</label>
                           {storedSignature ? (
                             <div className="space-y-3">
                               <label className="flex items-center gap-3 cursor-pointer select-none">
@@ -708,12 +711,25 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
                                   </button>
                                 </div>
                               ) : (
-                                <div className="bg-white rounded-[2rem] overflow-hidden border-4 border-stone-800">
-                                  <SignaturePad
-                                    onSave={dataUrl => setChairSignature(dataUrl)}
-                                    onClear={() => setChairSignature('')}
-                                    clearLabel={dict.recruitment?.btnClear || 'Smazat'}
-                                  />
+                                <div className="space-y-3">
+                                  <div className="bg-white rounded-[2rem] overflow-hidden border-4 border-stone-800">
+                                    <SignaturePad
+                                      onSave={(dataUrl) => setChairSignature(dataUrl)}
+                                      onClear={() => setChairSignature('')}
+                                      clearLabel={dict.recruitment?.btnClear || 'Smazat'}
+                                    />
+                                  </div>
+                                  <label className="flex items-center gap-3 cursor-pointer select-none">
+                                    <input
+                                      type="checkbox"
+                                      checked={saveAsDefaultSignature}
+                                      onChange={(e) => setSaveAsDefaultSignature(e.target.checked)}
+                                      className="w-4 h-4 accent-green-600"
+                                    />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-stone-400">
+                                      {dict.admin.saveSignatureForLater || 'Uložit podpis pro příště'}
+                                    </span>
+                                  </label>
                                 </div>
                               )}
                             </div>
@@ -721,7 +737,7 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
                             <div className="space-y-3">
                               <div className="bg-white rounded-[2rem] overflow-hidden border-4 border-stone-800">
                                 <SignaturePad
-                                  onSave={dataUrl => setChairSignature(dataUrl)}
+                                  onSave={(dataUrl) => setChairSignature(dataUrl)}
                                   onClear={() => setChairSignature('')}
                                   clearLabel={dict.recruitment?.btnClear || 'Smazat'}
                                 />
@@ -787,7 +803,7 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
                             <div className="flex items-center justify-between gap-4">
                               <span className="text-[10px] font-black uppercase tracking-widest text-stone-500">{isEn ? 'Decided at' : 'Rozhodnuto dne'}</span>
                               <span className="text-xs font-black text-white/90">
-                                {selectedApp.decided_at ? new Date(selectedApp.decided_at).toLocaleString(isEn ? 'en-GB' : 'cs-CZ') : '—'}
+                                {selectedApp.decided_at ? formatDateTimePrague(selectedApp.decided_at, isEn ? 'en' : 'cs') : '—'}
                               </span>
                             </div>
                             <div className="flex items-center justify-between gap-4">

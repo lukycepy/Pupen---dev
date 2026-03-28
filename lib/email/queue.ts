@@ -5,6 +5,11 @@ function isSchemaCacheMissingTable(e: any) {
   return msg.includes('Could not find the table') && msg.includes('in the schema cache');
 }
 
+function isSchemaCacheMissingColumn(e: any) {
+  const msg = String(e?.message || '');
+  return msg.includes('in the schema cache') && msg.toLowerCase().includes('column');
+}
+
 function normalizeError(e: any) {
   const err = e || {};
   return {
@@ -30,7 +35,9 @@ export type EnqueueEmailInput = {
   from: string;
   subject: string;
   html: string;
+  text?: string;
   replyTo?: string;
+  headers?: Record<string, string>;
   meta?: EmailQueueMeta;
   maxAttempts?: number;
   lastError?: string;
@@ -39,22 +46,24 @@ export type EnqueueEmailInput = {
 export async function enqueueEmailSend(input: EnqueueEmailInput, supabase?: any) {
   try {
     const sb = supabase || getServerSupabase();
-    const res = await sb.from('email_send_queue').insert([
-      {
-        status: 'queued',
-        to_email: input.to,
-        from_email: input.from,
-        reply_to: input.replyTo || null,
-        subject: input.subject,
-        html: input.html,
-        meta: input.meta || {},
-        last_error: input.lastError || null,
-        max_attempts: typeof input.maxAttempts === 'number' ? input.maxAttempts : 5,
-        attempt_count: 0,
-        next_attempt_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-    ]);
+    const base: any = {
+      status: 'queued',
+      to_email: input.to,
+      from_email: input.from,
+      reply_to: input.replyTo || null,
+      subject: input.subject,
+      html: input.html,
+      meta: input.meta || {},
+      last_error: input.lastError || null,
+      max_attempts: typeof input.maxAttempts === 'number' ? input.maxAttempts : 5,
+      attempt_count: 0,
+      next_attempt_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    let res = await sb.from('email_send_queue').insert([{ ...base, text: input.text || null, headers: input.headers || {} }]);
+    if (res.error && isSchemaCacheMissingColumn(res.error)) {
+      res = await sb.from('email_send_queue').insert([base]);
+    }
     if (res.error) throw res.error;
     return { ok: true as const };
   } catch (e: any) {
@@ -65,7 +74,7 @@ export async function enqueueEmailSend(input: EnqueueEmailInput, supabase?: any)
 
 export async function sendMailWithQueueFallback(opts: {
   transporter: any;
-  message: { from: string; to: string; subject: string; html: string; replyTo?: string; headers?: Record<string, string>; attachments?: any[] };
+  message: { from: string; to: string; subject: string; html: string; text?: string; replyTo?: string; headers?: Record<string, string>; attachments?: any[] };
   meta?: EmailQueueMeta;
   supabase?: any;
 }) {
@@ -75,6 +84,7 @@ export async function sendMailWithQueueFallback(opts: {
       to: opts.message.to,
       subject: opts.message.subject,
       html: opts.message.html,
+      text: opts.message.text,
       replyTo: opts.message.replyTo || undefined,
       headers: opts.message.headers,
       attachments: opts.message.attachments,
@@ -90,6 +100,8 @@ export async function sendMailWithQueueFallback(opts: {
         replyTo: opts.message.replyTo,
         subject: opts.message.subject,
         html: opts.message.html,
+        text: opts.message.text,
+        headers: opts.message.headers,
         meta: { ...(opts.meta || {}), last_error: lastError, enqueue_error: info },
         lastError,
       },

@@ -19,8 +19,10 @@ Balíček migrací pro nasazení aktuálních změn. Aplikujte v uvedeném pořa
 14. `65_events_ticket_sale_end.sql` – `events.time` + `events.ticket_sale_end`
 15. `66_rsvp_qr_code.sql` – `rsvp.qr_code` + backfill z `qr_token`
 16. `67_newsletter_unsubscribe_reason.sql` – důvody odhlášení newsletteru
+17. `68_email_send_queue_headers_text.sql` – email queue: text+headers pro doručitelnost
+18. `69_email_settings_application_notifications.sql` – email_settings: cílové adresy notifikací přihlášek
+19. `70_email_settings_application_notifications_v2.sql` – email_settings: separace notifikací + DKIM selector
 
 ## Poznámky
 - Všechny migrace v tomto balíčku volají `SELECT public.notify_schema_change();` kvůli schema cache.
 - Migrace jsou psané tak, aby byly bezpečné pro opakované spuštění (IF NOT EXISTS / guardy na policy/constraint).
-

@@ -1,3 +1,5 @@
+import { formatDatePrague, formatDateTimePrague } from '@/lib/time/prague';
+
 export type EmailTemplateKey =
   | 'ticket'
   | 'admin_password'
@@ -5,7 +7,11 @@ export type EmailTemplateKey =
   | 'member_access'
   | 'member_welcome'
   | 'membership_expiry'
+  | 'application_received'
+  | 'application_new_admin'
+  | 'application_approved_access'
   | 'application_status'
+  | 'application_status_admin'
   | 'invoice_request'
   | 'refund_request'
   | 'refund_status'
@@ -59,6 +65,26 @@ export function listEmailTemplates() {
       variables: ['toEmail', 'firstName', 'status', 'reason', 'lang'],
     },
     {
+      key: 'application_status_admin' as const,
+      label: 'Přihláška: změna stavu (admin)',
+      variables: ['toEmail', 'firstName', 'lastName', 'status', 'reason', 'adminLink', 'lang'],
+    },
+    {
+      key: 'application_received' as const,
+      label: 'Přihláška – potvrzení uchazeči',
+      variables: ['toEmail', 'firstName', 'lastName', 'lang'],
+    },
+    {
+      key: 'application_new_admin' as const,
+      label: 'Přihláška – upozornění předseda/admin',
+      variables: ['toEmail', 'firstName', 'lastName', 'membershipType', 'adminLink', 'lang'],
+    },
+    {
+      key: 'application_approved_access' as const,
+      label: 'Přihláška – schválení + přístup + PDF',
+      variables: ['toEmail', 'firstName', 'lastName', 'actionUrl', 'pdfUrl', 'lang'],
+    },
+    {
       key: 'invoice_request' as const,
       label: 'Žádost o fakturu (interní)',
       variables: ['toEmail', 'replyTo', 'rsvpId', 'eventId', 'eventTitle', 'email', 'buyerType', 'buyerName', 'buyerAddress', 'ico', 'dic', 'note'],
@@ -105,7 +131,7 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
     const email = String(vars?.email || '');
     const subjectLine = String(vars?.subject || '').trim();
     const message = String(vars?.message || '');
-    const createdAt = vars?.createdAt ? new Date(String(vars.createdAt)).toLocaleString('cs-CZ') : '';
+    const createdAt = vars?.createdAt ? formatDateTimePrague(String(vars.createdAt), 'cs') : '';
     const messageId = String(vars?.messageId || '').trim();
 
     const subject = `Pupen — Nová zpráva z webu${subjectLine ? `: ${subjectLine}` : ''}`;
@@ -318,6 +344,89 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
     return { subject, html };
   }
 
+  if (key === 'application_received') {
+    const lang = vars?.lang === 'en' ? 'en' : 'cs';
+    const firstName = vars?.firstName ? String(vars.firstName) : '';
+    const toEmail = String(vars?.toEmail || vars?.email || '');
+
+    const subject = lang === 'en' ? 'Pupen — Application received' : 'Pupen — Přihláška přijata';
+    const title = lang === 'en' ? 'We received your application' : 'Přihláška dorazila';
+    const intro =
+      lang === 'en'
+        ? `Hello${firstName ? ` ${escapeHtml(firstName)}` : ''}, thank you! We received your application.`
+        : `Ahoj${firstName ? ` ${escapeHtml(firstName)}` : ''}, díky! Přihláška k nám dorazila.`;
+    const body =
+      lang === 'en'
+        ? 'We will review it and then email you the result. After approval you will get access to the member portal.'
+        : 'Přihlášku zkontrolujeme a výsledek pošleme e-mailem. Po schválení přijde i přístup do členského portálu.';
+
+    const html = `
+      <div style="font-family: sans-serif; padding: 20px; color: #1c1917; max-width: 700px; margin: auto; border: 1px solid #e7e5e4; border-radius: 20px;">
+        <h2 style="color: #16a34a; text-align: center;">${escapeHtml(title)}</h2>
+        <p style="text-align: center; font-weight: 800; font-size: 16px;">${intro}</p>
+        <div style="background-color: #f5f5f4; padding: 20px; border-radius: 15px; margin: 20px 0; text-align: center;">
+          <p style="margin: 0; font-size: 14px; color: #292524; font-weight: 700;">${escapeHtml(body)}</p>
+        </div>
+        ${toEmail ? `<p style="font-size: 12px; color: #78716c; text-align: center;">${escapeHtml(toEmail)}</p>` : ''}
+      </div>
+    `;
+    return { subject, html };
+  }
+
+  if (key === 'application_new_admin') {
+    const lang = vars?.lang === 'en' ? 'en' : 'cs';
+    const firstName = vars?.firstName ? String(vars.firstName) : '';
+    const lastName = vars?.lastName ? String(vars.lastName) : '';
+    const toEmail = String(vars?.toEmail || vars?.email || '');
+    const membershipType = String(vars?.membershipType || '');
+    const adminLink = String(vars?.adminLink || '');
+
+    const subject = lang === 'en' ? 'Pupen Control — New application' : 'Pupen Control — Nová přihláška';
+    const title = lang === 'en' ? 'New application submitted' : 'Byla podána nová přihláška';
+    const fullName = `${String(firstName || '').trim()} ${String(lastName || '').trim()}`.trim();
+
+    const html = `
+      <div style="font-family: sans-serif; padding: 20px; color: #1c1917; max-width: 700px; margin: auto; border: 1px solid #e7e5e4; border-radius: 20px;">
+        <h2 style="color: #16a34a; text-align: center;">${escapeHtml(title)}</h2>
+        <div style="background-color: #f5f5f4; padding: 18px; border-radius: 15px; margin: 20px 0;">
+          ${fullName ? section(lang === 'en' ? 'Name' : 'Jméno', fullName) : ''}
+          ${toEmail ? section('E-mail', toEmail) : ''}
+          ${membershipType ? section(lang === 'en' ? 'Type' : 'Typ', membershipType) : ''}
+        </div>
+        ${adminLink ? `<div style="text-align:center; margin-top: 10px;"><a href="${escapeHtml(adminLink)}" style="display:inline-block; background:#16a34a; color:#fff; padding: 12px 16px; border-radius: 14px; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; text-decoration:none; font-size:12px;">${escapeHtml(lang === 'en' ? 'Open in admin' : 'Otevřít v administraci')}</a></div>` : ''}
+      </div>
+    `;
+    return { subject, html };
+  }
+
+  if (key === 'application_approved_access') {
+    const lang = vars?.lang === 'en' ? 'en' : 'cs';
+    const firstName = vars?.firstName ? String(vars.firstName) : '';
+    const toEmail = String(vars?.toEmail || vars?.email || '');
+    const actionUrl = String(vars?.actionUrl || '');
+    const pdfUrl = String(vars?.pdfUrl || '');
+
+    const subject = lang === 'en' ? 'Pupen — Application approved' : 'Pupen — Přihláška schválena';
+    const title = lang === 'en' ? 'Welcome to Pupen' : 'Vítej v Pupen';
+    const intro =
+      lang === 'en'
+        ? `Hello${firstName ? ` ${escapeHtml(firstName)}` : ''}, your application was approved.`
+        : `Ahoj${firstName ? ` ${escapeHtml(firstName)}` : ''}, tvoje přihláška byla schválena.`;
+    const cta = lang === 'en' ? 'Set password and sign in' : 'Nastavit heslo a přihlásit se';
+    const pdfLabel = lang === 'en' ? 'Download application PDF' : 'Stáhnout PDF přihlášky';
+
+    const html = `
+      <div style="font-family: sans-serif; padding: 20px; color: #1c1917; max-width: 700px; margin: auto; border: 1px solid #e7e5e4; border-radius: 20px;">
+        <h2 style="color: #16a34a; text-align: center;">${escapeHtml(title)}</h2>
+        <p style="text-align: center; font-weight: 800; font-size: 16px;">${intro}</p>
+        ${actionUrl ? `<div style="background-color: #f5f5f4; padding: 20px; border-radius: 15px; margin: 20px 0; text-align: center;"><a href="${escapeHtml(actionUrl)}" style="display: inline-block; background: #16a34a; color: #fff; padding: 14px 18px; border-radius: 14px; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none; font-size: 12px;">${escapeHtml(cta)}</a><p style="margin-top: 16px; font-size: 12px; color: #78716c;">${escapeHtml(actionUrl)}</p></div>` : ''}
+        ${pdfUrl ? `<div style="text-align:center; margin-top: 8px;"><a href="${escapeHtml(pdfUrl)}" style="color:#16a34a; font-weight: 900; text-decoration: underline;">${escapeHtml(pdfLabel)}</a></div>` : ''}
+        ${toEmail ? `<p style="font-size: 12px; color: #78716c; text-align: center; margin-top: 18px;">${escapeHtml(toEmail)}</p>` : ''}
+      </div>
+    `;
+    return { subject, html };
+  }
+
   if (key === 'application_status') {
     const lang = vars?.lang === 'en' ? 'en' : 'cs';
     const firstName = vars?.firstName ? String(vars.firstName) : '';
@@ -384,13 +493,53 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
     return { subject, html };
   }
 
+  if (key === 'application_status_admin') {
+    const lang = vars?.lang === 'en' ? 'en' : 'cs';
+    const firstName = vars?.firstName ? String(vars.firstName) : '';
+    const lastName = vars?.lastName ? String(vars.lastName) : '';
+    const toEmail = String(vars?.toEmail || vars?.email || '');
+    const status = String(vars?.status || 'pending').trim();
+    const reason = String(vars?.reason || '').trim();
+    const adminLink = String(vars?.adminLink || '').trim();
+
+    const statusLabel =
+      status === 'approved'
+        ? lang === 'en'
+          ? 'Approved'
+          : 'Schváleno'
+        : status === 'rejected'
+          ? lang === 'en'
+            ? 'Rejected'
+            : 'Zamítnuto'
+          : lang === 'en'
+            ? 'Pending'
+            : 'Čeká';
+
+    const subject = lang === 'en' ? 'Pupen Control — Application status changed' : 'Pupen Control — Změna stavu přihlášky';
+    const title = lang === 'en' ? 'Application status changed' : 'Změna stavu přihlášky';
+    const fullName = `${String(firstName || '').trim()} ${String(lastName || '').trim()}`.trim();
+
+    const html = `
+      <div style="font-family: sans-serif; padding: 20px; color: #1c1917; max-width: 700px; margin: auto; border: 1px solid #e7e5e4; border-radius: 20px;">
+        <h2 style="color: #16a34a; text-align: center;">${escapeHtml(title)}</h2>
+        <div style="background-color: #f5f5f4; padding: 18px; border-radius: 15px; margin: 20px 0;">
+          ${fullName ? section(lang === 'en' ? 'Name' : 'Jméno', fullName) : ''}
+          ${toEmail ? section('E-mail', toEmail) : ''}
+          ${section(lang === 'en' ? 'Status' : 'Stav', statusLabel)}
+          ${reason ? section(lang === 'en' ? 'Reason' : 'Důvod', reason) : ''}
+        </div>
+        ${adminLink ? `<div style="text-align:center; margin-top: 10px;"><a href="${escapeHtml(adminLink)}" style="display:inline-block; background:#16a34a; color:#fff; padding: 12px 16px; border-radius: 14px; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; text-decoration:none; font-size:12px;">${escapeHtml(lang === 'en' ? 'Open in admin' : 'Otevřít v administraci')}</a></div>` : ''}
+      </div>
+    `;
+    return { subject, html };
+  }
+
   if (key === 'membership_expiry') {
     const lang = vars?.lang === 'en' ? 'en' : 'cs';
     const firstName = vars?.firstName ? String(vars.firstName) : '';
     const toEmail = String(vars?.toEmail || vars?.email || '');
     const daysLeft = typeof vars?.daysLeft === 'number' ? vars.daysLeft : Number(vars?.daysLeft || 0);
-    const expiresAt = vars?.expiresAt ? new Date(String(vars.expiresAt)) : null;
-    const dateStr = expiresAt ? expiresAt.toLocaleDateString(lang === 'en' ? 'en-US' : 'cs-CZ') : '';
+    const dateStr = vars?.expiresAt ? formatDatePrague(String(vars.expiresAt), lang) : '';
 
     const isExpired = daysLeft < 0;
     const subject = isExpired

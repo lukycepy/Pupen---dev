@@ -46,6 +46,9 @@ async function main() {
 
     for (const f of files) {
       const sql = fs.readFileSync(f.abs, 'utf8');
+      if (!sql.trim()) {
+        throw new Error(`Empty migration file: ${f.key}`);
+      }
       const checksum = sha256(sql);
       const prev = existing.get(f.key);
       if (prev) {
@@ -75,4 +78,3 @@ main().catch((e) => {
   console.error(e?.message || e);
   process.exit(1);
 });
-

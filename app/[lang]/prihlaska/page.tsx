@@ -95,20 +95,19 @@ export default function PrihlaskaPage() {
         faculty: formData.membership_type === 'regular' ? `${formData.field_of_study}, ${formData.study_year}` : null,
         status: 'pending',
       };
-      const { error } = await supabase.from('applications').insert([payload]);
-      if (error) throw error;
+      const ins = await supabase.from('applications').insert([payload]).select('id').single();
+      if (ins.error) throw ins.error;
       
-      // Notify admins about new application
+      const applicationId = String(ins.data?.id || '');
+
+      // Notify about new application
       try {
-        await fetch('/api/contact', {
+        await fetch('/api/applications/notify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            name: 'Systém Spolku Pupen',
-            email: 'noreply@pupen.org',
-            hp: '',
-            subject: 'Nová přihláška do spolku',
-            message: `Byla podána nová přihláška.\n\nJméno: ${full_name}\nE-mail: ${formData.email}\nTyp: ${formData.membership_type === 'regular' ? 'Řádný člen' : 'Externista'}\n\nZkontrolujte ji v administraci v sekci Přihlášky.`
+            applicationId,
+            lang,
           })
         });
       } catch (e) {

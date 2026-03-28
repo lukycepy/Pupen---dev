@@ -2,22 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireMember } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { buildApplicationPdfBytes } from '@/lib/applications/pdf';
-
-function asciiFileName(input: string) {
-  return String(input || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z0-9._-]+/g, '_')
-    .replace(/_+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .slice(0, 80);
-}
-
-function contentDispositionAttachment(fileNameUtf8: string) {
-  const ascii = asciiFileName(fileNameUtf8) || 'prihlaska.pdf';
-  const encoded = encodeURIComponent(fileNameUtf8).replace(/'/g, '%27').replace(/\*/g, '%2A');
-  return `attachment; filename="${ascii}"; filename*=UTF-8''${encoded}`;
-}
+import { formatApplicationPdfFileName } from '@/lib/applications/pdfFilename';
 
 export async function GET(req: Request) {
   try {
@@ -37,16 +22,13 @@ export async function GET(req: Request) {
     if (!app) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     const pdfBytes = await buildApplicationPdfBytes(app);
-    const last = String((app as any)?.last_name || '').trim() || 'neznamy';
-    const first = String((app as any)?.first_name || '').trim() || 'clen';
-
-    const rawName = `prihlaska_${last}_${first}.pdf`;
+    const { utf8, ascii } = formatApplicationPdfFileName({ firstName: app?.first_name, lastName: app?.last_name, createdAt: app?.created_at });
 
     return new NextResponse(pdfBytes, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': contentDispositionAttachment(rawName),
+        'Content-Disposition': `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(utf8)}`,
       },
     });
   } catch (e: any) {

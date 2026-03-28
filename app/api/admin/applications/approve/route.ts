@@ -4,6 +4,12 @@ import { getServerSupabase } from '@/lib/supabase-server';
 import { getMailerWithSettingsOrQueueTransporter, getSenderFromSettings } from '@/lib/email/mailer';
 import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
 import { sendMailWithQueueFallback } from '@/lib/email/queue';
+import { createSignedToken } from '@/lib/signed-token';
+import { stripHtmlToText } from '@/lib/richtext-shared';
+import { buildApplicationPdfBytes } from '@/lib/applications/pdf';
+import { formatApplicationPdfFileName } from '@/lib/applications/pdfFilename';
+
+export const runtime = 'nodejs';
 
 async function findUserIdByEmail(supabase: any, email: string) {
   const perPage = 200;
@@ -104,7 +110,7 @@ export async function POST(req: Request) {
           assigned_at: new Date().toISOString(),
           assigned_by_email: user.email || null,
         },
-      ], { onConflict: 'user_id' })
+      ], { onConflict: 'user_id,role_id' })
       .throwOnError();
 
     await supabase
@@ -141,20 +147,48 @@ export async function POST(req: Request) {
 
     const transporter = await getMailerWithSettingsOrQueueTransporter();
     const from = await getSenderFromSettings();
-    const { subject, html } = await renderEmailTemplateWithDbOverride('member_access', { toEmail: email, firstName, actionUrl, lang });
-    await sendMailWithQueueFallback({
-      transporter,
-      supabase,
-      meta: { kind: 'member_access' },
-      message: { from, to: email, subject, html },
-    });
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://pupen.org';
+    const tokenSecret = process.env.APPLICATION_LINK_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+    const pdfToken = createSignedToken({ appId: applicationId, email, exp: Date.now() + 7 * 24 * 60 * 60 * 1000 }, tokenSecret);
+    const pdfUrl = `${baseUrl}/api/applications/pdf?t=${encodeURIComponent(pdfToken)}`;
+    const { ascii: pdfAsciiName } = formatApplicationPdfFileName({ firstName, lastName, createdAt: app?.created_at });
+    let pdfBytes: Buffer | null = null;
+    try {
+      pdfBytes = await buildApplicationPdfBytes(app);
+    } catch {
+      pdfBytes = null;
+    }
 
-    const welcome = await renderEmailTemplateWithDbOverride('member_welcome', { toEmail: email, firstName, lang });
+    const tpl = await renderEmailTemplateWithDbOverride('application_approved_access', {
+      toEmail: email,
+      firstName,
+      actionUrl,
+      pdfUrl,
+      lang,
+    });
     await sendMailWithQueueFallback({
       transporter,
       supabase,
-      meta: { kind: 'member_welcome' },
-      message: { from, to: email, subject: welcome.subject, html: welcome.html },
+      meta: { kind: 'application_approved_access', application_id: applicationId },
+      message: {
+        from,
+        to: email,
+        subject: tpl.subject,
+        html: tpl.html,
+        text: stripHtmlToText(tpl.html),
+        replyTo: 'info@pupen.org',
+        headers: { 'X-Pupen-Category': 'application', 'X-Pupen-Template': 'application_approved_access' },
+        attachments:
+          pdfBytes && Buffer.isBuffer(pdfBytes)
+            ? [
+                {
+                  filename: pdfAsciiName,
+                  content: pdfBytes,
+                  contentType: 'application/pdf',
+                },
+              ]
+            : undefined,
+      },
     });
 
     await supabase
@@ -165,7 +199,7 @@ export async function POST(req: Request) {
           admin_name: user.user_metadata?.full_name || user.email || 'admin',
           action: 'APPLICATION_APPROVED_ACCESS_SENT',
           target_id: String(applicationId),
-          details: { email, user_id: userId, role_id: role.id, role_name: role.name, member_no: memberNo },
+          details: { email, user_id: userId, role_id: role.id, role_name: role.name, member_no: memberNo, pdf: true },
         },
       ])
       .throwOnError();

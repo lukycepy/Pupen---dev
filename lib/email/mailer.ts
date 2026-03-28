@@ -93,7 +93,16 @@ export function getMailer(config?: MailerConfig) {
 }
 
 let cachedSettings:
-  | { fetchedAt: number; smtp: MailerConfig | null; senderName: string | null; senderEmail: string | null }
+  | {
+      fetchedAt: number;
+      smtp: MailerConfig | null;
+      senderName: string | null;
+      senderEmail: string | null;
+      applicationNotificationEmails: string[] | null;
+      applicationNotificationEmailsNew: string[] | null;
+      applicationNotificationEmailsStatus: string[] | null;
+      dkimSelector: string | null;
+    }
   | null = null;
 
 async function getEmailSettingsCached() {
@@ -140,6 +149,16 @@ async function getEmailSettingsCached() {
     smtp,
     senderName: data?.sender_name ? String(data.sender_name) : null,
     senderEmail: data?.sender_email ? String(data.sender_email) : null,
+    applicationNotificationEmails: Array.isArray((data as any)?.application_notification_emails)
+      ? (data as any).application_notification_emails.map((x: any) => String(x)).filter(Boolean)
+      : null,
+    applicationNotificationEmailsNew: Array.isArray((data as any)?.application_notification_emails_new)
+      ? (data as any).application_notification_emails_new.map((x: any) => String(x)).filter(Boolean)
+      : null,
+    applicationNotificationEmailsStatus: Array.isArray((data as any)?.application_notification_emails_status)
+      ? (data as any).application_notification_emails_status.map((x: any) => String(x)).filter(Boolean)
+      : null,
+    dkimSelector: (data as any)?.dkim_selector ? String((data as any).dkim_selector) : null,
   };
   return cachedSettings;
 }
@@ -178,4 +197,24 @@ export async function getSenderFromSettings() {
   const name = settings?.senderName || 'Pupen.org';
   const email = settings?.senderEmail || 'info@pupen.org';
   return `"${name}" <${email}>`;
+}
+
+export async function getApplicationNotificationEmailsFromSettings() {
+  const settings = await getEmailSettingsCached().catch(() => null);
+  return settings?.applicationNotificationEmails || [];
+}
+
+export async function getApplicationNewNotificationEmailsFromSettings() {
+  const settings = await getEmailSettingsCached().catch(() => null);
+  return settings?.applicationNotificationEmailsNew || [];
+}
+
+export async function getApplicationStatusNotificationEmailsFromSettings() {
+  const settings = await getEmailSettingsCached().catch(() => null);
+  return settings?.applicationNotificationEmailsStatus || [];
+}
+
+export async function getDkimSelectorFromSettings() {
+  const settings = await getEmailSettingsCached().catch(() => null);
+  return settings?.dkimSelector || '';
 }

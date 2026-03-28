@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Mail, Save, Loader2, Server, User } from 'lucide-react';
+import { Mail, Save, Loader2, Server, User, ShieldCheck } from 'lucide-react';
 import { useToast } from '@/app/context/ToastContext';
 import { SkeletonTabContent } from '@/app/[lang]/components/Skeleton';
 import AdminModuleHeader from './ui/AdminModuleHeader';
@@ -26,8 +26,20 @@ export default function EmailSettingsTab({ dict }: { dict: any }) {
     imap_pass: '',
     imap_secure: true,
     sender_name: 'Pupen Control',
-    sender_email: 'info@pupen.org'
+    sender_email: 'info@pupen.org',
+    application_notification_emails: [] as string[],
+    application_notification_emails_new: [] as string[],
+    application_notification_emails_status: [] as string[],
+    dkim_selector: '',
   });
+
+  const [dnsLoading, setDnsLoading] = useState(false);
+  const [dnsResult, setDnsResult] = useState<any>(null);
+
+  const [testStatusLoading, setTestStatusLoading] = useState(false);
+  const [testStatusResult, setTestStatusResult] = useState<any>(null);
+
+  const senderDomain = String(settings.sender_email || '').includes('@') ? String(settings.sender_email).split('@').pop() : '';
 
   useEffect(() => {
     async function fetchSettings() {
@@ -67,6 +79,57 @@ export default function EmailSettingsTab({ dict }: { dict: any }) {
   };
 
   if (loading) return <SkeletonTabContent />;
+
+  const getToken = async () => {
+    let { data: sessionData } = await supabase.auth.getSession();
+    let token = sessionData.session?.access_token || '';
+    if (!token) {
+      await supabase.auth.refreshSession();
+      sessionData = (await supabase.auth.getSession()).data;
+      token = sessionData.session?.access_token || '';
+    }
+    if (!token) throw new Error('Přihlášení vypršelo. Obnovte stránku nebo se přihlaste znovu.');
+    return token;
+  };
+
+  const checkDns = async () => {
+    setDnsLoading(true);
+    try {
+      const token = await getToken();
+      const res = await fetch('/api/admin/email/deliverability', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j?.error || 'Kontrola DNS selhala');
+      setDnsResult(j);
+    } catch (e: any) {
+      setDnsResult({ ok: false, error: String(e?.message || e) });
+    } finally {
+      setDnsLoading(false);
+    }
+  };
+
+  const sendStatusTest = async (status: 'approved' | 'rejected') => {
+    setTestStatusLoading(true);
+    try {
+      const token = await getToken();
+      const res = await fetch('/api/admin/applications/status-email/test-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ lang: dict?.lang === 'en' ? 'en' : 'cs', status }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j?.error || 'Test selhal');
+      setTestStatusResult(j);
+      showToast(`Test notifikace odeslána (${status})`, 'success');
+    } catch (e: any) {
+      setTestStatusResult({ ok: false, error: String(e?.message || e) });
+      showToast(String(e?.message || e), 'error');
+    } finally {
+      setTestStatusLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -276,6 +339,156 @@ export default function EmailSettingsTab({ dict }: { dict: any }) {
               />
             </div>
           </div>
+        </AdminPanel>
+
+        <AdminPanel className="p-8 space-y-4 md:col-span-2">
+          <h3 className="text-lg font-bold flex items-center gap-2 text-stone-900">
+            <Mail className="text-green-600" size={20} />
+            Notifikace přihlášek
+          </h3>
+          <div className="text-xs font-bold text-stone-500">
+            Zadejte e-maily (1 na řádek), které dostanou upozornění.
+          </div>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Nová přihláška</div>
+              <textarea
+                value={(settings.application_notification_emails_new || settings.application_notification_emails || []).join('\n')}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    application_notification_emails_new: e.target.value
+                      .split(/\r?\n/g)
+                      .map((s) => s.trim())
+                      .filter(Boolean),
+                  })
+                }
+                placeholder="predseda@pupen.org&#10;sekretariat@pupen.org"
+                className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition min-h-[120px]"
+              />
+            </div>
+            <div className="space-y-2">
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Změna stavu</div>
+              <textarea
+                value={(settings.application_notification_emails_status || []).join('\n')}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    application_notification_emails_status: e.target.value
+                      .split(/\r?\n/g)
+                      .map((s) => s.trim())
+                      .filter(Boolean),
+                  })
+                }
+                placeholder="predseda@pupen.org"
+                className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition min-h-[120px]"
+              />
+            </div>
+          </div>
+          <div className="text-[11px] font-bold text-stone-500">
+            Pokud „Nová přihláška“ necháte prázdné, použije se fallback na admin profily. Staré pole zůstává kvůli kompatibilitě.
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => sendStatusTest('approved')}
+              disabled={testStatusLoading}
+              className="rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest bg-stone-900 text-white hover:bg-stone-800 disabled:opacity-50 transition"
+            >
+              {testStatusLoading ? 'Odesílám…' : 'Poslat test (schváleno)'}
+            </button>
+            <button
+              type="button"
+              onClick={() => sendStatusTest('rejected')}
+              disabled={testStatusLoading}
+              className="rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest bg-white border border-stone-200 text-stone-700 hover:bg-stone-50 disabled:opacity-50 transition"
+            >
+              {testStatusLoading ? 'Odesílám…' : 'Poslat test (zamítnuto)'}
+            </button>
+            {testStatusResult?.ok === true ? (
+              <div className="text-xs font-black text-green-700">Odesláno na {Array.isArray(testStatusResult.recipients) ? testStatusResult.recipients.length : 0} příjemců</div>
+            ) : testStatusResult?.error ? (
+              <div className="text-xs font-black text-red-700">{String(testStatusResult.error)}</div>
+            ) : null}
+          </div>
+        </AdminPanel>
+
+        <AdminPanel className="p-8 space-y-5 md:col-span-2">
+          <h3 className="text-lg font-bold flex items-center gap-2 text-stone-900">
+            <ShieldCheck className="text-green-600" size={20} />
+            Doručitelnost (SPF / DKIM / DMARC)
+          </h3>
+          <div className="text-xs font-bold text-stone-500">
+            Tyto záznamy se nastavují v DNS domény odesílatele. Pupen může ukázat doporučení a zkontrolovat, že existují.
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-4">
+            <div className="bg-stone-50 border border-stone-100 rounded-2xl p-5">
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">SPF</div>
+              <div className="mt-2 text-xs font-bold text-stone-700 break-words">
+                {senderDomain ? `TXT na ${senderDomain}` : 'TXT na doméně odesílatele'}
+              </div>
+              <div className="mt-2 text-[11px] font-bold text-stone-500">
+                Nastavte SPF podle SMTP providera (typicky v=spf1 … ~all / -all).
+              </div>
+            </div>
+            <div className="bg-stone-50 border border-stone-100 rounded-2xl p-5">
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">DKIM</div>
+              <div className="mt-2 text-xs font-bold text-stone-700 break-words">
+                {senderDomain ? `TXT na selector._domainkey.${senderDomain}` : 'TXT na selector._domainkey.doména'}
+              </div>
+              <div className="mt-3">
+                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Selector (volitelné)</label>
+                <input
+                  type="text"
+                  value={String((settings as any).dkim_selector || '')}
+                  onChange={(e) => setSettings({ ...(settings as any), dkim_selector: e.target.value })}
+                  placeholder="např. s1, mail, default"
+                  className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
+                />
+              </div>
+            </div>
+            <div className="bg-stone-50 border border-stone-100 rounded-2xl p-5">
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">DMARC</div>
+              <div className="mt-2 text-xs font-bold text-stone-700 break-words">
+                {senderDomain ? `TXT na _dmarc.${senderDomain}` : 'TXT na _dmarc.doména'}
+              </div>
+              <div className="mt-2 text-[11px] font-bold text-stone-500">
+                Doporučený start: p=none (reporting), pak zpřísnit na quarantine/reject.
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={checkDns}
+              disabled={dnsLoading}
+              className="rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest bg-stone-900 text-white hover:bg-stone-800 disabled:opacity-50 transition"
+            >
+              {dnsLoading ? 'Kontroluji…' : 'Zkontrolovat DNS'}
+            </button>
+            {dnsResult?.ok === true ? (
+              <div className="text-xs font-black text-green-700">DNS OK</div>
+            ) : dnsResult?.error ? (
+              <div className="text-xs font-black text-red-700">{String(dnsResult.error)}</div>
+            ) : null}
+          </div>
+
+          {dnsResult?.ok === true && (
+            <div className="grid md:grid-cols-3 gap-4 text-xs font-bold">
+              <div className={`rounded-2xl p-4 border ${dnsResult?.spf?.ok ? 'bg-green-50 border-green-100 text-green-800' : 'bg-red-50 border-red-100 text-red-800'}`}>
+                SPF: {dnsResult?.spf?.ok ? 'nalezeno' : 'nenalezeno'}
+              </div>
+              <div className={`rounded-2xl p-4 border ${dnsResult?.dkim?.ok ? 'bg-green-50 border-green-100 text-green-800' : 'bg-amber-50 border-amber-100 text-amber-800'}`}>
+                DKIM: {dnsResult?.dkim?.ok ? 'nalezeno' : 'neověřeno'}
+              </div>
+              <div className={`rounded-2xl p-4 border ${dnsResult?.dmarc?.ok ? 'bg-green-50 border-green-100 text-green-800' : 'bg-red-50 border-red-100 text-red-800'}`}>
+                DMARC: {dnsResult?.dmarc?.ok ? 'nalezeno' : 'nenalezeno'}
+              </div>
+            </div>
+          )}
         </AdminPanel>
 
         <div className="md:col-span-2">

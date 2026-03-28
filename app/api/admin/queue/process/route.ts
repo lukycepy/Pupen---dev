@@ -81,6 +81,8 @@ export async function POST(req: Request) {
       const replyTo = String(j.reply_to || '').trim();
       const subject = String(j.subject || '');
       const html = String(j.html || '');
+      const text = j.text ? String(j.text) : '';
+      const headers = j?.headers && typeof j.headers === 'object' ? j.headers : undefined;
       const attemptCount = Number(j.attempt_count || 0);
       const maxAttempts = Number(j.max_attempts || 5);
 
@@ -90,7 +92,9 @@ export async function POST(req: Request) {
           to,
           subject,
           html,
+          text: text || undefined,
           replyTo: replyTo || undefined,
+          headers,
         });
         const del = await supabase.from('email_send_queue').delete().eq('id', id);
         if (del.error) throw del.error;
@@ -112,6 +116,8 @@ export async function POST(req: Request) {
                 reply_to: replyTo || null,
                 subject,
                 html,
+                text: text || null,
+                headers: headers || {},
                 meta: meta2,
                 attempt_count: nextAttempt,
                 max_attempts: maxAttempts,

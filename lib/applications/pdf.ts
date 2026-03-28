@@ -1,5 +1,6 @@
 import { PDFDocument, rgb } from 'pdf-lib';
 import { getPdfFonts } from '@/lib/pdf/fonts';
+import { formatDatePrague } from '@/lib/time/prague';
 
 function cleanText(input: any, fallback = '-') {
   const s = String(input ?? '').replace(/\u0000/g, '').trim();
@@ -35,13 +36,7 @@ function labelStatus(input: any) {
 }
 
 function formatDateCs(input: any) {
-  try {
-    const d = input ? new Date(input) : null;
-    if (!d || Number.isNaN(d.getTime())) return '';
-    return d.toLocaleDateString('cs-CZ');
-  } catch {
-    return '';
-  }
+  return formatDatePrague(input, 'cs');
 }
 
 async function loadLogoPngBytes(): Promise<Uint8Array | null> {
@@ -103,6 +98,7 @@ export async function buildApplicationPdfBytes(app: any) {
   const gray = rgb(0.35, 0.35, 0.35);
   const light = rgb(0.92, 0.92, 0.92);
   const green = rgb(0.08, 0.6, 0.26);
+  const paper = rgb(0.98, 0.98, 0.97);
 
   const drawSafe = (text: any, opts: { x: number; y: number; size: number; font: any; color: any }) => {
     const primary = cleanText(text, '');
@@ -125,8 +121,13 @@ export async function buildApplicationPdfBytes(app: any) {
     } catch {}
   }
 
-  drawSafe('PŘIHLÁŠKA DO SPOLKU PUPEN, Z. S.', { x: margin + 70, y, size: 16, font: fontBold, color: black });
-  y -= 22;
+  page.drawRectangle({ x: 0, y: 835, width, height: 6, color: green });
+  page.drawRectangle({ x: margin, y: 748, width: width - margin * 2, height: 78, color: paper, borderColor: light, borderWidth: 1 });
+
+  drawSafe('PŘIHLÁŠKA DO STUDENTSKÉHO SPOLKU', { x: margin + 70, y, size: 14, font: fontBold, color: black });
+  y -= 18;
+  drawSafe('PUPEN, Z.S.', { x: margin + 70, y, size: 20, font: fontBold, color: black });
+  y -= 20;
   drawSafe('Studentský spolek Pupen, z.s. • Kamýcká 129, Suchdol, 165 00 Praha', { x: margin + 70, y, size: 9, font, color: gray });
   y -= 12;
   page.drawLine({ start: { x: margin, y }, end: { x: width - margin, y }, thickness: 1, color: light });
@@ -156,12 +157,14 @@ export async function buildApplicationPdfBytes(app: any) {
   const fullName = cleanText(`${firstName} ${lastName}`.trim() || app?.name || '', '-');
   const submittedAt = (app as any)?.created_at || app?.submitted_on || '';
   const membershipType = labelMembershipType(app?.decision_membership_type || app?.membership_type);
+  const gdprConsent = app?.gdpr_consent === true ? 'Ano' : app?.gdpr_consent === false ? 'Ne' : '-';
 
   section('OSOBNÍ ÚDAJE');
   row('Jméno a příjmení', fullName);
   row('E-mail', app?.email || '-');
   row('Telefon', app?.phone || '-');
   row('Typ členství', membershipType);
+  row('GDPR souhlas', gdprConsent);
   row('Datum podání', formatDateCs(submittedAt) || '-');
 
   if (String(app?.membership_type || '').trim().toLowerCase() !== 'external') {
@@ -214,7 +217,8 @@ export async function buildApplicationPdfBytes(app: any) {
   }
 
   y = Math.max(y, 70);
-  drawSafe('V Praze, v sídle spolku Studentský spolek Pupen, z.s.', { x: margin, y: 60, size: 9, font, color: gray });
+  drawSafe('Tento dokument byl vygenerován systémem Pupen.', { x: margin, y: 72, size: 9, font, color: gray });
+  drawSafe('V Praze, v sídle spolku Studentský spolek Pupen, z.s.', { x: margin, y: 58, size: 9, font, color: gray });
 
   const pdfBytes = await pdfDoc.save();
   return Buffer.from(pdfBytes);

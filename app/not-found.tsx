@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { getDictionary } from '@/lib/get-dictionary';
-import Image from 'next/image';
+import NextImage from 'next/image';
 import Skeleton from './[lang]/components/Skeleton';
 
 export default function GlobalNotFound() {
@@ -71,7 +71,7 @@ export default function GlobalNotFound() {
             <Link href={`/${lang}`} className="relative group transition-transform hover:scale-105 duration-300">
               <div className="absolute -inset-3 bg-green-100 rounded-full blur-lg opacity-40 group-hover:opacity-100 transition duration-500" />
               <div className="relative h-14 w-14 rounded-full overflow-hidden shadow-md border-2 border-white z-10 bg-white">
-                <Image 
+                <NextImage 
                   src="/logo.png" 
                   alt="Logo Spolek Pupen" 
                   fill

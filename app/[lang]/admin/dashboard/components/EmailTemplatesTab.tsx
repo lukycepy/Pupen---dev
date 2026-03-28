@@ -33,6 +33,11 @@ export default function EmailTemplatesTab() {
         ico: '',
         dic: '',
         note: '',
+        subject: 'Ukázkový newsletter',
+        preheader: 'Krátký preheader pro náhled v inboxu',
+        html: '<p style="margin:0 0 12px 0;">Ahoj! Tohle je ukázkový obsah newsletteru.</p><p style="margin:0;">Díky, že čteš Pupen.</p>',
+        unsubLink: 'https://pupen.org/unsubscribe?email=test@example.com',
+        preferencesLink: 'https://pupen.org/unsubscribe?email=test@example.com',
       },
       null,
       2

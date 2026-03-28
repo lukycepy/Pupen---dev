@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { formatDatePrague, formatDateTimePrague } from '@/lib/time/prague';
 
 function esc(input: any) {
   return String(input ?? '')
@@ -43,7 +44,7 @@ export async function buildWeeklyDigest(supabase: SupabaseClient) {
   const html = `
     <div style="font-family: sans-serif; padding: 20px; color: #1c1917; max-width: 720px; margin: auto;">
       <h2 style="color: #16a34a; margin-top: 0;">Pupen — Týdenní digest</h2>
-      <div style="color:#78716c; font-size: 12px; margin-bottom: 14px;">Období: posledních 7 dní • Vygenerováno: ${new Date().toLocaleString('cs-CZ')}</div>
+      <div style="color:#78716c; font-size: 12px; margin-bottom: 14px;">Období: posledních 7 dní • Vygenerováno: ${formatDateTimePrague(new Date(), 'cs')}</div>
       ${section('Registrace a přihlášky', [
         { label: 'Nové přihlášky členství', value: apps.length },
         { label: 'Nové RSVP', value: rsvps.length },
@@ -55,7 +56,7 @@ export async function buildWeeklyDigest(supabase: SupabaseClient) {
         events.length
           ? events.map((e: any) => ({
               label: e.title || 'Akce',
-              value: `${e.date ? new Date(e.date).toLocaleDateString('cs-CZ') : ''}${e.location ? ` • ${e.location}` : ''}`,
+              value: `${e.date ? formatDatePrague(e.date, 'cs') : ''}${e.location ? ` • ${e.location}` : ''}`,
             }))
           : [{ label: 'Akce', value: '—' }]
       )}
@@ -79,4 +80,3 @@ export async function buildWeeklyDigest(supabase: SupabaseClient) {
     },
   };
 }
-

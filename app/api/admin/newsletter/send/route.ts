@@ -171,10 +171,14 @@ export async function POST(req: Request) {
             to, 
             subject: wrappedSubject, 
             html: trackedHtml,
+            text: stripHtmlToText(trackedHtml),
+            replyTo: 'info@pupen.org',
             attachments: attachments
               .map((a: any) => ({ filename: a?.name, path: a?.url }))
               .filter((a: any) => typeof a?.filename === 'string' && a.filename && typeof a?.path === 'string' && a.path),
             headers: {
+              'X-Pupen-Category': 'newsletter',
+              'X-Pupen-Campaign': campaignId,
               'List-Unsubscribe': `<${unsubApiUrl}>`,
               'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
             }

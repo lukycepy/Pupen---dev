@@ -1,0 +1,9 @@
+- [x] Schvalování přihlášek nepadá na ON CONFLICT chybě.
+- [x] Notifikace o nové přihlášce jdou jen na e-maily nastavené v kontrolu.
+- [x] Uchazeč a předseda/admin dostanou rozdílné e-maily podle scénáře.
+- [x] Po schválení přijde uchazeči e-mail s PDF a přístupem/aktivací.
+- [x] Doručitelnost e-mailů je zlepšená (validní HTML, stabilní From/Reply-To, textový ekvivalent).
+- [x] Podpis předsedy funguje v admin modalu a propisuje se do PDF.
+- [x] Modal detailu přihlášky je použitelný bez zoom workaroundu.
+- [x] PDF přihláška má nový titul, GDPR souhlas, poznámku o generování a lepší design.
+- [x] Název PDF souboru je `Prijmeni-Jmeno-PUPEN-YY.pdf` (konzistentní transliterace).
