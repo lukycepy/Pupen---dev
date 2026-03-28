@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import InlinePulse from '@/app/components/InlinePulse';
 import { useToast } from '@/app/context/ToastContext';
 import { FolderKanban, Plus, Send, X } from 'lucide-react';
-import Portal from '@/app/components/ui/Portal';
+import Dialog from '@/app/components/ui/Dialog';
 
 export default function ProjectsTab({ lang }: { lang: string }) {
   const { showToast } = useToast();
@@ -193,15 +193,12 @@ export default function ProjectsTab({ lang }: { lang: string }) {
       </div>
 
       {joinOpen && (
-        <Portal>
-        <div className="fixed inset-0 z-[10003] flex items-center justify-center p-6">
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setJoinOpen(null)}
-            aria-label="Zavřít"
-          />
-          <div className="relative w-full max-w-lg bg-white rounded-[2.5rem] border border-stone-100 shadow-2xl overflow-hidden">
+        <Dialog
+          open={!!joinOpen}
+          onClose={() => setJoinOpen(null)}
+          overlayClassName="fixed inset-0 z-[10003] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
+          panelClassName="relative w-full max-w-lg bg-white rounded-[2.5rem] border border-stone-100 shadow-2xl overflow-hidden"
+        >
             <div className="p-6 border-b border-stone-100 flex items-center justify-between">
               <div className="min-w-0">
                 <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">
@@ -251,21 +248,16 @@ export default function ProjectsTab({ lang }: { lang: string }) {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-        </Portal>
+        </Dialog>
       )}
 
       {createOpen && (
-        <Portal>
-        <div className="fixed inset-0 z-[10003] flex items-center justify-center p-6">
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setCreateOpen(false)}
-            aria-label="Zavřít"
-          />
-          <div className="relative w-full max-w-2xl bg-white rounded-[2.5rem] border border-stone-100 shadow-2xl overflow-hidden">
+        <Dialog
+          open={createOpen}
+          onClose={() => setCreateOpen(false)}
+          overlayClassName="fixed inset-0 z-[10003] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
+          panelClassName="relative w-full max-w-2xl bg-white rounded-[2.5rem] border border-stone-100 shadow-2xl overflow-hidden"
+        >
             <div className="p-6 border-b border-stone-100 flex items-center justify-between">
               <div className="min-w-0">
                 <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">
@@ -338,9 +330,7 @@ export default function ProjectsTab({ lang }: { lang: string }) {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-        </Portal>
+        </Dialog>
       )}
     </div>
   );

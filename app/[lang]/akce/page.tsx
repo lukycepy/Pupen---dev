@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { getDictionary } from '@/lib/get-dictionary';
 import { Clock, ArrowRight, Calendar, CheckCircle, LayoutGrid, CalendarDays, Users, Trash2 } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
-import Portal from '@/app/components/ui/Portal';
+import Dialog from '@/app/components/ui/Dialog';
 import MonthlyCalendar from '../components/MonthlyCalendar';
 import InlinePulse from '@/app/components/InlinePulse';
 import SocialShareMenu from '@/app/components/SocialShareMenu';
@@ -530,9 +530,12 @@ export default function AkcePage() {
         )}
 
         {rsvpOpen && (
-          <Portal>
-            <div className="fixed inset-0 z-[10001] bg-stone-900/40 backdrop-blur-sm flex items-center justify-center p-6 overflow-y-auto">
-              <div className="bg-white w-full max-w-lg rounded-[2.5rem] p-10 shadow-2xl animate-in zoom-in-95 duration-300 my-8">
+          <Dialog
+            open={!!rsvpOpen}
+            onClose={() => setRsvpOpen(null)}
+            overlayClassName="fixed inset-0 z-[10001] bg-stone-900/40 backdrop-blur-sm flex items-center justify-center p-6 overflow-y-auto"
+            panelClassName="bg-white w-full max-w-lg rounded-[2.5rem] p-10 shadow-2xl animate-in zoom-in-95 duration-300 my-8"
+          >
               {rsvpView === 'success' && rsvpResult ? (
                 <div>
                   <h3 className="text-2xl font-black text-stone-900 mb-2">
@@ -722,9 +725,7 @@ export default function AkcePage() {
                   </div>
                 </div>
               )}
-              </div>
-            </div>
-          </Portal>
+          </Dialog>
         )}
       </div>
     </div>

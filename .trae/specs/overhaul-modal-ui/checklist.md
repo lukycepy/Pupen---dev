@@ -1,0 +1,6 @@
+- [x] Všechny modaly používají jednotné primitivum a renderují se přes Portal.
+- [x] ESC zavírá nejvyšší modal a focus se vrací na spouštěč.
+- [x] Backdrop click zavírá modal (pokud není explicitně zakázáno).
+- [x] Scroll lock funguje konzistentně (bez skoků layoutu).
+- [x] Z-index vrstvy jsou sjednocené a bez překryvů/glitchů (nav, toast, modal, bar).
+- [x] UI změny neporuší admin ani členský portál (ruční smoke test).

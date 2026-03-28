@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { ShieldCheck, Save, Trash2, UserPlus } from 'lucide-react';
 import { useToast } from '@/app/context/ToastContext';
 import InlinePulse from '@/app/components/InlinePulse';
 import AdminModuleHeader from './ui/AdminModuleHeader';
 import AdminPanel from './ui/AdminPanel';
+import Popover from '@/app/components/ui/Popover';
 
 type Role = { id: string; name: string; permissions: any; color_hex?: string };
 type Assignment = { user_id: string; role_id: string; assigned_at: string; assigned_by_email?: string | null; profiles?: any };
@@ -32,6 +33,7 @@ export default function RolesTab({ dict }: { dict: any }) {
   const [assignOpen, setAssignOpen] = useState(false);
   const [assignRoleId, setAssignRoleId] = useState('');
   const [assigning, setAssigning] = useState(false);
+  const assignAnchorRef = useRef<HTMLDivElement>(null);
 
   const assignmentsGrouped = useMemo(() => {
     const out: Array<{ userId: string; profile: any; items: Assignment[] }> = [];
@@ -386,7 +388,7 @@ export default function RolesTab({ dict }: { dict: any }) {
             <div className="grid md:grid-cols-3 gap-4">
               <div className="md:col-span-1">
                 <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{t.assignUserLabel || 'Uživatel'}</div>
-                <div className="relative">
+                <div className="relative" ref={assignAnchorRef}>
                   <input
                     value={assignSelectedUser ? `${String(assignSelectedUser.first_name || '').trim()} ${String(assignSelectedUser.last_name || '').trim()}`.trim() : assignQuery}
                     onChange={(e) => {
@@ -400,7 +402,16 @@ export default function RolesTab({ dict }: { dict: any }) {
                     className="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
                   />
                   {assignOpen && !assignSelectedUser ? (
-                    <div className="absolute left-0 right-0 mt-2 bg-white border border-stone-200 rounded-2xl shadow-xl overflow-hidden z-50">
+                    <Popover
+                      open={assignOpen && !assignSelectedUser}
+                      onClose={() => setAssignOpen(false)}
+                      anchorRef={assignAnchorRef}
+                      placement="bottom-start"
+                      offset={8}
+                      matchWidth
+                      zIndex={200}
+                      panelClassName="bg-white border border-stone-200 rounded-2xl shadow-xl overflow-hidden"
+                    >
                       {assignSearching ? (
                         <div className="p-4 text-stone-400 font-bold text-sm">Načítám…</div>
                       ) : assignResults.length ? (
@@ -436,7 +447,7 @@ export default function RolesTab({ dict }: { dict: any }) {
                       ) : (
                         <div className="p-4 text-stone-400 font-bold text-sm">{t.noResults || 'Nic nenalezeno.'}</div>
                       )}
-                    </div>
+                    </Popover>
                   ) : null}
                 </div>
                 {assignSelectedUser?.email ? (

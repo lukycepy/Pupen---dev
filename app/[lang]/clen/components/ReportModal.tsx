@@ -5,7 +5,7 @@ import { AlertTriangle, X } from 'lucide-react';
 import InlinePulse from '@/app/components/InlinePulse';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/app/context/ToastContext';
-import Portal from '@/app/components/ui/Portal';
+import Dialog from '@/app/components/ui/Dialog';
 
 export default function ReportModal({
   open,
@@ -69,11 +69,13 @@ export default function ReportModal({
   if (!open) return null;
 
   return (
-    <Portal>
-      <div className="fixed inset-0 z-[10003] flex items-center justify-center p-6">
-        <button type="button" className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} aria-label="Zavřít" />
-        <div className="relative w-full max-w-lg bg-white rounded-[2.5rem] border border-stone-100 shadow-2xl overflow-hidden">
-          <div className="p-6 border-b border-stone-100 flex items-center justify-between">
+    <Dialog
+      open={open}
+      onClose={onClose}
+      overlayClassName="fixed inset-0 z-[10003] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
+      panelClassName="relative w-full max-w-lg bg-white rounded-[2.5rem] border border-stone-100 shadow-2xl overflow-hidden"
+    >
+        <div className="p-6 border-b border-stone-100 flex items-center justify-between">
             <div className="min-w-0">
               <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">{lang === 'en' ? 'Report' : 'Nahlásit'}</div>
               <div className="font-black text-stone-900 truncate">{targetLabel || targetId}</div>
@@ -133,8 +135,6 @@ export default function ReportModal({
             </button>
           </div>
           </div>
-        </div>
-      </div>
-    </Portal>
+    </Dialog>
   );
 }

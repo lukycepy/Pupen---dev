@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Search, Command } from 'lucide-react';
 import { buildAdminMenuGroups } from './adminMenu';
-import Portal from '@/app/components/ui/Portal';
+import Dialog from '@/app/components/ui/Dialog';
 
 type Item = {
   id: string;
@@ -87,11 +87,12 @@ export default function AdminCommandPalette({
   if (!open) return null;
 
   return (
-    <Portal>
-      <div className="fixed inset-0 z-[10001] flex items-start justify-center p-4 sm:p-8">
-        <button type="button" className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} aria-label="Zavřít" />
-
-        <div className="relative w-full max-w-2xl bg-white rounded-[2rem] border border-stone-100 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <Dialog
+      open={open}
+      onClose={onClose}
+      overlayClassName="fixed inset-0 z-[10001] flex items-start justify-center p-4 sm:p-8 bg-black/60 backdrop-blur-sm"
+      panelClassName="relative w-full max-w-2xl bg-white rounded-[2rem] border border-stone-100 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+    >
           <div className="p-5 border-b border-stone-100 flex items-center gap-3">
             <div className="w-10 h-10 bg-stone-50 rounded-2xl border border-stone-100 flex items-center justify-center text-stone-400">
               <Command size={18} />
@@ -146,8 +147,6 @@ export default function AdminCommandPalette({
             <span>↑↓ výběr, Enter otevřít</span>
             <span>{dict?.admin?.tabAnalytics ? 'Ctrl+K / ⌘K' : 'Ctrl+K'}</span>
           </div>
-        </div>
-      </div>
-    </Portal>
+    </Dialog>
   );
 }

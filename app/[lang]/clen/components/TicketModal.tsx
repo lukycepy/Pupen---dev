@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Download, X } from 'lucide-react';
 import CopyButton from '@/app/components/CopyButton';
 import Image from 'next/image';
-import Portal from '@/app/components/ui/Portal';
+import Dialog from '@/app/components/ui/Dialog';
 
 export default function TicketModal({
   open,
@@ -56,16 +56,12 @@ export default function TicketModal({
   };
 
   return (
-    <Portal>
-      <div className="fixed inset-0 z-[10002] flex items-center justify-center p-6">
-        <button
-          type="button"
-          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-          onClick={onClose}
-          aria-label="Zavřít"
-        />
-
-        <div className="relative w-full max-w-lg bg-white rounded-[2.5rem] border border-stone-100 shadow-2xl overflow-hidden">
+    <Dialog
+      open={open}
+      onClose={onClose}
+      overlayClassName="fixed inset-0 z-[10002] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
+      panelClassName="relative w-full max-w-lg bg-white rounded-[2.5rem] border border-stone-100 shadow-2xl overflow-hidden"
+    >
           <div className="p-6 border-b border-stone-100 flex items-center justify-between">
             <div className="min-w-0">
               <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">
@@ -147,8 +143,6 @@ export default function TicketModal({
               </button>
             </div>
           </div>
-        </div>
-      </div>
-    </Portal>
+    </Dialog>
   );
 }

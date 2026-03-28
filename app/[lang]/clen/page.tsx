@@ -21,7 +21,7 @@ import MemberPanel from './components/ui/MemberPanel';
 import PasswordField from '@/app/components/PasswordField';
 import AddressAutocomplete from '@/app/components/AddressAutocomplete';
 import ConfirmModal from '@/app/components/ConfirmModal';
-import Portal from '@/app/components/ui/Portal';
+import Dialog from '@/app/components/ui/Dialog';
 import { evaluatePassword, passwordScoreLabel } from '@/lib/auth/password-policy';
 
 const MemberCard = dynamic<any>(() => import('./components/MemberCard'), { loading: () => <SkeletonTabContent /> });
@@ -1839,9 +1839,12 @@ export default function ClenskaSekcePage() {
                 </div>
               </MemberPanel>
               {mfaDisableOpen && (
-                <Portal>
-                  <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-                    <div className="w-full max-w-md bg-white rounded-[2rem] border border-stone-100 shadow-2xl p-6">
+                <Dialog
+                  open={mfaDisableOpen}
+                  onClose={() => setMfaDisableOpen(false)}
+                  overlayClassName="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+                  panelClassName="w-full max-w-md bg-white rounded-[2rem] border border-stone-100 shadow-2xl p-6"
+                >
                       <div className="text-sm font-black text-stone-900">{lang === 'en' ? 'Disable 2FA' : 'Vypnout 2FA'}</div>
                       <div className="mt-2 text-xs font-bold text-stone-500">
                         {lang === 'en' ? 'Enter your 6-digit code to confirm.' : 'Pro potvrzení zadejte 6místný kód z aplikace.'}
@@ -1871,9 +1874,7 @@ export default function ClenskaSekcePage() {
                           {mfaLoading ? (lang === 'en' ? 'Loading...' : 'Načítám...') : (lang === 'en' ? 'Disable' : 'Vypnout')}
                         </button>
                       </div>
-                    </div>
-                  </div>
-                </Portal>
+                </Dialog>
               )}
               <MemberPanel className="p-10 mt-8">
                 <h2 className="text-2xl font-black mb-6 flex items-center gap-3">

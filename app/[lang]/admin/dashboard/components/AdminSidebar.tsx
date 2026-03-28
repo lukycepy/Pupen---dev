@@ -13,7 +13,7 @@ import {
 import { buildAdminMenuGroups } from './adminMenu';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
-import Portal from '@/app/components/ui/Portal';
+import Drawer from '@/app/components/ui/Drawer';
 
 interface AdminSidebarProps {
   lang: string;
@@ -211,14 +211,16 @@ export default function AdminSidebar({
 
       {/* SIDEBAR MOBILE OVERLAY */}
       {isMobileOpen && (
-        <Portal>
-          <div className="lg:hidden fixed inset-0 z-[100] flex">
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsMobileOpen(false)} />
-            <div className="relative w-72 h-full animate-in slide-in-from-left duration-300">
-              <SidebarContent {...commonProps} />
-            </div>
-          </div>
-        </Portal>
+        <Drawer
+          open={isMobileOpen}
+          onClose={() => setIsMobileOpen(false)}
+          side="left"
+          overlayClassName="lg:hidden fixed inset-0 z-[100] flex"
+          backdropClassName="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          panelClassName="relative w-72 h-full animate-in slide-in-from-left duration-300"
+        >
+          <SidebarContent {...commonProps} />
+        </Drawer>
       )}
     </>
   );

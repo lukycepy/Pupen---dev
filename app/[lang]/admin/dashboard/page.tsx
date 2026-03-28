@@ -73,7 +73,7 @@ import Skeleton, { SkeletonTabContent } from '@/app/[lang]/components/Skeleton';
 import AdminSidebar from './components/AdminSidebar';
 import AdminCommandPalette from './components/AdminCommandPalette';
 import { buildAdminMenuGroups } from './components/adminMenu';
-import Portal from '@/app/components/ui/Portal';
+import Dialog from '@/app/components/ui/Dialog';
 
 export default function AdminDashboard() {
   const params = useParams();
@@ -436,10 +436,13 @@ export default function AdminDashboard() {
 
           {/* PROFILE SETTINGS MODAL */}
           {isProfileOpen && (
-            <Portal>
-              <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[10000] flex items-center justify-center p-6 animate-in fade-in duration-300 text-left">
-                <div className="bg-white w-full max-w-md rounded-[2rem] p-8 shadow-2xl animate-in zoom-in-95 duration-300">
-                <div className="flex justify-between items-center mb-6">
+            <Dialog
+              open={isProfileOpen}
+              onClose={() => setIsProfileOpen(false)}
+              overlayClassName="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[10000] flex items-center justify-center p-6 animate-in fade-in duration-300 text-left"
+              panelClassName="bg-white w-full max-w-md rounded-[2rem] p-8 shadow-2xl animate-in zoom-in-95 duration-300"
+            >
+              <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-black text-stone-900">{lang === 'cs' ? 'Nastavení profilu' : 'Profile Settings'}</h2>
                   <button onClick={() => setIsProfileOpen(false)} className="p-2 hover:bg-stone-100 rounded-full transition text-stone-400">
                     <X size={24} />
@@ -495,9 +498,7 @@ export default function AdminDashboard() {
                     </button>
                   </div>
                 </form>
-                </div>
-              </div>
-            </Portal>
+            </Dialog>
           )}
 
           {/* CONTENT AREA */}

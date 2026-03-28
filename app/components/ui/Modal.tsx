@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import Portal from './Portal';
+import { useTopLayer } from './topLayer';
 
 export default function Modal({
   open,
@@ -14,14 +15,8 @@ export default function Modal({
   children: React.ReactNode;
   maxWidthClassName?: string;
 }) {
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+  const panelRef = React.useRef<HTMLDivElement>(null);
+  useTopLayer(open, onClose, panelRef, { closeOnEscape: true, lockScroll: true, initialFocus: 'first' });
 
   if (!open) return null;
 
@@ -29,6 +24,8 @@ export default function Modal({
     <Portal>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onMouseDown={onClose}>
         <div
+          ref={panelRef}
+          tabIndex={-1}
           className={['bg-white rounded-[2rem] p-6 w-full shadow-2xl relative', maxWidthClassName].join(' ')}
           onMouseDown={(e) => e.stopPropagation()}
         >

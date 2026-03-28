@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { AlertTriangle, X } from 'lucide-react';
 import Portal from './ui/Portal';
+import { useTopLayer } from './ui/topLayer';
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -25,22 +26,8 @@ export default function ConfirmModal({
   cancelLabel = 'Zrušit',
   variant = 'danger'
 }: ConfirmModalProps) {
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      // Trap focus or handle escape
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') onClose();
-      };
-      window.addEventListener('keydown', handleKeyDown);
-      return () => {
-        document.body.style.overflow = 'unset';
-        window.removeEventListener('keydown', handleKeyDown);
-      };
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-  }, [isOpen, onClose]);
+  const panelRef = React.useRef<HTMLDivElement>(null);
+  useTopLayer(isOpen, onClose, panelRef, { closeOnEscape: true, lockScroll: true, initialFocus: 'first' });
 
   if (!isOpen) return null;
 
@@ -62,6 +49,8 @@ export default function ConfirmModal({
         <div className="absolute inset-0 bg-stone-900/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose} />
 
         <div
+          ref={panelRef}
+          tabIndex={-1}
           className="relative w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl border border-stone-100 overflow-hidden animate-in zoom-in slide-in-from-bottom-8 duration-300"
           role="dialog"
           aria-modal="true"

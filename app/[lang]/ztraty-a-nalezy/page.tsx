@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { KeyRound, MapPin, Phone, ShieldCheck, Search, HandHeart } from 'lucide-react';
 import InlinePulse from '@/app/components/InlinePulse';
-import Portal from '@/app/components/ui/Portal';
+import Dialog from '@/app/components/ui/Dialog';
 
 type Item = {
   id: string;
@@ -192,9 +192,12 @@ export default function LostFoundPage() {
 
       {/* Claim Modal */}
       {claimingItem && (
-        <Portal>
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <div className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl relative">
+        <Dialog
+          open={!!claimingItem}
+          onClose={() => setClaimingItem(null)}
+          overlayClassName="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          panelClassName="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl relative"
+        >
               <button onClick={() => setClaimingItem(null)} className="absolute top-6 right-6 text-stone-400 hover:text-stone-900">✕</button>
               <h3 className="text-2xl font-black text-stone-900 mb-2">{lang === 'en' ? 'Claim item' : 'Žádost o navrácení'}</h3>
               <p className="text-stone-500 mb-6 font-medium">
@@ -240,9 +243,7 @@ export default function LostFoundPage() {
                 </button>
               </form>
             )}
-            </div>
-          </div>
-        </Portal>
+        </Dialog>
       )}
     </div>
   );

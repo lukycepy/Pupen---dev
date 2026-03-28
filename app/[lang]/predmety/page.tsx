@@ -9,6 +9,7 @@ import { useToast } from '../../context/ToastContext';
 import subjectsData from '@/lib/subjects_data.json';
 import { getDictionary } from '@/lib/get-dictionary';
 import Skeleton, { SkeletonList } from '../components/Skeleton';
+import Popover from '@/app/components/ui/Popover';
 
 export default function PredmetyPage() {
   const params = useParams();
@@ -21,6 +22,8 @@ export default function PredmetyPage() {
   const [formData, setFormData] = useState({ subject_name: '', rating: 5, difficulty: 3, comment: '', author_name: '' });
   const [dict, setDict] = useState<any>(null);
   const mainSearchRef = useRef<HTMLDivElement>(null);
+  const formSuggestRef = useRef<HTMLDivElement>(null);
+  const [showFormSuggestions, setShowFormSuggestions] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -35,16 +38,6 @@ export default function PredmetyPage() {
       const q = new URLSearchParams(window.location.search).get('q') || '';
       if (q) setSearchTerm(q);
     } catch {}
-  }, []);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (mainSearchRef.current && !mainSearchRef.current.contains(event.target as Node)) {
-        setShowMainSuggestions(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const subjects = subjectsData;
@@ -118,8 +111,16 @@ export default function PredmetyPage() {
               className="w-full pl-16 pr-8 py-5 bg-white border-none rounded-[2rem] shadow-xl text-stone-700 font-bold focus:ring-2 focus:ring-green-500 transition"
             />
             
-            {showMainSuggestions && searchTerm.length > 0 && (
-              <div className="absolute z-[100] left-0 right-0 top-full mt-2 bg-white border border-stone-100 shadow-2xl rounded-[2rem] overflow-hidden max-h-64 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
+            <Popover
+              open={showMainSuggestions && searchTerm.length > 0}
+              onClose={() => setShowMainSuggestions(false)}
+              anchorRef={mainSearchRef}
+              placement="bottom-start"
+              offset={8}
+              matchWidth
+              zIndex={100}
+              panelClassName="bg-white border border-stone-100 shadow-2xl rounded-[2rem] overflow-hidden max-h-64 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200"
+            >
                 {subjects
                   .filter(s => 
                     s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -153,8 +154,7 @@ export default function PredmetyPage() {
                     {lang === 'cs' ? 'Nebyly nalezeny žádné odpovídající předměty.' : 'No matching subjects found.'}
                   </div>
                 )}
-              </div>
-            )}
+            </Popover>
           </div>
           <button 
             onClick={() => setIsAdding(!isAdding)}
@@ -169,17 +169,34 @@ export default function PredmetyPage() {
             <h2 className="text-2xl font-black mb-8 text-stone-900">{dict.newReview}</h2>
             <div className="grid md:grid-cols-2 gap-8">
               <div className="space-y-6">
-                <div className="relative">
+                <div className="relative" ref={formSuggestRef}>
                   <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.labelSubject}</label>
                   <input 
                     type="text" 
                     value={formData.subject_name} 
-                    onChange={e => setFormData({...formData, subject_name: e.target.value})} 
+                    onChange={e => {
+                      setFormData({...formData, subject_name: e.target.value});
+                      setShowFormSuggestions(true);
+                    }} 
+                    onFocus={() => setShowFormSuggestions(true)}
+                    onBlur={() => window.setTimeout(() => setShowFormSuggestions(false), 120)}
                     className="w-full bg-stone-50 border-none rounded-2xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition" 
                     placeholder={dict.placeholderSubject} 
                   />
-                  {formData.subject_name.length > 0 && !subjects.find(s => `${s.name} (${s.code}) [${s.type}]` === formData.subject_name) && (
-                    <div className="absolute z-50 left-0 right-0 top-full mt-2 bg-white border border-stone-100 shadow-2xl rounded-2xl overflow-hidden max-h-48 overflow-y-auto">
+                  <Popover
+                    open={
+                      showFormSuggestions &&
+                      formData.subject_name.length > 0 &&
+                      !subjects.find(s => `${s.name} (${s.code}) [${s.type}]` === formData.subject_name)
+                    }
+                    onClose={() => setShowFormSuggestions(false)}
+                    anchorRef={formSuggestRef}
+                    placement="bottom-start"
+                    offset={8}
+                    matchWidth
+                    zIndex={200}
+                    panelClassName="bg-white border border-stone-100 shadow-2xl rounded-2xl overflow-hidden max-h-48 overflow-y-auto"
+                  >
                       {subjects
                         .filter(s => 
                           s.name.toLowerCase().includes(formData.subject_name.toLowerCase()) || 
@@ -189,7 +206,11 @@ export default function PredmetyPage() {
                         .map(s => (
                           <button 
                             key={s.code}
-                            onClick={() => setFormData({...formData, subject_name: `${s.name} (${s.code}) [${s.type}]`})}
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => {
+                              setFormData({...formData, subject_name: `${s.name} (${s.code}) [${s.type}]`});
+                              setShowFormSuggestions(false);
+                            }}
                             className="w-full text-left px-6 py-3 hover:bg-green-50 transition border-b border-stone-50 last:border-0"
                           >
                             <span className="font-bold text-stone-700">{s.name}</span>
@@ -198,8 +219,7 @@ export default function PredmetyPage() {
                           </button>
                         ))
                       }
-                    </div>
-                  )}
+                  </Popover>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>

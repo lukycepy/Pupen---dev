@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { BarChart3, CheckCircle, Plus, Save, Trash2, X } from 'lucide-react';
 import InlinePulse from '@/app/components/InlinePulse';
 import { useToast } from '@/app/context/ToastContext';
-import Portal from '@/app/components/ui/Portal';
+import Dialog from '@/app/components/ui/Dialog';
 
 export default function PollsTab({ dict }: { dict: any }) {
   const qc = useQueryClient();
@@ -222,11 +222,13 @@ export default function PollsTab({ dict }: { dict: any }) {
       </div>
 
       {createOpen && (
-        <Portal>
-          <div className="fixed inset-0 z-[10003] flex items-center justify-center p-6">
-            <button type="button" className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setCreateOpen(false)} aria-label="Zavřít" />
-            <div className="relative w-full max-w-2xl bg-white rounded-[2.5rem] border border-stone-100 shadow-2xl overflow-hidden">
-            <div className="p-6 border-b border-stone-100 flex items-center justify-between">
+        <Dialog
+          open={createOpen}
+          onClose={() => setCreateOpen(false)}
+          overlayClassName="fixed inset-0 z-[10003] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
+          panelClassName="relative w-full max-w-2xl bg-white rounded-[2.5rem] border border-stone-100 shadow-2xl overflow-hidden"
+        >
+          <div className="p-6 border-b border-stone-100 flex items-center justify-between">
               <div className="font-black text-stone-900">Nová anketa</div>
               <button type="button" onClick={() => setCreateOpen(false)} className="p-2 rounded-xl hover:bg-stone-50 transition text-stone-400" aria-label="Zavřít">
                 <X size={18} />
@@ -317,9 +319,7 @@ export default function PollsTab({ dict }: { dict: any }) {
                 </button>
               </div>
             </div>
-            </div>
-          </div>
-        </Portal>
+        </Dialog>
       )}
     </div>
   );

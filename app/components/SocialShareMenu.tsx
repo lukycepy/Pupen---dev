@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { MessageCircle, Send, Facebook, X as XIcon, Share2 } from 'lucide-react';
 import CopyButton from './CopyButton';
-import Portal from './ui/Portal';
+import Popover from './ui/Popover';
 
 function buildLinks(title: string, url: string) {
   const text = `${title}\n${url}`;
@@ -26,6 +26,7 @@ export default function SocialShareMenu({
 }) {
   const [open, setOpen] = useState(false);
   const [resolvedUrl, setResolvedUrl] = useState<string>('');
+  const anchorRef = React.useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (url) setResolvedUrl(url);
@@ -39,6 +40,7 @@ export default function SocialShareMenu({
   return (
     <div className={`relative ${className}`}>
       <button
+        ref={anchorRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="p-2.5 sm:p-3 bg-stone-50 text-stone-400 rounded-lg sm:rounded-xl hover:bg-green-50 hover:text-green-600 transition flex-1 sm:flex-none flex justify-center"
@@ -48,16 +50,15 @@ export default function SocialShareMenu({
       </button>
 
       {open && (
-        <>
-          <Portal>
-            <button
-              type="button"
-              className="fixed inset-0 z-[10000]"
-              onClick={() => setOpen(false)}
-              aria-label="Zavřít sdílení"
-            />
-          </Portal>
-          <div className="absolute right-0 mt-3 z-[10001] w-64 bg-white border border-stone-100 shadow-2xl rounded-2xl p-3">
+        <Popover
+          open={open}
+          onClose={() => setOpen(false)}
+          anchorRef={anchorRef}
+          placement="bottom-end"
+          offset={12}
+          zIndex={10001}
+          panelClassName="w-64 bg-white border border-stone-100 shadow-2xl rounded-2xl p-3"
+        >
             <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 mb-2">
               Sdílet
             </div>
@@ -103,8 +104,7 @@ export default function SocialShareMenu({
                 className="w-full border-stone-200 bg-white text-stone-700 hover:bg-stone-50"
               />
             </div>
-          </div>
-        </>
+        </Popover>
       )}
     </div>
   );

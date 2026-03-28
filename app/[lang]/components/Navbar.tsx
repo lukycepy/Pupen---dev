@@ -10,7 +10,8 @@ import {
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import InlinePulse from '@/app/components/InlinePulse';
-import Portal from '@/app/components/ui/Portal';
+import Drawer from '@/app/components/ui/Drawer';
+import Popover from '@/app/components/ui/Popover';
 
 interface NavbarProps {
   lang: string;
@@ -74,20 +75,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
   const pathname = usePathname();
   const searchRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
-
-  // Close search on click outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-        setIsSearchOpen(false);
-      }
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
-        setIsUserMenuOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  const toolsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setIsMenuOpen(false);
@@ -229,6 +217,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
             
             {/* TOOLS DROPDOWN */}
             <div 
+              ref={toolsRef}
               className="relative group"
               onMouseLeave={() => setIsToolsOpen(false)}
             >
@@ -243,8 +232,14 @@ export default function Navbar({ lang, dict }: NavbarProps) {
               </button>
               
               {isToolsOpen && (
-                <div 
-                  className="absolute top-[85%] left-1/2 -translate-x-1/2 w-[520px] bg-white border border-stone-100 shadow-2xl rounded-[2.5rem] p-8 animate-in fade-in slide-in-from-top-2 duration-300 z-[10000]"
+                <Popover
+                  open={isToolsOpen}
+                  onClose={() => setIsToolsOpen(false)}
+                  anchorRef={toolsRef}
+                  placement="bottom-center"
+                  offset={10}
+                  zIndex={10000}
+                  panelClassName="w-[520px] bg-white border border-stone-100 shadow-2xl rounded-[2.5rem] p-8 animate-in fade-in slide-in-from-top-2 duration-300"
                 >
                   <div className="grid grid-cols-2 gap-3">
                     {TOOLS.filter((t) => isPageEnabled(t.slug) && showInTools(t.slug)).map((tool) => (
@@ -268,7 +263,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                       </Link>
                     ))}
                   </div>
-                </div>
+                </Popover>
               )}
             </div>
 
@@ -306,7 +301,15 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                 {isSearchOpen ? <X size={20} /> : <Search size={20} />}
               </button>
               {isSearchOpen && (
-                <div className="absolute top-full right-0 mt-4 w-96 bg-white border border-stone-100 shadow-2xl rounded-3xl p-6 animate-in slide-in-from-top-2 duration-300 z-[10001]">
+                <Popover
+                  open={isSearchOpen}
+                  onClose={() => setIsSearchOpen(false)}
+                  anchorRef={searchRef}
+                  placement="bottom-end"
+                  offset={16}
+                  zIndex={10001}
+                  panelClassName="w-96 bg-white border border-stone-100 shadow-2xl rounded-3xl p-6 animate-in slide-in-from-top-2 duration-300"
+                >
                   <div className="relative mb-6">
                     <input 
                       autoFocus
@@ -476,7 +479,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                       <p className="text-sm text-stone-400 font-bold">{dict?.searchNoResults || "Nic nenalezeno"}</p>
                     </div>
                   )}
-                </div>
+                </Popover>
               )}
             </div>
 
@@ -513,7 +516,15 @@ export default function Navbar({ lang, dict }: NavbarProps) {
               </button>
 
               {isUserMenuOpen && (
-                <div className="absolute right-0 top-full mt-3 w-64 bg-white border border-stone-100 shadow-2xl rounded-3xl p-2 z-[10001]">
+                <Popover
+                  open={isUserMenuOpen}
+                  onClose={() => setIsUserMenuOpen(false)}
+                  anchorRef={userMenuRef}
+                  placement="bottom-end"
+                  offset={12}
+                  zIndex={10001}
+                  panelClassName="w-64 bg-white border border-stone-100 shadow-2xl rounded-3xl p-2"
+                >
                   {(userProfile?.is_member || userProfile?.email === 'cepelak@pupen.org') && (
                     <Link
                       href={`/${lang}/clen`}
@@ -560,7 +571,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                       <span>{lang === 'cs' ? 'Odhlásit se' : 'Log out'}</span>
                     </button>
                   )}
-                </div>
+                </Popover>
               )}
             </div>
 
@@ -595,14 +606,15 @@ export default function Navbar({ lang, dict }: NavbarProps) {
 
       {/* MOBILNÍ MENU */}
       {isMenuOpen && (
-        <Portal>
-          <div 
-            className="lg:hidden fixed inset-x-0 bottom-0 top-16 h-[calc(100dvh-4rem)] bg-white z-[9998] animate-in slide-in-from-top-10 duration-500 overflow-y-auto overscroll-contain"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Mobilní navigace"
-          >
-            <div className="flex flex-col p-5 sm:p-8 space-y-5 text-stone-800 pb-[max(2rem,env(safe-area-inset-bottom))]">
+        <Drawer
+          open={isMenuOpen}
+          onClose={() => setIsMenuOpen(false)}
+          side="top"
+          overlayClassName="lg:hidden fixed inset-0 z-[9998] flex"
+          backdropClassName="absolute inset-0 bg-black/40 backdrop-blur-sm"
+          panelClassName="relative w-full mt-16 h-[calc(100dvh-4rem)] bg-white animate-in slide-in-from-top-10 duration-500 overflow-y-auto overscroll-contain"
+        >
+          <div className="flex flex-col p-5 sm:p-8 space-y-5 text-stone-800 pb-[max(2rem,env(safe-area-inset-bottom))]">
             {/* MOBILNÍ SEARCH */}
             <div className="relative mb-4">
               <Search className="absolute left-4 top-3.5 text-stone-500" size={20} />
@@ -793,9 +805,8 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                 {lang === 'cs' ? 'Přidej se k nám' : 'Join us'}
               </Link>
             )}
-            </div>
           </div>
-        </Portal>
+        </Drawer>
       )}
     </nav>
   );
