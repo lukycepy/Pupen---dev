@@ -218,11 +218,13 @@ export default function Navbar({ lang, dict }: NavbarProps) {
             {/* TOOLS DROPDOWN */}
             <div 
               ref={toolsRef}
-              className="relative group"
-              onMouseLeave={() => setIsToolsOpen(false)}
+              className="relative"
             >
               <button 
-                onMouseEnter={() => setIsToolsOpen(true)}
+                type="button"
+                onClick={() => setIsToolsOpen((v) => !v)}
+                aria-haspopup="menu"
+                aria-expanded={isToolsOpen}
                 className={`flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.2em] transition-all duration-300 py-6 whitespace-nowrap ${
                   isToolsOpen ? 'text-green-600' : 'text-stone-500 hover:text-stone-900'
                 }`}
@@ -503,7 +505,9 @@ export default function Navbar({ lang, dict }: NavbarProps) {
               <button
                 type="button"
                 onClick={() => setIsUserMenuOpen((v) => !v)}
-                className="p-2.5 bg-stone-50 text-stone-500 rounded-xl hover:bg-stone-100 hover:text-stone-900 transition-all border border-stone-100 shadow-sm"
+                aria-haspopup="menu"
+                aria-expanded={isUserMenuOpen}
+                className="px-3 py-2.5 bg-stone-50 text-stone-500 rounded-xl hover:bg-stone-100 hover:text-stone-900 transition-all border border-stone-100 shadow-sm inline-flex items-center gap-1.5"
                 title={userProfile ? (lang === 'cs' ? 'Účet' : 'Account') : (dict?.memberLogin || 'Login')}
               >
                 {userProfile ? (
@@ -513,6 +517,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                 ) : (
                   <LockIcon size={20} />
                 )}
+                <ChevronDown size={14} className={`transition-transform duration-300 ${isUserMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 
               {isUserMenuOpen && (
