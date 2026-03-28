@@ -96,3 +96,4 @@ $$;
 REVOKE EXECUTE ON FUNCTION public.email_queue_claim(int, text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.email_queue_claim(int, text) TO service_role;
 
+SELECT public.notify_schema_change();

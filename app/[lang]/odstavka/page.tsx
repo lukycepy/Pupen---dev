@@ -52,7 +52,8 @@ export default function MaintenancePage() {
   const body =
     lang === 'en'
       ? cfg?.maintenance_body_en || 'We are improving the website. Please try again later.'
-      : cfg?.maintenance_body_cs || 'Právě vylepšujeme web. Zkuste to prosím později.';
+      : cfg?.maintenance_body_cs ||
+        '🤖I technika občas potřebuje pauzu na kafe (nebo na pivo na JIHu). Aktuálně na webu makáme, abychom opravili chyby a nahodili novinky. Zatím si běž užít kampus, my se do toho obujeme a za chvíli jsme zpátky. Pokud hoří něco důležitého, napiš nám na info@pupen.org nebo naše socky.✨';
   const otherLang = lang === 'en' ? 'cs' : 'en';
 
   const startAt = cfg?.maintenance_start_at ? new Date(String(cfg.maintenance_start_at)) : null;
@@ -68,8 +69,6 @@ export default function MaintenancePage() {
     if (!now) return;
     if (!isActive) router.replace(`/${lang}`);
   }, [cfg, isActive, lang, router]);
-
-  const isProbablyHtml = (s: string) => /<\/?[a-z][\s\S]*>/i.test(s);
 
   const decodeHtmlEntities = (s: string) => decodeHtmlEntitiesDeep(String(s || ''), 3);
 
@@ -94,101 +93,21 @@ export default function MaintenancePage() {
     return withPhones.replace(/\n/g, '<br/>');
   };
 
-  const sanitizeAndLinkifyHtml = (html: string) => {
-    try {
-      if (typeof DOMParser === 'undefined') return linkifyPlain(html);
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, 'text/html');
-      if (!doc?.body) return linkifyPlain(html);
-    const allowedTags = new Set(['A', 'B', 'STRONG', 'I', 'EM', 'U', 'BR', 'P', 'DIV', 'SPAN', 'UL', 'OL', 'LI', 'H1', 'H2', 'H3', 'H4', 'BLOCKQUOTE']);
-
-    const walk = (node: any) => {
-      if (!node) return;
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        const el = node as HTMLElement;
-        const tag = el.tagName.toUpperCase();
-        if (!allowedTags.has(tag)) {
-          const parent = el.parentNode;
-          if (parent) {
-            while (el.firstChild) parent.insertBefore(el.firstChild, el);
-            parent.removeChild(el);
-          }
-          return;
-        }
-
-        for (const attr of Array.from(el.attributes)) {
-          const name = attr.name.toLowerCase();
-          if (name.startsWith('on') || name === 'style') {
-            el.removeAttribute(attr.name);
-            continue;
-          }
-          if (tag === 'A') {
-            if (name !== 'href' && name !== 'target' && name !== 'rel' && name !== 'class') el.removeAttribute(attr.name);
-          } else {
-            if (name !== 'class') el.removeAttribute(attr.name);
-          }
-        }
-
-        if (tag === 'A') {
-          const href = el.getAttribute('href') || '';
-          const safeHref = /^(https?:\/\/|mailto:|tel:)/i.test(href) ? href : '';
-          if (!safeHref) el.removeAttribute('href');
-          el.setAttribute('rel', 'noreferrer noopener');
-          if (!el.getAttribute('target') && /^https?:\/\//i.test(href)) el.setAttribute('target', '_blank');
-        }
-      }
-
-      const children = Array.from(node.childNodes || []);
-      for (const child of children) walk(child);
-    };
-
-    walk(doc.body);
-
-    const linkifyTextNodes = (node: any) => {
-      if (!node) return;
-      const isElement = node.nodeType === Node.ELEMENT_NODE;
-      const hasLink = isElement && typeof (node as any).querySelector === 'function' ? (node as Element).querySelector('a') : null;
-      if (hasLink) return;
-      const walker = doc.createTreeWalker(node, NodeFilter.SHOW_TEXT);
-      const targets: Text[] = [];
-      let current: Node | null = walker.nextNode();
-      while (current) {
-        const t = current as Text;
-        if (t.nodeValue && t.nodeValue.trim()) targets.push(t);
-        current = walker.nextNode();
-      }
-
-      const emailRe = /([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/gi;
-      const phoneRe = /(\+?\d[\d\s().-]{7,}\d)/g;
-
-      for (const t of targets) {
-        const text = t.nodeValue || '';
-        if (!emailRe.test(text) && !phoneRe.test(text)) continue;
-        emailRe.lastIndex = 0;
-        phoneRe.lastIndex = 0;
-
-        const container = doc.createElement('span');
-        container.innerHTML = linkifyPlain(text);
-        const parent = t.parentNode;
-        if (!parent) continue;
-        parent.replaceChild(container, t);
-      }
-    };
-
-    linkifyTextNodes(doc.body);
-    return doc.body.innerHTML;
-    } catch {
-      return linkifyPlain(html);
-    }
+  const toPlainText = (input: string) => {
+    const decoded = decodeHtmlEntities(input);
+    const withBreaks = decoded
+      .replace(/<\s*br\s*\/?\s*>/gi, '\n')
+      .replace(/<\/\s*(p|div|li|h1|h2|h3|h4|blockquote)\s*>/gi, '\n');
+    const stripped = withBreaks.replace(/<[^>]*>/g, '');
+    return stripped
+      .replace(/\r\n/g, '\n')
+      .replace(/[ \t]+\n/g, '\n')
+      .replace(/\n[ \t]+/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
   };
 
-  const decodedBody = decodeHtmlEntities(body);
-  const buildBodyHtml = (input: string) => (isProbablyHtml(input) ? sanitizeAndLinkifyHtml(input) : linkifyPlain(input));
-  let bodyHtml = buildBodyHtml(decodedBody);
-  if (bodyHtml.includes('&lt;') && /&lt;\/?[a-z]/i.test(bodyHtml)) {
-    const decodedAgain = decodeHtmlEntities(bodyHtml);
-    bodyHtml = buildBodyHtml(decodedAgain);
-  }
+  const bodyHtml = linkifyPlain(toPlainText(body));
 
   return (
     <>
@@ -256,20 +175,7 @@ export default function MaintenancePage() {
           </div>
         )}
 
-          <div className="mt-10 flex flex-col sm:flex-row gap-3">
-            <Link
-              href={`/${lang}`}
-              className="inline-flex items-center justify-center rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
-            >
-              {lang === 'en' ? 'Back to home' : 'Zpět na domů'}
-            </Link>
-            <a
-              href="mailto:info@pupen.org"
-              className="inline-flex items-center justify-center rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-widest border border-green-200 bg-green-600 text-white hover:bg-green-700 transition"
-            >
-              {lang === 'en' ? 'Contact us' : 'Kontakt'}
-            </a>
-          </div>
+          <div className="mt-2" />
         </div>
       </div>
     </div>

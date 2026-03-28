@@ -31,3 +31,4 @@ BEGIN
 END;
 $$;
 
+SELECT public.notify_schema_change();

@@ -6,3 +6,5 @@ BEGIN
     EXECUTE 'ALTER TABLE public.newsletter_drafts ADD COLUMN IF NOT EXISTS ab_split integer NOT NULL DEFAULT 50';
   END IF;
 END $$;
+
+SELECT public.notify_schema_change();

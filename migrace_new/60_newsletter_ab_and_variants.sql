@@ -13,3 +13,4 @@ ALTER TABLE public.newsletter
 ALTER TABLE public.newsletter_events
   ADD COLUMN IF NOT EXISTS variant text;
 
+SELECT public.notify_schema_change();

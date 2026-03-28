@@ -23,3 +23,4 @@ BEGIN
   END IF;
 END $$;
 
+SELECT public.notify_schema_change();

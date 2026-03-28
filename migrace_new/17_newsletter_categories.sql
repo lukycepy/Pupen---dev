@@ -5,3 +5,4 @@ UPDATE public.newsletter_subscriptions
 SET categories = '{all}'::text[]
 WHERE categories IS NULL;
 
+SELECT public.notify_schema_change();

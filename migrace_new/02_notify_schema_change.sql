@@ -9,3 +9,4 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.notify_schema_change() TO PUBLIC;
 
+SELECT public.notify_schema_change();

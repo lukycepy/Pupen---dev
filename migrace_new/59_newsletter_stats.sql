@@ -12,21 +12,31 @@ CREATE TABLE IF NOT EXISTS public.newsletter_events (
 
 ALTER TABLE public.newsletter_events ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Admin all newsletter_events" 
-    ON public.newsletter_events FOR ALL 
-    TO authenticated
-    USING (
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='newsletter_events' AND policyname='Admin all newsletter_events'
+  ) THEN
+    CREATE POLICY "Admin all newsletter_events" 
+      ON public.newsletter_events FOR ALL 
+      TO authenticated
+      USING (
         EXISTS (
-            SELECT 1 FROM public.profiles
-            WHERE profiles.id = auth.uid() AND (profiles.is_admin = true OR profiles.can_manage_admins = true)
+          SELECT 1 FROM public.profiles
+          WHERE profiles.id = auth.uid() AND (profiles.is_admin = true OR profiles.can_manage_admins = true)
         )
-    );
+      );
+  END IF;
 
--- Anonymní insert je povolen pro tracking endpoint
-CREATE POLICY "Public insert newsletter_events"
-    ON public.newsletter_events FOR INSERT
-    TO anon, authenticated
-    WITH CHECK (true);
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='newsletter_events' AND policyname='Public insert newsletter_events'
+  ) THEN
+    CREATE POLICY "Public insert newsletter_events"
+      ON public.newsletter_events FOR INSERT
+      TO anon, authenticated
+      WITH CHECK (true);
+  END IF;
+END $$;
 
 -- Přidání sloupců pro souhrnné statistiky přímo do tabulky newsletter
 ALTER TABLE public.newsletter ADD COLUMN IF NOT EXISTS target_count INTEGER DEFAULT 0;
@@ -53,3 +63,5 @@ BEGIN
   UPDATE public.newsletter SET click_count = click_count + 1 WHERE id = n_id;
 END;
 $$;
+
+SELECT public.notify_schema_change();
