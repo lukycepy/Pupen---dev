@@ -4,6 +4,11 @@ import type { NextRequest } from 'next/server';
 const locales = ['cs', 'en'];
 const defaultLocale = 'cs';
 const COOKIE_NAME = 'NEXT_LOCALE';
+const SITE_CONFIG_ID = Number(process.env.SITE_CONFIG_ID || 1);
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const CONFIG_CACHE_TTL_MS = 10_000;
+let cachedConfig: { at: number; cfg: SiteConfig } | null = null;
 
 type SiteConfig = {
   maintenance_enabled: boolean;
@@ -13,23 +18,44 @@ type SiteConfig = {
   pages: Record<string, { enabled?: boolean; navbar?: boolean; tools?: boolean }>;
 };
 
-async function loadConfig(origin: string): Promise<SiteConfig> {
+async function loadConfig(): Promise<SiteConfig> {
+  if (cachedConfig && Date.now() - cachedConfig.at < CONFIG_CACHE_TTL_MS) return cachedConfig.cfg;
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    return { maintenance_enabled: false, maintenance_start_at: null, maintenance_end_at: null, maintenance_active: false, pages: {} };
+  }
   try {
-    const res = await fetch(new URL('/api/site-config', origin || 'http://localhost').toString(), {
+    const configId = Number.isFinite(SITE_CONFIG_ID) && SITE_CONFIG_ID >= 1 ? SITE_CONFIG_ID : 1;
+    const base = SUPABASE_URL.replace(/\/$/, '');
+    const url = `${base}/rest/v1/site_public_config?id=eq.${encodeURIComponent(String(configId))}&select=maintenance_enabled,maintenance_start_at,maintenance_end_at,pages,updated_at`;
+    const res = await fetch(url, {
       cache: 'no-store',
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
     } as any);
-    const json = (await res.json().catch(() => ({}))) as any;
-    const cfg = (json?.config && typeof json.config === 'object' ? json.config : {}) as any;
+    const rows = (await res.json().catch(() => [])) as any[];
+    const row = (Array.isArray(rows) && rows[0] ? rows[0] : {}) as any;
+
+    const now = Date.now();
+    const startAt = row.maintenance_start_at ? String(row.maintenance_start_at) : null;
+    const endAt = row.maintenance_end_at ? String(row.maintenance_end_at) : null;
+    const startMs = startAt ? Date.parse(startAt) : null;
+    const endMs = endAt ? Date.parse(endAt) : null;
+    const windowAllows = (!startMs || now >= startMs) && (!endMs || now < endMs);
+    const ended = !!endMs && now >= endMs;
+
     const value: SiteConfig = {
-      maintenance_enabled: !!cfg.maintenance_enabled,
-      maintenance_start_at: cfg.maintenance_start_at ?? null,
-      maintenance_end_at: cfg.maintenance_end_at ?? null,
-      maintenance_active: !!cfg.maintenance_active,
-      pages: (cfg.pages && typeof cfg.pages === 'object' ? cfg.pages : {}) as any,
+      maintenance_enabled: !!row.maintenance_enabled && !ended,
+      maintenance_start_at: startAt,
+      maintenance_end_at: endAt,
+      maintenance_active: !!row.maintenance_enabled && !ended && windowAllows,
+      pages: (row.pages && typeof row.pages === 'object' ? row.pages : {}) as any,
     };
+    cachedConfig = { at: Date.now(), cfg: value };
     return value;
   } catch {
-    return { maintenance_enabled: false, pages: {} };
+    return cachedConfig?.cfg || { maintenance_enabled: false, maintenance_start_at: null, maintenance_end_at: null, maintenance_active: false, pages: {} };
   }
 }
 
@@ -67,7 +93,7 @@ export function proxy(request: NextRequest) {
   const currentLocale = pathname.split('/')[1];
   if (locales.includes(currentLocale)) {
     return (async () => {
-      const cfg = await loadConfig(request.nextUrl.origin);
+      const cfg = await loadConfig();
 
       const normalized = pathname.replace(/^\//, '');
       const allowDuringMaintenance = new Set([
@@ -109,6 +135,7 @@ export function proxy(request: NextRequest) {
       const response = NextResponse.next();
       response.headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate');
       response.headers.set('x-middleware-cache', 'no-cache');
+      response.headers.set('x-pupen-maintenance', cfg.maintenance_active ? '1' : '0');
 
       const cookieLocale = request.cookies.get(COOKIE_NAME)?.value;
       if (cookieLocale !== currentLocale) {
