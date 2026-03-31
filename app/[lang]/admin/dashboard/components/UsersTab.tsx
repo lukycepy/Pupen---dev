@@ -11,6 +11,7 @@ import { useToast } from '../../../../context/ToastContext';
 import ConfirmModal from '@/app/components/ConfirmModal';
 import AdminModuleHeader from './ui/AdminModuleHeader';
 import AddressAutocomplete from '@/app/components/AddressAutocomplete';
+import { evaluatePassword, passwordScoreLabel } from '@/lib/auth/password-policy';
 
 function generatePassword(length = 10) {
   const bytes = new Uint8Array(length);
@@ -221,6 +222,7 @@ export default function UsersTab({ dict }: UsersTabProps) {
 
   const passwordValue = watch('password');
   const addressValue = watch('address') || '';
+  const emailValue = watch('email') || '';
 
   const sendNewPasswordNow = handleSubmit(async (data: any) => {
     if (!editingAdmin) return;
@@ -661,6 +663,31 @@ export default function UsersTab({ dict }: UsersTabProps) {
             <div className="space-y-1.5">
               <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.admin.labelPassword || 'Heslo'}</label>
               <input {...register('password')} type="password" placeholder="••••••••" className="w-full border-none p-4 rounded-2xl outline-none ring-1 ring-stone-100 focus:ring-2 focus:ring-green-500 bg-stone-50/50 font-bold text-stone-700 transition" />
+              {passwordValue ? (
+                <div className="pt-2">
+                  {(() => {
+                    const r = evaluatePassword(String(passwordValue || ''), { email: String(emailValue || '') });
+                    const score = r.score;
+                    const label = passwordScoreLabel(score, lang === 'en' ? 'en' : 'cs');
+                    const pct = (score / 4) * 100;
+                    const bar = score <= 1 ? 'bg-red-500' : score === 2 ? 'bg-amber-500' : score === 3 ? 'bg-green-500' : 'bg-green-600';
+                    return (
+                      <>
+                        <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">
+                          <span>{lang === 'cs' ? 'Síla hesla' : 'Password strength'}</span>
+                          <span className="text-stone-500">{label}</span>
+                        </div>
+                        <div className="mt-2 h-2 bg-stone-200 rounded-full overflow-hidden">
+                          <div className={`h-2 ${bar}`} style={{ width: `${pct}%` }} />
+                        </div>
+                        <div className={`mt-2 text-[10px] font-bold px-1 ${r.ok ? 'text-stone-500' : 'text-red-600'}`}>
+                          {lang === 'cs' ? 'Min. 5 znaků' : 'Min. 5 characters'}
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              ) : null}
               <p className="text-[9px] text-stone-400 italic px-1">{editingAdmin ? 'Nechte prázdné pro zachování stávajícího hesla.' : 'Nechte prázdné pro automatické vygenerování.'}</p>
               {editingAdmin && (
                 <div className="grid sm:grid-cols-2 gap-3 mt-3">
