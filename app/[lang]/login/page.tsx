@@ -130,7 +130,19 @@ export default function LoginPage() {
     setError('');
     setInfo('');
     try {
-      const res = await authAny.mfa.enroll({ factorType: 'totp' });
+      const enroll = async (friendlyName?: string) => {
+        const payload: any = { factorType: 'totp' };
+        if (friendlyName) payload.friendlyName = friendlyName;
+        return await authAny.mfa.enroll(payload);
+      };
+
+      let res = await enroll('Pupen.org');
+      if (res?.error) {
+        const msg = String(res.error?.message || '');
+        if (msg.toLowerCase().includes('friendly name') && msg.toLowerCase().includes('already exists')) {
+          res = await enroll(`Pupen.org ${Date.now()}`);
+        }
+      }
       if (res?.error) throw res.error;
       const factorId = String(res?.data?.id || '');
       const rawUri = String(res?.data?.totp?.uri || res?.data?.totp?.qr_code || '');
@@ -159,7 +171,12 @@ export default function LoginPage() {
       setAdminMfaEnrollCode('');
       setInfo(lang === 'cs' ? 'Admin účet vyžaduje 2FA. Naskenujte QR a ověřte kód.' : 'Admin accounts require 2FA. Scan QR and verify code.');
     } catch (e: any) {
-      setError(e?.message || (lang === 'cs' ? 'Chyba' : 'Error'));
+      const msg = String(e?.message || '');
+      if (msg.toLowerCase().includes('friendly name') && msg.toLowerCase().includes('already exists')) {
+        setError(lang === 'cs' ? '2FA už je pro tento účet rozpracované. Pokud nemáte přístup k authenticatoru, požádejte správce o reset 2FA.' : '2FA is already set up for this account. If you cannot access your authenticator, ask an admin to reset 2FA.');
+      } else {
+        setError(msg || (lang === 'cs' ? 'Chyba' : 'Error'));
+      }
       setAdminMfaEnroll(false);
       setAdminMfaEnrollQr('');
       setAdminMfaFactorId('');
