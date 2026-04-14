@@ -30,9 +30,8 @@ export default function AdminLogin() {
         }
 
         const { data: prof } = await supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle();
-        const isSuperAdmin = session.user.email === 'cepelak@pupen.org';
-        const isAdmin = !!(prof?.is_admin || prof?.can_manage_admins) || isSuperAdmin;
-        const isMember = !!(prof?.is_member || prof?.is_admin || prof?.can_view_member_portal || prof?.can_edit_member_portal) || isSuperAdmin;
+        const isAdmin = !!(prof?.is_admin || prof?.can_manage_admins);
+        const isMember = !!(prof?.is_member || prof?.is_admin || prof?.can_manage_admins || prof?.can_view_member_portal || prof?.can_edit_member_portal);
 
         if (isAdmin) {
           router.replace(`/${lang}/admin/dashboard`);

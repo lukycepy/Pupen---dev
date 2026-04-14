@@ -58,6 +58,7 @@ const RefundsTab = dynamic<any>(() => import('./components/RefundsTab'), { loadi
 const TicketSecurityTab = dynamic<any>(() => import('./components/TicketSecurityTab'), { loading: () => <SkeletonTabContent /> });
 const PromoRulesTab = dynamic<any>(() => import('./components/PromoRulesTab'), { loading: () => <SkeletonTabContent /> });
 const SiteConfigTab = dynamic<any>(() => import('./components/SiteConfigTab'), { loading: () => <SkeletonTabContent /> });
+const DbHealthTab = dynamic<any>(() => import('./components/DbHealthTab'), { loading: () => <SkeletonTabContent /> });
 const LostFoundTab = dynamic<any>(() => import('./components/LostFoundTab'), { loading: () => <SkeletonTabContent /> });
 const SosTab = dynamic<any>(() => import('./components/SosTab'), { loading: () => <SkeletonTabContent /> });
 const BrokenLinksTab = dynamic<any>(() => import('./components/BrokenLinksTab'), { loading: () => <SkeletonTabContent /> });
@@ -235,31 +236,13 @@ export default function AdminDashboard() {
         .maybeSingle();
       
       if (!profile && isMounted) {
-        // SuperAdmin bypass even without profile (should not happen if profile is created by trigger, but for safety)
-        if (user.email === 'cepelak@pupen.org') {
-          const mockProfile = { 
-            first_name: 'Super', 
-            last_name: 'Admin', 
-            is_admin: true, 
-            can_manage_admins: true,
-            email: user.email 
-          };
-          setUserProfile(mockProfile);
-          setPermissions(mockProfile);
-          
-          // Only set active tab if hash is not present
-          if (!window.location.hash) {
-            setActiveTab('analytics');
-          }
-          return;
-        }
         router.replace(`/${lang}/admin`);
         return;
       }
 
       if (profile && isMounted) {
         // CHECK IF IS ADMIN
-        if (!profile.is_admin && !profile.can_manage_admins && user.email !== 'cepelak@pupen.org') {
+        if (!profile.is_admin && !profile.can_manage_admins) {
           // If not admin but member, redirect to member portal
           if (profile.is_member) {
             router.replace(`/${lang}/clen`);
@@ -269,7 +252,7 @@ export default function AdminDashboard() {
           return;
         }
 
-        if ((profile.is_admin || profile.can_manage_admins) && user.email !== 'cepelak@pupen.org') {
+        if ((profile.is_admin || profile.can_manage_admins) && !profile.can_manage_admins) {
           try {
             const authAny: any = supabase.auth as any;
             const aal = await authAny?.mfa?.getAuthenticatorAssuranceLevel?.();
@@ -284,10 +267,6 @@ export default function AdminDashboard() {
         setUserProfile(profile);
         
         const finalPerms: any = { ...profile, trustbox_admin: false, trustbox_can_view_pii: false };
-        // SuperAdmin bypass
-        if (user.email === 'cepelak@pupen.org') {
-          finalPerms.can_manage_admins = true;
-        }
         setPermissions(finalPerms);
 
         try {
@@ -559,6 +538,10 @@ export default function AdminDashboard() {
 
             {activeTab === 'site_pages' && permissions.can_manage_admins && (
               <SiteConfigTab dict={dict} />
+            )}
+
+            {activeTab === 'db_health' && permissions.can_manage_admins && (
+              <DbHealthTab />
             )}
 
             {activeTab === 'lost_found' && permissions.can_manage_admins && (

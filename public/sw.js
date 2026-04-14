@@ -1,12 +1,12 @@
-const CACHE = 'pupen-sw-v2';
+const CACHE_NAME = 'pupen-shell-v1';
+const PRECACHE_URLS = ['/', '/offline', '/manifest.json', '/logo.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
-      .open(CACHE)
-      .then((cache) => cache.addAll(['/manifest.json', '/logo.png', '/favicon.ico']))
-      .then(() => self.skipWaiting())
-      .catch(() => {}),
+      .open(CACHE_NAME)
+      .then((cache) => cache.addAll(PRECACHE_URLS))
+      .then(() => self.skipWaiting()),
   );
 });
 
@@ -14,9 +14,8 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
-      .then(() => self.clients.claim())
-      .catch(() => {}),
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim()),
   );
 });
 
@@ -26,32 +25,38 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith('/api')) return;
-  if (url.pathname === '/sw.js') return;
+
+  const accept = req.headers.get('accept') || '';
+  const isNavigation = req.mode === 'navigate' || accept.includes('text/html');
+
+  if (isNavigation) {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy)).catch(() => {});
+          return res;
+        })
+        .catch(async () => {
+          const cache = await caches.open(CACHE_NAME);
+          const cached = await cache.match(req);
+          return cached || cache.match('/offline');
+        }),
+    );
+    return;
+  }
 
   event.respondWith(
     caches.match(req).then((cached) => {
-      const fetchPromise = fetch(req)
+      if (cached) return cached;
+      return fetch(req)
         .then((res) => {
-          const isStatic =
-            url.pathname.startsWith('/_next/static') ||
-            url.pathname.endsWith('.png') ||
-            url.pathname.endsWith('.jpg') ||
-            url.pathname.endsWith('.jpeg') ||
-            url.pathname.endsWith('.webp') ||
-            url.pathname.endsWith('.svg') ||
-            url.pathname.endsWith('.ico') ||
-            url.pathname === '/manifest.json';
-
-          if (isStatic && res && res.status === 200) {
-            const copy = res.clone();
-            caches.open(CACHE).then((cache) => cache.put(req, copy)).catch(() => {});
-          }
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy)).catch(() => {});
           return res;
         })
         .catch(() => cached);
-
-      return cached || fetchPromise;
     }),
   );
 });
+

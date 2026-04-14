@@ -169,15 +169,15 @@ export default function ClenskaSekcePage() {
       
       setUser(session.user);
       const { data: prof } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-      
-      const isSuperAdmin = session.user.email === 'cepelak@pupen.org';
-      const hasMemberPortal = !!(prof?.is_member || prof?.is_admin || prof?.can_view_member_portal || prof?.can_edit_member_portal);
-      if (!hasMemberPortal && !isSuperAdmin) {
+
+      const isSuperAdmin = !!prof?.can_manage_admins;
+      const hasMemberPortal = !!(prof?.is_member || prof?.is_admin || prof?.can_manage_admins || prof?.can_view_member_portal || prof?.can_edit_member_portal);
+      if (!hasMemberPortal) {
         router.replace(`/${lang}/login`);
         return;
       }
-      
-      const userProf = prof || (isSuperAdmin ? { first_name: 'Super', last_name: 'Admin', is_admin: true, is_member: true } : null);
+
+      const userProf = prof || null;
       setProfile(userProf);
 
       if (!isSuperAdmin && userProf && !(userProf as any).member_no) {
@@ -856,7 +856,7 @@ export default function ClenskaSekcePage() {
     }
   };
   const hasAccessToMemberPortal =
-    !!(profile?.is_member || profile?.is_admin || profile?.can_view_member_portal || profile?.can_edit_member_portal) || user.email === 'cepelak@pupen.org';
+    !!(profile?.is_member || profile?.is_admin || profile?.can_manage_admins || profile?.can_view_member_portal || profile?.can_edit_member_portal);
 
   if (!hasAccessToMemberPortal) {
     return (
@@ -1068,7 +1068,7 @@ export default function ClenskaSekcePage() {
                   </p>
                   <div className="grid gap-3">
                     <a
-                      href={`mailto:${String(memberPortalCfg.supportEmail || 'cepelak@pupen.org').trim()}`}
+                      href={`mailto:${String(memberPortalCfg.supportEmail || 'support@pupen.org').trim()}`}
                       className="block w-full py-4 bg-white text-green-600 rounded-2xl font-black uppercase tracking-widest text-xs text-center hover:bg-green-50 transition"
                     >
                       {dict.member.writeSupport}

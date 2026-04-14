@@ -577,7 +577,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                   onPanelMouseLeave={scheduleUserClose}
                   panelClassName="w-64 bg-white border border-stone-100 shadow-2xl rounded-3xl p-2"
                 >
-                  {(userProfile?.is_member || userProfile?.email === 'cepelak@pupen.org') && (
+                  {(userProfile?.is_member || userProfile?.is_admin || userProfile?.can_manage_admins || userProfile?.can_view_member_portal || userProfile?.can_edit_member_portal) && (
                     <Link
                       href={`/${lang}/clen`}
                       className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-stone-50 transition text-stone-700 font-bold"
@@ -588,7 +588,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                     </Link>
                   )}
 
-                  {userProfile?.is_admin && (
+                  {(userProfile?.is_admin || userProfile?.can_manage_admins) && (
                     <Link
                       href={`/${lang}/admin/dashboard`}
                       className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-stone-50 transition text-stone-700 font-bold"

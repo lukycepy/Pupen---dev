@@ -9,6 +9,8 @@ import {
   Mail, Bell, QrCode, Ticket, FolderKanban, BarChart3, ScrollText, ChevronDown, Award
 } from 'lucide-react';
 import Drawer from '@/app/components/ui/Drawer';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
 
 interface MemberSidebarProps {
   lang: string;
@@ -35,6 +37,19 @@ const SidebarContent = ({
   lang, dict, activeTab, onTabChange, userProfile, onLogout, setIsMobileOpen, hiddenTabs
 }: SidebarContentProps) => {
   const hidden = new Set((hiddenTabs || []).map(String));
+  const unreadDmQuery = useQuery({
+    queryKey: ['dm_unread_count'],
+    queryFn: async () => {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) return 0;
+      const res = await fetch('/api/dm/threads', { headers: { Authorization: `Bearer ${token}` } });
+      const j = await res.json().catch(() => ({}));
+      return Number(j?.totalUnread || 0);
+    },
+    refetchInterval: 10_000,
+  });
+  const unreadDm = Number(unreadDmQuery.data || 0);
   const menuGroups = [
     {
       title: dict.member?.navOverview || (lang === 'en' ? 'Overview' : 'Přehled'),
@@ -166,6 +181,15 @@ const SidebarContent = ({
                         className={activeTab === item.id ? 'text-white' : 'text-stone-400 group-hover:text-green-600'}
                       />
                       <span className="flex-grow text-left">{item.label}</span>
+                      {item.id === 'messages' && unreadDm > 0 && (
+                        <span
+                          className={`min-w-5 h-5 px-1.5 rounded-full text-[10px] font-black inline-flex items-center justify-center ${
+                            activeTab === item.id ? 'bg-white/20 text-white' : 'bg-green-100 text-green-700'
+                          }`}
+                        >
+                          {unreadDm > 99 ? '99+' : unreadDm}
+                        </span>
+                      )}
                       {activeTab === item.id && <ChevronRight size={14} className="opacity-50" />}
                     </button>
                   ))}

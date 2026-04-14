@@ -71,13 +71,26 @@ const PROFILE_BOOL_FIELDS = new Set([
   'can_edit_member_portal',
 ]);
 
-function pickProfilePatch(perms: any) {
-  const out: any = {};
-  for (const [k, v] of Object.entries(perms || {})) {
-    if (!PROFILE_BOOL_FIELDS.has(k)) continue;
-    out[k] = !!v;
+async function recomputeProfilePermissions(supabase: ReturnType<typeof getServerSupabase>, userId: string) {
+  const rolesRes = await supabase
+    .from('app_user_roles')
+    .select('role_id, app_roles:role_id (permissions)')
+    .eq('user_id', userId);
+  if (rolesRes.error) throw rolesRes.error;
+
+  const computed: any = {};
+  for (const k of PROFILE_BOOL_FIELDS) computed[k] = false;
+
+  for (const row of rolesRes.data || []) {
+    const perms = (row as any)?.app_roles?.permissions || {};
+    for (const [k, v] of Object.entries(perms)) {
+      if (!PROFILE_BOOL_FIELDS.has(k)) continue;
+      if (v) computed[k] = true;
+    }
   }
-  return out;
+
+  await supabase.from('profiles').update(computed).eq('id', userId).throwOnError();
+  return computed;
 }
 
 export async function POST(req: Request) {
@@ -100,6 +113,7 @@ export async function POST(req: Request) {
 
     if (action === 'unassign' && roleId) {
       await supabase.from('app_user_roles').delete().eq('user_id', userId).eq('role_id', roleId).throwOnError();
+      const computed = await recomputeProfilePermissions(supabase, userId);
       await supabase
         .from('admin_logs')
         .insert([
@@ -108,7 +122,7 @@ export async function POST(req: Request) {
             admin_name: user.user_metadata?.full_name || user.email || 'admin',
             action: 'ROLE_UNASSIGN',
             target_id: userId,
-            details: { email: email || null, role_id: roleId },
+            details: { email: email || null, role_id: roleId, permissionKeys: Object.keys(computed).filter((k) => computed[k]) },
           },
         ])
         .throwOnError();
@@ -117,6 +131,7 @@ export async function POST(req: Request) {
 
     if (!roleId) {
       await supabase.from('app_user_roles').delete().eq('user_id', userId).throwOnError();
+      const computed = await recomputeProfilePermissions(supabase, userId);
       await supabase
         .from('admin_logs')
         .insert([
@@ -125,7 +140,7 @@ export async function POST(req: Request) {
             admin_name: user.user_metadata?.full_name || user.email || 'admin',
             action: 'ROLE_CLEAR',
             target_id: userId,
-            details: email ? { email } : {},
+            details: { ...(email ? { email } : {}), permissionKeys: Object.keys(computed).filter((k) => computed[k]) },
           },
         ])
         .throwOnError();
@@ -135,7 +150,6 @@ export async function POST(req: Request) {
     const roleRes = await supabase.from('app_roles').select('id,name,permissions').eq('id', roleId).single();
     if (roleRes.error) throw roleRes.error;
     const role: any = roleRes.data;
-    const patch = pickProfilePatch(role?.permissions || {});
 
     await supabase
       .from('app_user_roles')
@@ -145,9 +159,7 @@ export async function POST(req: Request) {
       )
       .throwOnError();
 
-    if (Object.keys(patch).length > 0) {
-      await supabase.from('profiles').update(patch).eq('id', userId).throwOnError();
-    }
+    const computed = await recomputeProfilePermissions(supabase, userId);
 
     await supabase
       .from('admin_logs')
@@ -157,7 +169,7 @@ export async function POST(req: Request) {
           admin_name: user.user_metadata?.full_name || user.email || 'admin',
           action: 'ROLE_ASSIGN',
           target_id: userId,
-          details: { email: email || null, role_id: roleId, role_name: role?.name || null, permissionKeys: Object.keys(patch) },
+          details: { email: email || null, role_id: roleId, role_name: role?.name || null, permissionKeys: Object.keys(computed).filter((k) => computed[k]) },
         },
       ])
       .throwOnError();

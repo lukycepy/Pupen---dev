@@ -12,8 +12,6 @@ import Image from 'next/image';
 
 export default function LoginPage() {
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
-  const universitySsoProvider = process.env.NEXT_PUBLIC_UNIVERSITY_SSO_PROVIDER || '';
-  const universitySsoLabel = process.env.NEXT_PUBLIC_UNIVERSITY_SSO_LABEL || '';
   const googleAuthEnabled = process.env.NEXT_PUBLIC_ENABLE_GOOGLE_AUTH === 'true';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -219,8 +217,8 @@ export default function LoginPage() {
   };
 
   const ensureAdminAal2 = useCallback(async (profile: any, email?: string, method?: string) => {
-    const isSuperAdmin = email === 'cepelak@pupen.org' || profile?.email === 'cepelak@pupen.org';
-    const hasAdmin = profile?.is_admin || profile?.can_manage_admins || isSuperAdmin;
+    const isSuperAdmin = !!profile?.can_manage_admins;
+    const hasAdmin = !!(profile?.is_admin || profile?.can_manage_admins);
     if (!hasAdmin || isSuperAdmin) return true;
 
     const authAny: any = supabase.auth as any;
@@ -274,16 +272,11 @@ export default function LoginPage() {
   }, [lang, logSecurity, startAdminMfaEnroll]);
 
   const handleRedirect = useCallback(async (profile: any, email?: string, method?: string) => {
-    if (profile?.is_blocked) {
-      setError(lang === 'cs' ? 'Účet je zablokován. Kontaktujte správce.' : 'Your account is blocked. Please contact an administrator.');
-      await logSecurity('LOGIN_BLOCKED', { method: method || 'session' });
-      await supabase.auth.signOut();
-      return;
-    }
-
-    const isSuperAdmin = email === 'cepelak@pupen.org' || profile?.email === 'cepelak@pupen.org';
-    const hasAdmin = profile?.is_admin || isSuperAdmin;
-    const hasMember = !!(profile?.is_member || profile?.is_admin || profile?.can_view_member_portal || profile?.can_edit_member_portal) || isSuperAdmin;
+    const isSuperAdmin = !!profile?.can_manage_admins;
+    const hasAdmin = !!(profile?.is_admin || profile?.can_manage_admins);
+    const hasMember =
+      !!(profile?.is_member || profile?.is_admin || profile?.can_manage_admins || profile?.can_view_member_portal || profile?.can_edit_member_portal) ||
+      isSuperAdmin;
 
     if (hasAdmin) {
       const ok = await ensureAdminAal2(profile, email, method);
@@ -366,52 +359,6 @@ export default function LoginPage() {
         .maybeSingle();
       
       await handleRedirect(profile, data.user.email, 'password');
-    }
-  };
-
-  const handleMagicLink = async () => {
-    setLoading(true);
-    setError('');
-    setInfo('');
-    try {
-      try {
-        const guard = await fetch('/api/auth/login-guard', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(turnstileSiteKey ? { token: captchaToken } : {}),
-        });
-        if (!guard.ok) {
-          if (guard.status === 400) {
-            setError(lang === 'cs' ? 'Ověřte, že nejste robot.' : 'Please verify you are not a robot.');
-            setLoading(false);
-            return;
-          }
-          const j = await guard.json().catch(() => ({}));
-          const retryAfterMs = Number(j?.retryAfterMs || 0);
-          const sec = retryAfterMs ? Math.ceil(retryAfterMs / 1000) : 60;
-          setError(lang === 'cs' ? `Příliš mnoho pokusů. Zkuste to za ${sec}s.` : `Too many attempts. Try again in ${sec}s.`);
-          setLoading(false);
-          return;
-        }
-      } catch {}
-
-      const emailValue = String(email || '').trim();
-      if (!emailValue) {
-        setError(lang === 'cs' ? 'Zadejte e-mail.' : 'Enter your email.');
-        setLoading(false);
-        return;
-      }
-      const redirectTo = `${window.location.origin}/${lang}/login`;
-      const { error: otpError } = await (supabase.auth as any).signInWithOtp({
-        email: emailValue,
-        options: { emailRedirectTo: redirectTo },
-      });
-      if (otpError) throw otpError;
-      setInfo(lang === 'cs' ? 'Odkaz pro přihlášení byl odeslán na e-mail.' : 'A sign-in link has been sent to your email.');
-    } catch (e: any) {
-      setError(e?.message || (lang === 'cs' ? 'Chyba' : 'Error'));
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -547,44 +494,6 @@ export default function LoginPage() {
         await handleRedirect(profile, u.email, 'passkey');
         return;
       }
-    } catch (e: any) {
-      setError(e?.message || (lang === 'cs' ? 'Chyba' : 'Error'));
-      setLoading(false);
-    }
-  };
-
-  const handleUniversitySso = async () => {
-    if (!universitySsoProvider) return;
-    setError('');
-    setLoading(true);
-    try {
-      try {
-        const guard = await fetch('/api/auth/login-guard', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(turnstileSiteKey ? { token: captchaToken } : {}),
-        });
-        if (!guard.ok) {
-          if (guard.status === 400) {
-            setError(lang === 'cs' ? 'Ověřte, že nejste robot.' : 'Please verify you are not a robot.');
-            setLoading(false);
-            return;
-          }
-          const j = await guard.json().catch(() => ({}));
-          const retryAfterMs = Number(j?.retryAfterMs || 0);
-          const sec = retryAfterMs ? Math.ceil(retryAfterMs / 1000) : 60;
-          setError(lang === 'cs' ? `Příliš mnoho pokusů. Zkuste to za ${sec}s.` : `Too many attempts. Try again in ${sec}s.`);
-          setLoading(false);
-          return;
-        }
-      } catch {}
-
-      const origin = window.location.origin;
-      const { error } = await (supabase.auth as any).signInWithOAuth({
-        provider: universitySsoProvider,
-        options: { redirectTo: `${origin}/${lang}/login` },
-      });
-      if (error) throw error;
     } catch (e: any) {
       setError(e?.message || (lang === 'cs' ? 'Chyba' : 'Error'));
       setLoading(false);
@@ -833,24 +742,6 @@ export default function LoginPage() {
                 className="w-full bg-white text-stone-700 py-4 rounded-2xl font-black uppercase tracking-widest text-xs border border-stone-200 hover:bg-stone-50 transition disabled:opacity-50"
               >
                 {lang === 'cs' ? 'Přihlásit se passkey' : 'Sign in with passkey'}
-              </button>
-              {universitySsoProvider ? (
-                <button
-                  type="button"
-                  onClick={handleUniversitySso}
-                  disabled={loading}
-                  className="w-full bg-white text-stone-700 py-4 rounded-2xl font-black uppercase tracking-widest text-xs border border-stone-200 hover:bg-stone-50 transition disabled:opacity-50"
-                >
-                  {universitySsoLabel ? universitySsoLabel : lang === 'cs' ? 'SSO (Univerzita)' : 'SSO (University)'}
-                </button>
-              ) : null}
-              <button
-                type="button"
-                onClick={handleMagicLink}
-                disabled={loading}
-                className="w-full bg-white text-stone-700 py-4 rounded-2xl font-black uppercase tracking-widest text-xs border border-stone-200 hover:bg-stone-50 transition disabled:opacity-50"
-              >
-                {lang === 'cs' ? 'Poslat magic link' : 'Send magic link'}
               </button>
             </div>
           )}

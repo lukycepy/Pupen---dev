@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { 
-  Leaf, Calendar, Users, ArrowRight, 
+  Leaf, Calendar, Users, ArrowRight,
   HelpCircle, ChevronDown, ChevronUp, ExternalLink, 
   Archive, Map as MapIcon, BookOpen, UserPlus as UserPlusIcon, Image as ImageIcon
 } from 'lucide-react';
@@ -322,6 +322,7 @@ export default function PupenWeb() {
                                alt={post.title}
                                fill
                                className="object-cover group-hover:scale-105 transition duration-500 blur-sm"
+                               sizes="(max-width: 768px) 100vw, 50vw"
                                referrerPolicy="no-referrer"
                                onLoadingComplete={(target) => target.classList.remove('blur-sm')}
                              />

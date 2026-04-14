@@ -106,7 +106,7 @@ export default function SiteConfigTab({ dict }: { dict: any }) {
       show_onboarding: true,
       hidden_tabs: [],
       default_tab: null,
-      support_email: 'cepelak@pupen.org',
+      support_email: 'support@pupen.org',
       support_phone: null,
       quick_links: [],
     },

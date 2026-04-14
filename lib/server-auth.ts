@@ -19,13 +19,6 @@ export async function requireUser(req: Request) {
   const res = await supabase.auth.getUser(token);
   const user = res.data?.user;
   if (!user) throw new Error('Unauthorized');
-  const { data: profile, error } = await supabase
-    .from('profiles')
-    .select('is_blocked, can_manage_admins')
-    .eq('id', user.id)
-    .maybeSingle();
-  if (error) throw error;
-  if (profile?.is_blocked && !profile?.can_manage_admins) throw new Error('Forbidden');
   return user;
 }
 

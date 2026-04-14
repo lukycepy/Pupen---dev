@@ -60,8 +60,6 @@ export default function UsersTab({ dict }: UsersTabProps) {
     last_name: z.string().min(1, dict.admin.validation.required),
     is_admin: z.boolean().default(false),
     is_member: z.boolean().default(false),
-    is_blocked: z.boolean().default(false),
-    blocked_reason: z.string().optional(),
     member_since: z.string().optional(),
     member_expires_at: z.string().optional(),
     application_scan_url: z.string().optional(),
@@ -171,7 +169,7 @@ export default function UsersTab({ dict }: UsersTabProps) {
     queryFn: async ({ pageParam }) => {
       const from = typeof pageParam === 'number' ? pageParam : 0;
       const to = from + PAGE_SIZE - 1;
-      let q = supabase.from('profiles').select('id,email,first_name,last_name,is_admin,is_member,is_blocked,can_manage_admins,created_at');
+      let q = supabase.from('profiles').select('id,email,first_name,last_name,is_admin,is_member,can_manage_admins,created_at');
       
       if (roleFilter === 'admin') q = q.eq('is_admin', true);
       else if (roleFilter === 'member') q = q.eq('is_member', true).eq('is_admin', false);
@@ -207,8 +205,6 @@ export default function UsersTab({ dict }: UsersTabProps) {
       password: '',
       is_admin: false,
       is_member: false,
-      is_blocked: false,
-      blocked_reason: '',
       can_manage_admins: false,
       ...defaultPerms
     }
@@ -264,8 +260,6 @@ export default function UsersTab({ dict }: UsersTabProps) {
         last_name: data.last_name,
         is_admin: !!data.is_admin,
         is_member: !!data.is_member,
-        is_blocked: !!data.is_blocked,
-        blocked_reason: data.is_blocked ? (String(data.blocked_reason || '').trim().slice(0, 2000) || null) : null,
         member_since: data.member_since || null,
       member_expires_at: data.member_expires_at || null,
         can_manage_admins: !!data.can_manage_admins,
@@ -275,12 +269,6 @@ export default function UsersTab({ dict }: UsersTabProps) {
           [`can_edit_${mod.id}`]: !!data[`can_edit_${mod.id}`],
         }), {}),
       };
-
-      const wasBlocked = !!editingAdmin?.is_blocked;
-      const nextBlocked = !!data.is_blocked;
-      if (nextBlocked !== wasBlocked) {
-        profilePayload.blocked_at = nextBlocked ? new Date().toISOString() : null;
-      }
 
       const prevExp = editingAdmin?.member_expires_at ? String(editingAdmin.member_expires_at).slice(0, 10) : '';
       const nextExp = data.member_expires_at ? String(data.member_expires_at).slice(0, 10) : '';
@@ -504,8 +492,6 @@ export default function UsersTab({ dict }: UsersTabProps) {
       last_name: full.last_name || '',
       is_admin: full.is_admin || false,
       is_member: full.is_member || false,
-      is_blocked: full.is_blocked || false,
-      blocked_reason: full.blocked_reason || '',
       member_since: full.member_since || '',
       member_expires_at: full.member_expires_at || '',
       application_scan_url: full.application_scan_url || '',
@@ -911,24 +897,6 @@ export default function UsersTab({ dict }: UsersTabProps) {
                     <input type="checkbox" {...register('can_manage_admins')} className="w-5 h-5 rounded-lg border-stone-700 bg-stone-800 text-purple-500 focus:ring-purple-500" />
                     <span className="text-sm font-bold text-stone-200 group-hover:text-white transition">{dict.admin.superAdmin || 'SuperAdmin'}</span>
                   </label>
-                  <label className="flex items-center gap-3 cursor-pointer group pt-2 border-t border-stone-800">
-                    <input type="checkbox" {...register('is_blocked')} className="w-5 h-5 rounded-lg border-stone-700 bg-stone-800 text-red-500 focus:ring-red-500" />
-                    <div className="flex flex-col">
-                      <span className="text-sm font-bold text-stone-200 group-hover:text-white transition">Blokovat účet</span>
-                      <span className="text-[10px] text-stone-500 font-medium">Zakáže přístup do chráněných sekcí.</span>
-                    </div>
-                  </label>
-                  {watch('is_blocked') ? (
-                    <div className="pt-1">
-                      <div className="text-[10px] font-black uppercase tracking-widest text-stone-500 px-1 mb-2">Důvod blokace</div>
-                      <textarea
-                        {...register('blocked_reason')}
-                        rows={3}
-                        className="w-full bg-stone-800 border border-stone-700 rounded-2xl px-4 py-3 text-xs font-bold text-stone-100 outline-none focus:ring-2 focus:ring-red-500 transition resize-none"
-                        placeholder="Např. opakované zneužití, spam…"
-                      />
-                    </div>
-                  ) : null}
                 </div>
               </div>
             </div>
@@ -1069,7 +1037,6 @@ export default function UsersTab({ dict }: UsersTabProps) {
               allUsers.map((u: any) => {
                 const isAdmin = u.is_admin;
                 const isMember = u.is_member;
-                const isBlocked = u.is_blocked;
                 const isSelected = selectedIds.includes(u.id);
 
                 return (
@@ -1095,12 +1062,11 @@ export default function UsersTab({ dict }: UsersTabProps) {
                         {isAdmin && <span className="text-[8px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-black uppercase tracking-widest">Admin</span>}
                         {isMember && <span className="text-[8px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-black uppercase tracking-widest">Člen</span>}
                         {u.can_manage_admins && <span className="text-[8px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-black uppercase tracking-widest">SuperAdmin</span>}
-                        {isBlocked && <span className="text-[8px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-black uppercase tracking-widest">Blokovaný</span>}
                       </div>
                     </div>
                     <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button onClick={() => handleEdit(u)} className="p-2 text-stone-400 hover:text-green-600 hover:bg-green-50 rounded-xl transition-all"><Edit3 size={18} /></button>
-                      {u.email !== 'cepelak@pupen.org' && (
+                      {!u.can_manage_admins && (
                         <button onClick={() => deleteItem(u.id)} className="p-2 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={18} /></button>
                       )}
                     </div>

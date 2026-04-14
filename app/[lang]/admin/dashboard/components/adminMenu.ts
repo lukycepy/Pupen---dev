@@ -124,6 +124,7 @@ export function buildAdminMenuGroups(dict: any, permissions: any): AdminMenuGrou
     {
       title: 'Systém',
       items: [
+        { id: 'db_health', label: 'DB Health', icon: Server, visible: permissions.can_manage_admins },
         { id: 'site_pages', label: dict.admin?.tabSitePages || 'Stránky', icon: Globe, visible: permissions.can_manage_admins },
         { id: 'broken_links', label: 'Broken links', icon: Link2, visible: permissions.can_manage_admins },
         { id: 'webhooks', label: 'Webhooky', icon: Webhook, visible: permissions.can_manage_admins },
