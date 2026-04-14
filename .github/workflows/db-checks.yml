@@ -17,14 +17,8 @@ jobs:
     - name: DB Drift Check
       run: npm run db:drift-check
       env:
-        PUPEN_DB_HOST: ${{ secrets.PUPEN_DB_HOST }}
-        PUPEN_DB_USER: ${{ secrets.PUPEN_DB_USER }}
-        PUPEN_DB_PASS: ${{ secrets.PUPEN_DB_PASS }}
-        PUPEN_DB_NAME: ${{ secrets.PUPEN_DB_NAME }}
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
     - name: DB RLS Check
       run: npm run db:rls-check
       env:
-        PUPEN_DB_HOST: ${{ secrets.PUPEN_DB_HOST }}
-        PUPEN_DB_USER: ${{ secrets.PUPEN_DB_USER }}
-        PUPEN_DB_PASS: ${{ secrets.PUPEN_DB_PASS }}
-        PUPEN_DB_NAME: ${{ secrets.PUPEN_DB_NAME }}
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
