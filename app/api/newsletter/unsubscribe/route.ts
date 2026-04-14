@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
-import { getClientIp, rateLimit } from '@/lib/rate-limit';
+import { guardPublicGet, guardPublicPostAny } from '@/lib/public-post-guard';
 
 function normalizeEmail(input: string) {
   return String(input || '').trim().toLowerCase();
@@ -21,58 +21,6 @@ function normalizeSmall(input: any) {
   return s.slice(0, 80);
 }
 
-async function extractEmail(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const fromQuery = normalizeEmail(searchParams.get('email') || '');
-  if (fromQuery) return fromQuery;
-
-  const ct = String(req.headers.get('content-type') || '').toLowerCase();
-  if (ct.includes('application/json')) {
-    const body = await req.json().catch(() => ({}));
-    return normalizeEmail(body?.email || '');
-  }
-
-  const raw = await req.text().catch(() => '');
-  const sp = new URLSearchParams(raw);
-  const fromForm = normalizeEmail(sp.get('email') || '');
-  if (fromForm) return fromForm;
-
-  return '';
-}
-
-async function extractExtras(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const fromQuery = {
-    reason: normalizeReason(searchParams.get('reason') || ''),
-    detail: normalizeDetail(searchParams.get('detail') || ''),
-    source: normalizeSmall(searchParams.get('source') || ''),
-    campaignId: normalizeSmall(searchParams.get('n') || ''),
-    variant: normalizeSmall(searchParams.get('v') || ''),
-  };
-
-  const ct = String(req.headers.get('content-type') || '').toLowerCase();
-  if (ct.includes('application/json')) {
-    const body = await req.json().catch(() => ({}));
-    return {
-      reason: normalizeReason(body?.reason || fromQuery.reason),
-      detail: normalizeDetail(body?.detail || body?.reason_detail || fromQuery.detail),
-      source: normalizeSmall(body?.source || fromQuery.source),
-      campaignId: normalizeSmall(body?.campaignId || body?.campaign_id || fromQuery.campaignId),
-      variant: normalizeSmall(body?.variant || fromQuery.variant),
-    };
-  }
-
-  const raw = await req.text().catch(() => '');
-  const sp = new URLSearchParams(raw);
-  return {
-    reason: normalizeReason(sp.get('reason') || fromQuery.reason),
-    detail: normalizeDetail(sp.get('detail') || fromQuery.detail),
-    source: normalizeSmall(sp.get('source') || fromQuery.source),
-    campaignId: normalizeSmall(sp.get('n') || fromQuery.campaignId),
-    variant: normalizeSmall(sp.get('v') || fromQuery.variant),
-  };
-}
-
 function isMissingColumn(e: any) {
   const msg = String(e?.message || '');
   return /(schema cache|does not exist|column)/i.test(msg);
@@ -80,13 +28,24 @@ function isMissingColumn(e: any) {
 
 export async function GET(req: Request) {
   try {
-    const ip = getClientIp(req);
-    const rl = rateLimit({ key: `nl_unsub:${ip}`, windowMs: 10 * 60_000, max: 30 });
-    if (!rl.ok) return NextResponse.json({ error: 'Příliš mnoho požadavků, zkuste to později.' }, { status: 429 });
+    const g = await guardPublicGet(req, {
+      keyPrefix: 'nl_unsub',
+      windowMs: 10 * 60_000,
+      max: 30,
+      tooManyMessage: 'Příliš mnoho požadavků, zkuste to později.',
+    });
+    if (!g.ok) return g.response;
 
-    const email = await extractEmail(req);
+    const url = new URL(req.url);
+    const email = normalizeEmail(url.searchParams.get('email') || '');
     if (!email) return NextResponse.json({ error: 'Chybí e-mail.' }, { status: 400 });
-    const extras = await extractExtras(req);
+    const extras = {
+      reason: normalizeReason(url.searchParams.get('reason') || ''),
+      detail: normalizeDetail(url.searchParams.get('detail') || ''),
+      source: normalizeSmall(url.searchParams.get('source') || ''),
+      campaignId: normalizeSmall(url.searchParams.get('n') || ''),
+      variant: normalizeSmall(url.searchParams.get('v') || ''),
+    };
 
     const supabase = getServerSupabase();
     const nowIso = new Date().toISOString();
@@ -115,12 +74,32 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const ip = getClientIp(req);
-    const rl = rateLimit({ key: `nl_unsub:${ip}`, windowMs: 10 * 60_000, max: 30 });
-    if (!rl.ok) return NextResponse.json({ error: 'Příliš mnoho požadavků, zkuste to později.' }, { status: 429 });
+    const g = await guardPublicPostAny(req, {
+      keyPrefix: 'nl_unsub',
+      windowMs: 10 * 60_000,
+      max: 30,
+      honeypotResponse: { ok: true, status: 'unsubscribed' },
+      tooManyMessage: 'Příliš mnoho požadavků, zkuste to později.',
+    });
+    if (!g.ok) return g.response;
+    const body = g.body;
 
-    const email = await extractEmail(req);
-    const extras = await extractExtras(req);
+    const url = new URL(req.url);
+    const email = normalizeEmail(url.searchParams.get('email') || body?.email || '');
+    const fromQuery = {
+      reason: normalizeReason(url.searchParams.get('reason') || ''),
+      detail: normalizeDetail(url.searchParams.get('detail') || ''),
+      source: normalizeSmall(url.searchParams.get('source') || ''),
+      campaignId: normalizeSmall(url.searchParams.get('n') || ''),
+      variant: normalizeSmall(url.searchParams.get('v') || ''),
+    };
+    const extras = {
+      reason: normalizeReason(body?.reason || fromQuery.reason),
+      detail: normalizeDetail(body?.detail || body?.reason_detail || fromQuery.detail),
+      source: normalizeSmall(body?.source || fromQuery.source),
+      campaignId: normalizeSmall(body?.campaignId || body?.campaign_id || fromQuery.campaignId),
+      variant: normalizeSmall(body?.variant || fromQuery.variant),
+    };
 
     if (!email) return NextResponse.json({ error: 'Chybí e-mail.' }, { status: 400 });
 

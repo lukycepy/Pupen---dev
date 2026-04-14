@@ -4,12 +4,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
-import { Calendar, ArrowRight, Tag, Newspaper, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowRight, Newspaper, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { getDictionary } from '@/lib/get-dictionary';
 import Skeleton from '../components/Skeleton';
 import { richTextToClientHtml } from '@/lib/richtext-client';
 import { stripHtmlToText } from '@/lib/richtext-shared';
+
+const passthroughLoader = ({ src }: { src: string }) => src;
 
 export default function NovinkyPage() {
   const params = useParams();
@@ -25,7 +27,6 @@ export default function NovinkyPage() {
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dict, setDict] = useState<any>(null);
-  const [globalDict, setGlobalDict] = useState<any>(null);
   const [activeCategory, setActiveCategory] = useState("Vše");
   const [scrollProgress, setScrollProgress] = useState(0);
 
@@ -45,7 +46,6 @@ export default function NovinkyPage() {
     async function loadData() {
       try {
         const dictionary = await getDictionary(lang);
-        setGlobalDict(dictionary);
         setDict(dictionary.newsPage || dictionary.news); // Zkusit oba klíče pro jistotu
 
         const nowIso = new Date().toISOString();
@@ -202,11 +202,14 @@ export default function NovinkyPage() {
                   <div className="h-52 overflow-hidden rounded-t-[2.5rem] relative">
                     {isSafeImageSrc(String(post.image_url ?? '')) ? (
                       String(post.image_url).startsWith('http') ? (
-                        <img
+                        <Image
+                          loader={passthroughLoader}
+                          unoptimized
                           src={String(post.image_url)}
                           alt={post.title}
-                          className="absolute inset-0 w-full h-full object-cover transition duration-700 group-hover:scale-110"
-                          loading="lazy"
+                          fill
+                          className="object-cover transition duration-700 group-hover:scale-110"
+                          sizes="(max-width: 768px) 85vw, 33vw"
                           referrerPolicy="no-referrer"
                         />
                       ) : (

@@ -89,6 +89,7 @@ export function buildAdminMenuGroups(dict: any, permissions: any): AdminMenuGrou
       items: [
         { id: 'badges', label: 'Odznaky (Gamifikace)', icon: Award, visible: permissions.can_manage_admins },
         { id: 'messages', label: dict.admin.tabMessages, icon: MessageSquare, visible: canView('messages') },
+        { id: 'trustbox', label: 'Schránka důvěry', icon: Inbox, visible: permissions.can_manage_admins || permissions.trustbox_admin },
         { id: 'polls', label: dict.admin.tabPolls || 'Ankety', icon: BarChart3, visible: canView('polls') },
         { id: 'feedback', label: dict.admin.tabFeedback || 'Feedback', icon: MessageSquare, visible: canView('feedback') },
         { id: 'projects', label: dict.admin?.tabProjects || 'Projekty', icon: FolderKanban, visible: canView('logs') },

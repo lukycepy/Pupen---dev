@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { getClientIp, rateLimit } from '@/lib/rate-limit';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { getMailerWithSettingsOrQueueTransporter, getSenderFromSettings } from '@/lib/email/mailer';
 import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
 import { sendMailWithQueueFallback } from '@/lib/email/queue';
 import { triggerWebhooks } from '@/lib/webhook';
 import { contactFormSchema } from '@/lib/validations/contact';
+import { guardPublicJsonPost } from '@/lib/public-post-guard';
 
 const BLOCKED_DOMAINS = [
   'mailinator.com',
@@ -30,13 +30,9 @@ function countLinks(input: string) {
 
 export async function POST(req: Request) {
   try {
-    const ip = getClientIp(req);
-    const rl = rateLimit({ key: `contact:${ip}`, windowMs: 60_000, max: 10 });
-    if (!rl.ok) return NextResponse.json({ error: 'Příliš mnoho požadavků, zkuste to později.' }, { status: 429 });
-
-    const body = await req.json().catch(() => ({}));
-    const honeypot = String(body?.website || body?.hp || '').trim();
-    if (honeypot) return NextResponse.json({ ok: true });
+    const g = await guardPublicJsonPost(req, { keyPrefix: 'contact', windowMs: 60_000, max: 10 });
+    if (!g.ok) return g.response;
+    const body = g.body;
 
     const parseResult = contactFormSchema.safeParse(body);
     if (!parseResult.success) {

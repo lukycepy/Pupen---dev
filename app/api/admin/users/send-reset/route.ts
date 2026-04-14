@@ -1,31 +1,9 @@
 import { NextResponse } from 'next/server';
-import { createHash } from 'crypto';
 import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { getMailerWithSettingsOrQueueTransporter, getSenderFromSettings } from '@/lib/email/mailer';
 import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
 import { sendMailWithQueueFallback } from '@/lib/email/queue';
-
-function sha256Hex(input: string) {
-  return createHash('sha256').update(input).digest('hex');
-}
-
-function randomToken() {
-  return createHash('sha256').update(String(crypto.randomUUID()) + String(Date.now())).digest('hex');
-}
-
-async function findUserIdByEmail(supabase: any, email: string) {
-  const perPage = 200;
-  for (let page = 1; page <= 10; page += 1) {
-    const res = await supabase.auth.admin.listUsers({ page, perPage });
-    if (res.error) throw res.error;
-    const users = res.data?.users || [];
-    const u = users.find((x: any) => String(x?.email || '').toLowerCase() === email.toLowerCase());
-    if (u?.id) return String(u.id);
-    if (users.length < perPage) return null;
-  }
-  return null;
-}
 
 export async function POST(req: Request) {
   try {

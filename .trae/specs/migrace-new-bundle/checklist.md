@@ -1,4 +1,0 @@
-- [x] /migrace_new existuje a obsahuje jen potřebné migrace.
-- [x] V balíčku je uvedené pořadí aplikace a krátký účel každé migrace.
-- [x] Všechny migrace v balíčku jsou idempotentní (bezpečné opakované spuštění).
-- [x] Všechny migrace v balíčku volají `public.notify_schema_change()`.

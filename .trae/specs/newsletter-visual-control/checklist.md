@@ -1,3 +1,0 @@
-- [x] Newsletter wrapper jde upravit v Pupen Controlu a změny se projeví v preview i send.
-- [x] Wrapper podporuje preheader, odhlášení a úpravu preferencí.
-- [x] Sanitizace/validace zabrání rozbitým odkazům a nebezpečnému HTML.

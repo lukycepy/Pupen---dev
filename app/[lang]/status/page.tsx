@@ -17,7 +17,7 @@ export default async function StatusPage({ params }: { params: Promise<{ lang: s
       dbStatus = 'error';
       apiStatus = 'error';
     }
-  } catch (e) {
+  } catch {
     apiStatus = 'error';
     dbStatus = 'error';
   }

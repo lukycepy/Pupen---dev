@@ -66,14 +66,14 @@ export function useTopLayer(
   containerRef: React.RefObject<HTMLElement | null>,
   options: TopLayerOptions = {},
 ) {
-  const idRef = React.useRef<string>('');
-  if (!idRef.current) idRef.current = `tl_${Math.random().toString(36).slice(2)}_${Date.now()}`;
+  const reactId = React.useId();
+  const id = `tl_${String(reactId).replaceAll(':', '')}`;
   const activeElRef = React.useRef<HTMLElement | null>(null);
 
   React.useEffect(() => {
     if (!open) return;
     activeElRef.current = (document.activeElement as HTMLElement) || null;
-    stack = [...stack.filter((x) => x !== idRef.current), idRef.current];
+    stack = [...stack.filter((x) => x !== id), id];
     if (options.lockScroll !== false) lockBodyScroll();
 
     const el = containerRef.current;
@@ -90,7 +90,7 @@ export function useTopLayer(
     }
 
     return () => {
-      stack = stack.filter((x) => x !== idRef.current);
+      stack = stack.filter((x) => x !== id);
       if (options.lockScroll !== false) unlockBodyScroll();
       const prev = activeElRef.current;
       if (prev) {
@@ -101,12 +101,12 @@ export function useTopLayer(
         }, 0);
       }
     };
-  }, [open, containerRef, options.initialFocus, options.lockScroll]);
+  }, [open, containerRef, options.initialFocus, options.lockScroll, id]);
 
   React.useEffect(() => {
     if (!open) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      const isTop = stack[stack.length - 1] === idRef.current;
+      const isTop = stack[stack.length - 1] === id;
       if (!isTop) return;
 
       if (e.key === 'Escape' && options.closeOnEscape !== false) {
@@ -134,5 +134,5 @@ export function useTopLayer(
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [open, onClose, containerRef, options.closeOnEscape]);
+  }, [open, onClose, containerRef, options.closeOnEscape, id]);
 }

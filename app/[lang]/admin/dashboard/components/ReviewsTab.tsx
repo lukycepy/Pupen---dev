@@ -28,8 +28,8 @@ export default function ReviewsTab({ dict }: { dict: any }) {
   });
 
   const approveMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: boolean }) => {
-      const { error } = await supabase.from('subject_reviews').update({ is_approved: status }).eq('id', id);
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const { error } = await supabase.from('subject_reviews').update({ status }).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -97,9 +97,9 @@ export default function ReviewsTab({ dict }: { dict: any }) {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div className="flex-grow">
                   <div className="flex items-center gap-3 mb-2">
-                    {!review.is_approved && (
+                    {review.status !== 'published' && (
                       <span className="bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full">
-                        Ke schválení
+                        Stav: {review.status}
                       </span>
                     )}
                     <span className="text-[10px] font-black uppercase tracking-widest text-stone-300 flex items-center gap-1">
@@ -129,16 +129,16 @@ export default function ReviewsTab({ dict }: { dict: any }) {
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                  {!review.is_approved ? (
+                  {review.status !== 'published' ? (
                     <button 
-                      onClick={() => approveMutation.mutate({ id: review.id, status: true })}
+                      onClick={() => approveMutation.mutate({ id: review.id, status: 'published' })}
                       className="p-4 bg-green-50 text-green-600 rounded-2xl hover:bg-green-600 hover:text-white transition shadow-sm"
                     >
                       <Check size={20} />
                     </button>
                   ) : (
                     <button 
-                      onClick={() => approveMutation.mutate({ id: review.id, status: false })}
+                      onClick={() => approveMutation.mutate({ id: review.id, status: 'pending' })}
                       className="p-4 bg-amber-50 text-amber-600 rounded-2xl hover:bg-amber-600 hover:text-white transition shadow-sm"
                     >
                       <X size={20} />

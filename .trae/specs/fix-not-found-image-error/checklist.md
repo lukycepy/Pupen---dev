@@ -1,2 +1,0 @@
-- [x] `app/not-found.tsx` nepoužívá globální `Image` a nepadá v runtime.
-- [x] Ruční test: otevření neexistující URL zobrazí 404 bez chyb v konzoli.

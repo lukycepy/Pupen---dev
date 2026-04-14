@@ -29,6 +29,10 @@ async function resolveStatusAdminRecipients(supabase: any) {
 
 export async function POST(req: Request) {
   try {
+    if (process.env.ENABLE_EMAIL_TESTS !== 'true') {
+      return NextResponse.json({ error: 'Not Found' }, { status: 404 });
+    }
+
     const { user, profile } = await requireAdmin(req);
     if (!profile?.is_admin && !profile?.can_manage_admins) throw new Error('Forbidden');
 
@@ -91,4 +95,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: e?.message || 'Error' }, { status });
   }
 }
-

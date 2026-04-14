@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { 
-  Leaf, Calendar, Users, ArrowRight, Beer, GraduationCap, 
-  HeartHandshake, HelpCircle, ChevronDown, ChevronUp, ExternalLink, 
+  Leaf, Calendar, Users, ArrowRight, 
+  HelpCircle, ChevronDown, ChevronUp, ExternalLink, 
   Archive, Map as MapIcon, BookOpen, UserPlus as UserPlusIcon, Image as ImageIcon
 } from 'lucide-react';
 import { getDictionary } from '@/lib/get-dictionary';
@@ -21,6 +21,7 @@ const PollComponent = dynamic(() => import('./components/PollComponent'), {
   loading: () => <div className="h-48 bg-white rounded-[2.5rem] animate-pulse border border-stone-100 shadow-sm" />,
   ssr: false
 });
+const passthroughLoader = ({ src }: { src: string }) => src;
 
 export default function PupenWeb() {
   const params = useParams();
@@ -314,13 +315,15 @@ export default function PupenWeb() {
                       <div className="h-48 bg-stone-100 rounded-[2rem] mb-6 overflow-hidden relative">
                          {isSafeImageSrc(String(post.image_url ?? '')) ? (
                            String(post.image_url).startsWith('http') ? (
-                             <img
+                             <Image
+                               loader={passthroughLoader}
+                               unoptimized
                                src={String(post.image_url)}
                                alt={post.title}
-                               className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition duration-500 blur-sm"
-                               loading="lazy"
+                               fill
+                               className="object-cover group-hover:scale-105 transition duration-500 blur-sm"
                                referrerPolicy="no-referrer"
-                               onLoad={(e) => e.currentTarget.classList.remove('blur-sm')}
+                               onLoadingComplete={(target) => target.classList.remove('blur-sm')}
                              />
                            ) : (
                              <Image

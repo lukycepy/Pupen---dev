@@ -9,7 +9,7 @@ import AdminEmptyState from './ui/AdminEmptyState';
 import AdminPanel from './ui/AdminPanel';
 import { useToast } from '../../../../context/ToastContext';
 
-export default function ErrorLogsTab({ dict }: { dict: any }) {
+export default function ErrorLogsTab() {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 

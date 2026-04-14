@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createHash } from 'crypto';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { evaluatePassword } from '@/lib/auth/password-policy';
+import { guardPublicJsonPost } from '@/lib/public-post-guard';
 
 function isSchemaCacheMissingTable(e: any) {
   const msg = String(e?.message || '');
@@ -14,7 +15,14 @@ function sha256Hex(input: string) {
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json().catch(() => ({}));
+    const g = await guardPublicJsonPost(req, {
+      keyPrefix: 'auth_resetpw',
+      windowMs: 10 * 60_000,
+      max: 20,
+      honeypot: false,
+    });
+    if (!g.ok) return g.response;
+    const body = g.body;
     const token = String(body?.token || '').trim();
     const password = String(body?.password || '');
     const email = body?.email ? String(body.email).trim() : '';

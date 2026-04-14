@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { supabase } from '@/lib/supabase';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { Plus, Trash2, Edit3, HelpCircle, Loader2, GripVertical, AlertTriangle, X, HelpCircle as Save } from 'lucide-react';
+import { Plus, Trash2, Edit3, HelpCircle, Loader2, X } from 'lucide-react';
 import { useToast } from '../../../../context/ToastContext';
 import ConfirmModal from '@/app/components/ConfirmModal';
 import { SkeletonTabContent } from '../../../components/Skeleton';

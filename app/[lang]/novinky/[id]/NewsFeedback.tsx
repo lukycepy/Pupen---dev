@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import InlinePulse from '@/app/components/InlinePulse';
 import { Heart, MessageSquare } from 'lucide-react';
@@ -18,7 +18,7 @@ export default function NewsFeedback({ postId, lang }: { postId: string; lang: s
 
   const commentCount = useMemo(() => comments.filter((c) => c?.status === 'approved').length, [comments]);
 
-  const loadReactions = async () => {
+  const loadReactions = useCallback(async () => {
     try {
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
@@ -31,9 +31,9 @@ export default function NewsFeedback({ postId, lang }: { postId: string; lang: s
       setLikes(Number(json?.likes || 0));
       setMine(json?.mine ? String(json.mine) : null);
     } catch {}
-  };
+  }, [postId]);
 
-  const loadComments = async () => {
+  const loadComments = useCallback(async () => {
     setCommentsBusy(true);
     try {
       const { data } = await supabase.auth.getSession();
@@ -50,12 +50,12 @@ export default function NewsFeedback({ postId, lang }: { postId: string; lang: s
     } finally {
       setCommentsBusy(false);
     }
-  };
+  }, [postId]);
 
   useEffect(() => {
     loadReactions();
     loadComments();
-  }, [postId]);
+  }, [loadComments, loadReactions]);
 
   const toggleLike = async () => {
     setLikeBusy(true);
@@ -191,4 +191,3 @@ export default function NewsFeedback({ postId, lang }: { postId: string; lang: s
     </div>
   );
 }
-

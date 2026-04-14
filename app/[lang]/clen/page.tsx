@@ -1,14 +1,15 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { 
   Lock, ShieldCheck, FileText, Download, Users, 
   ArrowLeft, FileCheck, BookOpen, Clock, 
-  Mail, X, Calendar, Settings, LayoutDashboard, Save, KeyRound
+  Mail, X, Calendar, Settings, Save, KeyRound
 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useQuery } from '@tanstack/react-query';
 import { useToast } from '../../context/ToastContext';
 import { getDictionary } from '@/lib/get-dictionary';
@@ -23,6 +24,8 @@ import AddressAutocomplete from '@/app/components/AddressAutocomplete';
 import ConfirmModal from '@/app/components/ConfirmModal';
 import Dialog from '@/app/components/ui/Dialog';
 import { evaluatePassword, passwordScoreLabel } from '@/lib/auth/password-policy';
+
+const passthroughLoader = ({ src }: { src: string }) => src;
 
 const MemberCard = dynamic<any>(() => import('./components/MemberCard'), { loading: () => <SkeletonTabContent /> });
 const MyEventsTab = dynamic<any>(() => import('./components/MyEventsTab'), { loading: () => <SkeletonTabContent /> });
@@ -43,6 +46,7 @@ export default function ClenskaSekcePage() {
   const lang = (params?.lang as string) || 'cs';
   const router = useRouter();
   const { showToast } = useToast();
+  const didInitTabRef = useRef(false);
   
   const [activeTab, setActiveTab] = useState('dashboard');
   const [memberPortalCfg, setMemberPortalCfg] = useState<{
@@ -56,7 +60,6 @@ export default function ClenskaSekcePage() {
     hiddenTabs: [],
     showOnboarding: true,
   });
-  const [didInitTab, setDidInitTab] = useState(false);
   const [memberDefaultTab, setMemberDefaultTab] = useState('dashboard');
   const [uiPrefsSaving, setUiPrefsSaving] = useState(false);
   const [reportOpen, setReportOpen] = useState<null | { type: 'user' | 'content'; id: string; label: string }>(null);
@@ -107,9 +110,8 @@ export default function ClenskaSekcePage() {
   useEffect(() => {
     const hidden = new Set(memberPortalCfg.hiddenTabs.map(String));
     if (!hidden.size) return;
-    if (!hidden.has(activeTab)) return;
     const preferred = memberPortalCfg.defaultTab && !hidden.has(memberPortalCfg.defaultTab) ? memberPortalCfg.defaultTab : 'dashboard';
-    setActiveTab(preferred);
+    setActiveTab((prev) => (hidden.has(prev) ? preferred : prev));
   }, [memberPortalCfg.hiddenTabs, memberPortalCfg.defaultTab]);
 
   const toggleBlocked = (email: string) => {
@@ -130,7 +132,6 @@ export default function ClenskaSekcePage() {
   const [mfaLoading, setMfaLoading] = useState(false);
   const [mfaEnabled, setMfaEnabled] = useState(false);
   const [mfaFactorId, setMfaFactorId] = useState<string>('');
-  const [mfaEnrollUri, setMfaEnrollUri] = useState<string>('');
   const [mfaEnrollQr, setMfaEnrollQr] = useState<string>('');
   const [mfaVerifyCode, setMfaVerifyCode] = useState('');
   const [mfaDisableOpen, setMfaDisableOpen] = useState(false);
@@ -193,9 +194,9 @@ export default function ClenskaSekcePage() {
 
       const prefTab = (userProf as any)?.ui_prefs?.member?.defaultTab ? String((userProf as any).ui_prefs.member.defaultTab) : '';
       if (prefTab) setMemberDefaultTab(prefTab);
-      if (prefTab && !didInitTab) {
+      if (prefTab && !didInitTabRef.current) {
         setActiveTab(prefTab);
-        setDidInitTab(true);
+        didInitTabRef.current = true;
       }
       setEditProfile({ 
         first_name: userProf?.first_name || '', 
@@ -229,9 +230,16 @@ export default function ClenskaSekcePage() {
   useEffect(() => {
     if (!user?.email) return;
     setPrefsLoading(true);
-    fetch(`/api/newsletter/preferences?email=${encodeURIComponent(user.email)}`)
-      .then(r => r.json())
-      .then(d => {
+    (async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        const token = data.session?.access_token;
+        if (!token) return;
+        const res = await fetch('/api/newsletter/preferences', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const d = await res.json().catch(() => ({}));
+        if (!res.ok) return;
         if (d.preferences) {
           const cats = d.preferences.categories || [];
           setEmailPrefs({
@@ -244,17 +252,19 @@ export default function ClenskaSekcePage() {
             }
           });
         }
-      })
-      .catch(() => {})
-      .finally(() => setPrefsLoading(false));
+      } catch {
+      } finally {
+        setPrefsLoading(false);
+      }
+    })();
   }, [user]);
 
   const saveEmailPrefs = async () => {
     setPrefsSaving(true);
     try {
       const cats = Object.entries(emailPrefs.categories)
-        .filter(([_, v]) => !!v)
-        .map(([k, _]) => {
+        .filter(([, v]) => !!v)
+        .map(([k]) => {
           if (k === 'events') return 'Akce';
           if (k === 'community') return 'Komunita';
           if (k === 'finance') return 'Finance';
@@ -262,12 +272,16 @@ export default function ClenskaSekcePage() {
           return k;
         });
 
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error(lang === 'en' ? 'Not signed in' : 'Nejste přihlášen.');
+
       const res = await fetch('/api/newsletter/preferences', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ 
-          email: user.email,
-          categories: cats 
+          categories: cats,
+          hp: ''
         }),
       });
       const json = await res.json().catch(() => ({}));
@@ -565,7 +579,6 @@ export default function ClenskaSekcePage() {
       }
 
       setMfaFactorId(factorId);
-      setMfaEnrollUri(uri);
       const QRCode: any = await import('qrcode');
       const qr = await QRCode.toDataURL(uri, { margin: 1, width: 320 });
       setMfaEnrollQr(qr);
@@ -587,7 +600,6 @@ export default function ClenskaSekcePage() {
       if (!challengeId) throw new Error('Challenge failed');
       const res = await authAny?.mfa?.verify?.({ factorId: mfaFactorId, challengeId, code: mfaVerifyCode });
       if (res?.error) throw res.error;
-      setMfaEnrollUri('');
       setMfaEnrollQr('');
       setMfaVerifyCode('');
       await refreshMfa();
@@ -623,7 +635,6 @@ export default function ClenskaSekcePage() {
       if (res?.error) throw res.error;
       setMfaDisableOpen(false);
       setMfaDisableCode('');
-      setMfaEnrollUri('');
       setMfaEnrollQr('');
       setMfaVerifyCode('');
       await refreshMfa();
@@ -1140,7 +1151,15 @@ export default function ClenskaSekcePage() {
                           </div>
                           <div className="w-16 h-16 rounded-2xl bg-white flex items-center justify-center shadow-sm mb-4 border border-stone-100 overflow-hidden relative">
                             {badge?.icon ? (
-                              <img src={badge.icon} alt={badge.name} className="w-full h-full object-cover" />
+                              <Image
+                                loader={passthroughLoader}
+                                unoptimized
+                                src={badge.icon}
+                                alt={String(badge?.name || '')}
+                                width={64}
+                                height={64}
+                                className="w-full h-full object-cover"
+                              />
                             ) : (
                               <span className="text-amber-500 text-2xl">★</span>
                             )}
@@ -1706,8 +1725,8 @@ export default function ClenskaSekcePage() {
                     {mfaEnrollQr ? (
                       <div className="mt-6 grid md:grid-cols-2 gap-6 items-start">
                         <div className="bg-white border border-stone-100 rounded-2xl p-6 flex flex-col items-center justify-center gap-4">
-                          <img src="/logo.png" alt="Pupen" className="h-10 w-10 object-contain" />
-                          <img src={mfaEnrollQr} alt="2FA QR" className="w-full max-w-[260px]" />
+                          <Image src="/logo.png" alt="Pupen" width={40} height={40} className="h-10 w-10 object-contain" />
+                          <Image src={mfaEnrollQr} alt="2FA QR" width={260} height={260} className="w-full max-w-[260px]" unoptimized />
                         </div>
                         <div className="space-y-4">
                           <div className="text-sm text-stone-600 font-medium">

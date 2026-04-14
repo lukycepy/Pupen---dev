@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { BookOpen, Plus, Trash2, Edit2, Loader2, Save, X, List, AlertTriangle } from 'lucide-react';
+import { BookOpen, Plus, Trash2, Loader2, Save, X } from 'lucide-react';
 import { useToast } from '../../../../context/ToastContext';
 import dynamic from 'next/dynamic';
 import ConfirmModal from '@/app/components/ConfirmModal';
@@ -18,7 +18,6 @@ export default function GuideTab({ dict }: { dict: any }) {
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const [isAdding, setIsAdding] = useState(false);
-  const [editingItem, setEditingItem] = useState<any>(null);
   const [formData, setFormData] = useState({ title: '', title_en: '', content: '', content_en: '', category: 'Obecné', order_index: 0 });
   const [modalOpen, setModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState<{ title: string; message: string; onConfirm: () => void }>({
@@ -157,7 +156,7 @@ export default function GuideTab({ dict }: { dict: any }) {
             className="w-full bg-green-600 text-white py-4 rounded-xl font-black uppercase tracking-widest hover:bg-green-500 disabled:opacity-50 transition shadow-lg shadow-green-900/20 flex items-center justify-center gap-2"
           >
             {addMutation.isPending ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
-            {editingItem ? dict.admin.btnUpdateGuide : dict.admin.btnSaveGuide}
+            {dict.admin.btnSaveGuide}
           </button>
         </div>
       )}

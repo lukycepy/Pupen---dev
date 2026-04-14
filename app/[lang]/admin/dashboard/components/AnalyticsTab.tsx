@@ -72,7 +72,7 @@ export default function AnalyticsTab() {
             Nejčtenější akce
           </h3>
           <div className="space-y-6">
-            {stats?.topEvents.map((ev: any, idx: number) => {
+            {stats?.topEvents.map((ev: any) => {
               const maxViews = stats.topEvents[0].views || 1;
               const percent = Math.round((ev.views / maxViews) * 100);
               return (
@@ -100,7 +100,7 @@ export default function AnalyticsTab() {
             Nejčtenější novinky
           </h3>
           <div className="space-y-6">
-            {stats?.topPosts.map((p: any, idx: number) => {
+            {stats?.topPosts.map((p: any) => {
               const maxViews = stats.topPosts[0].views || 1;
               const percent = Math.round((p.views / maxViews) * 100);
               return (

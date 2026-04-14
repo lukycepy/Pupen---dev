@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { guardPublicJsonPost } from '@/lib/public-post-guard';
 
 type NormalizedTx = {
   id: string | null;
@@ -84,14 +85,22 @@ async function pullFromFio(fioToken: string) {
 export async function POST(req: Request) {
   try {
     const secret = process.env.PUPEN_FIO_WEBHOOK_SECRET;
-    if (secret) {
-      const provided = req.headers.get('x-pupen-signature');
-      if (!provided || provided !== secret) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
+    if (!secret) return NextResponse.json({ error: 'Webhook not configured' }, { status: 503 });
+    const provided = req.headers.get('x-pupen-signature');
+    if (!provided || provided !== secret) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await req.json().catch(() => ({}));
+    const g = await guardPublicJsonPost(req, {
+      keyPrefix: 'webhook_fio',
+      windowMs: 60_000,
+      max: 60,
+      sameSite: false,
+      honeypot: false,
+      tooManyMessage: 'Too many requests',
+    });
+    if (!g.ok) return g.response;
+    const body = g.body;
     const supabase = getServerSupabase();
 
     let payload = body;

@@ -26,6 +26,12 @@ export function evaluatePassword(password: string, opts?: { email?: string | nul
   if (pw.length < 5) issues.push('min_length_5');
   if (pw.length > 128) issues.push('max_length_128');
 
+  const email = String(opts?.email || '').trim().toLowerCase();
+  if (email) {
+    const local = email.split('@')[0] || '';
+    if (local.length >= 3 && pw.toLowerCase().includes(local)) issues.push('contains_email');
+  }
+
   const lower = hasLower(pw);
   const upper = hasUpper(pw);
   const digit = hasDigit(pw);

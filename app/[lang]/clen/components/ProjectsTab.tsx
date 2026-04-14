@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import InlinePulse from '@/app/components/InlinePulse';
 import { useToast } from '@/app/context/ToastContext';
@@ -20,7 +20,7 @@ export default function ProjectsTab({ lang }: { lang: string }) {
   const [createTags, setCreateTags] = useState('');
   const [createLoading, setCreateLoading] = useState(false);
 
-  const fetchProjects = async () => {
+  const fetchProjects = useCallback(async () => {
     setLoading(true);
     try {
       const { data } = await supabase.auth.getSession();
@@ -36,11 +36,11 @@ export default function ProjectsTab({ lang }: { lang: string }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [lang, showToast]);
 
   useEffect(() => {
     fetchProjects();
-  }, []);
+  }, [fetchProjects]);
 
   const openProjects = useMemo(() => (projects || []).filter((p) => (p.status || 'open') === 'open'), [projects]);
 

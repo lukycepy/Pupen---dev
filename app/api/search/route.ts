@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { getClientIp, rateLimit } from '@/lib/rate-limit';
+import { guardPublicGet } from '@/lib/public-post-guard';
 
 function getAnonServerSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -11,9 +11,8 @@ function getAnonServerSupabase() {
 
 export async function GET(req: Request) {
   try {
-    const ip = getClientIp(req);
-    const rl = rateLimit({ key: `search:${ip || 'unknown'}`, windowMs: 60_000, max: 120 });
-    if (!rl.ok) return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+    const g = await guardPublicGet(req, { keyPrefix: 'search', windowMs: 60_000, max: 120, tooManyMessage: 'Too many requests' });
+    if (!g.ok) return g.response;
 
     const url = new URL(req.url);
     const qRaw = (url.searchParams.get('q') || '').trim();

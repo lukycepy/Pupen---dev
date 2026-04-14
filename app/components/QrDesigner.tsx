@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Download, Image as ImageIcon, RefreshCw } from 'lucide-react';
+import NextImage from 'next/image';
 
 type PresetKey = 'pupen' | 'dark' | 'blue' | 'red' | 'purple';
 
@@ -167,7 +168,7 @@ export default function QrDesigner({ initialText, initialCaption, title, subtitl
 
   React.useEffect(() => {
     generatePng();
-  }, []);
+  }, [generatePng]);
 
   const downloadPng = () => {
     if (!pngUrl) return;
@@ -437,7 +438,7 @@ export default function QrDesigner({ initialText, initialCaption, title, subtitl
       <div className="bg-white p-10 rounded-[3rem] shadow-2xl border border-stone-100 flex flex-col items-center justify-center text-center">
         <div className="mb-8 p-6 bg-stone-50 rounded-[2.5rem] border border-stone-100 shadow-inner">
           {pngUrl ? (
-            <img src={pngUrl} alt="QR" className="w-64 h-auto md:w-80" />
+            <NextImage src={pngUrl} alt="QR" width={320} height={320} className="w-64 h-auto md:w-80" unoptimized />
           ) : (
             <div className="w-64 h-64 md:w-80 md:h-80 bg-white rounded-3xl border border-stone-100" />
           )}

@@ -21,6 +21,7 @@ export default function FeedbackPage() {
   
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
+  const [honeyPot, setHoneyPot] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   const { data: event, isLoading } = useQuery({
@@ -35,19 +36,27 @@ export default function FeedbackPage() {
 
   const mutation = useMutation({
     mutationFn: async (newData: any) => {
-      const { error } = await supabase.from('event_feedback').insert([newData]);
-      if (error) throw error;
+      const res = await fetch('/api/feedback/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newData),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || 'Chyba při odesílání');
     },
     onSuccess: () => {
       setIsSubmitted(true);
       showToast(lang === 'cs' ? 'Díky za tvůj názor!' : 'Thanks for your feedback!', 'success');
+    },
+    onError: (err: any) => {
+      showToast(err.message, 'error');
     }
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isUuid) return;
-    mutation.mutate({ event_id: id, rating, comment });
+    mutation.mutate({ event_id: id, rating, comment, hp: honeyPot });
   };
 
   if (isLoading) {
@@ -113,6 +122,16 @@ export default function FeedbackPage() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="bg-white p-8 md:p-16 rounded-[4rem] shadow-2xl border border-stone-100">
+            {/* Honeypot field (ochrana proti spamu) */}
+            <input
+              type="text"
+              name="website"
+              value={honeyPot}
+              onChange={(e) => setHoneyPot(e.target.value)}
+              className="opacity-0 absolute -z-10 w-0 h-0"
+              tabIndex={-1}
+              autoComplete="off"
+            />
             <div className="mb-12 text-center">
               <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 block mb-6">Tvoje hodnocení</label>
               <div className="flex justify-center gap-2 md:gap-4">

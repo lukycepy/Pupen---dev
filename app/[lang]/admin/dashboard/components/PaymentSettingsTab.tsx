@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Wallet, ShieldCheck, Save, Loader2, Landmark, Mail, Key, Globe, CreditCard, Hash } from 'lucide-react';
+import { ShieldCheck, Save, Loader2, Landmark, Mail, Key, Globe, CreditCard, Hash } from 'lucide-react';
 import { useToast } from '@/app/context/ToastContext';
 import { SkeletonTabContent } from '@/app/[lang]/components/Skeleton';
 import AdminModuleHeader from './ui/AdminModuleHeader';

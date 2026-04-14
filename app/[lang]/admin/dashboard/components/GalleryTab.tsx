@@ -8,7 +8,8 @@ import Image from 'next/image';
 import { useToast } from '../../../../context/ToastContext';
 import ConfirmModal from '@/app/components/ConfirmModal';
 
-export default function GalleryTab({ dict, uploadImage }: { dict: any, uploadImage: any }) {
+export default function GalleryTab(props: any) {
+  const { uploadImage } = props;
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   

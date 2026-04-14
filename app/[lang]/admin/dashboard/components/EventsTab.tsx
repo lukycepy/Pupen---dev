@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import React, { useEffect, useState } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { supabase } from '@/lib/supabase';
@@ -75,6 +75,10 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
     message: '',
     onConfirm: () => {}
   });
+  const [nowTs, setNowTs] = useState(0);
+  useEffect(() => {
+    setNowTs(Date.now());
+  }, []);
 
   const { data: eventPhotos = [] } = useQuery({
     queryKey: ['event_photos', editingEvent?.id],
@@ -147,7 +151,7 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
     if (!event.published_at) return 'draft';
     const ts = new Date(event.published_at).getTime();
     if (Number.isNaN(ts)) return 'draft';
-    return ts <= Date.now() ? 'published' : 'scheduled';
+    return ts <= nowTs ? 'published' : 'scheduled';
   };
 
   const askTogglePublish = (event: any, mode: 'toggle' | 'clear_schedule' = 'toggle') => {
@@ -177,7 +181,7 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
     setModalOpen(true);
   };
 
-  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<any>({
+  const { register, handleSubmit, reset, setValue, control, formState: { errors } } = useForm<any>({
     resolver: zodResolver(eventSchema),
     defaultValues: {
       category: 'Párty',
@@ -195,21 +199,21 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
     }
   });
 
-  const description = watch('description');
-  const descriptionEn = watch('description_en');
-  const title = watch('title');
-  const titleEn = watch('title_en');
-  const date = watch('date');
-  const time = watch('time');
-  const location = watch('location');
-  const category = watch('category');
-  const isMemberOnly = watch('is_member_only');
-  const publishedAt = watch('published_at');
+  const description = useWatch({ control, name: 'description' }) || '';
+  const descriptionEn = useWatch({ control, name: 'description_en' }) || '';
+  const title = useWatch({ control, name: 'title' }) || '';
+  const titleEn = useWatch({ control, name: 'title_en' }) || '';
+  const date = useWatch({ control, name: 'date' }) || '';
+  const time = useWatch({ control, name: 'time' }) || '';
+  const location = useWatch({ control, name: 'location' }) || '';
+  const category = useWatch({ control, name: 'category' }) || '';
+  const isMemberOnly = !!useWatch({ control, name: 'is_member_only' });
+  const publishedAt = useWatch({ control, name: 'published_at' }) || '';
   const isDraft = !String(publishedAt || '').trim();
 
   const seo = seoSuggestions({
-    title: title || '',
-    descriptionHtml: description || '',
+    title: title,
+    descriptionHtml: description,
     imageUrl: imageFile ? 'local' : editingEvent?.image_url,
     canonicalPath: editingEvent?.id ? `/cs/akce/${editingEvent.id}` : undefined,
   });
@@ -247,8 +251,9 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
         is_member_only: !!data.is_member_only
       };
       const withoutTicketSaleEnd = () => {
-        const { ticket_sale_end: _drop, ...rest } = payload as any;
-        return rest;
+        const next: any = { ...(payload as any) };
+        delete next.ticket_sale_end;
+        return next;
       };
 
       if (editingEvent?.id) {

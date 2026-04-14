@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default async function RomanPage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang: rawLang } = await params;
@@ -18,7 +19,7 @@ export default async function RomanPage({ params }: { params: Promise<{ lang: st
         </div>
 
         <div className="relative overflow-hidden rounded-[2.5rem] border border-white/10 shadow-2xl">
-          <img src="/img/roman.jpg" alt="Roman" className="w-full h-auto block" />
+          <Image src="/img/roman.jpg" alt="Roman" width={750} height={500} className="w-full h-auto block" priority />
         </div>
       </div>
     </div>

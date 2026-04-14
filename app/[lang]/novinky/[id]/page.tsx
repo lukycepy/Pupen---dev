@@ -2,7 +2,7 @@
 import { supabase } from '@/lib/supabase';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
+import Image, { type ImageLoader } from 'next/image';
 import { ArrowLeft, Calendar, Clock, Newspaper } from 'lucide-react';
 import { getDictionary } from '@/lib/get-dictionary';
 import { richTextToSafeHtml } from '@/lib/richtext-server';
@@ -13,6 +13,7 @@ import SocialShareInline from '@/app/components/SocialShareInline';
 import NewsFeedback from './NewsFeedback';
 
 export const revalidate = 60;
+const passthroughLoader: ImageLoader = ({ src }) => src;
 
 interface Props {
   params: Promise<{ id: string; lang: string }>;
@@ -192,11 +193,15 @@ export default async function DetailNovinky({ params }: Props) {
 <header className="relative h-[15vh] min-h-[250px] w-full bg-stone-900 overflow-hidden">
   {headerImg ? (
     headerImg.startsWith('http') ? (
-      <img
+      <Image
+        loader={passthroughLoader}
+        unoptimized
         src={headerImg}
         alt={post.title}
-        className="absolute inset-0 w-full h-full object-cover opacity-50 transition-opacity duration-500"
-        loading="eager"
+        fill
+        priority
+        className="object-cover opacity-50 transition-opacity duration-500"
+        sizes="100vw"
         referrerPolicy="no-referrer"
       />
     ) : (

@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
 import { useToast } from '../../../../context/ToastContext';
 import { Webhook, Plus, Trash2, Edit2, Loader2, Play } from 'lucide-react';
 import { SkeletonTabContent } from '../../../components/Skeleton';
@@ -10,7 +9,7 @@ import AdminModuleHeader from './ui/AdminModuleHeader';
 import AdminEmptyState from './ui/AdminEmptyState';
 import AdminPanel from './ui/AdminPanel';
 
-export default function WebhooksTab({ dict }: { dict: any }) {
+export default function WebhooksTab() {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   

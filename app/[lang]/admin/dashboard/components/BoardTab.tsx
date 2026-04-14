@@ -12,7 +12,7 @@ import Image from 'next/image';
 import Papa from 'papaparse';
 import { supabase } from '@/lib/supabase';
 
-export default function BoardTab({ dict, uploadImage }: { dict: any, uploadImage: (file: File, bucket: string) => Promise<string> }) {
+export default function BoardTab({ uploadImage }: { uploadImage: (file: File, bucket: string) => Promise<string> }) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 

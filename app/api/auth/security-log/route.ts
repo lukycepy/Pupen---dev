@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { requireUser } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { guardPublicJsonPost } from '@/lib/public-post-guard';
+import { getBearerToken } from '@/lib/server-auth';
 
 const ALLOWED_EVENTS = new Set([
   'MFA_ENROLL_START',
@@ -21,7 +23,14 @@ const ALLOWED_EVENTS = new Set([
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json().catch(() => ({}));
+    const g = await guardPublicJsonPost(req, {
+      keyPrefix: 'security_log',
+      windowMs: 60_000,
+      max: 60,
+      honeypot: false,
+    });
+    if (!g.ok) return g.response;
+    const body = g.body;
     const event = String(body?.event || '');
     if (!ALLOWED_EVENTS.has(event)) return NextResponse.json({ error: 'Invalid event' }, { status: 400 });
 
@@ -31,8 +40,11 @@ export async function POST(req: Request) {
       user = await requireUser(req);
     } else {
       const supabase = getServerSupabase();
-      const { data: { session } } = await supabase.auth.getSession();
-      user = session?.user;
+      const token = getBearerToken(req);
+      if (token) {
+        const r = await supabase.auth.getUser(token);
+        user = r.data?.user || null;
+      }
     }
 
     const detailsRaw = body?.details;

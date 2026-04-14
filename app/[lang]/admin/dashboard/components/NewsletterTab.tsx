@@ -9,7 +9,7 @@ import { richTextToClientHtml } from '@/lib/richtext-client';
 import { SkeletonTabContent } from '@/app/[lang]/components/Skeleton';
 import TiptapEditor from '@/app/[lang]/components/Editor';
 
-export default function NewsletterTab({ dict }: { dict: any }) {
+export default function NewsletterTab() {
   const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [subscribers, setSubscribers] = useState<any[]>([]);

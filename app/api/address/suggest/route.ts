@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getClientIp, rateLimit } from '@/lib/rate-limit';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { guardPublicGet } from '@/lib/public-post-guard';
 
 function pickFirst(obj: any, keys: string[]) {
   for (const k of keys) {
@@ -114,9 +114,14 @@ async function fetchRuian(q: string) {
 
 export async function GET(req: Request) {
   try {
-    const ip = getClientIp(req) || 'unknown';
-    const rl = rateLimit({ key: `addr:${ip}`, windowMs: 60_000, max: 60 });
-    if (!rl.ok) return NextResponse.json({ ok: false, error: 'Rate limited' }, { status: 429 });
+    const g = await guardPublicGet(req, {
+      keyPrefix: 'addr',
+      windowMs: 60_000,
+      max: 60,
+      tooManyPayload: { ok: false },
+      tooManyMessage: 'Rate limited',
+    });
+    if (!g.ok) return g.response;
 
     const url = new URL(req.url);
     const q = String(url.searchParams.get('q') || '').trim();

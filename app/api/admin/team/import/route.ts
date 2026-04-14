@@ -29,7 +29,7 @@ export async function POST(req: Request) {
 
     if (!inserts.length) return NextResponse.json({ error: 'Žádné validní záznamy v CSV (chybí name nebo role)' }, { status: 400 });
 
-    const { data, error } = await supabase.from('team_members').insert(inserts).select();
+    const { error } = await supabase.from('team_members').insert(inserts).select();
     if (error) throw error;
 
     await supabase.from('admin_logs').insert([{

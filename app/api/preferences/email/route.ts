@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { requireUser } from '@/lib/server-auth';
-import { getClientIp, rateLimit } from '@/lib/rate-limit';
+import { guardPublicJsonPost } from '@/lib/public-post-guard';
 
 const DEFAULT_PREFS = {
   digestWeekly: true,
@@ -38,16 +38,15 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const user = await requireUser(req);
-    const ip = getClientIp(req) || 'unknown';
-    const rl = rateLimit({ key: `email_prefs:${user.id}:${ip}`, windowMs: 60 * 60 * 1000, max: 60 });
-    if (!rl.ok) {
-      return NextResponse.json(
-        { error: 'Příliš mnoho požadavků. Zkuste to prosím později.' },
-        { status: 429, headers: { 'Retry-After': String(Math.ceil(rl.retryAfterMs / 1000)) } },
-      );
-    }
-
-    const body = await req.json().catch(() => ({}));
+    const g = await guardPublicJsonPost(req, {
+      keyPrefix: `email_prefs:${user.id}`,
+      windowMs: 60 * 60 * 1000,
+      max: 60,
+      honeypot: false,
+      tooManyMessage: 'Příliš mnoho požadavků. Zkuste to prosím později.',
+    });
+    if (!g.ok) return g.response;
+    const body = g.body;
     const input = body?.prefs || {};
 
     const prefs = {

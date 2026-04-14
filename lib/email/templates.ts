@@ -4,6 +4,9 @@ export type EmailTemplateKey =
   | 'ticket'
   | 'admin_password'
   | 'password_reset'
+  | 'trust_box_verify'
+  | 'trust_box_confirm'
+  | 'trust_box_admin_reply'
   | 'member_access'
   | 'member_welcome'
   | 'membership_expiry'
@@ -43,6 +46,21 @@ export function listEmailTemplates() {
       key: 'password_reset' as const,
       label: 'Reset hesla',
       variables: ['email', 'resetUrl', 'lang'],
+    },
+    {
+      key: 'trust_box_verify' as const,
+      label: 'Schránka důvěry – ověření e‑mailu',
+      variables: ['toEmail', 'firstName', 'verifyUrl', 'code', 'lang'],
+    },
+    {
+      key: 'trust_box_confirm' as const,
+      label: 'Schránka důvěry – potvrzení',
+      variables: ['toEmail', 'firstName', 'threadUrl', 'lang'],
+    },
+    {
+      key: 'trust_box_admin_reply' as const,
+      label: 'Schránka důvěry – odpověď správce',
+      variables: ['toEmail', 'firstName', 'threadUrl', 'lang'],
     },
     {
       key: 'member_access' as const,
@@ -228,6 +246,68 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
     </table>
   </body>
 </html>`;
+    return { subject, html };
+  }
+
+  if (key === 'trust_box_verify') {
+    const toEmail = String(vars?.toEmail || '').trim();
+    const firstName = String(vars?.firstName || '').trim();
+    const verifyUrl = String(vars?.verifyUrl || '').trim();
+    const code = String(vars?.code || '').trim();
+    const lang = vars?.lang === 'en' ? 'en' : 'cs';
+    const subject = lang === 'en' ? 'Pupen — Trust Box verification' : 'Pupen — Ověření schránky důvěry';
+    const html = `
+      <div style="font-family: sans-serif; padding: 20px; color: #1c1917; max-width: 700px; margin: auto; border: 1px solid #e7e5e4; border-radius: 20px;">
+        <h2 style="color: #16a34a; text-align: center;">${lang === 'en' ? 'Verify your email' : 'Ověřte svůj e‑mail'}</h2>
+        <div style="background-color: #f5f5f4; padding: 20px; border-radius: 15px; margin: 20px 0;">
+          <p style="margin: 8px 0;">${lang === 'en' ? 'Hello' : 'Dobrý den'}${firstName ? ` ${escapeHtml(firstName)}` : ''},</p>
+          <p style="margin: 8px 0;">${lang === 'en' ? 'To submit a message to the Trust Box, please verify your email.' : 'Pro odeslání podnětu do schránky důvěry prosím ověřte svůj e‑mail.'}</p>
+          ${verifyUrl ? `<p style="margin: 16px 0;"><a href="${escapeHtml(verifyUrl)}" style="display:inline-block; background:#16a34a; color:#ffffff; text-decoration:none; padding:12px 16px; border-radius:14px; font-weight:900;">${lang === 'en' ? 'Verify' : 'Ověřit'}</a></p>` : ''}
+          ${code ? `<p style="margin: 8px 0;"><strong>${lang === 'en' ? 'Code' : 'Kód'}:</strong> ${escapeHtml(code)}</p>` : ''}
+          <p style="margin: 8px 0; font-size: 12px; color:#78716c;">${lang === 'en' ? `This email was sent to ${escapeHtml(toEmail)}.` : `Tento e‑mail byl odeslán na ${escapeHtml(toEmail)}.`}</p>
+        </div>
+      </div>
+    `;
+    return { subject, html };
+  }
+
+  if (key === 'trust_box_confirm') {
+    const toEmail = String(vars?.toEmail || '').trim();
+    const firstName = String(vars?.firstName || '').trim();
+    const threadUrl = String(vars?.threadUrl || '').trim();
+    const lang = vars?.lang === 'en' ? 'en' : 'cs';
+    const subject = lang === 'en' ? 'Pupen — Trust Box received' : 'Pupen — Schránka důvěry: přijato';
+    const html = `
+      <div style="font-family: sans-serif; padding: 20px; color: #1c1917; max-width: 700px; margin: auto; border: 1px solid #e7e5e4; border-radius: 20px;">
+        <h2 style="color: #16a34a; text-align: center;">${lang === 'en' ? 'Thank you' : 'Děkujeme za důvěru'}</h2>
+        <div style="background-color: #f5f5f4; padding: 20px; border-radius: 15px; margin: 20px 0;">
+          <p style="margin: 8px 0;">${lang === 'en' ? 'Hello' : 'Dobrý den'}${firstName ? ` ${escapeHtml(firstName)}` : ''},</p>
+          <p style="margin: 8px 0;">${lang === 'en' ? 'Your message was received.' : 'Váš podnět byl přijat.'}</p>
+          ${threadUrl ? `<p style="margin: 16px 0;"><a href="${escapeHtml(threadUrl)}" style="display:inline-block; background:#16a34a; color:#ffffff; text-decoration:none; padding:12px 16px; border-radius:14px; font-weight:900;">${lang === 'en' ? 'Open thread' : 'Otevřít vlákno'}</a></p>` : ''}
+          <p style="margin: 8px 0; font-size: 12px; color:#78716c;">${lang === 'en' ? `This email was sent to ${escapeHtml(toEmail)}.` : `Tento e‑mail byl odeslán na ${escapeHtml(toEmail)}.`}</p>
+        </div>
+      </div>
+    `;
+    return { subject, html };
+  }
+
+  if (key === 'trust_box_admin_reply') {
+    const toEmail = String(vars?.toEmail || '').trim();
+    const firstName = String(vars?.firstName || '').trim();
+    const threadUrl = String(vars?.threadUrl || '').trim();
+    const lang = vars?.lang === 'en' ? 'en' : 'cs';
+    const subject = lang === 'en' ? 'Pupen — Trust Box update' : 'Pupen — Schránka důvěry: nová zpráva';
+    const html = `
+      <div style="font-family: sans-serif; padding: 20px; color: #1c1917; max-width: 700px; margin: auto; border: 1px solid #e7e5e4; border-radius: 20px;">
+        <h2 style="color: #16a34a; text-align: center;">${lang === 'en' ? 'New message' : 'Nová zpráva'}</h2>
+        <div style="background-color: #f5f5f4; padding: 20px; border-radius: 15px; margin: 20px 0;">
+          <p style="margin: 8px 0;">${lang === 'en' ? 'Hello' : 'Dobrý den'}${firstName ? ` ${escapeHtml(firstName)}` : ''},</p>
+          <p style="margin: 8px 0;">${lang === 'en' ? 'There is a new message in your Trust Box thread.' : 'Ve vašem vlákně schránky důvěry je nová zpráva.'}</p>
+          ${threadUrl ? `<p style="margin: 16px 0;"><a href="${escapeHtml(threadUrl)}" style="display:inline-block; background:#16a34a; color:#ffffff; text-decoration:none; padding:12px 16px; border-radius:14px; font-weight:900;">${lang === 'en' ? 'Open thread' : 'Otevřít vlákno'}</a></p>` : ''}
+          <p style="margin: 8px 0; font-size: 12px; color:#78716c;">${lang === 'en' ? `This email was sent to ${escapeHtml(toEmail)}.` : `Tento e‑mail byl odeslán na ${escapeHtml(toEmail)}.`}</p>
+        </div>
+      </div>
+    `;
     return { subject, html };
   }
 

@@ -4,18 +4,10 @@ import { getBearerToken } from '@/lib/server-auth';
 import { isEmailBlacklisted } from '@/lib/tickets/blacklist';
 import { normalizePromoCode } from '@/lib/promo/rules';
 import { DEFAULT_TICKET_SECURITY_CONFIG, normalizeTicketSecurityConfig } from '@/lib/tickets/securityConfig';
+import { guardPublicJsonPost } from '@/lib/public-post-guard';
 
 function err(code: string, status: number, payload?: Record<string, any>) {
   return NextResponse.json({ ok: false, error: code, error_code: code, ...(payload || {}) }, { status });
-}
-
-function getIp(req: Request) {
-  const h = req.headers;
-  const xf = h.get('x-forwarded-for');
-  if (xf) return xf.split(',')[0]?.trim() || null;
-  const xr = h.get('x-real-ip');
-  if (xr) return xr.trim();
-  return null;
 }
 
 async function getOptionalUser(req: Request) {
@@ -28,17 +20,32 @@ async function getOptionalUser(req: Request) {
 
 export async function POST(req: Request) {
   const supabase = getServerSupabase();
-  const ip = getIp(req);
   const ua = req.headers.get('user-agent') || '';
 
   try {
-    const body = await req.json().catch(() => ({}));
+    const g = await guardPublicJsonPost(req, {
+      keyPrefix: 'rsvp',
+      windowMs: 60_000,
+      max: 10,
+      honeypotResponse: { ok: true, status: 'reserved', qrToken: null, expiresAt: null },
+      tooManyMessage: 'RSVP_RATE_LIMIT',
+      tooManyPayload: { ok: false, error_code: 'RSVP_RATE_LIMIT' },
+      forbiddenMessage: 'RSVP_FORBIDDEN',
+      forbiddenPayload: { ok: false, error_code: 'RSVP_FORBIDDEN' },
+    });
+    if (!g.ok) return g.response;
+    const body = g.body;
+    const ip = g.ip === 'unknown' ? null : g.ip;
     const { eventId, name, email, attendees, payment_method, promoCode } = body || {};
 
     const cleanName = String(name || '').trim();
     const cleanEmail = String(email || '').trim().toLowerCase();
     const method = String(payment_method || 'hotove');
     const promo = promoCode ? normalizePromoCode(String(promoCode)) : '';
+
+    if (cleanName.length > 100 || cleanEmail.length > 150) {
+      return err('RSVP_PAYLOAD_TOO_LARGE', 400);
+    }
 
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail);
     if (!eventId || !cleanName || !emailOk) return err('RSVP_BAD_INPUT', 400);
@@ -92,7 +99,7 @@ export async function POST(req: Request) {
         : 'id, title, capacity, is_member_only';
       return supabase.from('events').select(select).eq('id', eventId).single();
     };
-    let first: any = await loadEvent(true);
+    const first: any = await loadEvent(true);
     let event: any = first.data;
     let evErr: any = first.error;
     if (

@@ -4,22 +4,21 @@ import { requireUser } from '@/lib/server-auth';
 import { getMailer } from '@/lib/email/mailer';
 import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
 import { isEmailBlacklisted } from '@/lib/tickets/blacklist';
-import { getClientIp, rateLimit } from '@/lib/rate-limit';
 import { sendMailWithQueueFallback } from '@/lib/email/queue';
+import { guardPublicJsonPost } from '@/lib/public-post-guard';
 
 export async function POST(req: Request) {
   try {
     const user = await requireUser(req);
-    const ip = getClientIp(req) || 'unknown';
-    const rl = rateLimit({ key: `refund:${user.id}:${ip}`, windowMs: 10 * 60 * 1000, max: 5 });
-    if (!rl.ok) {
-      return NextResponse.json(
-        { error: 'Příliš mnoho požadavků. Zkuste to prosím později.' },
-        { status: 429, headers: { 'Retry-After': String(Math.ceil(rl.retryAfterMs / 1000)) } },
-      );
-    }
-
-    const body = await req.json().catch(() => ({}));
+    const g = await guardPublicJsonPost(req, {
+      keyPrefix: `refund:${user.id}`,
+      windowMs: 10 * 60 * 1000,
+      max: 5,
+      honeypot: false,
+      tooManyMessage: 'Příliš mnoho požadavků. Zkuste to prosím později.',
+    });
+    if (!g.ok) return g.response;
+    const body = g.body;
     const { rsvpId, eventId, eventTitle, reason, note } = body || {};
     if (!rsvpId || !eventId || !eventTitle || !reason) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
 

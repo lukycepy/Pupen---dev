@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { ShieldCheck, Save, Trash2, UserPlus } from 'lucide-react';
 import { useToast } from '@/app/context/ToastContext';
@@ -14,6 +14,7 @@ type Assignment = { user_id: string; role_id: string; assigned_at: string; assig
 
 export default function RolesTab({ dict }: { dict: any }) {
   const t = dict?.adminRoles || {};
+  const errorMsg = String(t?.error || 'Chyba');
   const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -57,7 +58,7 @@ export default function RolesTab({ dict }: { dict: any }) {
     return out;
   }, [assignments]);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const { data } = await supabase.auth.getSession();
@@ -70,15 +71,15 @@ export default function RolesTab({ dict }: { dict: any }) {
       setAssignments(Array.isArray(json?.assignments) ? json.assignments : []);
       setPermissionKeys(Array.isArray(json?.permissionKeys) ? json.permissionKeys : []);
     } catch (e: any) {
-      showToast(e?.message || (t?.error || 'Chyba'), 'error');
+      showToast(e?.message || errorMsg, 'error');
     } finally {
       setLoading(false);
     }
-  };
+  }, [errorMsg, showToast]);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   const groupedKeys = useMemo(() => {
     const groups: Record<string, string[]> = { [String(t.groupBase || 'Základ')]: [], [String(t.groupModules || 'Moduly')]: [] };
@@ -89,7 +90,7 @@ export default function RolesTab({ dict }: { dict: any }) {
       else groups[modulesKey].push(k);
     }
     return groups;
-  }, [permissionKeys]);
+  }, [permissionKeys, t.groupBase, t.groupModules]);
 
   const startCreate = () => {
     setEditing(null);

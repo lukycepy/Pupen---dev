@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { requireUser } from '@/lib/server-auth';
+import { guardPublicJsonPost } from '@/lib/public-post-guard';
 
 function normalizeEmail(input: string) {
   return String(input || '').trim().toLowerCase();
@@ -15,22 +17,37 @@ function normalizeCategories(input: any): string[] {
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json().catch(() => ({}));
-    const email = normalizeEmail(body?.email || '');
-    const categories = normalizeCategories(body?.categories);
+    const g = await guardPublicJsonPost(req, {
+      keyPrefix: 'nl_prefs',
+      windowMs: 60_000,
+      max: 20,
+      honeypotResponse: { ok: true, status: 'preferences_updated' },
+      tooManyMessage: 'Příliš mnoho požadavků, zkuste to později.',
+    });
+    if (!g.ok) return g.response;
+    const body = g.body;
 
+    const user = await requireUser(req);
+    const email = normalizeEmail(user.email || '');
     if (!email) return NextResponse.json({ error: 'Chybí e-mail.' }, { status: 400 });
+
+    const categories = normalizeCategories(body?.categories);
 
     const supabase = getServerSupabase();
     
     const { error } = await supabase
       .from('newsletter_subscriptions')
-      .update({ 
-        categories, 
-        consent: true, // If they update preferences, they consent
-        updated_at: new Date().toISOString() 
-      })
-      .eq('email', email);
+      .upsert(
+        [
+          {
+            email,
+            categories,
+            consent: true,
+            updated_at: new Date().toISOString(),
+          },
+        ],
+        { onConflict: 'email' },
+      );
 
     if (error) throw error;
 
@@ -42,9 +59,8 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
   try {
-    const { searchParams } = new URL(req.url);
-    const email = normalizeEmail(searchParams.get('email') || '');
-    
+    const user = await requireUser(req);
+    const email = normalizeEmail(user.email || '');
     if (!email) return NextResponse.json({ error: 'Chybí e-mail.' }, { status: 400 });
 
     const supabase = getServerSupabase();
@@ -52,7 +68,7 @@ export async function GET(req: Request) {
       .from('newsletter_subscriptions')
       .select('categories, consent')
       .eq('email', email)
-      .single();
+      .maybeSingle();
 
     if (error && error.code !== 'PGRST116') throw error; // ignore not found
     

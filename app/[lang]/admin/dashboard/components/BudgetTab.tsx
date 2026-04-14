@@ -3,10 +3,9 @@
 import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Wallet, Plus, Trash2, TrendingUp, TrendingDown, Calendar, Loader2, Save, X, DollarSign, FileDown, Mail, AlertTriangle, Receipt, Upload, Image as ImageIcon } from 'lucide-react';
+import { Wallet, Plus, Trash2, Loader2, Save, X, Mail, Receipt } from 'lucide-react';
 import { useToast } from '../../../../context/ToastContext';
 import ConfirmModal from '@/app/components/ConfirmModal';
-import Image from 'next/image';
 import { SkeletonTabContent } from '../../../components/Skeleton';
 
 export default function BudgetTab({ dict, uploadImage }: { dict: any, uploadImage?: (file: File, bucket: string) => Promise<string> }) {
@@ -43,13 +42,15 @@ export default function BudgetTab({ dict, uploadImage }: { dict: any, uploadImag
       const base64 = reader.result as string;
       setIsOCRRunning(true);
       try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
         const res = await fetch('/api/ocr', {
           method: 'POST',
           body: JSON.stringify({ 
             imageBase64: base64,
             mimeType: file.type || "image/jpeg"
           }),
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
         });
         const data = await res.json();
         

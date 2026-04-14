@@ -72,7 +72,6 @@ export default function PrihlaskaPage() {
         validatedMeta = json?.meta || validatedMeta;
       }
 
-      const full_name = `${formData.first_name} ${formData.last_name}`.trim();
       const submitRes = await fetch('/api/applications/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

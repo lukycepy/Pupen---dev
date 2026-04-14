@@ -53,7 +53,7 @@ export default function MaintenancePage() {
     lang === 'en'
       ? cfg?.maintenance_body_en || 'We are improving the website. Please try again later.'
       : cfg?.maintenance_body_cs ||
-        '🤖I technika občas potřebuje pauzu na kafe (nebo na pivo na JIHu). Aktuálně na webu makáme, abychom opravili chyby a nahodili novinky. Zatím si běž užít kampus, my se do toho obujeme a za chvíli jsme zpátky. Pokud hoří něco důležitého, napiš nám na info@pupen.org nebo naše socky.✨';
+        'Na webu probíhá plánovaná údržba a dočasně není dostupný. Údržba slouží k úpravám, které zvyšují stabilitu a bezpečnost provozu. Pokud potřebujete urgentně řešit provozní záležitost, kontaktujte nás na info@pupen.org.';
   const otherLang = lang === 'en' ? 'cs' : 'en';
 
   const startAt = cfg?.maintenance_start_at ? new Date(String(cfg.maintenance_start_at)) : null;
@@ -68,7 +68,7 @@ export default function MaintenancePage() {
     if (!cfg) return;
     if (!now) return;
     if (!isActive) router.replace(`/${lang}`);
-  }, [cfg, isActive, lang, router]);
+  }, [cfg, isActive, lang, now, router]);
 
   const decodeHtmlEntities = (s: string) => decodeHtmlEntitiesDeep(String(s || ''), 3);
 

@@ -55,7 +55,7 @@ export default function LostFoundPage() {
         setClaimEmail('');
         setClaimMessage('');
       }, 3000);
-    } catch (err) {
+    } catch {
       alert(lang === 'en' ? 'Error sending request' : 'Chyba při odesílání žádosti');
     } finally {
       setClaimSending(false);

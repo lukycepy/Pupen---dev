@@ -1,3 +1,0 @@
-- [x] V UI se datumy/časy zobrazují v `Europe/Prague` (včetně DST).
-- [x] PDF a e-maily formátují datumy/časy v `Europe/Prague`.
-- [x] Neexistují „mixy“ UTC/locale formátování bez explicitního timezone.

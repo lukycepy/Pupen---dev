@@ -1,19 +1,21 @@
 import { NextResponse } from 'next/server';
-import { getClientIp, rateLimit } from '@/lib/rate-limit';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { applicationSubmitSchema } from '@/lib/validations/application';
+import { guardPublicJsonPost } from '@/lib/public-post-guard';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
   try {
-    const ip = getClientIp(req);
-    const rl = rateLimit({ key: `applications:submit:${ip}`, windowMs: 60_000, max: 10 });
-    if (!rl.ok) return NextResponse.json({ error: 'Příliš mnoho požadavků, zkuste to prosím později.' }, { status: 429 });
-
-    const body = await req.json().catch(() => ({}));
-    const honeypot = String(body?.website || body?.hp || '').trim();
-    if (honeypot) return NextResponse.json({ ok: true });
+    const g = await guardPublicJsonPost(req, {
+      keyPrefix: 'applications:submit',
+      windowMs: 60_000,
+      max: 10,
+      honeypotResponse: { ok: true },
+      tooManyMessage: 'Příliš mnoho požadavků, zkuste to prosím později.',
+    });
+    if (!g.ok) return g.response;
+    const body = g.body;
 
     const parseResult = applicationSubmitSchema.safeParse(body);
     if (!parseResult.success) {
@@ -55,4 +57,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: String(e?.message || 'Error') }, { status: 500 });
   }
 }
-

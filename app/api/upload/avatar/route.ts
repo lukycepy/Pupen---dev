@@ -3,22 +3,6 @@ import { requireUser } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 import sharp from 'sharp';
 
-function safeFileName(name: string) {
-  const base = name.split(/[/\\]/).pop() || 'file';
-  return base.replace(/[^a-zA-Z0-9._-]/g, '_');
-}
-
-function extFromFile(file: File) {
-  const byName = (file.name.split('.').pop() || '').toLowerCase();
-  if (byName && byName.length <= 8) return byName;
-  const byType = (file.type || '').toLowerCase();
-  if (byType === 'image/jpeg') return 'jpg';
-  if (byType === 'image/png') return 'png';
-  if (byType === 'image/webp') return 'webp';
-  if (byType === 'image/gif') return 'gif';
-  return 'bin';
-}
-
 export async function POST(req: Request) {
   try {
     const user = await requireUser(req);

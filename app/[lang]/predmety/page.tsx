@@ -45,7 +45,7 @@ export default function PredmetyPage() {
   const { data: reviews = [], isLoading } = useQuery({
     queryKey: ['public_subject_reviews'],
     queryFn: async () => {
-      const { data } = await supabase.from('subject_reviews').select('*').eq('is_approved', true).order('created_at', { ascending: false });
+      const { data } = await supabase.from('subject_reviews').select('*').in('status', ['approved', 'published']).order('created_at', { ascending: false });
       return data || [];
     }
   });

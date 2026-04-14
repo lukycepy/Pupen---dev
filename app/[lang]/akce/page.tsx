@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
@@ -16,6 +16,7 @@ import CopyButton from '@/app/components/CopyButton';
 
 const DEFAULT_CATEGORY_KEYS = ['Vše', 'Párty', 'Vzdělávání', 'Výlet', 'Zábava'];
 const RSVP_DRAFT_KEY = 'pupen_rsvp_draft_v1';
+const passthroughLoader = ({ src }: { src: string }) => src;
 
 function stripHtmlToText(s: string) {
   return String(s || '')
@@ -44,7 +45,6 @@ export default function AkcePage() {
   const { showToast } = useToast();
 
   const [events, setEvents] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [dict, setDict] = useState<any>(null);
   const [globalDict, setGlobalDict] = useState<any>(null);
   const [activeCategory, setActiveCategory] = useState("Vše");
@@ -68,22 +68,22 @@ export default function AkcePage() {
     attendees: [{ name: '' }] // Support for up to 3 people
   });
 
-  const readDrafts = () => {
+  const readDrafts = useCallback(() => {
     try {
       const raw = window.localStorage.getItem(RSVP_DRAFT_KEY);
       return raw ? (JSON.parse(raw) as Record<string, any>) : {};
     } catch {
       return {};
     }
-  };
+  }, []);
 
-  const writeDraft = (eventId: string, draft: any) => {
+  const writeDraft = useCallback((eventId: string, draft: any) => {
     try {
       const drafts = readDrafts();
       drafts[eventId] = draft;
       window.localStorage.setItem(RSVP_DRAFT_KEY, JSON.stringify(drafts));
     } catch {}
-  };
+  }, [readDrafts]);
 
   const clearDraft = (eventId: string) => {
     try {
@@ -155,7 +155,7 @@ export default function AkcePage() {
         }
       })
       .catch(() => {});
-  }, [rsvpOpen]);
+  }, [rsvpOpen, readDrafts, writeDraft]);
 
   useEffect(() => {
     async function loadPageData() {
@@ -221,8 +221,6 @@ export default function AkcePage() {
         }
       } catch (err: any) {
         console.error("Chyba při načítání dat:", err?.message || err);
-      } finally {
-        setLoading(false);
       }
     }
     loadPageData();
@@ -457,11 +455,14 @@ export default function AkcePage() {
                   <div className="aspect-video relative overflow-hidden shrink-0">
                     {isSafeImageSrc(String(event.image_url ?? '')) ? (
                       String(event.image_url).startsWith('http') ? (
-                      <img
+                      <Image
+                        loader={passthroughLoader}
+                        unoptimized
                         src={String(event.image_url)}
                         alt={event.title}
-                        className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition duration-700"
-                        loading="lazy"
+                        fill
+                        className="object-cover group-hover:scale-105 transition duration-700"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                         referrerPolicy="no-referrer"
                       />
                       ) : (
@@ -597,7 +598,7 @@ export default function AkcePage() {
                         setRsvpResult(null);
                         setRsvpForm({ name: '', email: '', promo_code: '', payment_method: 'hotove', attendees: [{ name: '' }] });
                       }}
-                      className="w-full bg-green-600 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-green-100"
+                      className="w-full bg-green-600 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-green-100 outline-none focus:ring-2 focus:ring-green-500"
                     >
                       {lang === 'en' ? 'Done' : 'Hotovo'}
                     </button>
@@ -619,7 +620,7 @@ export default function AkcePage() {
                           placeholder={globalDict?.contactPage?.labelName || (lang === 'cs' ? 'Jméno' : 'Name')} 
                           value={rsvpForm.name} 
                           onChange={e => setRsvpFormWithDraft({ ...rsvpForm, name: e.target.value }, rsvpOpen)} 
-                          className="w-full bg-stone-50 border-none rounded-xl px-6 py-4 font-bold"
+                          className="w-full bg-stone-50 border-none rounded-xl px-6 py-4 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500"
                         />
                       </div>
                       <div className="space-y-1">
@@ -631,7 +632,7 @@ export default function AkcePage() {
                           placeholder="Email" 
                           value={rsvpForm.email} 
                           onChange={e => setRsvpFormWithDraft({ ...rsvpForm, email: e.target.value }, rsvpOpen)} 
-                          className="w-full bg-stone-50 border-none rounded-xl px-6 py-4 font-bold"
+                          className="w-full bg-stone-50 border-none rounded-xl px-6 py-4 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500"
                         />
                       </div>
                     </div>
@@ -640,7 +641,13 @@ export default function AkcePage() {
                       <div className="flex items-center justify-between">
                         <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Účastníci (max 3)</label>
                         {rsvpForm.attendees.length < 3 && (
-                          <button type="button" onClick={addAttendee} className="text-xs font-bold text-green-600 hover:text-green-700">+ Přidat osobu</button>
+                          <button
+                            type="button"
+                            onClick={addAttendee}
+                            className="text-xs font-bold text-green-600 hover:text-green-700 outline-none focus:ring-2 focus:ring-green-500 rounded-lg px-2 py-1 -mr-2"
+                          >
+                            + Přidat osobu
+                          </button>
                         )}
                       </div>
                       {rsvpForm.attendees.map((attendee, index) => (
@@ -652,10 +659,16 @@ export default function AkcePage() {
                             placeholder={`Jméno účastníka ${index + 1}`}
                             value={attendee.name}
                             onChange={e => updateAttendee(index, e.target.value)}
-                            className="flex-grow bg-stone-50 border-none rounded-xl px-6 py-3 font-bold text-sm"
+                            className="flex-grow bg-stone-50 border-none rounded-xl px-6 py-3 font-bold text-sm text-stone-700 outline-none focus:ring-2 focus:ring-green-500"
                           />
                           {rsvpForm.attendees.length > 1 && (
-                            <button type="button" onClick={() => removeAttendee(index)} className="p-3 text-red-400 hover:text-red-600 transition"><Trash2 size={18} /></button>
+                            <button
+                              type="button"
+                              onClick={() => removeAttendee(index)}
+                              className="p-3 text-red-400 hover:text-red-600 transition outline-none focus:ring-2 focus:ring-green-500 rounded-xl"
+                            >
+                              <Trash2 size={18} />
+                            </button>
                           )}
                         </div>
                       ))}
@@ -667,14 +680,14 @@ export default function AkcePage() {
                         <button 
                           type="button"
                           onClick={() => setRsvpFormWithDraft({ ...rsvpForm, payment_method: 'hotove' }, rsvpOpen)}
-                          className={`py-3 px-4 rounded-xl font-bold text-sm border-2 transition ${rsvpForm.payment_method === 'hotove' ? 'bg-green-50 border-green-600 text-green-700' : 'bg-white border-stone-100 text-stone-400'}`}
+                          className={`py-3 px-4 rounded-xl font-bold text-sm border-2 transition outline-none focus:ring-2 focus:ring-green-500 ${rsvpForm.payment_method === 'hotove' ? 'bg-green-50 border-green-600 text-green-700' : 'bg-white border-stone-100 text-stone-400'}`}
                         >
                           Hotově na místě
                         </button>
                         <button 
                           type="button"
                           onClick={() => setRsvpFormWithDraft({ ...rsvpForm, payment_method: 'prevod' }, rsvpOpen)}
-                          className={`py-3 px-4 rounded-xl font-bold text-sm border-2 transition ${rsvpForm.payment_method === 'prevod' ? 'bg-green-50 border-green-600 text-green-700' : 'bg-white border-stone-100 text-stone-400'}`}
+                          className={`py-3 px-4 rounded-xl font-bold text-sm border-2 transition outline-none focus:ring-2 focus:ring-green-500 ${rsvpForm.payment_method === 'prevod' ? 'bg-green-50 border-green-600 text-green-700' : 'bg-white border-stone-100 text-stone-400'}`}
                         >
                           Převodem (QR kód)
                         </button>
@@ -694,7 +707,7 @@ export default function AkcePage() {
                         type="text"
                         value={(rsvpForm as any).promo_code || ''}
                         onChange={(e) => setRsvpFormWithDraft({ ...(rsvpForm as any), promo_code: e.target.value }, rsvpOpen)}
-                        className="w-full bg-stone-50 border-none rounded-xl px-6 py-4 font-bold"
+                        className="w-full bg-stone-50 border-none rounded-xl px-6 py-4 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500"
                         placeholder={lang === 'en' ? 'e.g. PUPEN2026' : 'např. PUPEN2026'}
                       />
                     </div>
@@ -703,7 +716,7 @@ export default function AkcePage() {
                       <button
                         type="button"
                         onClick={() => setRsvpOpen(null)}
-                        className="flex-grow bg-stone-100 text-stone-500 py-4 rounded-xl font-bold"
+                        className="flex-grow bg-stone-100 text-stone-500 py-4 rounded-xl font-bold outline-none focus:ring-2 focus:ring-green-500"
                       >
                         {globalDict?.admin?.btnCancel || (lang === 'cs' ? 'Zrušit' : 'Cancel')}
                       </button>
@@ -716,7 +729,7 @@ export default function AkcePage() {
                           !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rsvpForm.email.trim()) ||
                           rsvpForm.attendees.some(a => !(a.name || '').trim())
                         }
-                        className="flex-grow bg-green-600 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-green-100 disabled:opacity-50"
+                        className="flex-grow bg-green-600 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-green-100 disabled:opacity-50 outline-none focus:ring-2 focus:ring-green-500"
                       >
                         {rsvpLoading === rsvpOpen ? <InlinePulse className="bg-white/80" size={14} /> : <CheckCircle size={20} />}
                         {dict.rsvpBtn || (lang === 'cs' ? 'Rezervovat' : 'Reserve')}

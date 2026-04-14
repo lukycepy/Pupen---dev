@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const { withClient } = require('./utils');
+const { withClient, getDbUrl } = require('./utils');
 
 function sha256(text) {
   return crypto.createHash('sha256').update(text, 'utf8').digest('hex');
@@ -17,6 +17,14 @@ function listSqlFiles(rootDir, prefix) {
 }
 
 async function main() {
+  const url = getDbUrl();
+  if (!url) {
+    if (process.env.CI) {
+      throw new Error('Missing DATABASE_URL (or DATABASE_URL_STAGING / DATABASE_URL_PROD with --env)');
+    }
+    console.log('SKIPPED: drift-check (no DATABASE_URL provided)');
+    return;
+  }
   const repoRoot = process.cwd();
   const files = [
     ...listSqlFiles(path.join(repoRoot, 'migrace'), 'migrace'),
@@ -76,4 +84,3 @@ main().catch((e) => {
   console.error(e?.message || e);
   process.exit(1);
 });
-

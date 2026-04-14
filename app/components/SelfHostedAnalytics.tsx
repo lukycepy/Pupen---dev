@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Script from 'next/script';
 import { usePathname } from 'next/navigation';
 
@@ -11,15 +11,6 @@ export default function SelfHostedAnalytics() {
   const provider = String(process.env.NEXT_PUBLIC_ANALYTICS_PROVIDER || '').trim().toLowerCase();
   const src = String(process.env.NEXT_PUBLIC_ANALYTICS_SCRIPT_URL || '').trim();
   const [allowed, setAllowed] = useState(false);
-
-  const consent = useMemo(() => {
-    if (typeof window === 'undefined') return '';
-    try {
-      return String(window.localStorage.getItem('cookie-consent') || '');
-    } catch {
-      return '';
-    }
-  }, []);
 
   useEffect(() => {
     const sync = () => {

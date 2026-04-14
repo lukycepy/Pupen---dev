@@ -33,16 +33,15 @@ export default function AdminCommandPalette({
     const groups = buildAdminMenuGroups(dict, permissions);
     return groups
       .flatMap((g) =>
-        g.items.map((it) => ({
-          id: it.id,
-          label: it.label,
-          groupTitle: g.title,
-          icon: it.icon,
-          visible: it.visible,
-        }))
-      )
-      .filter((it: any) => it.visible)
-      .map(({ visible, ...rest }: any) => rest);
+        g.items
+          .filter((it) => !!it.visible)
+          .map((it) => ({
+            id: it.id,
+            label: it.label,
+            groupTitle: g.title,
+            icon: it.icon,
+          }))
+      );
   }, [dict, permissions]);
 
   const filtered = useMemo(() => {

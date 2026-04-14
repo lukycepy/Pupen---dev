@@ -1,49 +1,30 @@
-name: DB checks
-
+name: Database Checks
 on:
-  workflow_dispatch:
-    inputs:
-      target:
-        description: Target environment
-        required: true
-        default: staging
-        type: choice
-        options:
-          - staging
-          - prod
-
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
 jobs:
-  staging:
-    if: ${{ inputs.target == 'staging' }}
+  check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - run: npm ci
-      - run: npm run db:drift-check
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL_STAGING }}
-      - run: npm run db:rls-check
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL_STAGING }}
-
-  prod:
-    if: ${{ inputs.target == 'prod' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - run: npm ci
-      - run: npm run db:drift-check
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
-      - run: npm run db:rls-check
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
-
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: lts/*
+    - name: Install dependencies
+      run: npm ci
+    - name: DB Drift Check
+      run: npm run db:drift-check
+      env:
+        PUPEN_DB_HOST: ${{ secrets.PUPEN_DB_HOST }}
+        PUPEN_DB_USER: ${{ secrets.PUPEN_DB_USER }}
+        PUPEN_DB_PASS: ${{ secrets.PUPEN_DB_PASS }}
+        PUPEN_DB_NAME: ${{ secrets.PUPEN_DB_NAME }}
+    - name: DB RLS Check
+      run: npm run db:rls-check
+      env:
+        PUPEN_DB_HOST: ${{ secrets.PUPEN_DB_HOST }}
+        PUPEN_DB_USER: ${{ secrets.PUPEN_DB_USER }}
+        PUPEN_DB_PASS: ${{ secrets.PUPEN_DB_PASS }}
+        PUPEN_DB_NAME: ${{ secrets.PUPEN_DB_NAME }}

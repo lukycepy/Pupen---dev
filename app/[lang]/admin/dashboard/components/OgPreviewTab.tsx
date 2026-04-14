@@ -6,6 +6,7 @@ import InlinePulse from '@/app/components/InlinePulse';
 import { useToast } from '@/app/context/ToastContext';
 import CopyButton from '@/app/components/CopyButton';
 import { supabase } from '@/lib/supabase';
+import Image from 'next/image';
 
 export default function OgPreviewTab() {
   const { showToast } = useToast();
@@ -91,7 +92,7 @@ export default function OgPreviewTab() {
               <div className="border border-stone-200 rounded-2xl overflow-hidden">
                 {data.image ? (
                   <div className="relative aspect-[1.91/1] bg-stone-100">
-                    <img src={data.image} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                    <Image src={data.image} alt="" fill sizes="100vw" className="object-cover" unoptimized />
                   </div>
                 ) : (
                   <div className="aspect-[1.91/1] bg-stone-100" />

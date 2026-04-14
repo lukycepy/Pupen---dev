@@ -60,7 +60,6 @@ export default function NotFound() {
     canvas.style.height = `${h}px`;
     ctx.scale(dpr, dpr);
 
-    let t = 0;
     let running = true;
     let y = 0;
     let vy = 0;
@@ -78,7 +77,6 @@ export default function NotFound() {
     };
 
     const reset = () => {
-      t = 0;
       y = 0;
       vy = 0;
       score = 0;
@@ -119,7 +117,6 @@ export default function NotFound() {
       ctx.fillText(`${gameText.title} • ${gameText.start} • ${Math.floor(score)}`, 14, 18);
 
       if (running) {
-        t += 1;
         score += 0.08 * speed;
         speed = Math.min(7, speed + 0.0006);
 

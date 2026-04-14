@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Tag, Plus, Trash2, MapPin, Loader2, Save, X, ShoppingBag, Edit3, AlertTriangle } from 'lucide-react';
+import { Tag, Plus, Trash2, MapPin, Loader2, Save, X, ShoppingBag, Edit3 } from 'lucide-react';
 import { useToast } from '../../../../context/ToastContext';
 import ConfirmModal from '@/app/components/ConfirmModal';
 import { SkeletonTabContent } from '../../../components/Skeleton';

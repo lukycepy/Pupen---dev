@@ -18,6 +18,7 @@ export default function NewsletterForm({ lang }: { lang: string }) {
   const [selectedCats, setSelectedCats] = useState<string[]>(['all']);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [honeyPot, setHoneyPot] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +29,12 @@ export default function NewsletterForm({ lang }: { lang: string }) {
       const res = await fetch('/api/newsletter/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), categories: selectedCats, source: 'web' }),
+        body: JSON.stringify({ 
+          email: email.trim(), 
+          categories: selectedCats, 
+          source: 'web',
+          hp: honeyPot
+        }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error || 'Chyba');
@@ -81,6 +87,15 @@ export default function NewsletterForm({ lang }: { lang: string }) {
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          <input
+            type="text"
+            name="hp"
+            value={honeyPot}
+            onChange={(e) => setHoneyPot(e.target.value)}
+            className="opacity-0 absolute -z-10 w-0 h-0"
+            tabIndex={-1}
+            autoComplete="off"
+          />
           <div className="flex flex-wrap justify-center gap-2 mb-6">
             {CATEGORIES.map(cat => (
               <button

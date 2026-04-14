@@ -11,7 +11,7 @@ import Dialog from '@/app/components/ui/Dialog';
 
 type View = 'queue' | 'dead';
 
-export default function QueueTab({ dict }: { dict: any }) {
+export default function QueueTab() {
   const { showToast } = useToast();
   const qc = useQueryClient();
   const [view, setView] = useState<View>('queue');

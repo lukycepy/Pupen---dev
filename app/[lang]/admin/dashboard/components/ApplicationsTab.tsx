@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { CheckCircle, XCircle, Clock, FileText, Loader2, User, Mail, Phone, GraduationCap, Quote, FileCheck } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, FileText, User, Mail, Phone, GraduationCap, Quote, FileCheck } from 'lucide-react';
 import { useToast } from '../../../../context/ToastContext';
 import SignaturePad from '../../../components/SignaturePad';
 import Image from 'next/image';

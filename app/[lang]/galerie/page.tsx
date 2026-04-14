@@ -9,6 +9,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import Dialog from '@/app/components/ui/Dialog';
 
+const passthroughLoader = ({ src }: { src: string }) => src;
+
 export default function GaleriePage() {
   const params = useParams();
   const lang = (params?.lang as string) || 'cs';
@@ -146,7 +148,7 @@ export default function GaleriePage() {
       }
     }
     loadGalleries();
-  }, []);
+  }, [lang]);
 
   if (!dict) return null;
 
@@ -240,11 +242,14 @@ export default function GaleriePage() {
                               >
                                 {isSafeImageSrc(String(img.image_url ?? '')) ? (
                                   String(img.image_url).startsWith('http') ? (
-                                    <img
+                                    <Image
+                                      loader={passthroughLoader}
+                                      unoptimized
                                       src={String(img.image_url)}
                                       alt=""
-                                      className="absolute inset-0 w-full h-full object-cover transition duration-700 group-hover:scale-110"
-                                      loading="lazy"
+                                      fill
+                                      className="object-cover transition duration-700 group-hover:scale-110"
+                                      sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 20vw"
                                       referrerPolicy="no-referrer"
                                     />
                                   ) : (
@@ -290,7 +295,16 @@ export default function GaleriePage() {
             </button>
             {isSafeImageSrc(String(selectedImage ?? '')) ? (
               String(selectedImage).startsWith('http') ? (
-                <img src={String(selectedImage)} alt="" className="absolute inset-0 w-full h-full object-contain" referrerPolicy="no-referrer" />
+                <Image
+                  loader={passthroughLoader}
+                  unoptimized
+                  src={String(selectedImage)}
+                  alt=""
+                  fill
+                  className="object-contain"
+                  sizes="100vw"
+                  referrerPolicy="no-referrer"
+                />
               ) : (
                 <Image src={selectedImage} alt="" fill className="object-contain" />
               )

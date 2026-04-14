@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { supabase } from '@/lib/supabase';
@@ -70,7 +70,7 @@ export default function NewsTab({ dict, uploadImage, currentUser, userProfile, r
 
   const posts = (postsQuery.data?.pages || []).flatMap((p) => p.items);
 
-  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<any>({
+  const { register, handleSubmit, reset, setValue, control, formState: { errors } } = useForm<any>({
     resolver: zodResolver(newsSchema),
     defaultValues: {
       category: 'Zprávy',
@@ -84,16 +84,16 @@ export default function NewsTab({ dict, uploadImage, currentUser, userProfile, r
     }
   });
 
-  const excerpt = watch('excerpt');
-  const excerptEn = watch('excerpt_en');
-  const content = watch('content');
-  const contentEn = watch('content_en');
-  const title = watch('title');
-  const titleEn = watch('title_en');
+  const excerpt = useWatch({ control, name: 'excerpt' }) || '';
+  const excerptEn = useWatch({ control, name: 'excerpt_en' }) || '';
+  const content = useWatch({ control, name: 'content' }) || '';
+  const contentEn = useWatch({ control, name: 'content_en' }) || '';
+  const title = useWatch({ control, name: 'title' }) || '';
+  const titleEn = useWatch({ control, name: 'title_en' }) || '';
 
   const seo = seoSuggestions({
-    title: title || '',
-    descriptionHtml: excerpt || '',
+    title: title,
+    descriptionHtml: excerpt,
     imageUrl: imageFile ? 'local' : editingPost?.image_url,
     canonicalPath: editingPost?.id ? `/cs/novinky/${editingPost.id}` : undefined,
   });

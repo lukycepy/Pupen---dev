@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import InlinePulse from '@/app/components/InlinePulse';
 import { useToast } from '@/app/context/ToastContext';
@@ -13,7 +13,7 @@ export default function MemberPollsTab({ lang }: { lang: string }) {
   const [loading, setLoading] = useState(true);
   const [votingId, setVotingId] = useState<string | null>(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const { data } = await supabase.auth.getSession();
@@ -30,11 +30,11 @@ export default function MemberPollsTab({ lang }: { lang: string }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [lang, showToast]);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   const totalVotes = useMemo(() => {
     if (!poll?.poll_options) return 0;
@@ -143,4 +143,3 @@ export default function MemberPollsTab({ lang }: { lang: string }) {
     </div>
   );
 }
-

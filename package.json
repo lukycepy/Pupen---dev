@@ -7,6 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:e2e": "npm run build && playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "admin:create-superadmin": "node scripts/admin/create-superadmin.mjs",
     "db:migrate": "node scripts/db/migrate.js",
     "db:migrate:staging": "node scripts/db/migrate.js --env staging",
     "db:migrate:prod": "node scripts/db/migrate.js --env prod",
@@ -15,7 +18,15 @@
     "db:drift-check:prod": "node scripts/db/drift-check.js --env prod",
     "db:rls-check": "node scripts/db/rls-check.js",
     "db:rls-check:staging": "node scripts/db/rls-check.js --env staging",
-    "db:rls-check:prod": "node scripts/db/rls-check.js --env prod"
+    "db:rls-check:prod": "node scripts/db/rls-check.js --env prod",
+    "backup:db": "node scripts/ops/backup-db.mjs --env prod",
+    "backup:storage": "node scripts/ops/backup-storage.mjs",
+    "backup:offsite": "npm run backup:db && npm run backup:storage",
+    "backup:verify": "node scripts/ops/verify-backup.mjs",
+    "backup:run": "node scripts/ops/backup-run.mjs",
+    "backup:record": "node scripts/ops/record-backup-to-md.mjs",
+    "restore:db": "node scripts/ops/restore-db.mjs --env staging",
+    "restore:record": "node scripts/ops/record-restore-to-md.mjs"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -54,6 +65,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/papaparse": "^5.5.2",
@@ -63,6 +75,7 @@
     "@types/sanitize-html": "^2.16.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "supabase": "^2.91.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

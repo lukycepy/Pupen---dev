@@ -2,14 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { getDictionary } from '@/lib/get-dictionary';
 import NextImage from 'next/image';
 import Skeleton from './[lang]/components/Skeleton';
 
 export default function GlobalNotFound() {
-  const pathname = usePathname();
   const [dict, setDict] = useState<any>(null);
   
   // Detekce jazyka z URL nebo cookie

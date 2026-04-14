@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Trash2, BookOpen, Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Trash2, BookOpen, CheckCircle, XCircle } from 'lucide-react';
 import { useToast } from '@/app/context/ToastContext';
 import Skeleton from '@/app/[lang]/components/Skeleton';
 

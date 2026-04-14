@@ -16,7 +16,7 @@ export default function BlogPage() {
   const { showToast } = useToast();
   
   const [isAdding, setIsAdding] = useState(false);
-  const [formData, setFormData] = useState({ title: '', content: '', author_name: '', author_email: '' });
+  const [formData, setFormData] = useState({ title: '', content: '', author_name: '', author_email: '', hp: '' });
   const [dict, setDict] = useState<any>(null);
 
   React.useEffect(() => {
@@ -41,7 +41,7 @@ export default function BlogPage() {
   const { data: posts = [], isLoading } = useQuery({
     queryKey: ['public_blog_posts'],
     queryFn: async () => {
-      const { data } = await supabase.from('student_blog').select('*').eq('is_approved', true).order('created_at', { ascending: false });
+      const { data } = await supabase.from('student_blog').select('*').in('status', ['approved', 'published']).order('created_at', { ascending: false });
       return data || [];
     }
   });
@@ -51,17 +51,22 @@ export default function BlogPage() {
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData.session?.user?.id || null;
 
-      const { error } = await supabase.from('student_blog').insert([{ 
-        ...newData, 
-        user_id: userId,
-        is_approved: false 
-      }]);
-      if (error) throw error;
+      const res = await fetch('/api/blog/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...newData, user_id: userId }),
+      });
+      
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || 'Něco se nepovedlo.');
     },
     onSuccess: () => {
       showToast(dict?.success || (lang === 'cs' ? 'Článek odeslán ke schválení!' : 'Article sent for approval!'), 'success');
       setIsAdding(false);
-      setFormData({ title: '', content: '', author_name: '', author_email: '' });
+      setFormData({ title: '', content: '', author_name: '', author_email: '', hp: '' });
+    },
+    onError: (err: any) => {
+      showToast(err.message, 'error');
     }
   });
 
@@ -90,6 +95,16 @@ export default function BlogPage() {
           <div className="bg-white p-8 md:p-12 rounded-[3rem] shadow-2xl mb-20 border border-stone-100 animate-in fade-in slide-in-from-top-8 duration-500">
             <h2 className="text-2xl font-black mb-8 text-stone-900">{dict.newPost}</h2>
             <div className="space-y-6">
+              {/* Honeypot field (ochrana proti spamu) */}
+              <input
+                type="text"
+                name="website"
+                value={formData.hp}
+                onChange={(e) => setFormData({...formData, hp: e.target.value})}
+                className="opacity-0 absolute -z-10 w-0 h-0"
+                tabIndex={-1}
+                autoComplete="off"
+              />
               <div>
                 <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.labelTitle}</label>
                 <input type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full bg-stone-50 border-none rounded-2xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition" placeholder={dict.placeholderTitle} />

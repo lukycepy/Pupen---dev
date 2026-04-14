@@ -4,7 +4,7 @@ import { getMailerWithSettingsOrQueueTransporter, getSenderFromSettings, getAppl
 import { sendMailWithQueueFallback } from '@/lib/email/queue';
 import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
 import { stripHtmlToText } from '@/lib/richtext-shared';
-import { getClientIp, rateLimit } from '@/lib/rate-limit';
+import { guardPublicJsonPost } from '@/lib/public-post-guard';
 
 export const runtime = 'nodejs';
 
@@ -29,11 +29,15 @@ async function resolveAdminRecipients(supabase: any) {
 
 export async function POST(req: Request) {
   try {
-    const ip = getClientIp(req);
-    const rl = rateLimit({ key: `app_notify:${ip}`, windowMs: 10 * 60_000, max: 40 });
-    if (!rl.ok) return NextResponse.json({ error: 'Příliš mnoho požadavků, zkuste to později.' }, { status: 429 });
-
-    const body = await req.json().catch(() => ({}));
+    const g = await guardPublicJsonPost(req, {
+      keyPrefix: 'app_notify',
+      windowMs: 10 * 60_000,
+      max: 40,
+      honeypot: false,
+      tooManyMessage: 'Příliš mnoho požadavků, zkuste to později.',
+    });
+    if (!g.ok) return g.response;
+    const body = g.body;
     const applicationId = String(body?.applicationId || '').trim();
     const lang = body?.lang === 'en' ? 'en' : 'cs';
 

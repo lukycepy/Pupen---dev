@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
-import { Tag, Search, MapPin, ShoppingBag, Percent, Filter } from 'lucide-react';
+import { Search, MapPin, ShoppingBag, Percent } from 'lucide-react';
 import { SkeletonGrid } from '../components/Skeleton';
 
 import { getDictionary } from '@/lib/get-dictionary';

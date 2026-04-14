@@ -65,6 +65,7 @@ const GodModeTab = dynamic<any>(() => import('./components/GodModeTab'), { loadi
 const BadgesTab = dynamic<any>(() => import('./components/BadgesTab'), { loading: () => <SkeletonTabContent /> });
 const ErrorLogsTab = dynamic<any>(() => import('./components/ErrorLogsTab'), { loading: () => <SkeletonTabContent /> });
 const WebhooksTab = dynamic<any>(() => import('./components/WebhooksTab'), { loading: () => <SkeletonTabContent /> });
+const TrustBoxTab = dynamic<any>(() => import('./components/TrustBoxTab'), { loading: () => <SkeletonTabContent /> });
 
 
 import { useToast } from '@/app/context/ToastContext';
@@ -92,6 +93,8 @@ export default function AdminDashboard() {
   const [userProfile, setUserProfile] = useState<any>(null);
   const [permissions, setPermissions] = useState<any>({
     can_manage_admins: false,
+    trustbox_admin: false,
+    trustbox_can_view_pii: false,
   });
 
   const tabLabels = useMemo(() => {
@@ -280,12 +283,27 @@ export default function AdminDashboard() {
 
         setUserProfile(profile);
         
-        const finalPerms = { ...profile };
+        const finalPerms: any = { ...profile, trustbox_admin: false, trustbox_can_view_pii: false };
         // SuperAdmin bypass
         if (user.email === 'cepelak@pupen.org') {
           finalPerms.can_manage_admins = true;
         }
         setPermissions(finalPerms);
+
+        try {
+          const token = session.access_token;
+          if (token) {
+            const res = await fetch('/api/admin/trustbox/me', { headers: { Authorization: `Bearer ${token}` } });
+            const json = await res.json().catch(() => ({}));
+            if (res.ok && isMounted) {
+              setPermissions((prev: any) => ({
+                ...prev,
+                trustbox_admin: true,
+                trustbox_can_view_pii: !!json?.canViewPii,
+              }));
+            }
+          }
+        } catch {}
 
         // Find first available tab - ONLY if no hash exists
         if (!window.location.hash) {
@@ -527,6 +545,10 @@ export default function AdminDashboard() {
               <MessagesTab dict={dict} readOnly={!canEdit('messages')} />
             )}
 
+            {activeTab === 'trustbox' && (permissions.can_manage_admins || permissions.trustbox_admin) && (
+              <TrustBoxTab dict={dict} />
+            )}
+
             {activeTab === 'users' && permissions.can_manage_admins && (
               <UsersTab dict={dict} />
             )}
@@ -552,11 +574,11 @@ export default function AdminDashboard() {
             )}
 
             {activeTab === 'webhooks' && permissions.can_manage_admins && (
-              <WebhooksTab dict={dict} />
+              <WebhooksTab />
             )}
 
             {activeTab === 'error_logs' && permissions.can_manage_admins && (
-              <ErrorLogsTab dict={dict} />
+              <ErrorLogsTab />
             )}
 
             {activeTab === 'god_mode' && permissions.can_manage_admins && (
@@ -564,7 +586,7 @@ export default function AdminDashboard() {
             )}
 
             {activeTab === 'badges' && permissions.can_manage_admins && (
-              <BadgesTab dict={dict} uploadImage={uploadImage} />
+              <BadgesTab uploadImage={uploadImage} />
             )}
 
 
@@ -630,7 +652,7 @@ export default function AdminDashboard() {
             )}
 
             {activeTab === 'board' && permissions.can_manage_admins && (
-              <BoardTab dict={dict} uploadImage={uploadImage} />
+              <BoardTab uploadImage={uploadImage} />
             )}
 
             {activeTab === 'documents' && canView('documents') && (
@@ -673,7 +695,7 @@ export default function AdminDashboard() {
               <FeedbackTab dict={dict} readOnly={!canEdit('feedback')} />
             )}
              {activeTab === 'banners' && canView('banners') && (
-               <BannersTab dict={dict} readOnly={!canEdit('banners')} currentUser={currentUser} />
+              <BannersTab dict={dict} />
              )}
 
             {activeTab === 'logs' && canView('logs') && (
@@ -681,11 +703,11 @@ export default function AdminDashboard() {
             )}
 
             {activeTab === 'newsletter' && canView('newsletter') && (
-              <NewsletterTab dict={dict} />
+              <NewsletterTab />
             )}
 
             {activeTab === 'queue' && permissions.can_manage_admins && (
-              <QueueTab dict={dict} />
+              <QueueTab />
             )}
 
             {activeTab === 'email_settings' && canView('email_settings') && (
@@ -725,7 +747,7 @@ export default function AdminDashboard() {
             )}
 
             {activeTab === 'archive' && canView('archive') && (
-              <ArchiveTab dict={dict} readOnly={!canEdit('archive')} currentUser={currentUser} />
+              <ArchiveTab dict={dict} />
             )}
 
             {activeTab === 'map' && canView('map') && (

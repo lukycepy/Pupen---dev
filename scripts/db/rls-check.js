@@ -1,6 +1,14 @@
-const { withClient } = require('./utils');
+const { withClient, getDbUrl } = require('./utils');
 
 async function main() {
+  const url = getDbUrl();
+  if (!url) {
+    if (process.env.CI) {
+      throw new Error('Missing DATABASE_URL (or DATABASE_URL_STAGING / DATABASE_URL_PROD with --env)');
+    }
+    console.log('SKIPPED: rls-check (no DATABASE_URL provided)');
+    return;
+  }
   await withClient(async (client) => {
     const tablesRes = await client.query(
       `
@@ -60,4 +68,3 @@ main().catch((e) => {
   console.error(e?.message || e);
   process.exit(1);
 });
-

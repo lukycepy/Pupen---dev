@@ -5,9 +5,7 @@ import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
-  Plus, Trash2, Map as MapIcon, Loader2, MapPin, Edit3, X, Save,
-  Info, Coffee, BookOpen, Heart, Landmark, Settings, 
-  HelpCircle, Utensils, ShoppingBag, TreePine, Hospital, School, GraduationCap, Building, Building2, Beer, Pizza, Wifi, Phone, Mail, Bus, Train, ParkingCircle, Navigation
+  Plus, Trash2, Map as MapIcon, Loader2, Edit3, X, Save, Settings, HelpCircle
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 
@@ -29,7 +27,6 @@ import { useToast } from '../../../../context/ToastContext';
 // Dynamický import Leaflet komponent kvůli SSR
 const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false }) as any;
 const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false }) as any;
-const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false }) as any;
 
 // Komponenta pro výběr polohy kliknutím na mapu
 function LocationPicker({ onLocationSelect, currentPos }: { onLocationSelect: (lat: number, lng: number) => void, currentPos: [number, number] }) {
@@ -75,14 +72,15 @@ export default function MapTab({ dict }: { dict: any }) {
   });
 
   React.useEffect(() => {
-    if (categories.length > 0 && !formData.category) {
-      setFormData(prev => ({ ...prev, category: categories[0].name }));
-    }
+    setFormData((prev) => {
+      if (categories.length > 0 && !prev.category) return { ...prev, category: categories[0].name };
+      return prev;
+    });
   }, [categories]);
 
   const saveCategoryMutation = useMutation({
     mutationFn: async (data: any) => {
-      const { data: existing, error: checkError } = await supabase
+      const { data: existing } = await supabase
         .from('campus_map_categories')
         .select('id')
         .eq('name', data.name)
@@ -131,7 +129,7 @@ export default function MapTab({ dict }: { dict: any }) {
     });
   }, []);
 
-  const { data: points = [], isLoading } = useQuery({
+  const { data: points = [] } = useQuery({
     queryKey: ['map_points'],
     queryFn: async () => {
       const { data } = await supabase.from('campus_map_points').select('*').order('building_code', { ascending: true });
@@ -214,11 +212,6 @@ export default function MapTab({ dict }: { dict: any }) {
     },
     onError: (err: any) => showToast(err.message, 'error')
   });
-
-  const getIcon = (categoryName: string) => {
-    const category = categories.find((c: any) => c.name === categoryName);
-    return <DynamicIcon name={category?.icon_name || 'MapPin'} size={16} />;
-  };
 
   return (
     <div className="space-y-8">

@@ -1,21 +1,20 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { requireMember } from '@/lib/server-auth';
-import { getClientIp, rateLimit } from '@/lib/rate-limit';
+import { guardPublicJsonPost } from '@/lib/public-post-guard';
 
 export async function POST(req: Request) {
   try {
     const { user } = await requireMember(req);
-    const ip = getClientIp(req) || 'unknown';
-    const rl = rateLimit({ key: `dm_report:${user.id}:${ip}`, windowMs: 10 * 60 * 1000, max: 10 });
-    if (!rl.ok) {
-      return NextResponse.json(
-        { error: 'Příliš mnoho požadavků. Zkuste to prosím později.' },
-        { status: 429, headers: { 'Retry-After': String(Math.ceil(rl.retryAfterMs / 1000)) } },
-      );
-    }
-
-    const body = await req.json().catch(() => ({}));
+    const g = await guardPublicJsonPost(req, {
+      keyPrefix: `dm_report:${user.id}`,
+      windowMs: 10 * 60 * 1000,
+      max: 10,
+      honeypot: false,
+      tooManyMessage: 'Příliš mnoho požadavků. Zkuste to prosím později.',
+    });
+    if (!g.ok) return g.response;
+    const body = g.body;
     const { messageId, reason } = body || {};
 
     if (!messageId) {

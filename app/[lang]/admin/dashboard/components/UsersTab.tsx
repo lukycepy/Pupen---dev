@@ -6,18 +6,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { supabase } from '@/lib/supabase';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { UserPlus, Edit3, Trash2, ShieldCheck, X, FileText, ExternalLink, Users, Search } from 'lucide-react';
+import { UserPlus, Edit3, Trash2, ShieldCheck, X, FileText, ExternalLink, Search, Download } from 'lucide-react';
 import { useToast } from '../../../../context/ToastContext';
 import ConfirmModal from '@/app/components/ConfirmModal';
 import AdminModuleHeader from './ui/AdminModuleHeader';
 import AddressAutocomplete from '@/app/components/AddressAutocomplete';
 import { evaluatePassword, passwordScoreLabel } from '@/lib/auth/password-policy';
-
-function generatePassword(length = 10) {
-  const bytes = new Uint8Array(length);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes, (b) => (b % 36).toString(36)).join('');
-}
 
 interface UsersTabProps {
   dict: any;
@@ -490,32 +484,6 @@ export default function UsersTab({ dict }: UsersTabProps) {
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
-  const handleCreateNew = () => {
-    setEditingAdmin({ id: null });
-    reset({
-      email: '',
-      first_name: '',
-      last_name: '',
-      is_admin: false,
-      is_member: false,
-      is_blocked: false,
-      blocked_reason: '',
-      member_since: '',
-      member_expires_at: '',
-      application_scan_url: '',
-      password: generatePassword(12),
-      can_manage_admins: false,
-      phone: '',
-      address: '',
-      date_of_birth: '',
-      application_received_at: '',
-      notes_internal: '',
-      ...defaultPerms
-    });
-    setScanDoc(null);
-    setScanFile(null);
-  };
-
   const handleEdit = async (adm: any) => {
     let full = adm;
     try {
@@ -611,17 +579,61 @@ export default function UsersTab({ dict }: UsersTabProps) {
     setModalOpen(true);
   };
 
+  const exportOutlookContacts = async (format: 'csv' | 'vcf') => {
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
+      const res = await fetch(`/api/admin/users/export?format=${encodeURIComponent(format)}&scope=active`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json?.error || 'Chyba exportu');
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', format === 'vcf' ? 'pupen-contacts.vcf' : 'pupen-contacts-outlook.csv');
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      showToast(e?.message || 'Chyba', 'error');
+    }
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <AdminModuleHeader
         title={dict.admin.tabUsers || 'Uživatelé a správa'}
         description="Správa administrátorů, členů a jejich oprávnění"
         actions={
-          <div className="flex items-center gap-2 px-4 py-2 bg-stone-50 rounded-xl border border-stone-100">
-            <ShieldCheck size={16} className="text-green-600" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-stone-500">
-              {allUsers.length}{usersQuery.hasNextPage ? '+' : ''} uživatelů
-            </span>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 px-4 py-2 bg-stone-50 rounded-xl border border-stone-100">
+              <ShieldCheck size={16} className="text-green-600" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-stone-500">
+                {allUsers.length}{usersQuery.hasNextPage ? '+' : ''} uživatelů
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => exportOutlookContacts('csv')}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-stone-900 text-white rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-stone-800 transition"
+              title="Export kontaktů pro Outlook (CSV)"
+            >
+              <Download size={14} />
+              Outlook CSV
+            </button>
+            <button
+              type="button"
+              onClick={() => exportOutlookContacts('vcf')}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white text-stone-700 rounded-xl font-black uppercase tracking-widest text-[10px] border border-stone-200 hover:bg-stone-50 transition"
+              title="Export kontaktů (VCF)"
+            >
+              <Download size={14} />
+              VCF
+            </button>
           </div>
         }
       />

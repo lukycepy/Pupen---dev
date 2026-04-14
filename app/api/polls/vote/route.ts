@@ -1,21 +1,20 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { requireMember } from '@/lib/server-auth';
-import { getClientIp, rateLimit } from '@/lib/rate-limit';
+import { guardPublicJsonPost } from '@/lib/public-post-guard';
 
 export async function POST(req: Request) {
   try {
     const { user } = await requireMember(req);
-    const ip = getClientIp(req) || 'unknown';
-    const rl = rateLimit({ key: `poll_vote:${user.id}:${ip}`, windowMs: 10 * 60 * 1000, max: 30 });
-    if (!rl.ok) {
-      return NextResponse.json(
-        { error: 'Příliš mnoho požadavků. Zkuste to prosím později.' },
-        { status: 429, headers: { 'Retry-After': String(Math.ceil(rl.retryAfterMs / 1000)) } },
-      );
-    }
-
-    const body = await req.json().catch(() => ({}));
+    const g = await guardPublicJsonPost(req, {
+      keyPrefix: `poll_vote:${user.id}`,
+      windowMs: 10 * 60 * 1000,
+      max: 30,
+      honeypot: false,
+      tooManyMessage: 'Příliš mnoho požadavků. Zkuste to prosím později.',
+    });
+    if (!g.ok) return g.response;
+    const body = g.body;
     const pollId = String(body?.pollId || body?.poll_id || '').trim();
     const optionId = body?.optionId ? String(body.optionId).trim() : '';
     const optionIdsRaw = Array.isArray(body?.optionIds) ? body.optionIds : null;
@@ -65,7 +64,7 @@ export async function POST(req: Request) {
         poll_id: pollId,
         user_id: user.id,
         option_ids: uniq,
-        ip: ip === 'unknown' ? null : ip,
+        ip: g.ip === 'unknown' ? null : g.ip,
       },
     ]);
     if (voteInsert.error) throw voteInsert.error;

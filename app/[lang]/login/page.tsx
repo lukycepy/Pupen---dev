@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Lock, Leaf, ShieldCheck, Mail, Key, ArrowRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -8,6 +8,7 @@ import { getDictionary } from '@/lib/get-dictionary';
 import Link from 'next/link';
 import InlinePulse from '@/app/components/InlinePulse';
 import PasswordField from '@/app/components/PasswordField';
+import Image from 'next/image';
 
 export default function LoginPage() {
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
@@ -27,14 +28,14 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState('');
   const [dict, setDict] = useState<any>(null);
-  const [userProfile, setUserProfile] = useState<any>(null);
   const [showRoleSelection, setShowRoleSelection] = useState(false);
+  const handleRedirectRef = useRef<((profile: any, email?: string, method?: string) => Promise<void>) | null>(null);
   
   const router = useRouter();
   const params = useParams();
   const lang = (params?.lang as string) || 'cs';
 
-  const logSecurity = async (event: string, details: any) => {
+  const logSecurity = useCallback(async (event: string, details: any) => {
     try {
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
@@ -45,7 +46,7 @@ export default function LoginPage() {
         body: JSON.stringify({ event, details }),
       });
     } catch {}
-  };
+  }, []);
 
   useEffect(() => {
     async function loadDict() {
@@ -113,13 +114,13 @@ export default function LoginPage() {
           .eq('id', session.user.id)
           .maybeSingle();
         
-        handleRedirect(profile, session.user.email, 'session');
+        await handleRedirectRef.current?.(profile, session.user.email, 'session');
       }
     };
     checkSession();
-  }, [router, lang]);
+  }, []);
 
-  const startAdminMfaEnroll = async () => {
+  const startAdminMfaEnroll = useCallback(async () => {
     const authAny: any = supabase.auth as any;
     if (!authAny?.mfa?.enroll) {
       setError(lang === 'cs' ? '2FA není podporováno.' : '2FA not supported.');
@@ -184,7 +185,7 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [email, lang]);
 
   const verifyAdminMfaEnroll = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -217,7 +218,7 @@ export default function LoginPage() {
     }
   };
 
-  const ensureAdminAal2 = async (profile: any, email?: string, method?: string) => {
+  const ensureAdminAal2 = useCallback(async (profile: any, email?: string, method?: string) => {
     const isSuperAdmin = email === 'cepelak@pupen.org' || profile?.email === 'cepelak@pupen.org';
     const hasAdmin = profile?.is_admin || profile?.can_manage_admins || isSuperAdmin;
     if (!hasAdmin || isSuperAdmin) return true;
@@ -270,9 +271,9 @@ export default function LoginPage() {
       await startAdminMfaEnroll();
       return false;
     }
-  };
+  }, [lang, logSecurity, startAdminMfaEnroll]);
 
-  const handleRedirect = async (profile: any, email?: string, method?: string) => {
+  const handleRedirect = useCallback(async (profile: any, email?: string, method?: string) => {
     if (profile?.is_blocked) {
       setError(lang === 'cs' ? 'Účet je zablokován. Kontaktujte správce.' : 'Your account is blocked. Please contact an administrator.');
       await logSecurity('LOGIN_BLOCKED', { method: method || 'session' });
@@ -290,7 +291,6 @@ export default function LoginPage() {
     }
 
     if (hasAdmin && hasMember) {
-      setUserProfile(profile || { email: 'cepelak@pupen.org' });
       setShowRoleSelection(true);
       await logSecurity('LOGIN_SUCCESS', { method: method || 'session', outcome: 'multi' });
     } else if (hasAdmin) {
@@ -304,7 +304,8 @@ export default function LoginPage() {
       await logSecurity('LOGIN_NO_ACCESS', { method: method || 'session' });
       supabase.auth.signOut();
     }
-  };
+  }, [dict?.auth?.login?.noAccess, ensureAdminAal2, lang, logSecurity, router]);
+  handleRedirectRef.current = handleRedirect;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -681,7 +682,7 @@ export default function LoginPage() {
               </div>
               {adminMfaEnrollQr ? (
                 <div className="flex justify-center">
-                  <img src={adminMfaEnrollQr} alt="2FA QR" className="w-48 h-48 rounded-2xl border border-stone-200" />
+                  <Image src={adminMfaEnrollQr} alt="2FA QR" width={192} height={192} className="w-48 h-48 rounded-2xl border border-stone-200" unoptimized />
                 </div>
               ) : null}
               <div className="space-y-1">

@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { supabase } from '@/lib/supabase';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { MessageSquare, Trash2, Mail, Clock, Download, Tag, CheckCircle, Clock3, User, AlertTriangle } from 'lucide-react';
+import { MessageSquare, Trash2, Mail, Clock, Download, Tag, CheckCircle, User, AlertTriangle } from 'lucide-react';
 import ConfirmModal from '@/app/components/ConfirmModal';
 import { useToast } from '@/app/context/ToastContext';
 

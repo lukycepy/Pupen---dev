@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { guardPublicJsonPost } from '@/lib/public-post-guard';
 
 function normEmail(v: any) {
   return String(v || '').trim().toLowerCase().slice(0, 240);
@@ -25,7 +26,16 @@ export async function POST(req: Request) {
   const supabase = getServerSupabase();
 
   try {
-    const body = await req.json().catch(() => ({}));
+    const g = await guardPublicJsonPost(req, {
+      keyPrefix: 'webhook_bounce',
+      windowMs: 60_000,
+      max: 120,
+      sameSite: false,
+      honeypot: false,
+      tooManyMessage: 'Too many requests',
+    });
+    if (!g.ok) return g.response;
+    const body = g.body;
     const email = pickEmail(body);
     if (!email || !email.includes('@')) return NextResponse.json({ ok: true, ignored: true });
 
@@ -76,4 +86,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
   }
 }
-

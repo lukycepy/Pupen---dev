@@ -6,6 +6,10 @@ import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
 export const runtime = 'nodejs';
 
 export async function GET(req: Request) {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Not Found' }, { status: 404 });
+  }
+
   const url = new URL(req.url);
   const secret = url.searchParams.get('secret') || '';
   const expected = process.env.CRON_SECRET || '';

@@ -234,7 +234,7 @@ export default function TicketsTab() {
     } finally {
       setScanBusy(false);
     }
-  }, [activeEvent, checkInMutation, normalizeToken, showToast]);
+  }, [activeEvent, normalizeToken, queryClient, showToast]);
 
   useEffect(() => {
     if (!scannerOpen) return;

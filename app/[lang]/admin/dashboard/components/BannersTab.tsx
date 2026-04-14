@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { Megaphone, Plus, Trash2, Power, Edit3, Loader2, AlertTriangle, Save, X } from 'lucide-react';
+import { Megaphone, Plus, Trash2, Power, Edit3, Loader2, Save, X } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useToast } from '../../../../context/ToastContext';
 import ConfirmModal from '@/app/components/ConfirmModal';
@@ -15,7 +15,7 @@ const Editor = dynamic(() => import('../../../components/Editor'), {
   loading: () => <div className="h-[100px] w-full bg-stone-50 animate-pulse rounded-xl border border-dashed border-stone-200" />
 });
 
-export default function BannersTab({ dict, currentUser, readOnly = false }: { dict: any, currentUser?: any, readOnly?: boolean }) {
+export default function BannersTab({ dict }: { dict: any }) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [editingBanner, setEditingBanner] = useState<any>(null);

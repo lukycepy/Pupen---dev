@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2, Archive, Loader2, X, Edit2, Save } from 'lucide-react';
 import { useToast } from '../../../../context/ToastContext';
 
-export default function ArchiveTab({ dict, currentUser, readOnly = false }: { dict: any, currentUser?: any, readOnly?: boolean }) {
+export default function ArchiveTab({ dict }: { dict: any }) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [isAdding, setIsAdding] = useState(false);
@@ -14,7 +14,7 @@ export default function ArchiveTab({ dict, currentUser, readOnly = false }: { di
 
   const [editingItem, setEditingItem] = useState<any>(null);
 
-  const { data: archive = [], isLoading } = useQuery({
+  const { data: archive = [] } = useQuery({
     queryKey: ['admin_archive'],
     queryFn: async () => {
       const { data } = await supabase.from('activity_archive').select('*').order('year', { ascending: false });

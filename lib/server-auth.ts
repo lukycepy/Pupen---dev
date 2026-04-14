@@ -50,3 +50,17 @@ export async function requireMember(req: Request) {
   if (!profile?.is_admin && !profile?.is_member && !profile?.can_view_member_portal && !profile?.can_edit_member_portal) throw new Error('Forbidden');
   return { user, profile };
 }
+
+export async function requireTrustBoxAdmin(req: Request) {
+  const user = await requireUser(req);
+  const supabase = getServerSupabase();
+  const profRes = await supabase.from('profiles').select('can_manage_admins').eq('id', user.id).maybeSingle();
+  if (profRes.error) throw profRes.error;
+  const isSuperadmin = !!(profRes.data as any)?.can_manage_admins;
+  if (isSuperadmin) return { user, isSuperadmin: true, canViewPii: true };
+
+  const row = await supabase.from('trust_box_admins').select('can_view_pii').eq('user_id', user.id).maybeSingle();
+  if (row.error) throw row.error;
+  if (!row.data) throw new Error('Forbidden');
+  return { user, isSuperadmin: false, canViewPii: !!(row.data as any)?.can_view_pii };
+}

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getClientIp, rateLimit } from '@/lib/rate-limit';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { guardPublicJsonPost } from '@/lib/public-post-guard';
 
 function pickFirst(obj: any, keys: string[]) {
   for (const k of keys) {
@@ -118,11 +118,17 @@ async function validateRuian(q: string) {
 
 export async function POST(req: Request) {
   try {
-    const ip = getClientIp(req) || 'unknown';
-    const rl = rateLimit({ key: `addrv:${ip}`, windowMs: 60_000, max: 60 });
-    if (!rl.ok) return NextResponse.json({ ok: false, error: 'Rate limited' }, { status: 429 });
-
-    const body = await req.json().catch(() => ({}));
+    const g = await guardPublicJsonPost(req, {
+      keyPrefix: 'addrv',
+      windowMs: 60_000,
+      max: 60,
+      honeypot: false,
+      tooManyPayload: { ok: false },
+      tooManyMessage: 'Rate limited',
+      forbiddenPayload: { ok: false },
+    });
+    if (!g.ok) return g.response;
+    const body = g.body;
     const q = String(body?.q || body?.address || '').trim();
     const lang = body?.lang === 'en' ? 'en' : 'cs';
     if (q.length < 3) return NextResponse.json({ ok: false, error: 'Too short' }, { status: 400 });
@@ -138,4 +144,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: e?.message || 'Error' }, { status: 500 });
   }
 }
-

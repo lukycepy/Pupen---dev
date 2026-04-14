@@ -37,14 +37,22 @@ export default function ArchivPage() {
         const uniqueYears = Array.from(new Set(data.map((d: any) => String(d.year)))).sort().reverse();
         setTable('activity_archive');
         setYears(uniqueYears as string[]);
-        if (uniqueYears.length > 0 && (!selectedYear || !uniqueYears.includes(selectedYear))) setSelectedYear(uniqueYears[0] as string);
+        setSelectedYear((prev) => {
+          if (uniqueYears.length === 0) return prev;
+          if (!prev || !uniqueYears.includes(prev)) return uniqueYears[0] as string;
+          return prev;
+        });
       } catch {
         try {
           const data = await tryLoad('archive_entries');
           const uniqueYears = Array.from(new Set(data.map((d: any) => String(d.year)))).sort().reverse();
           setTable('archive_entries');
           setYears(uniqueYears as string[]);
-          if (uniqueYears.length > 0 && (!selectedYear || !uniqueYears.includes(selectedYear))) setSelectedYear(uniqueYears[0] as string);
+          setSelectedYear((prev) => {
+            if (uniqueYears.length === 0) return prev;
+            if (!prev || !uniqueYears.includes(prev)) return uniqueYears[0] as string;
+            return prev;
+          });
         } catch {
           setYears([]);
         }

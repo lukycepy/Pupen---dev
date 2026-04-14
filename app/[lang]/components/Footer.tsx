@@ -16,6 +16,7 @@ export default function Footer({ lang, dict }: FooterProps) {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [honeyPot, setHoneyPot] = useState('');
   const [sitePages, setSitePages] = useState<Record<string, any> | null>(null);
   const [instagramUrl, setInstagramUrl] = useState<string>('https://instagram.com/pupenfappz/');
   const pathname = usePathname();
@@ -54,7 +55,7 @@ export default function Footer({ lang, dict }: FooterProps) {
       const res = await fetch('/api/newsletter/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), categories: ['all'], source: 'footer' }),
+        body: JSON.stringify({ email: email.trim(), categories: ['all'], source: 'footer', hp: honeyPot }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error || 'Chyba');
@@ -62,7 +63,7 @@ export default function Footer({ lang, dict }: FooterProps) {
       setStatus('success');
       setEmail('');
       setTimeout(() => setStatus('idle'), 5000);
-    } catch (err: any) {
+    } catch {
       setStatus('error');
     } finally {
       setLoading(false);
@@ -149,6 +150,15 @@ export default function Footer({ lang, dict }: FooterProps) {
             <p className="text-sm mb-4">{t.newsletterText || ''}</p>
             
             <form onSubmit={handleSubscribe} className="relative mb-8">
+              <input
+                type="text"
+                name="website"
+                value={honeyPot}
+                onChange={(e) => setHoneyPot(e.target.value)}
+                className="opacity-0 absolute -z-10 w-0 h-0"
+                tabIndex={-1}
+                autoComplete="off"
+              />
               <div className="flex gap-2">
                 <input 
                   type="email" 

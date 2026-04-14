@@ -7,6 +7,9 @@ import { ArrowLeft, HandHeart, MapPin, Calendar } from 'lucide-react';
 import InlinePulse from '@/app/components/InlinePulse';
 import { getDictionary } from '@/lib/get-dictionary';
 import Modal from '@/app/components/ui/Modal';
+import Image from 'next/image';
+
+const passthroughLoader = ({ src }: { src: string }) => src;
 
 type Item = {
   id: string;
@@ -131,8 +134,17 @@ export default function LostFoundDetailPage() {
           ) : (
             <div className="space-y-8">
               {item.image_url ? (
-                <div className="aspect-[16/9] rounded-[2rem] overflow-hidden bg-stone-100">
-                  <img src={item.image_url} alt="" className="w-full h-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
+                <div className="aspect-[16/9] rounded-[2rem] overflow-hidden bg-stone-100 relative">
+                  <Image
+                    loader={passthroughLoader}
+                    unoptimized
+                    src={item.image_url}
+                    alt=""
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 1024px) 100vw, 768px"
+                    referrerPolicy="no-referrer"
+                  />
                 </div>
               ) : null}
 

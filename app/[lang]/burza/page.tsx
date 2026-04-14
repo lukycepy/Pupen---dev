@@ -18,7 +18,7 @@ export default function BurzaPage() {
   const [searchTerm, setSearchTerm] = useState('');
 
   const [isAdding, setIsAdding] = useState(false);
-  const [formData, setFormData] = useState({ title: '', author: '', price: '', contact: '' });
+  const [formData, setFormData] = useState({ title: '', author: '', price: '', contact: '', hp: '' });
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -51,20 +51,21 @@ export default function BurzaPage() {
       return;
     }
 
-    const { error } = await supabase.from('book_exchange').insert([{ 
-      title: formData.title,
-      author: formData.author,
-      price: formData.price,
-      contact: formData.contact,
-      status: 'pending', 
-      is_sold: false 
-    }]);
-    if (error) {
-      showToast(error.message, 'error');
-    } else {
+    try {
+      const res = await fetch('/api/burza/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || 'Něco se nepovedlo.');
+
       showToast(dict.saveSuccess, 'success');
       setIsAdding(false);
-      setFormData({ title: '', author: '', price: '', contact: '' });
+      setFormData({ title: '', author: '', price: '', contact: '', hp: '' });
+    } catch (err: any) {
+      showToast(err.message, 'error');
     }
   };
 
@@ -102,6 +103,16 @@ export default function BurzaPage() {
         {isAdding && (
           <div className="bg-white p-8 md:p-12 rounded-[3rem] shadow-2xl mb-16 border border-green-100 animate-in fade-in slide-in-from-top-8 duration-500">
             <h2 className="text-2xl font-black mb-8 text-stone-900">{dict.newAd}</h2>
+            {/* Honeypot field */}
+            <input
+              type="text"
+              name="website"
+              value={formData.hp}
+              onChange={(e) => setFormData({...formData, hp: e.target.value})}
+              className="opacity-0 absolute -z-10 w-0 h-0"
+              tabIndex={-1}
+              autoComplete="off"
+            />
             <div className="grid md:grid-cols-2 gap-8">
               <div className="space-y-6">
                 <div>

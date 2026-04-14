@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Mail, Send, Eye, Save, Trash2, RefreshCw } from 'lucide-react';
 import InlinePulse from '@/app/components/InlinePulse';
 import { useToast } from '@/app/context/ToastContext';
@@ -69,7 +69,7 @@ export default function EmailTemplatesTab() {
     return overrides.find((o: any) => String(o?.template_key || '') === key) || null;
   }, [overrides, templateKey]);
 
-  const getToken = async () => {
+  const getToken = useCallback(async () => {
     let { data: sessionData } = await supabase.auth.getSession();
     let token = sessionData.session?.access_token || '';
     if (!token) {
@@ -79,9 +79,9 @@ export default function EmailTemplatesTab() {
     }
     if (!token) throw new Error('Přihlášení vypršelo. Obnovte stránku nebo se přihlaste znovu.');
     return token;
-  };
+  }, []);
 
-  const loadOverrides = async () => {
+  const loadOverrides = useCallback(async () => {
     setOverridesLoading(true);
     try {
       const token = await getToken();
@@ -97,9 +97,9 @@ export default function EmailTemplatesTab() {
     } finally {
       setOverridesLoading(false);
     }
-  };
+  }, [getToken, showToast]);
 
-  const refreshPreview = async (opts?: { forceDraft?: boolean }) => {
+  const refreshPreview = useCallback(async (opts?: { forceDraft?: boolean }) => {
     if (!parsed.ok) return;
     setPreviewLoading(true);
     try {
@@ -123,11 +123,11 @@ export default function EmailTemplatesTab() {
     } finally {
       setPreviewLoading(false);
     }
-  };
+  }, [draftHtml, draftSubject, getToken, parsed, templateKey]);
 
   useEffect(() => {
     loadOverrides();
-  }, []);
+  }, [loadOverrides]);
 
   useEffect(() => {
     if (currentOverride) {
@@ -148,7 +148,7 @@ export default function EmailTemplatesTab() {
       refreshPreview();
     }, 350);
     return () => clearTimeout(t);
-  }, [previewOpen, templateKey, variablesJson, draftSubject, draftHtml]);
+  }, [parsed.ok, previewOpen, refreshPreview]);
 
   const sendTest = async () => {
     if (!to.trim()) {

@@ -1,19 +1,18 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { requireMember } from '@/lib/server-auth';
-import { getClientIp, rateLimit } from '@/lib/rate-limit';
+import { guardPublicGet } from '@/lib/public-post-guard';
 
 export async function GET(req: Request) {
   try {
     const { user } = await requireMember(req);
-    const ip = getClientIp(req) || 'unknown';
-    const rl = rateLimit({ key: `gdpr_export:${user.id}:${ip}`, windowMs: 60 * 60 * 1000, max: 5 });
-    if (!rl.ok) {
-      return NextResponse.json(
-        { error: 'Příliš mnoho požadavků. Zkuste to prosím později.' },
-        { status: 429, headers: { 'Retry-After': String(Math.ceil(rl.retryAfterMs / 1000)) } },
-      );
-    }
+    const g = await guardPublicGet(req, {
+      keyPrefix: `gdpr_export:${user.id}`,
+      windowMs: 60 * 60 * 1000,
+      max: 5,
+      tooManyMessage: 'Příliš mnoho požadavků. Zkuste to prosím později.',
+    });
+    if (!g.ok) return g.response;
 
     const supabase = getServerSupabase();
     const email = String(user.email || '').toLowerCase();

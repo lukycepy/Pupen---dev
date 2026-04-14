@@ -10,7 +10,7 @@ import AdminPanel from './ui/AdminPanel';
 import { useToast } from '../../../../context/ToastContext';
 import Image from 'next/image';
 
-export default function BadgesTab({ dict, uploadImage }: { dict: any, uploadImage: (file: File, bucket: string) => Promise<string> }) {
+export default function BadgesTab({ uploadImage }: { uploadImage: (file: File, bucket: string) => Promise<string> }) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   

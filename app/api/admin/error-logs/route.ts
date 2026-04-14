@@ -4,7 +4,7 @@ import { getServerSupabase } from '@/lib/supabase-server';
 
 export async function GET(req: Request) {
   try {
-    const { user, profile } = await requireAdmin(req);
+    const { profile } = await requireAdmin(req);
     if (!profile?.is_admin && !profile?.can_manage_admins) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
@@ -26,7 +26,7 @@ export async function GET(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
-    const { user, profile } = await requireAdmin(req);
+    const { profile } = await requireAdmin(req);
     if (!profile?.is_admin && !profile?.can_manage_admins) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }

@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
-import { getClientIp, rateLimit } from '@/lib/rate-limit';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { guardPublicJsonPost } from '@/lib/public-post-guard';
 
 function normalizeEmail(input: string) {
-  return String(input || '').trim().toLowerCase();
+  const v = String(input || '').trim().toLowerCase();
+  if (v.length > 200) return '';
+  return v;
 }
 
 function isEmail(input: string) {
@@ -21,11 +23,16 @@ function normalizeCategories(input: any): string[] {
 
 export async function POST(req: Request) {
   try {
-    const ip = getClientIp(req);
-    const rl = rateLimit({ key: `nl_sub:${ip}`, windowMs: 10 * 60_000, max: 30 });
-    if (!rl.ok) return NextResponse.json({ error: 'Příliš mnoho požadavků, zkuste to později.' }, { status: 429 });
+    const g = await guardPublicJsonPost(req, {
+      keyPrefix: 'nl_sub',
+      windowMs: 10 * 60_000,
+      max: 30,
+      honeypotResponse: { ok: true, status: 'created' },
+      tooManyMessage: 'Příliš mnoho požadavků, zkuste to později.',
+    });
+    if (!g.ok) return g.response;
+    const body = g.body;
 
-    const body = await req.json().catch(() => ({}));
     const email = normalizeEmail(body?.email || '');
     const categories = normalizeCategories(body?.categories);
     const source = body?.source != null ? String(body.source).slice(0, 80) : 'web';

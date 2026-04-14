@@ -6,8 +6,23 @@ export const runtime = 'nodejs'; // Use nodejs runtime for memoryUsage and uptim
 export async function GET() {
   const start = Date.now();
   try {
+    const hasSupabaseEnv = !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!hasSupabaseEnv) {
+      return NextResponse.json({
+        status: 'degraded',
+        message: 'Supabase is not configured in this environment',
+        timestamp: new Date().toISOString(),
+        database: 'not_configured',
+        metrics: {
+          dbLatencyMs: null,
+          memoryUsage: process.memoryUsage ? process.memoryUsage().rss : 'unknown',
+          uptime: process.uptime ? process.uptime() : 'unknown',
+        },
+      });
+    }
+
     // Check database connection
-    const { data, error } = await supabase.from('site_settings').select('id').limit(1);
+    const { error } = await supabase.from('site_public_config').select('id').limit(1);
     const end = Date.now();
     const dbLatency = end - start;
     

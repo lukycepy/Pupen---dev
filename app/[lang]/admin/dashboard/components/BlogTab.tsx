@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FileText, Check, X, Trash2, Eye, User, Clock, Loader2, Search, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { FileText, Check, X, Trash2, Eye, User, Clock, Search, ShieldCheck } from 'lucide-react';
 import { useToast } from '../../../../context/ToastContext';
 import ConfirmModal from '@/app/components/ConfirmModal';
 import { SkeletonTabContent } from '../../../components/Skeleton';
@@ -38,8 +38,8 @@ export default function BlogTab({ dict }: { dict: any }) {
   });
 
   const approveMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: boolean }) => {
-      const { error } = await supabase.from('student_blog').update({ is_approved: status }).eq('id', id);
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const { error } = await supabase.from('student_blog').update({ status }).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -107,9 +107,9 @@ export default function BlogTab({ dict }: { dict: any }) {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div className="flex-grow">
                   <div className="flex items-center gap-3 mb-2">
-                    {!post.is_approved && (
+                    {post.status !== 'published' && (
                       <span className="bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full">
-                        Čeká na schválení
+                        Stav: {post.status}
                       </span>
                     )}
                     <span className="text-[10px] font-black uppercase tracking-widest text-stone-300 flex items-center gap-1">
@@ -132,19 +132,19 @@ export default function BlogTab({ dict }: { dict: any }) {
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                  {!post.is_approved ? (
+                  {post.status !== 'published' ? (
                     <button 
-                      onClick={() => approveMutation.mutate({ id: post.id, status: true })}
+                      onClick={() => approveMutation.mutate({ id: post.id, status: 'published' })}
                       className="p-4 bg-green-50 text-green-600 rounded-2xl hover:bg-green-600 hover:text-white transition shadow-sm"
-                      title="Schválit"
+                      title="Schválit a publikovat"
                     >
                       <Check size={20} />
                     </button>
                   ) : (
                     <button 
-                      onClick={() => approveMutation.mutate({ id: post.id, status: false })}
+                      onClick={() => approveMutation.mutate({ id: post.id, status: 'pending' })}
                       className="p-4 bg-amber-50 text-amber-600 rounded-2xl hover:bg-amber-600 hover:text-white transition shadow-sm"
-                      title="Skrýt"
+                      title="Vrátit do čekajících"
                     >
                       <X size={20} />
                     </button>
