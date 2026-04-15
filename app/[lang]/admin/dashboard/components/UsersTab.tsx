@@ -36,9 +36,13 @@ export default function UsersTab({ dict }: UsersTabProps) {
     { id: 'hunts', label: dict.admin?.navHunts || 'Bojovky' },
     { id: 'map', label: dict.admin?.navMap || 'Mapa' },
     { id: 'meetings', label: dict.admin?.navMeetings || 'Schůze' },
+    { id: 'polls', label: dict.admin?.navPolls || 'Ankety' },
     { id: 'quizzes', label: dict.admin?.navQuizzes || 'Kvízy' },
     { id: 'jobs', label: dict.admin?.navJobs || 'Práce' },
+    { id: 'schedule', label: dict.admin?.navSchedule || 'Rozvrh' },
     { id: 'hours', label: dict.admin?.navHours || 'Otevírací doba' },
+    { id: 'discounts', label: dict.admin?.navDiscounts || 'Slevy' },
+    { id: 'qr', label: dict.admin?.navQr || 'QR' },
     { id: 'archive', label: dict.admin?.navArchive || 'Archiv' },
     { id: 'gallery', label: dict.admin?.tabGallery || 'Galerie' },
     { id: 'logs', label: dict.admin?.navLogs || 'Logy' },
@@ -46,6 +50,7 @@ export default function UsersTab({ dict }: UsersTabProps) {
     { id: 'blog_mod', label: dict.admin?.tabBlog || 'Moderace blogu' },
     { id: 'member_portal', label: dict.nav?.memberPortal || 'Členský portál' },
     { id: 'reviews', label: dict.admin?.tabReviews || 'Recenze' },
+    { id: 'books', label: dict.admin?.navBooks || 'Knihy' },
   ];
   const permsSchema: any = {};
   modules.forEach(m => {

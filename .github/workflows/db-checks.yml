@@ -19,7 +19,9 @@ jobs:
       run: npm run db:drift-check
       env:
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        PGSSLMODE: require
     - name: DB RLS Check
       run: npm run db:rls-check
       env:
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        PGSSLMODE: require

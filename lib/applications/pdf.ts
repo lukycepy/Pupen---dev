@@ -185,7 +185,7 @@ export async function buildApplicationPdfBytes(app: any) {
   section('STAV');
   row('Status', labelStatus(app?.status));
   if (app?.decided_at) row('Rozhodnuto', formatDateCs(app.decided_at) || '-');
-  if (app?.decided_by_email) row('Rozhodl', app.decided_by_email);
+  if (app?.decided_by_email) row('Rozhodl jménem', app.decided_by_email);
   const rejection = app?.rejection_reason || app?.decision_reason;
   if (String(app?.status || '') === 'rejected' && rejection) row('Důvod', rejection);
 

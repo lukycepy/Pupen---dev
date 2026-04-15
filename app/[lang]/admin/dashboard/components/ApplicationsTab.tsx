@@ -807,7 +807,7 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
                               </span>
                             </div>
                             <div className="flex items-center justify-between gap-4">
-                              <span className="text-[10px] font-black uppercase tracking-widest text-stone-500">{isEn ? 'Decided by' : 'Rozhodl'}</span>
+                              <span className="text-[10px] font-black uppercase tracking-widest text-stone-500">{isEn ? 'Decided by' : 'Rozhodl jménem'}</span>
                               <span className="text-xs font-black text-white/90 break-all text-right">{selectedApp.decided_by_email || '—'}</span>
                             </div>
                             <div className="flex items-center justify-between gap-4">

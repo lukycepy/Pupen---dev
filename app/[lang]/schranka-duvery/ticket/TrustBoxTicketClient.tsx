@@ -86,7 +86,11 @@ export default function TrustBoxTicketClient() {
               <div className="space-y-3">
                 {messages.map((m) => (
                   <div key={m.id} className="bg-stone-50 rounded-2xl p-5 border border-stone-100">
-                    <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">{m.author_type}</div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">
+                      {String(m.author_type || '').toLowerCase() === 'reporter'
+                        ? 'reporter'
+                        : `${String(m.author_type || '')}${m.author_name ? ` (${String(m.author_name)})` : ''}`}
+                    </div>
                     <div className="font-bold text-stone-800 whitespace-pre-wrap">{m.body}</div>
                   </div>
                 ))}
@@ -110,4 +114,3 @@ export default function TrustBoxTicketClient() {
     </div>
   );
 }
-

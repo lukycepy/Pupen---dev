@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/app/context/ToastContext';
 import InlinePulse from '@/app/components/InlinePulse';
-import { Wrench, Trash2, ShieldCheck } from 'lucide-react';
+import { Wrench, Trash2, ShieldCheck, Mail } from 'lucide-react';
 import AdminModuleHeader from './ui/AdminModuleHeader';
 import AdminPanel from './ui/AdminPanel';
 
@@ -12,6 +12,7 @@ export default function GodModeTab() {
   const { showToast } = useToast();
   const [clearingCache, setClearingCache] = useState(false);
   const [reloadingSchema, setReloadingSchema] = useState(false);
+  const [processingQueue, setProcessingQueue] = useState(false);
 
   const clearCache = async () => {
     setClearingCache(true);
@@ -53,11 +54,32 @@ export default function GodModeTab() {
     }
   };
 
+  const processQueue = async () => {
+    setProcessingQueue(true);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Nepřihlášen');
+      const res = await fetch('/api/admin/queue/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ limit: 50, resetStuck: true }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Chyba');
+      showToast(`Queue: processed ${json?.processed || 0}, ok ${json?.okCount || 0}, retry ${json?.retried || 0}, dead ${json?.dead || 0}`, 'success');
+    } catch (e: any) {
+      showToast(e?.message || 'Chyba', 'error');
+    } finally {
+      setProcessingQueue(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
       <AdminModuleHeader
-        title="God Mode"
-        description="Pokročilé úkony pro IT správce (bezpečně, auditovatelně)."
+        title="Údržba"
+        description="Údržbové nástroje pro provoz: cache, schema cache, e-mailová fronta."
         actions={
           <div className="flex flex-wrap gap-3">
             <button
@@ -67,6 +89,14 @@ export default function GodModeTab() {
               className="bg-blue-50 text-blue-700 px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-blue-100 transition border border-blue-200 disabled:opacity-50"
             >
               {reloadingSchema ? <InlinePulse className="bg-blue-200" size={16} /> : <ShieldCheck size={18} />} Reload schema cache
+            </button>
+            <button
+              type="button"
+              onClick={processQueue}
+              disabled={processingQueue}
+              className="bg-stone-50 text-stone-800 px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-stone-100 transition border border-stone-200 disabled:opacity-50"
+            >
+              {processingQueue ? <InlinePulse className="bg-stone-200" size={16} /> : <Mail size={18} />} Zpracovat e-mail frontu
             </button>
             <button
               type="button"

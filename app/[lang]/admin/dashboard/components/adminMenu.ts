@@ -129,7 +129,7 @@ export function buildAdminMenuGroups(dict: any, permissions: any): AdminMenuGrou
         { id: 'broken_links', label: 'Broken links', icon: Link2, visible: permissions.can_manage_admins },
         { id: 'webhooks', label: 'Webhooky', icon: Webhook, visible: permissions.can_manage_admins },
         { id: 'error_logs', label: 'Chyby (Logs)', icon: AlertTriangle, visible: permissions.can_manage_admins },
-        { id: 'god_mode', label: 'God Mode', icon: Wrench, visible: permissions.can_manage_admins },
+        { id: 'god_mode', label: 'Údržba', icon: Wrench, visible: permissions.can_manage_admins },
         { id: 'analytics', label: dict.admin.tabAnalytics || 'Analytika', icon: BarChart3, visible: canView('analytics') },
         { id: 'logs', label: dict.admin.tabLogs || 'Logy', icon: FileSearch, visible: canView('logs') },
         { id: 'newsletter', label: 'Newsletter', icon: Mail, visible: canView('newsletter') },

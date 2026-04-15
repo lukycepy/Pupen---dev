@@ -101,25 +101,26 @@ export default function TrustBoxPageClient() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error || 'Error');
-      setVerificationToken(String(json?.verificationToken || ''));
+      const token = String(json?.verificationToken || '').trim();
+      setVerificationToken(token);
       setStatus('started');
       showToast(labels.okStarted, 'success');
+      return token;
     } catch (e: any) {
       showToast(e?.message || 'Error', 'error');
+      return null;
     } finally {
       setLoading(false);
     }
   };
 
   const onUpload = async (file: File) => {
-    if (!effectiveToken) {
-      showToast(lang === 'en' ? 'Start verification first.' : 'Nejdřív spusťte ověření.', 'error');
-      return;
-    }
+    const token = effectiveToken || (await onStart());
+    if (!token) return;
     setUploading(true);
     try {
       const fd = new FormData();
-      fd.set('token', effectiveToken);
+      fd.set('token', token);
       fd.set('file', file);
       const res = await fetch('/api/trustbox/attachments/upload', { method: 'POST', body: fd });
       const json = await res.json().catch(() => ({}));
@@ -217,6 +218,26 @@ export default function TrustBoxPageClient() {
                   <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={6} className="w-full bg-stone-50 border-none rounded-2xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition resize-none" />
                 </div>
 
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{labels.upload}</label>
+                  <div className="flex items-center gap-3">
+                    <label className="inline-flex items-center gap-2 bg-stone-900 text-white px-5 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-600 transition cursor-pointer">
+                      {uploading || loading ? <InlinePulse className="bg-white/80" size={14} /> : <Upload size={16} />}
+                      {uploading || loading ? (lang === 'en' ? 'Uploading' : 'Nahrávám') : (lang === 'en' ? 'Select file' : 'Vybrat soubor')}
+                      <input
+                        type="file"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) onUpload(f);
+                          e.currentTarget.value = '';
+                        }}
+                      />
+                    </label>
+                    <div className="text-stone-400 text-sm font-bold">max 10MB</div>
+                  </div>
+                </div>
+
                 <div className="flex flex-col gap-3">
                   <label className="flex items-center gap-3 font-bold text-stone-700">
                     <input type="checkbox" checked={priority === 'urgent'} onChange={(e) => setPriority(e.target.checked ? 'urgent' : 'normal')} />
@@ -291,4 +312,3 @@ export default function TrustBoxPageClient() {
     </div>
   );
 }
-

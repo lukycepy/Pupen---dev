@@ -17,7 +17,6 @@ async function main() {
       join pg_namespace n on n.oid = c.relnamespace
       where c.relkind = 'r'
         and n.nspname = 'public'
-        and c.relname not in ('schema_migrations')
       order by c.relname asc
     `,
     );

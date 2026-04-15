@@ -6,7 +6,7 @@ import { logTrustBoxAudit } from '@/lib/trustbox/audit';
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const auth = await requireTrustBoxAdmin(req);
-    if (!auth.canViewPii) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (!auth.isSuperadmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const { id } = await params;
     const threadId = String(id || '').trim();
@@ -45,4 +45,3 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
   }
 }
-

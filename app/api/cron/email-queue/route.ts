@@ -108,6 +108,18 @@ export async function GET(req: Request) {
           replyTo: replyTo || undefined,
           headers,
         });
+        try {
+          await supabase.from('email_audit_logs').insert([
+            {
+              queue_id: id,
+              to_email: to,
+              from_email: from,
+              subject,
+              status: 'sent',
+              meta: j?.meta && typeof j.meta === 'object' ? j.meta : {},
+            },
+          ]);
+        } catch {}
         const del = await supabase.from('email_send_queue').delete().eq('id', id);
         if (del.error) throw del.error;
         ok += 1;
@@ -135,6 +147,19 @@ export async function GET(req: Request) {
                 max_attempts: maxAttempts,
                 final_error: errMsg,
                 failed_at: new Date().toISOString(),
+              },
+            ]);
+          } catch {}
+          try {
+            await supabase.from('email_audit_logs').insert([
+              {
+                queue_id: id,
+                to_email: to,
+                from_email: from,
+                subject,
+                status: 'failed',
+                meta: meta2,
+                error: info,
               },
             ]);
           } catch {}

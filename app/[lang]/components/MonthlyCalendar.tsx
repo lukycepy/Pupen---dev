@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 
 interface CalendarProps {
@@ -28,13 +29,24 @@ export default function MonthlyCalendar({ events, lang }: CalendarProps) {
   const totalDays = daysInMonth(year, month);
   const startDay = firstDayOfMonth(year, month);
 
+  const toYmd = (v: any) => {
+    if (!v) return '';
+    if (typeof v === 'string') return v.slice(0, 10);
+    const d = v instanceof Date ? v : new Date(v);
+    if (Number.isNaN(d.getTime())) return '';
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
   const calendarDays = [];
   for (let i = 0; i < startDay; i++) calendarDays.push(null);
   for (let i = 1; i <= totalDays; i++) calendarDays.push(i);
 
   const getEventsForDay = (day: number) => {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    return events.filter(e => e.date === dateStr);
+    return events.filter((e) => toYmd(e.date) === dateStr);
   };
 
   return (
@@ -76,10 +88,14 @@ export default function MonthlyCalendar({ events, lang }: CalendarProps) {
                     </span>
                     <div className="space-y-1">
                       {dayEvents.map(ev => (
-                        <div key={ev.id} className="bg-green-50 text-green-700 p-1.5 rounded-lg text-[9px] font-bold leading-tight border border-green-100 truncate hover:bg-green-100 transition-colors cursor-pointer">
+                        <Link
+                          key={ev.id}
+                          href={`/${lang}/akce/${ev.id}`}
+                          className="block bg-green-50 text-green-700 p-1.5 rounded-lg text-[9px] font-bold leading-tight border border-green-100 truncate hover:bg-green-100 transition-colors"
+                        >
                           {ev.time && <span className="mr-1 opacity-60">{ev.time}</span>}
                           {lang === 'en' && ev.title_en ? ev.title_en : ev.title}
-                        </div>
+                        </Link>
                       ))}
                     </div>
                   </>

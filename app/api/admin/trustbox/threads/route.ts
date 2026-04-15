@@ -50,9 +50,7 @@ export async function GET(req: Request) {
     const out = threads.map((t) => {
       const ident: any = idMap.get(String(t.id)) || null;
       const reporter = ident
-        ? canViewPii
-          ? { name: `${ident.first_name} ${ident.last_name}`.trim(), email: ident.email }
-          : { name: redactName(ident.first_name, ident.last_name), email: redactEmail(ident.email) }
+        ? { name: redactName(ident.first_name, ident.last_name), email: redactEmail(ident.email) }
         : { name: '—', email: '—' };
       return { ...t, reporter };
     });

@@ -37,6 +37,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   try {
     const auth = await requireTrustBoxAdmin(req);
     const canViewPii = auth.canViewPii;
+    const isSuperadmin = auth.isSuperadmin;
     const { id } = await params;
     const threadId = String(id || '').trim();
     if (!threadId) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
@@ -68,7 +69,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
     const msgsRes = await supabase
       .from('trust_box_messages')
-      .select('id,author_type,body,created_at')
+      .select('id,author_type,author_name,body,created_at')
       .eq('thread_id', threadId)
       .order('created_at', { ascending: true });
     if (msgsRes.error) throw msgsRes.error;
@@ -83,7 +84,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     return NextResponse.json({
       ok: true,
       canViewPii,
-      piiAvailable: canViewPii && !thread.anonymized_at,
+      piiAvailable: isSuperadmin && !thread.anonymized_at,
       thread: { ...thread, reporter },
       messages: msgsRes.data || [],
       attachments: attRes.data || [],

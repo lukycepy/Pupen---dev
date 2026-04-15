@@ -611,7 +611,11 @@ export default function TrustBoxTab({ dict }: { dict: any }) {
                 {(threadDetail.data?.messages || []).map((m: any) => (
                   <AdminPanel key={m.id} className="p-5">
                     <div className="flex items-center justify-between gap-4">
-                      <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{m.author_type}</div>
+                      <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">
+                        {String(m.author_type || '').toLowerCase() === 'reporter'
+                          ? 'reporter'
+                          : `${String(m.author_type || '')}${m.author_name ? ` (${String(m.author_name)})` : ''}`}
+                      </div>
                       <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{fmtDate(m.created_at)}</div>
                     </div>
                     <div className="mt-3 font-bold text-stone-800 whitespace-pre-wrap">{m.body}</div>

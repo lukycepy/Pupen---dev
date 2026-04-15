@@ -39,7 +39,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const thread: any = thrRes.data;
     if (!thread?.id) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    const ins = await supabase.from('trust_box_messages').insert([{ thread_id: threadId, author_type: kind, body: text }]);
+    const profRes = await supabase.from('profiles').select('first_name,last_name').eq('id', auth.user.id).maybeSingle();
+    const prof: any = profRes.data || null;
+    const authorName = String(`${prof?.first_name || ''} ${prof?.last_name || ''}`).trim() || auth.user.email || 'Admin';
+
+    const ins = await supabase
+      .from('trust_box_messages')
+      .insert([{ thread_id: threadId, author_type: kind, body: text, author_user_id: auth.user.id, author_name: authorName }]);
     if (ins.error) throw ins.error;
     const upd = await supabase.from('trust_box_threads').update({ last_activity_at: new Date().toISOString() }).eq('id', threadId);
     if (upd.error) throw upd.error;
@@ -74,6 +80,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           toEmail: ident.email,
           firstName: ident.first_name || '',
           threadUrl,
+          authorName,
           lang: 'cs',
         });
         try {

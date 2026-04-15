@@ -295,6 +295,7 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
     const toEmail = String(vars?.toEmail || '').trim();
     const firstName = String(vars?.firstName || '').trim();
     const threadUrl = String(vars?.threadUrl || '').trim();
+    const authorName = String(vars?.authorName || '').trim();
     const lang = vars?.lang === 'en' ? 'en' : 'cs';
     const subject = lang === 'en' ? 'Pupen — Trust Box update' : 'Pupen — Schránka důvěry: nová zpráva';
     const html = `
@@ -303,6 +304,7 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
         <div style="background-color: #f5f5f4; padding: 20px; border-radius: 15px; margin: 20px 0;">
           <p style="margin: 8px 0;">${lang === 'en' ? 'Hello' : 'Dobrý den'}${firstName ? ` ${escapeHtml(firstName)}` : ''},</p>
           <p style="margin: 8px 0;">${lang === 'en' ? 'There is a new message in your Trust Box thread.' : 'Ve vašem vlákně schránky důvěry je nová zpráva.'}</p>
+          ${authorName ? `<p style="margin: 8px 0; color:#57534e; font-size: 12px; font-weight: 700;">${lang === 'en' ? 'Replied by' : 'Odpověděl'}: ${escapeHtml(authorName)}</p>` : ''}
           ${threadUrl ? `<p style="margin: 16px 0;"><a href="${escapeHtml(threadUrl)}" style="display:inline-block; background:#16a34a; color:#ffffff; text-decoration:none; padding:12px 16px; border-radius:14px; font-weight:900;">${lang === 'en' ? 'Open thread' : 'Otevřít vlákno'}</a></p>` : ''}
           <p style="margin: 8px 0; font-size: 12px; color:#78716c;">${lang === 'en' ? `This email was sent to ${escapeHtml(toEmail)}.` : `Tento e‑mail byl odeslán na ${escapeHtml(toEmail)}.`}</p>
         </div>

@@ -35,10 +35,16 @@ function redactEmail(email: string) {
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const auth = await requireTrustBoxAdmin(req);
-    const canViewPii = auth.canViewPii;
+    const isSuperadmin = auth.isSuperadmin;
     const { id } = await params;
     const threadId = String(id || '').trim();
     if (!threadId) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
+    const url = new URL(req.url);
+    const includePii = url.searchParams.get('include_pii') === '1';
+    const reason = String(url.searchParams.get('reason') || '').trim();
+    const piiAllowed = includePii && isSuperadmin;
+    if (includePii && !piiAllowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (piiAllowed && reason.length < 10) return NextResponse.json({ error: 'Reason required' }, { status: 400 });
 
     const supabase = getServerSupabase();
 
@@ -60,14 +66,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const ident: any = identRes.data;
 
     const reporter = ident
-      ? canViewPii
+      ? piiAllowed && !thread.anonymized_at
         ? { name: `${ident.first_name} ${ident.last_name}`.trim(), email: ident.email }
         : { name: redactName(ident.first_name, ident.last_name), email: redactEmail(ident.email) }
       : { name: '—', email: '—' };
 
     const msgsRes = await supabase
       .from('trust_box_messages')
-      .select('author_type,body,created_at')
+      .select('author_type,author_name,body,created_at')
       .eq('thread_id', threadId)
       .order('created_at', { ascending: true });
     if (msgsRes.error) throw msgsRes.error;
@@ -134,7 +140,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     draw('Zprávy', 14, 'bold');
     for (const m of messages) {
       if (y < 120) break;
-      drawWrap(`${String(m.author_type || '')} (${fmt(m.created_at)})`, String(m.body || '').slice(0, 6000));
+      const who = String(m.author_type || '').toLowerCase() === 'reporter'
+        ? 'reporter'
+        : String(m.author_type || '').toLowerCase() === 'internal'
+          ? `internal${m.author_name ? ` (${String(m.author_name)})` : ''}`
+          : `admin${m.author_name ? ` (${String(m.author_name)})` : ''}`;
+      drawWrap(`${who} (${fmt(m.created_at)})`, String(m.body || '').slice(0, 6000));
       y -= 6;
     }
 
@@ -158,7 +169,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       actorEmail: auth.user.email || null,
       action: 'ADMIN_EXPORT_PDF',
       threadId,
-      piiAccessed: canViewPii,
+      piiAccessed: piiAllowed,
+      reason: piiAllowed ? reason : undefined,
     });
     return new NextResponse(Buffer.from(pdfBytes), {
       headers: {
