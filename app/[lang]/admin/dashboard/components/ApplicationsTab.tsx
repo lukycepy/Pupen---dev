@@ -411,7 +411,7 @@ export default function ApplicationsTab({ dict }: { dict: any }) {
         <Dialog
           open={!!selectedApp}
           onClose={() => setSelectedApp(null)}
-          overlayClassName="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-300"
+          overlayClassName="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[30000] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-300"
           panelClassName="bg-white w-full max-w-5xl max-h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-500"
         >
           <div className="p-8 border-b border-stone-100 flex justify-between items-center bg-stone-50/30">

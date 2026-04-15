@@ -1861,7 +1861,7 @@ export default function ClenskaSekcePage() {
                 <Dialog
                   open={mfaDisableOpen}
                   onClose={() => setMfaDisableOpen(false)}
-                  overlayClassName="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+                  overlayClassName="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[30000] flex items-center justify-center p-4"
                   panelClassName="w-full max-w-md bg-white rounded-[2rem] border border-stone-100 shadow-2xl p-6"
                 >
                       <div className="text-sm font-black text-stone-900">{lang === 'en' ? 'Disable 2FA' : 'Vypnout 2FA'}</div>

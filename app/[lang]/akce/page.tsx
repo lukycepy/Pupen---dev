@@ -2,11 +2,11 @@
 
 import React, { useCallback, useState, useEffect } from 'react';
 import Image from 'next/image';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { getDictionary } from '@/lib/get-dictionary';
-import { Clock, ArrowRight, Calendar, CheckCircle, LayoutGrid, CalendarDays, Users, Trash2 } from 'lucide-react';
+import { Clock, ArrowRight, Calendar, CheckCircle, LayoutGrid, CalendarDays, Users, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import Dialog from '@/app/components/ui/Dialog';
 import MonthlyCalendar from '../components/MonthlyCalendar';
@@ -36,6 +36,7 @@ function getEventExcerpt(ev: any, lang: string) {
 export default function AkcePage() {
   const params = useParams();
   const lang = (params?.lang as string) || 'cs';
+  const router = useRouter();
   const isSafeImageSrc = (value: unknown) => {
     if (typeof value !== 'string') return false;
     if (!value) return false;
@@ -49,6 +50,7 @@ export default function AkcePage() {
   const [globalDict, setGlobalDict] = useState<any>(null);
   const [activeCategory, setActiveCategory] = useState("Vše");
   const [viewMode, setActiveViewMode] = useState<'list' | 'calendar'>('list');
+  const [calendarDate, setCalendarDate] = useState(() => new Date());
 
   // RSVP state
   const [rsvpLoading, setRsvpLoading] = useState<string | null>(null);
@@ -385,9 +387,28 @@ export default function AkcePage() {
     return `${window.location.origin}/${lang}/akce/${eventId}`;
   };
 
+  const toYmd = (v: any) => {
+    if (!v) return '';
+    if (typeof v === 'string') return v.slice(0, 10);
+    const d = v instanceof Date ? v : new Date(v);
+    if (Number.isNaN(d.getTime())) return '';
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
   const filteredEvents = activeCategory === "Vše" 
     ? events 
     : events.filter(e => e.category === activeCategory);
+
+  const calendarYear = calendarDate.getFullYear();
+  const calendarMonth = calendarDate.getMonth();
+  const monthKey = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}`;
+  const monthName = calendarDate.toLocaleString(lang === 'cs' ? 'cs-CZ' : 'en-US', { month: 'long' });
+  const monthFilteredEvents = filteredEvents.filter((e) => toYmd(e.date).slice(0, 7) === monthKey);
+  const todayKey = toYmd(new Date());
+  const futureEvents = filteredEvents.filter((e) => toYmd(e.date) >= todayKey);
 
   if (!dict) return null;
   const categoryKeys = Object.keys(dict.categories || {}).length > 0 ? Object.keys(dict.categories) : DEFAULT_CATEGORY_KEYS;
@@ -405,6 +426,29 @@ export default function AkcePage() {
             </div>
 
             <div className="flex items-center gap-3">
+              {viewMode === 'calendar' && (
+              <div className="hidden md:flex items-center gap-2 bg-white border border-stone-100 rounded-2xl p-1.5 shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => setCalendarDate(new Date(calendarYear, calendarMonth - 1, 1))}
+                  className="p-3 rounded-xl text-stone-400 hover:text-stone-700 hover:bg-stone-50 transition"
+                  aria-label={lang === 'en' ? 'Previous month' : 'Předchozí měsíc'}
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <div className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-stone-600">
+                  {monthName} {calendarYear}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCalendarDate(new Date(calendarYear, calendarMonth + 1, 1))}
+                  className="p-3 rounded-xl text-stone-400 hover:text-stone-700 hover:bg-stone-50 transition"
+                  aria-label={lang === 'en' ? 'Next month' : 'Další měsíc'}
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+              )}
               <a
                 href={`/api/ical/events?lang=${lang}`}
                 className="inline-flex items-center gap-2 rounded-2xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
@@ -442,16 +486,25 @@ export default function AkcePage() {
         </header>
 
         {viewMode === 'calendar' ? (
-          <MonthlyCalendar events={events} lang={lang} />
+          <MonthlyCalendar events={monthFilteredEvents} lang={lang} value={calendarDate} onChange={setCalendarDate} />
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredEvents.length === 0 ? (
+            {futureEvents.length === 0 ? (
               <div className="col-span-full py-20 text-center text-stone-400 font-bold uppercase tracking-widest bg-white rounded-[3rem] border border-dashed border-stone-200">
                 {dict.noEvents}
               </div>
             ) : (
-              filteredEvents.map((event) => (
-                <div id={`event-${event.id}`} key={event.id} className="bg-white rounded-[2rem] sm:rounded-[3rem] overflow-hidden shadow-xl border border-stone-100 group hover:shadow-2xl transition-all duration-500 flex flex-col h-full">
+              futureEvents.map((event) => (
+                <div
+                  id={`event-${event.id}`}
+                  key={event.id}
+                  className="bg-white rounded-[2rem] sm:rounded-[3rem] overflow-hidden shadow-xl border border-stone-100 group hover:shadow-2xl transition-all duration-500 flex flex-col h-full cursor-pointer"
+                  onClick={(e) => {
+                    const target = e.target as HTMLElement | null;
+                    if (target?.closest('button, a, input, textarea, select, label')) return;
+                    router.push(`/${lang}/akce/${event.id}`);
+                  }}
+                >
                   <div className="aspect-video relative overflow-hidden shrink-0">
                     {isSafeImageSrc(String(event.image_url ?? '')) ? (
                       String(event.image_url).startsWith('http') ? (
@@ -478,6 +531,7 @@ export default function AkcePage() {
                     <div className="absolute top-4 left-4 sm:top-6 sm:left-6 px-3 py-1.5 sm:px-4 sm:py-2 bg-white/90 backdrop-blur rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-green-600">
                       {dict.categories[event.category] || event.category}
                     </div>
+                    <Link href={`/${lang}/akce/${event.id}`} className="absolute inset-0" aria-label="Detail" />
                   </div>
                   <div className="p-6 sm:p-8 md:p-10 flex flex-col flex-grow">
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-stone-400 text-[9px] sm:text-[10px] font-black uppercase tracking-widest mb-4 sm:mb-6">

@@ -7,10 +7,17 @@ import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-reac
 interface CalendarProps {
   events: any[];
   lang: string;
+  value?: Date;
+  onChange?: (next: Date) => void;
 }
 
-export default function MonthlyCalendar({ events, lang }: CalendarProps) {
-  const [currentDate, setCurrentDate] = useState(new Date());
+export default function MonthlyCalendar({ events, lang, value, onChange }: CalendarProps) {
+  const [internalDate, setInternalDate] = useState(new Date());
+  const currentDate = value || internalDate;
+  const setCurrentDate = (next: Date) => {
+    if (onChange) onChange(next);
+    else setInternalDate(next);
+  };
 
   const daysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
   const firstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
@@ -18,8 +25,8 @@ export default function MonthlyCalendar({ events, lang }: CalendarProps) {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
-  const prevMonth = () => setCurrentDate(new Date(year, month - 1));
-  const nextMonth = () => setCurrentDate(new Date(year, month + 1));
+  const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
+  const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
 
   const monthName = currentDate.toLocaleString(lang === 'cs' ? 'cs-CZ' : 'en-US', { month: 'long' });
   const days = ['Ne', 'Po', 'Út', 'St', 'Čt', 'Pá', 'So'];

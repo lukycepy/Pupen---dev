@@ -5,6 +5,47 @@ import { requireTrustBoxAdmin } from '@/lib/server-auth';
 import { getPdfFonts } from '@/lib/pdf/fonts';
 import { logTrustBoxAudit } from '@/lib/trustbox/audit';
 
+function cleanText(input: any, fallback = '—') {
+  const s = String(input ?? '').replace(/\u0000/g, '').trim();
+  if (!s) return fallback;
+  return s.replace(/\s+/g, ' ').trim();
+}
+
+function asciiFallbackText(input: any, fallback = '—') {
+  const s = String(input ?? '').trim();
+  if (!s) return fallback;
+  return s
+    .replace(/\u2022/g, '-')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9\s.,@:+\\/-_()]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function wrapLines(font: any, text: string, size: number, maxWidth: number) {
+  const words = String(text || '').split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let current = '';
+  for (const w of words) {
+    const next = current ? `${current} ${w}` : w;
+    let width = 0;
+    try {
+      width = font.widthOfTextAtSize(next, size);
+    } catch {
+      width = font.widthOfTextAtSize(asciiFallbackText(next), size);
+    }
+    if (width <= maxWidth || !current) {
+      current = next;
+      continue;
+    }
+    lines.push(current);
+    current = w;
+  }
+  if (current) lines.push(current);
+  return lines.length ? lines : [''];
+}
+
 function fmt(value: any) {
   try {
     return new Date(String(value)).toLocaleString();
@@ -88,76 +129,113 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const attachments: any[] = atRes.data || [];
 
     const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage([595.28, 841.89]);
     const { font, fontBold } = await getPdfFonts(pdfDoc);
 
-    const margin = 40;
+    const width = 595.28;
+    const margin = 48;
+    const black = rgb(0, 0, 0);
+    const gray = rgb(0.35, 0.35, 0.35);
+    const light = rgb(0.92, 0.92, 0.92);
+    const green = rgb(0.08, 0.6, 0.26);
+    const paper = rgb(0.98, 0.98, 0.97);
+
+    let page = pdfDoc.addPage([width, 841.89]);
     let y = 800;
-    const lineH = 16;
-    const maxW = 595.28 - margin * 2;
 
-    const draw = (text: string, size: number, weight: 'normal' | 'bold' = 'normal', color = rgb(0.1, 0.1, 0.1)) => {
-      const f = weight === 'bold' ? fontBold : font;
-      page.drawText(text, { x: margin, y, size, font: f, color, maxWidth: maxW });
-      y -= Math.max(lineH, size + 6);
-    };
-
-    const drawWrap = (label: string, value: string) => {
-      const f = font;
-      const labelText = `${label}: `;
-      const full = `${labelText}${value}`;
-      const words = full.split(/\s+/);
-      let line = '';
-      for (const w of words) {
-        const test = line ? `${line} ${w}` : w;
-        const width = f.widthOfTextAtSize(test, 11);
-        if (width > maxW) {
-          page.drawText(line, { x: margin, y, size: 11, font: f, color: rgb(0.15, 0.15, 0.15) });
-          y -= 14;
-          line = w;
-        } else {
-          line = test;
-        }
-      }
-      if (line) {
-        page.drawText(line, { x: margin, y, size: 11, font: f, color: rgb(0.15, 0.15, 0.15) });
-        y -= 16;
+    const drawSafe = (text: any, opts: { x: number; y: number; size: number; font: any; color: any }) => {
+      const primary = cleanText(text, '');
+      if (!primary) return;
+      try {
+        page.drawText(primary, opts);
+      } catch {
+        page.drawText(asciiFallbackText(primary, ''), opts);
       }
     };
 
-    draw('Schránka důvěry – export', 18, 'bold', rgb(0.09, 0.6, 0.3));
-    drawWrap('ID', String(thread.id));
-    drawWrap('Předmět', String(thread.subject));
-    drawWrap('Kategorie', String(thread.category));
-    drawWrap('Status', String(thread.status));
-    drawWrap('Priorita', String(thread.priority));
-    drawWrap('Vytvořeno', fmt(thread.created_at));
-    drawWrap('Poslední aktivita', fmt(thread.last_activity_at));
-    drawWrap('Reporter', `${reporter.name} · ${reporter.email}`);
-    if (thread.anonymized_at) drawWrap('Anonymizováno', fmt(thread.anonymized_at));
+    const header = () => {
+      page.drawRectangle({ x: 0, y: 835, width, height: 6, color: green });
+      page.drawRectangle({ x: margin, y: 748, width: width - margin * 2, height: 78, color: paper, borderColor: light, borderWidth: 1 });
+      drawSafe('SCHRÁNKA DŮVĚRY', { x: margin, y, size: 10, font: fontBold, color: gray });
+      y -= 16;
+      drawSafe('Export vlákna', { x: margin, y, size: 20, font: fontBold, color: black });
+      y -= 18;
+      page.drawLine({ start: { x: margin, y }, end: { x: width - margin, y }, thickness: 1, color: light });
+      y -= 18;
+    };
 
-    y -= 10;
-    draw('Zprávy', 14, 'bold');
+    const newPage = () => {
+      page = pdfDoc.addPage([width, 841.89]);
+      y = 800;
+      header();
+    };
+
+    header();
+
+    const section = (title: string) => {
+      if (y < 120) newPage();
+      drawSafe(title, { x: margin, y, size: 11, font: fontBold, color: green });
+      y -= 10;
+      page.drawLine({ start: { x: margin, y }, end: { x: width - margin, y }, thickness: 1, color: light });
+      y -= 14;
+    };
+
+    const row = (label: string, value: any) => {
+      if (y < 120) newPage();
+      drawSafe(label, { x: margin, y, size: 9, font: fontBold, color: gray });
+      const valueX = margin + 180;
+      const valueWidth = width - margin - valueX;
+      const rawValue = cleanText(value, '—');
+      const valueLines = wrapLines(font, rawValue, 11, valueWidth);
+      for (let i = 0; i < valueLines.length; i += 1) {
+        drawSafe(valueLines[i], { x: valueX, y: y - i * 14, size: 11, font, color: black });
+      }
+      y -= Math.max(16, valueLines.length * 14);
+    };
+
+    section('METADATA');
+    row('ID', String(thread.id));
+    row('Předmět', thread.subject || '—');
+    row('Kategorie', thread.category || '—');
+    row('Status', thread.status || '—');
+    row('Priorita', thread.priority || '—');
+    row('Vytvořeno', fmt(thread.created_at));
+    row('Poslední aktivita', fmt(thread.last_activity_at));
+    row('Reporter', `${reporter.name} · ${reporter.email}`);
+    if (thread.anonymized_at) row('Anonymizováno', fmt(thread.anonymized_at));
+
+    section('ZPRÁVY');
     for (const m of messages) {
-      if (y < 120) break;
-      const who = String(m.author_type || '').toLowerCase() === 'reporter'
-        ? 'reporter'
-        : String(m.author_type || '').toLowerCase() === 'internal'
-          ? `internal${m.author_name ? ` (${String(m.author_name)})` : ''}`
-          : `admin${m.author_name ? ` (${String(m.author_name)})` : ''}`;
-      drawWrap(`${who} (${fmt(m.created_at)})`, String(m.body || '').slice(0, 6000));
-      y -= 6;
+      const body = String(m.body || '').slice(0, 6000);
+      const who =
+        String(m.author_type || '').toLowerCase() === 'reporter'
+          ? 'reporter'
+          : String(m.author_type || '').toLowerCase() === 'internal'
+            ? `internal${m.author_name ? ` (${String(m.author_name)})` : ''}`
+            : `admin${m.author_name ? ` (${String(m.author_name)})` : ''}`;
+
+      const head = `${who} · ${fmt(m.created_at)}`;
+      if (y < 150) newPage();
+      drawSafe(head, { x: margin, y, size: 9, font: fontBold, color: gray });
+      y -= 14;
+      const lines = wrapLines(font, cleanText(body, '—'), 11, width - margin * 2);
+      for (const line of lines) {
+        if (y < 90) newPage();
+        drawSafe(line, { x: margin, y, size: 11, font, color: black });
+        y -= 14;
+      }
+      y -= 8;
     }
 
-    if (y > 120) {
-      draw('Přílohy', 14, 'bold');
-      if (attachments.length === 0) {
-        drawWrap('—', 'Žádné');
-      } else {
-        for (const a of attachments.slice(0, 30)) {
-          if (y < 120) break;
-          drawWrap('Soubor', `${String(a.original_name || '')} · ${String(a.content_type || '')} · ${Number(a.size_bytes || 0)} B`);
-        }
+    section('PŘÍLOHY');
+    if (attachments.length === 0) {
+      row('—', 'Žádné');
+    } else {
+      for (const a of attachments.slice(0, 60)) {
+        if (y < 120) newPage();
+        const name = String(a.original_name || '');
+        const ct = String(a.content_type || '');
+        const size = Number(a.size_bytes || 0);
+        row('Soubor', `${name} · ${ct} · ${size} B`);
       }
     }
 
