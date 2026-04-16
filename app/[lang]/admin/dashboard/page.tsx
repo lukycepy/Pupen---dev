@@ -229,11 +229,15 @@ export default function AdminDashboard() {
       setCurrentUser(user);
 
       // Fetch profile
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
+      let profile: any = null;
+      try {
+        const token = session.access_token;
+        const profRes = await fetch('/api/auth/me-profile', { headers: { Authorization: `Bearer ${token}` } });
+        const profJson = await profRes.json().catch(() => ({}));
+        profile = profRes.ok ? (profJson?.profile || null) : null;
+      } catch {
+        profile = null;
+      }
       
       if (!profile && isMounted) {
         router.replace(`/${lang}/admin`);

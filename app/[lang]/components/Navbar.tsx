@@ -43,8 +43,14 @@ export default function Navbar({ lang, dict }: NavbarProps) {
     async function getProfile() {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-        setUserProfile(data);
+        try {
+          const token = session.access_token;
+          const res = await fetch('/api/auth/me-profile', { headers: { Authorization: `Bearer ${token}` } });
+          const json = await res.json().catch(() => ({}));
+          setUserProfile(res.ok ? (json?.profile || null) : null);
+        } catch {
+          setUserProfile(null);
+        }
       }
     }
     getProfile();
@@ -106,20 +112,6 @@ export default function Navbar({ lang, dict }: NavbarProps) {
     setIsToolsOpen(false);
     setIsUserMenuOpen(false);
   }, [pathname]);
-
-  useEffect(() => {
-    if (typeof document === 'undefined') return;
-    const prevBody = document.body.style.overflow;
-    const prevHtml = document.documentElement.style.overflow;
-    if (isMenuOpen) {
-      document.body.style.overflow = 'hidden';
-      document.documentElement.style.overflow = 'hidden';
-    }
-    return () => {
-      document.body.style.overflow = prevBody;
-      document.documentElement.style.overflow = prevHtml;
-    };
-  }, [isMenuOpen]);
 
   // Search logic
   useEffect(() => {
@@ -259,12 +251,15 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                 }}
                 aria-haspopup="menu"
                 aria-expanded={isToolsOpen}
-                className={`flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.2em] transition-all duration-300 py-6 whitespace-nowrap ${
+                className={`relative group flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.2em] transition-all duration-300 py-2 whitespace-nowrap ${
                   isToolsOpen ? 'text-green-600' : 'text-stone-500 hover:text-stone-900'
                 }`}
               >
                 {toolsTitle}
                 <ChevronDown size={14} className={`transition-transform duration-300 ${isToolsOpen ? 'rotate-180' : ''}`} />
+                <span className={`absolute bottom-0 left-0 w-full h-0.5 bg-green-600 transition-all duration-300 transform origin-left ${
+                  isToolsOpen ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+                }`} />
               </button>
               
               {isToolsOpen && (
@@ -666,9 +661,10 @@ export default function Navbar({ lang, dict }: NavbarProps) {
           open={isMenuOpen}
           onClose={() => setIsMenuOpen(false)}
           side="top"
+          lockScroll={false}
           overlayClassName="lg:hidden fixed inset-0 z-[9998] flex"
           backdropClassName="absolute inset-0 bg-black/40 backdrop-blur-sm"
-          panelClassName="relative w-full mt-16 h-[calc(100dvh-4rem)] bg-white animate-in slide-in-from-top-10 duration-500 overflow-y-auto overscroll-contain"
+          panelClassName="relative w-full mt-16 h-[calc(100dvh-4rem)] bg-white animate-in slide-in-from-top-10 duration-500 overflow-y-auto overscroll-contain touch-pan-y"
         >
           <div className="flex flex-col p-5 sm:p-8 space-y-5 text-stone-800 pb-[max(2rem,env(safe-area-inset-bottom))]">
             {/* MOBILNÍ SEARCH */}

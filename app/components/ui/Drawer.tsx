@@ -10,6 +10,7 @@ export default function Drawer({
   children,
   side = 'left',
   closeOnBackdrop = true,
+  lockScroll = true,
   overlayClassName = 'fixed inset-0 z-[10000] flex',
   backdropClassName = 'absolute inset-0 bg-black/60 backdrop-blur-sm',
   panelClassName = 'relative h-full w-72 bg-white',
@@ -19,12 +20,13 @@ export default function Drawer({
   children: React.ReactNode;
   side?: 'left' | 'right' | 'top' | 'bottom';
   closeOnBackdrop?: boolean;
+  lockScroll?: boolean;
   overlayClassName?: string;
   backdropClassName?: string;
   panelClassName?: string;
 }) {
   const panelRef = React.useRef<HTMLDivElement>(null);
-  useTopLayer(open, onClose, panelRef, { closeOnEscape: true, lockScroll: true, initialFocus: 'first' });
+  useTopLayer(open, onClose, panelRef, { closeOnEscape: true, lockScroll, initialFocus: 'first' });
   if (!open) return null;
 
   const sideAlign =
@@ -40,11 +42,16 @@ export default function Drawer({
     <Portal>
       <div className={`${overlayClassName} ${sideAlign}`}>
         <button type="button" className={backdropClassName} onClick={closeOnBackdrop ? onClose : undefined} aria-label="Zavřít" />
-        <div ref={panelRef} tabIndex={-1} className={panelClassName} onMouseDown={(e) => e.stopPropagation()}>
+        <div
+          ref={panelRef}
+          tabIndex={-1}
+          className={panelClassName}
+          onMouseDown={(e) => e.stopPropagation()}
+          style={{ WebkitOverflowScrolling: 'touch' } as any}
+        >
           {children}
         </div>
       </div>
     </Portal>
   );
 }
-

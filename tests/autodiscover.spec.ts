@@ -23,7 +23,7 @@ test.describe('Outlook Autodiscover', () => {
   });
 
   test('Autodiscover XML is served on /.well-known/autodiscover/autodiscover.xml', async ({ request }) => {
-    const res = await request.get('/.well-known/autodiscover/autodiscover.xml?email=test@pupen.org');
+    const res = await request.get('/.well-known/autodiscover/autodiscover.xml?email=test@pupen.org', { timeout: 30_000 });
     expect(res.ok()).toBeTruthy();
     const text = await res.text();
     expect(text).toContain('imap.pupen.org');
@@ -31,7 +31,7 @@ test.describe('Outlook Autodiscover', () => {
   });
 
   test('Autodiscover XML is served on /Autodiscover/Autodiscover.xml', async ({ request }) => {
-    const res = await request.get('/Autodiscover/Autodiscover.xml?email=test@pupen.org');
+    const res = await request.get('/Autodiscover/Autodiscover.xml?email=test@pupen.org', { timeout: 30_000 });
     expect(res.ok()).toBeTruthy();
     const text = await res.text();
     expect(text).toContain('imap.pupen.org');

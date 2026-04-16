@@ -152,9 +152,6 @@ export default function ClenskaSekcePage() {
   const [mfaDisableOpen, setMfaDisableOpen] = useState(false);
   const [mfaDisableCode, setMfaDisableCode] = useState('');
   const [googleBusy, setGoogleBusy] = useState(false);
-  const [passkeysLoading, setPasskeysLoading] = useState(false);
-  const [passkeyFriendlyName, setPasskeyFriendlyName] = useState('');
-  const [passkeyFactors, setPasskeyFactors] = useState<any[]>([]);
   const googleAuthEnabled = process.env.NEXT_PUBLIC_ENABLE_GOOGLE_AUTH === 'true';
   const logSecurityEvent = async (event: string, details?: any) => {
     try {
@@ -183,7 +180,10 @@ export default function ClenskaSekcePage() {
       }
       
       setUser(session.user);
-      const { data: prof } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+      const token = session.access_token;
+      const profRes = await fetch('/api/auth/me-profile', { headers: { Authorization: `Bearer ${token}` } });
+      const profJson = await profRes.json().catch(() => ({}));
+      const prof = profRes.ok ? profJson?.profile : null;
 
       const isSuperAdmin = !!prof?.can_manage_admins;
       const hasMemberPortal = !!(prof?.is_member || prof?.is_admin || prof?.can_manage_admins || prof?.can_view_member_portal || prof?.can_edit_member_portal);
@@ -471,94 +471,6 @@ export default function ClenskaSekcePage() {
   useEffect(() => {
     refreshMfa();
   }, []);
-
-  const refreshPasskeys = async () => {
-    const authAny: any = supabase.auth as any;
-    if (!authAny?.mfa?.listFactors) return;
-    setPasskeysLoading(true);
-    try {
-      const res = await authAny.mfa.listFactors();
-      if (res?.error) throw res.error;
-      const all = res?.data?.all || [];
-      const webauthn = Array.isArray(all) ? all.filter((f: any) => f?.factor_type === 'webauthn') : [];
-      setPasskeyFactors(webauthn);
-    } catch {
-      setPasskeyFactors([]);
-    } finally {
-      setPasskeysLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    refreshPasskeys();
-  }, []);
-
-  const registerPasskey = async () => {
-    const authAny: any = supabase.auth as any;
-    if (!authAny?.mfa?.webauthn?.register) {
-      showToast(lang === 'en' ? 'Passkeys are not supported.' : 'Passkeys nejsou podporované.', 'error');
-      return;
-    }
-    if (typeof window !== 'undefined') {
-      if (!window.isSecureContext) {
-        showToast(lang === 'en' ? 'Passkeys require HTTPS.' : 'Passkeys vyžadují HTTPS.', 'error');
-        return;
-      }
-      if (!(window as any).PublicKeyCredential) {
-        showToast(lang === 'en' ? 'Passkeys are not supported in this browser.' : 'V tomto prohlížeči nejsou passkeys podporované.', 'error');
-        return;
-      }
-    }
-    setPasskeysLoading(true);
-    try {
-      await logSecurityEvent('PASSKEY_REGISTER_START', {});
-      const friendlyName = String(passkeyFriendlyName || '').trim() || (lang === 'en' ? 'Passkey' : 'Passkey');
-      const res = await authAny.mfa.webauthn.register({ friendlyName });
-      if (res?.error) throw res.error;
-      setPasskeyFriendlyName('');
-      await refreshPasskeys();
-      showToast(lang === 'en' ? 'Passkey added.' : 'Passkey přidán.', 'success');
-      await logSecurityEvent('PASSKEY_REGISTERED', {});
-    } catch (e: any) {
-      const msg = String(e?.message || 'Chyba');
-      if (msg.toLowerCase().includes('mfa enroll is disabled for webauthn')) {
-        showToast(
-          lang === 'en'
-            ? 'Passkeys are disabled in Supabase (Auth → MFA → WebAuthn).'
-            : 'Passkeys nejsou povolené v Supabase (Auth → MFA → WebAuthn).',
-          'error',
-        );
-      } else if (msg.toLowerCase().includes('notallowederror') || msg.toLowerCase().includes('not allowed')) {
-        showToast(lang === 'en' ? 'Passkey action was cancelled.' : 'Akce passkey byla zrušena.', 'error');
-      } else {
-        showToast(msg, 'error');
-      }
-    } finally {
-      setPasskeysLoading(false);
-    }
-  };
-
-  const removePasskey = async (factorId: string) => {
-    const authAny: any = supabase.auth as any;
-    if (!authAny?.mfa?.unenroll) return;
-    setPasskeysLoading(true);
-    try {
-      const res = await authAny.mfa.unenroll({ factorId });
-      if (res?.error) throw res.error;
-      await refreshPasskeys();
-      showToast(lang === 'en' ? 'Passkey removed.' : 'Passkey odebrán.', 'success');
-      await logSecurityEvent('PASSKEY_REMOVED', {});
-    } catch (e: any) {
-      const msg = String(e?.message || 'Chyba');
-      if (msg.toLowerCase().includes('aal2')) {
-        showToast(lang === 'en' ? 'Verify 2FA code to remove passkey.' : 'Pro odebrání passkey nejdřív ověř 2FA kódem.', 'error');
-      } else {
-        showToast(msg, 'error');
-      }
-    } finally {
-      setPasskeysLoading(false);
-    }
-  };
 
   const startMfaEnroll = async () => {
     const authAny: any = supabase.auth as any;
@@ -1225,7 +1137,6 @@ export default function ClenskaSekcePage() {
                 {(() => {
                   const attendance = badgeStats?.attendance || 0;
                   const payments = badgeStats?.payments || 0;
-                  const hasPasskey = passkeyFactors.length > 0;
                   const has2fa = !!mfaEnabled;
                   const isMember = !!profile?.is_member;
                   const hasMemberNo = !!profile?.member_no;
@@ -1272,12 +1183,6 @@ export default function ClenskaSekcePage() {
                       title: lang === 'en' ? '2FA enabled' : '2FA zapnuté',
                       desc: lang === 'en' ? 'Extra account protection.' : 'Extra ochrana účtu.',
                       ok: has2fa,
-                    },
-                    {
-                      k: 'passkey',
-                      title: lang === 'en' ? 'Passkey' : 'Passkey',
-                      desc: lang === 'en' ? 'Passkey added.' : 'Přidaný passkey.',
-                      ok: hasPasskey,
                     },
                   ];
 
@@ -1872,61 +1777,6 @@ export default function ClenskaSekcePage() {
                         </button>
                       </div>
                     )}
-                  </div>
-
-                  <div className="bg-stone-50 border border-stone-100 rounded-[2rem] p-6">
-                    <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">
-                      {lang === 'en' ? 'Passkeys (WebAuthn)' : 'Passkeys (WebAuthn)'}
-                    </div>
-                    <div className="mt-2 text-sm text-stone-600 font-medium">
-                      {lang === 'en'
-                        ? 'Add a passkey for faster and safer sign-in.'
-                        : 'Přidejte passkey pro rychlejší a bezpečnější přihlášení.'}
-                    </div>
-
-                    <div className="mt-4 space-y-3">
-                      <input
-                        value={passkeyFriendlyName}
-                        onChange={(e) => setPasskeyFriendlyName(e.target.value)}
-                        className="w-full bg-white border border-stone-200 rounded-2xl px-5 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 outline-none transition"
-                        placeholder={lang === 'en' ? 'Name (e.g., MacBook)' : 'Název (např. MacBook)'}
-                      />
-                      <button
-                        type="button"
-                        onClick={registerPasskey}
-                        disabled={passkeysLoading}
-                        className="w-full py-4 bg-stone-900 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-600 transition disabled:opacity-50"
-                      >
-                        {passkeysLoading ? (lang === 'en' ? 'Loading...' : 'Načítám...') : (lang === 'en' ? 'Add passkey' : 'Přidat passkey')}
-                      </button>
-                    </div>
-
-                    <div className="mt-6 space-y-2">
-                      {passkeyFactors.length ? (
-                        passkeyFactors.map((f: any) => (
-                          <div key={f.id} className="flex items-center justify-between gap-3 bg-white border border-stone-100 rounded-2xl px-4 py-3">
-                            <div className="min-w-0">
-                              <div className="font-bold text-stone-900 truncate">{f.friendly_name || 'Passkey'}</div>
-                              <div className="text-[10px] font-black uppercase tracking-widest text-stone-300">
-                                {String(f.status || '').toUpperCase() || '—'}
-                              </div>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => removePasskey(String(f.id))}
-                              disabled={passkeysLoading}
-                              className="shrink-0 px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border bg-white text-stone-700 border-stone-200 hover:bg-stone-50 disabled:opacity-50"
-                            >
-                              {lang === 'en' ? 'Remove' : 'Odebrat'}
-                            </button>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="text-xs text-stone-400 font-bold uppercase tracking-widest">
-                          {lang === 'en' ? 'No passkeys yet.' : 'Zatím žádné passkeys.'}
-                        </div>
-                      )}
-                    </div>
                   </div>
 
                   {googleAuthEnabled && (

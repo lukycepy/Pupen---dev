@@ -29,7 +29,10 @@ export default function AdminLogin() {
           return;
         }
 
-        const { data: prof } = await supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle();
+        const token = session.access_token;
+        const profRes = await fetch('/api/auth/me-profile', { headers: { Authorization: `Bearer ${token}` } });
+        const profJson = await profRes.json().catch(() => ({}));
+        const prof = profRes.ok ? profJson?.profile : null;
         const isAdmin = !!(prof?.is_admin || prof?.can_manage_admins);
         const isMember = !!(prof?.is_member || prof?.is_admin || prof?.can_manage_admins || prof?.can_view_member_portal || prof?.can_edit_member_portal);
 

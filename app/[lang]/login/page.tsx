@@ -106,13 +106,15 @@ export default function LoginPage() {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .maybeSingle();
-        
-        await handleRedirectRef.current?.(profile, session.user.email, 'session');
+        try {
+          const token = session.access_token;
+          const res = await fetch('/api/auth/me-profile', { headers: { Authorization: `Bearer ${token}` } });
+          const json = await res.json().catch(() => ({}));
+          const profile = res.ok ? (json?.profile || null) : null;
+          await handleRedirectRef.current?.(profile, session.user.email, 'session');
+        } catch {
+          await handleRedirectRef.current?.(null, session.user.email, 'session');
+        }
       }
     };
     checkSession();
@@ -286,16 +288,20 @@ export default function LoginPage() {
     if (hasAdmin && hasMember) {
       setShowRoleSelection(true);
       await logSecurity('LOGIN_SUCCESS', { method: method || 'session', outcome: 'multi' });
+      setLoading(false);
     } else if (hasAdmin) {
       await logSecurity('LOGIN_SUCCESS', { method: method || 'session', outcome: 'admin' });
+      setLoading(false);
       router.replace(`/${lang}/admin/dashboard`);
     } else if (hasMember) {
       await logSecurity('LOGIN_SUCCESS', { method: method || 'session', outcome: 'member' });
+      setLoading(false);
       router.replace(`/${lang}/clen`);
     } else {
       setError((dict?.auth?.login?.noAccess as string) || (lang === 'cs' ? 'Váš účet nemá přístup do chráněných sekcí.' : 'Your account has no access to protected sections.'));
       await logSecurity('LOGIN_NO_ACCESS', { method: method || 'session' });
       supabase.auth.signOut();
+      setLoading(false);
     }
   }, [dict?.auth?.login?.noAccess, ensureAdminAal2, lang, logSecurity, router]);
   handleRedirectRef.current = handleRedirect;
@@ -352,13 +358,18 @@ export default function LoginPage() {
         setLoading(false);
       }
     } else if (data.user) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', data.user.id)
-        .maybeSingle();
-      
-      await handleRedirect(profile, data.user.email, 'password');
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        if (!token) throw new Error('Unauthorized');
+        const res = await fetch('/api/auth/me-profile', { headers: { Authorization: `Bearer ${token}` } });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(String(json?.error || 'Chyba'));
+        await handleRedirect(json?.profile || null, data.user.email, 'password');
+      } catch (e: any) {
+        setError(e?.message || (lang === 'cs' ? 'Chyba' : 'Error'));
+        setLoading(false);
+      }
     }
   };
 
@@ -416,84 +427,6 @@ export default function LoginPage() {
         options: { redirectTo: `${origin}/${lang}/login` },
       });
       if (error) throw error;
-    } catch (e: any) {
-      setError(e?.message || (lang === 'cs' ? 'Chyba' : 'Error'));
-      setLoading(false);
-    }
-  };
-
-  const handlePasskey = async () => {
-    setError('');
-    setInfo('');
-    setLoading(true);
-    try {
-      try {
-        const guard = await fetch('/api/auth/login-guard', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(turnstileSiteKey ? { token: captchaToken } : {}),
-        });
-        if (!guard.ok) {
-          if (guard.status === 400) {
-            setError(lang === 'cs' ? 'Ověřte, že nejste robot.' : 'Please verify you are not a robot.');
-            setLoading(false);
-            return;
-          }
-          const j = await guard.json().catch(() => ({}));
-          const retryAfterMs = Number(j?.retryAfterMs || 0);
-          const sec = retryAfterMs ? Math.ceil(retryAfterMs / 1000) : 60;
-          setError(lang === 'cs' ? `Příliš mnoho pokusů. Zkuste to za ${sec}s.` : `Too many attempts. Try again in ${sec}s.`);
-          setLoading(false);
-          return;
-        }
-      } catch {}
-
-      const emailValue = String(email || '').trim();
-      if (!emailValue) {
-        setError(lang === 'cs' ? 'Zadejte e-mail.' : 'Enter your email.');
-        setLoading(false);
-        return;
-      }
-
-      const { data, error: loginError } = await supabase.auth.signInWithPassword({ email: emailValue, password });
-      if (loginError) {
-        setError((dict?.auth?.login?.loginError as string) || (lang === 'cs' ? 'Chyba přihlášení. Zkontrolujte údaje.' : 'Login error. Please check your credentials.'));
-        setLoading(false);
-        return;
-      }
-
-      if ((data as any)?.mfa && !(data as any)?.session) {
-        const anyData: any = data as any;
-        const factors = anyData?.mfa?.factors || anyData?.mfa?.availableFactors || [];
-        const web = Array.isArray(factors) ? factors.find((f: any) => f?.factor_type === 'webauthn' || f?.type === 'webauthn') : null;
-        const factorId = String(anyData?.mfa?.factorId || web?.id || factors?.[0]?.id || '');
-        const authAny: any = supabase.auth as any;
-        if (web && authAny?.mfa?.webauthn?.authenticate) {
-          const r = await authAny.mfa.webauthn.authenticate({ factorId });
-          if (r?.error) throw r.error;
-          const { data: sessionData } = await supabase.auth.getSession();
-          const user = sessionData.session?.user;
-          if (!user) throw new Error('Unauthorized');
-          const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
-          await handleRedirect(profile, user.email || undefined, 'passkey');
-          return;
-        }
-
-        if (!factorId) throw new Error((dict?.auth?.login?.mfaRequired as string) || (lang === 'cs' ? 'Vyžadováno 2FA.' : '2FA required.'));
-        const ch = await authAny?.mfa?.challenge?.({ factorId });
-        const challengeId = String(ch?.data?.id || ch?.data?.challengeId || '');
-        if (!challengeId) throw new Error((dict?.auth?.login?.mfaRequired as string) || (lang === 'cs' ? 'Vyžadováno 2FA.' : '2FA required.'));
-        setMfa({ factorId, challengeId });
-        setLoading(false);
-        return;
-      }
-
-      if ((data as any)?.user) {
-        const u: any = (data as any).user;
-        const { data: profile } = await supabase.from('profiles').select('*').eq('id', u.id).maybeSingle();
-        await handleRedirect(profile, u.email, 'passkey');
-        return;
-      }
     } catch (e: any) {
       setError(e?.message || (lang === 'cs' ? 'Chyba' : 'Error'));
       setLoading(false);
@@ -735,14 +668,6 @@ export default function LoginPage() {
                   {t.google || (lang === 'cs' ? 'Pokračovat s Google' : 'Continue with Google')}
                 </button>
               ) : null}
-              <button
-                type="button"
-                onClick={handlePasskey}
-                disabled={loading}
-                className="w-full bg-white text-stone-700 py-4 rounded-2xl font-black uppercase tracking-widest text-xs border border-stone-200 hover:bg-stone-50 transition disabled:opacity-50"
-              >
-                {lang === 'cs' ? 'Přihlásit se passkey' : 'Sign in with passkey'}
-              </button>
             </div>
           )}
         </form>

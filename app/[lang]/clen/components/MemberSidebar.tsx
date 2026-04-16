@@ -255,9 +255,10 @@ export default function MemberSidebar({
           open={isMobileOpen}
           onClose={() => setIsMobileOpen(false)}
           side="left"
+          lockScroll={false}
           overlayClassName="lg:hidden fixed inset-0 z-[100] flex"
           backdropClassName="absolute inset-0 bg-stone-900/40 backdrop-blur-sm"
-          panelClassName="relative w-72 h-full animate-in slide-in-from-left duration-300 shadow-2xl"
+          panelClassName="relative w-72 h-full animate-in slide-in-from-left duration-300 shadow-2xl touch-pan-y"
         >
           <SidebarContent {...commonProps} />
         </Drawer>

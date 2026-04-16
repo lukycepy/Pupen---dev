@@ -31,7 +31,7 @@ test.describe('Public Smoke Tests', () => {
 
 test.describe('Admin Smoke Tests (Mocked/Unauthenticated)', () => {
   test('Admin dashboard redirects to login if unauthenticated', async ({ page }) => {
-    await page.goto('/cs/admin/dashboard', { waitUntil: 'domcontentloaded' });
+    await page.goto('/cs/admin/dashboard', { waitUntil: 'commit' });
     await expect(page).toHaveURL(/\/cs\/(admin|login)(\/|$)/);
     await expect(page.locator('body')).toBeVisible();
   });

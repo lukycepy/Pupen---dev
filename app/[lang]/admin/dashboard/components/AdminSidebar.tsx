@@ -281,9 +281,10 @@ export default function AdminSidebar({
           open={mobileOpen}
           onClose={() => onMobileOpenChange(false)}
           side="left"
+          lockScroll={false}
           overlayClassName="lg:hidden fixed inset-0 z-[100] flex"
           backdropClassName="absolute inset-0 bg-black/60 backdrop-blur-sm"
-          panelClassName="relative w-[280px] h-full animate-in slide-in-from-left duration-300"
+          panelClassName="relative w-[280px] h-full animate-in slide-in-from-left duration-300 touch-pan-y"
         >
           <SidebarContent {...commonProps} />
         </Drawer>
