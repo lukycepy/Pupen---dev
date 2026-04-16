@@ -20,11 +20,14 @@ interface NavbarProps {
 
 export default function Navbar({ lang, dict }: NavbarProps) {
   const t = dict && typeof dict === 'object' ? (dict as any) : {};
-  const toolsTitle = t?.tools?.dropdownTitle || (lang === 'en' ? 'Tools' : 'Nástroje');
-  const searchPlaceholder = t?.eventsPage?.searchPlaceholder || (lang === 'en' ? 'Search...' : 'Hledat...');
+  const navTools = t?.nav?.tools && typeof t.nav.tools === 'object' ? t.nav.tools : {};
+  const toolsTitle = navTools?.dropdownTitle || (lang === 'en' ? 'Tools' : 'Nástroje');
+  const searchPlaceholder = t?.common?.searchPlaceholder || (lang === 'en' ? 'Search…' : 'Vyhledat…');
   const navHome = t?.home || (lang === 'en' ? 'Home' : 'Domů');
   const navEvents = t?.events || (lang === 'en' ? 'Events' : 'Akce');
   const navNews = t?.news || (lang === 'en' ? 'News' : 'Novinky');
+
+  const humanizeSlug = (s: string) => String(s || '').replace(/-/g, ' ');
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -289,10 +292,10 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                         </div>
                         <div className="flex flex-col">
                           <span className="text-sm font-bold text-stone-900 leading-tight mb-0.5 normal-case">
-                            {dict?.tools?.[tool.key]?.title || tool.slug}
+                            {navTools?.[tool.key]?.title || humanizeSlug(tool.slug)}
                           </span>
                           <span className="text-[10px] text-stone-400 font-medium group-hover/tool:text-green-600 transition-colors">
-                            {dict?.tools?.[tool.key]?.sub || ''}
+                            {navTools?.[tool.key]?.sub || ''}
                           </span>
                         </div>
                       </Link>
@@ -791,7 +794,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
             
             <div className="py-4 border-y border-stone-100">
               <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-6">
-                {dict?.tools?.dropdownTitle || (lang === 'en' ? 'Tools' : 'Nástroje')}
+                {toolsTitle}
               </p>
               <div className="grid grid-cols-2 gap-x-4 gap-y-6">
                 {TOOLS.filter((t) => isPageEnabled(t.slug) && showInTools(t.slug)).map((tool) => (
@@ -802,7 +805,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                     className="text-[11px] font-black text-stone-700 hover:text-green-600 flex items-center gap-3"
                   >
                     <span className="text-stone-400">{tool.icon}</span>
-                    {dict?.tools?.[tool.key]?.title || tool.slug}
+                    {navTools?.[tool.key]?.title || humanizeSlug(tool.slug)}
                   </Link>
                 ))}
               </div>

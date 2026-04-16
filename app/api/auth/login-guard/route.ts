@@ -14,7 +14,9 @@ export async function POST(req: Request) {
   const ip = g.ip;
   const body = g.body;
   const secret = process.env.TURNSTILE_SECRET_KEY || '';
-  if (secret) {
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
+  const turnstileEnabled = !!(secret && siteKey);
+  if (turnstileEnabled) {
     const token = String(body?.token || body?.captchaToken || '').trim();
     if (!token) return NextResponse.json({ error: 'Captcha required' }, { status: 400 });
     const form = new URLSearchParams();

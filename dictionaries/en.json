@@ -17,6 +17,7 @@
       "dropdownSub": "Everything a FAPPZ student needs.",
       "lostFound": { "title": "Lost & Found", "sub": "ISIC, keys, items" },
       "sos": { "title": "SOS for Freshmen", "sub": "Quick contacts" },
+      "trustbox": { "title": "Trust Box", "sub": "Safe contact" },
       "subjects": { "title": "Courses", "sub": "Reviews and info" },
       "schedule": { "title": "Schedule", "sub": "Academic year" },
       "guide": { "title": "Guide", "sub": "For freshmen" },

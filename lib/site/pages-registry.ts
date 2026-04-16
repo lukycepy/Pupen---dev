@@ -21,7 +21,7 @@ export const SITE_PAGES: SitePageRegistryItem[] = [
   { slug: 'roman', group: 'Ostatní', defaults: { enabled: false } },
 
   { slug: 'sos', group: 'Nástroje', toolKey: 'sos', defaults: { enabled: true, tools: true } },
-  { slug: 'schranka-duvery', group: 'Nástroje', defaults: { enabled: true, tools: true } },
+  { slug: 'schranka-duvery', group: 'Nástroje', toolKey: 'trustbox', defaults: { enabled: true, tools: true } },
   { slug: 'ztraty-a-nalezy', group: 'Nástroje', toolKey: 'lostFound', defaults: { enabled: true, tools: true } },
   { slug: 'predmety', group: 'Nástroje', toolKey: 'subjects', defaults: { enabled: true, tools: true } },
   { slug: 'harmonogram', group: 'Nástroje', toolKey: 'schedule', defaults: { enabled: true, tools: true } },
