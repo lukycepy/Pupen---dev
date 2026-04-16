@@ -4,7 +4,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, Users, Mail, Phone } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 import InlinePulse from '@/app/components/InlinePulse';
 import { getDictionary } from '@/lib/get-dictionary';
 import PageHeader from '@/app/components/ui/PageHeader';
@@ -67,15 +66,10 @@ export default function BoardPage() {
     (async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase
-          .from('team_members')
-          .select('id,name,role,email,phone,image_url,sort_order')
-          .eq('is_active', true)
-          .order('sort_order', { ascending: true })
-          .order('created_at', { ascending: false })
-          .limit(200);
-        if (error) throw error;
-        if (mounted) setItems((data || []) as any);
+        const res = await fetch('/api/team', { cache: 'no-store' });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(String(json?.error || 'Error'));
+        if (mounted) setItems((json?.items || []) as any);
       } catch {
         if (mounted) setItems([]);
       } finally {

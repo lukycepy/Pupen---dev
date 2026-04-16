@@ -20,7 +20,7 @@ interface NavbarProps {
 
 export default function Navbar({ lang, dict }: NavbarProps) {
   const t = dict && typeof dict === 'object' ? (dict as any) : {};
-  const navTools = t?.nav?.tools && typeof t.nav.tools === 'object' ? t.nav.tools : {};
+  const navTools = t?.tools && typeof t.tools === 'object' ? t.tools : {};
   const toolsTitle = navTools?.dropdownTitle || (lang === 'en' ? 'Tools' : 'Nástroje');
   const searchPlaceholder = t?.common?.searchPlaceholder || (lang === 'en' ? 'Search…' : 'Vyhledat…');
   const navHome = t?.home || (lang === 'en' ? 'Home' : 'Domů');

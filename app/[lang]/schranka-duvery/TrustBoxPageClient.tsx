@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
-import { Send, ShieldCheck, CheckCircle2, AlertCircle, Upload } from 'lucide-react';
+import { Send, ShieldCheck, CheckCircle2, AlertCircle, Upload, X } from 'lucide-react';
 import InlinePulse from '@/app/components/InlinePulse';
 import { useToast } from '@/app/context/ToastContext';
 
@@ -19,6 +19,42 @@ const TOPICS: Topic[] = [
   { id: 'organization', cs: 'Organizace / procesy', en: 'Organization / process' },
   { id: 'other', cs: 'Jiné', en: 'Other' },
 ];
+
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
+const MAX_FILES = 10;
+const ALLOWED_EXT = [
+  'pdf',
+  'doc',
+  'docx',
+  'xls',
+  'xlsx',
+  'ppt',
+  'pptx',
+  'txt',
+  'csv',
+  'zip',
+  'rar',
+  '7z',
+  'mp3',
+  'wav',
+  'm4a',
+  'ogg',
+  'mp4',
+  'mov',
+  'webm',
+  'jpg',
+  'jpeg',
+  'png',
+  'gif',
+  'webp',
+];
+
+function fileExt(name: string) {
+  const n = String(name || '');
+  const i = n.lastIndexOf('.');
+  if (i <= 0 || i === n.length - 1) return '';
+  return n.slice(i + 1).toLowerCase();
+}
 
 export default function TrustBoxPageClient() {
   const params = useParams();
@@ -44,6 +80,9 @@ export default function TrustBoxPageClient() {
   const [verifying, setVerifying] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'started' | 'verified'>('idle');
+  const [attachments, setAttachments] = useState<
+    { id: string; file: File; status: 'pending' | 'uploading' | 'uploaded' | 'error'; error?: string }[]
+  >([]);
 
   const tokenFromQuery = searchParams.get('token');
   const effectiveToken = verificationToken || tokenFromQuery;
@@ -55,7 +94,14 @@ export default function TrustBoxPageClient() {
       start: 'Odeslat a ověřit',
       verify: 'Ověřit a odeslat',
       code: 'Kód z e‑mailu',
-      upload: 'Nahrát přílohu (volitelné)',
+      upload: 'Přílohy (volitelné)',
+      uploadHint: 'Lze přiložit více souborů. Podporované: PDF, DOCX, ZIP, MP3, MP4 aj. Odkaz na OneDrive vložte přímo do textu.',
+      uploadStartFirst: 'Nejdřív klikněte na „Odeslat a ověřit“ a poté nahrajte přílohy.',
+      uploadSelected: 'Nahrát vybrané',
+      uploaded: 'Nahráno.',
+      tooManyFiles: `Maximálně ${MAX_FILES} souborů.`,
+      fileTooLarge: 'Soubor je větší než 10 MB.',
+      unsupportedFile: 'Nepodporovaný typ souboru.',
       followup: 'Chci možnost další komunikace (ticket)',
       forward: 'Souhlasím s předáním fakultě (pokud bude potřeba)',
       urgent: 'Urgentní',
@@ -68,7 +114,14 @@ export default function TrustBoxPageClient() {
       start: 'Send and verify',
       verify: 'Verify and submit',
       code: 'Email code',
-      upload: 'Upload attachment (optional)',
+      upload: 'Attachments (optional)',
+      uploadHint: 'You can attach multiple files (PDF, DOCX, ZIP, MP3, MP4, etc.). Or paste a OneDrive link into the message.',
+      uploadStartFirst: 'Click “Send and verify” first, then upload attachments.',
+      uploadSelected: 'Upload selected',
+      uploaded: 'Uploaded.',
+      tooManyFiles: `Up to ${MAX_FILES} files.`,
+      fileTooLarge: 'File is larger than 10 MB.',
+      unsupportedFile: 'Unsupported file type.',
       followup: 'Enable follow-up (ticket thread)',
       forward: 'I allow forwarding to faculty if needed',
       urgent: 'Urgent',
@@ -115,23 +168,71 @@ export default function TrustBoxPageClient() {
   };
 
   const onUpload = async (file: File) => {
-    const token = effectiveToken || (await onStart());
-    if (!token) return;
-    setUploading(true);
-    try {
-      const fd = new FormData();
-      fd.set('token', token);
-      fd.set('file', file);
-      const res = await fetch('/api/trustbox/attachments/upload', { method: 'POST', body: fd });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error || 'Error');
-      showToast(lang === 'en' ? 'Uploaded.' : 'Nahráno.', 'success');
-    } catch (e: any) {
-      showToast(e?.message || 'Error', 'error');
-    } finally {
-      setUploading(false);
-    }
+    if (!effectiveToken) throw new Error(labels.uploadStartFirst);
+    const fd = new FormData();
+    fd.set('token', effectiveToken);
+    fd.set('file', file);
+    const res = await fetch('/api/trustbox/attachments/upload', { method: 'POST', body: fd });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json?.error || 'Error');
   };
+
+  const validateFile = (file: File) => {
+    if (file.size > MAX_FILE_BYTES) return labels.fileTooLarge;
+    const ext = fileExt(file.name);
+    if (!ext || !ALLOWED_EXT.includes(ext)) return labels.unsupportedFile;
+    if (ext === 'svg') return labels.unsupportedFile;
+    return '';
+  };
+
+  const onSelectFiles = (files: FileList | null) => {
+    if (!files?.length) return;
+    const next: { id: string; file: File; status: 'pending' | 'uploading' | 'uploaded' | 'error'; error?: string }[] = [];
+    for (const f of Array.from(files)) {
+      const err = validateFile(f);
+      next.push({
+        id: `${Date.now()}_${Math.random().toString(16).slice(2)}`,
+        file: f,
+        status: err ? 'error' : 'pending',
+        error: err || undefined,
+      });
+    }
+
+    setAttachments((prev) => {
+      const merged = [...prev, ...next].slice(0, MAX_FILES);
+      if (prev.length + next.length > MAX_FILES) showToast(labels.tooManyFiles, 'error');
+      return merged;
+    });
+  };
+
+  const uploadPending = async () => {
+    if (!effectiveToken) {
+      showToast(labels.uploadStartFirst, 'error');
+      return;
+    }
+    setUploading(true);
+    const current = attachments;
+    for (const a of current) {
+      if (a.status !== 'pending' && a.status !== 'error') continue;
+      const err = validateFile(a.file);
+      if (err) {
+        setAttachments((prev) => prev.map((p) => (p.id === a.id ? { ...p, status: 'error', error: err } : p)));
+        continue;
+      }
+      setAttachments((prev) => prev.map((p) => (p.id === a.id ? { ...p, status: 'uploading', error: undefined } : p)));
+      try {
+        await onUpload(a.file);
+        setAttachments((prev) => prev.map((p) => (p.id === a.id ? { ...p, status: 'uploaded', error: undefined } : p)));
+        showToast(labels.uploaded, 'success');
+      } catch (e: any) {
+        setAttachments((prev) => prev.map((p) => (p.id === a.id ? { ...p, status: 'error', error: e?.message || 'Error' } : p)));
+        showToast(e?.message || 'Error', 'error');
+      }
+    }
+    setUploading(false);
+  };
+
+  const accept = useMemo(() => ALLOWED_EXT.map((e) => `.${e}`).join(','), []);
 
   const onVerify = async () => {
     if (!effectiveToken) return;
@@ -220,22 +321,63 @@ export default function TrustBoxPageClient() {
 
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{labels.upload}</label>
-                  <div className="flex items-center gap-3">
+                  <div className="text-xs text-stone-500 font-bold mb-3">{labels.uploadHint}</div>
+                  <div className="flex flex-wrap items-center gap-3">
                     <label className="inline-flex items-center gap-2 bg-stone-900 text-white px-5 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-600 transition cursor-pointer">
-                      {uploading || loading ? <InlinePulse className="bg-white/80" size={14} /> : <Upload size={16} />}
-                      {uploading || loading ? (lang === 'en' ? 'Uploading' : 'Nahrávám') : (lang === 'en' ? 'Select file' : 'Vybrat soubor')}
+                      <Upload size={16} />
+                      {lang === 'en' ? 'Select files' : 'Vybrat soubory'}
                       <input
                         type="file"
+                        multiple
+                        accept={accept}
                         className="hidden"
                         onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (f) onUpload(f);
+                          onSelectFiles(e.target.files);
                           e.currentTarget.value = '';
                         }}
                       />
                     </label>
+                    <button
+                      type="button"
+                      onClick={uploadPending}
+                      disabled={!attachments.some((a) => a.status === 'pending' || a.status === 'error') || !effectiveToken || uploading || loading}
+                      className="inline-flex items-center gap-2 bg-white text-stone-700 px-5 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-stone-200 hover:bg-stone-50 transition disabled:opacity-50"
+                    >
+                      {uploading ? <InlinePulse className="bg-stone-500/70" size={14} /> : null}
+                      {labels.uploadSelected}
+                    </button>
                     <div className="text-stone-400 text-sm font-bold">max 10MB</div>
                   </div>
+
+                  {attachments.length ? (
+                    <div className="mt-4 space-y-2">
+                      {attachments.map((a) => (
+                        <div key={a.id} className="flex items-center justify-between gap-3 bg-stone-50 border border-stone-200 rounded-2xl px-4 py-3">
+                          <div className="min-w-0">
+                            <div className="font-bold text-stone-800 truncate">{a.file.name}</div>
+                            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">
+                              {a.status === 'pending'
+                                ? (lang === 'en' ? 'Pending' : 'Připraveno')
+                                : a.status === 'uploading'
+                                  ? (lang === 'en' ? 'Uploading' : 'Nahrávám')
+                                  : a.status === 'uploaded'
+                                    ? (lang === 'en' ? 'Uploaded' : 'Nahráno')
+                                    : (a.error || (lang === 'en' ? 'Error' : 'Chyba'))}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setAttachments((prev) => prev.filter((p) => p.id !== a.id))}
+                            disabled={a.status === 'uploading'}
+                            className="shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-2xl border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 disabled:opacity-50"
+                            aria-label={lang === 'en' ? 'Remove' : 'Odebrat'}
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="flex flex-col gap-3">
@@ -278,22 +420,63 @@ export default function TrustBoxPageClient() {
 
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{labels.upload}</label>
-                  <div className="flex items-center gap-3">
+                  <div className="text-xs text-stone-500 font-bold mb-3">{labels.uploadHint}</div>
+                  <div className="flex flex-wrap items-center gap-3">
                     <label className="inline-flex items-center gap-2 bg-stone-900 text-white px-5 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-600 transition cursor-pointer">
-                      {uploading ? <InlinePulse className="bg-white/80" size={14} /> : <Upload size={16} />}
-                      {uploading ? (lang === 'en' ? 'Uploading' : 'Nahrávám') : (lang === 'en' ? 'Select file' : 'Vybrat soubor')}
+                      <Upload size={16} />
+                      {lang === 'en' ? 'Select files' : 'Vybrat soubory'}
                       <input
                         type="file"
+                        multiple
+                        accept={accept}
                         className="hidden"
                         onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (f) onUpload(f);
+                          onSelectFiles(e.target.files);
                           e.currentTarget.value = '';
                         }}
                       />
                     </label>
+                    <button
+                      type="button"
+                      onClick={uploadPending}
+                      disabled={!attachments.some((a) => a.status === 'pending' || a.status === 'error') || !effectiveToken || uploading}
+                      className="inline-flex items-center gap-2 bg-white text-stone-700 px-5 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-stone-200 hover:bg-stone-50 transition disabled:opacity-50"
+                    >
+                      {uploading ? <InlinePulse className="bg-stone-500/70" size={14} /> : null}
+                      {labels.uploadSelected}
+                    </button>
                     <div className="text-stone-400 text-sm font-bold">max 10MB</div>
                   </div>
+
+                  {attachments.length ? (
+                    <div className="mt-4 space-y-2">
+                      {attachments.map((a) => (
+                        <div key={a.id} className="flex items-center justify-between gap-3 bg-stone-50 border border-stone-200 rounded-2xl px-4 py-3">
+                          <div className="min-w-0">
+                            <div className="font-bold text-stone-800 truncate">{a.file.name}</div>
+                            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">
+                              {a.status === 'pending'
+                                ? (lang === 'en' ? 'Pending' : 'Připraveno')
+                                : a.status === 'uploading'
+                                  ? (lang === 'en' ? 'Uploading' : 'Nahrávám')
+                                  : a.status === 'uploaded'
+                                    ? (lang === 'en' ? 'Uploaded' : 'Nahráno')
+                                    : (a.error || (lang === 'en' ? 'Error' : 'Chyba'))}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setAttachments((prev) => prev.filter((p) => p.id !== a.id))}
+                            disabled={a.status === 'uploading'}
+                            className="shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-2xl border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 disabled:opacity-50"
+                            aria-label={lang === 'en' ? 'Remove' : 'Odebrat'}
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
 
                 <button

@@ -143,6 +143,118 @@ function section(label: string, value: any) {
   return `<p style="margin: 8px 0;"><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}</p>`;
 }
 
+function emailDoc(opts: {
+  subject: string;
+  title: string;
+  preheader?: string;
+  badge?: string;
+  introHtml?: string;
+  contentHtml?: string;
+  cta?: { href: string; label: string };
+  secondaryCta?: { href: string; label: string };
+  footerText?: string;
+  toEmail?: string;
+  lang?: 'cs' | 'en';
+}) {
+  const subject = String(opts.subject || '').trim();
+  const title = String(opts.title || '').trim();
+  const preheader = String(opts.preheader || '').trim();
+  const badge = String(opts.badge || '').trim();
+  const introHtml = String(opts.introHtml || '').trim();
+  const contentHtml = String(opts.contentHtml || '').trim();
+  const footerText = String(opts.footerText || '').trim();
+  const toEmail = String(opts.toEmail || '').trim();
+  const lang = opts.lang === 'en' ? 'en' : 'cs';
+
+  const ctaHref = String(opts.cta?.href || '').trim();
+  const ctaLabel = String(opts.cta?.label || '').trim();
+  const secondaryHref = String(opts.secondaryCta?.href || '').trim();
+  const secondaryLabel = String(opts.secondaryCta?.label || '').trim();
+
+  const ctaBlock = ctaHref && ctaLabel
+    ? `<div style="padding:18px 28px 8px 28px; text-align:center;">
+        <a href="${escapeHtml(ctaHref)}" style="display:inline-block; background:#16a34a; color:#ffffff; text-decoration:none; padding:14px 18px; border-radius:14px; font-weight:900; letter-spacing:0.08em; text-transform:uppercase; font-size:12px;">
+          ${escapeHtml(ctaLabel)}
+        </a>
+        <div style="margin-top:10px; font-size:12px; color:#78716c; word-break:break-all;">${escapeHtml(ctaHref)}</div>
+      </div>`
+    : '';
+
+  const secondaryBlock = secondaryHref && secondaryLabel
+    ? `<div style="padding:0 28px 22px 28px; text-align:center;">
+        <a href="${escapeHtml(secondaryHref)}" style="color:#16a34a; font-weight:900; text-decoration:underline; font-size:12px;">
+          ${escapeHtml(secondaryLabel)}
+        </a>
+      </div>`
+    : '';
+
+  return `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="x-apple-disable-message-reformatting" />
+    <title>${escapeHtml(subject)}</title>
+  </head>
+  <body style="margin:0; padding:0; background:#f5f5f4;">
+    <div style="display:none; max-height:0; overflow:hidden; opacity:0; color:transparent; mso-hide:all;">
+      ${escapeHtml(preheader)}
+    </div>
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f5f5f4;">
+      <tr>
+        <td align="center" style="padding:24px 12px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="640" style="width:640px; max-width:640px;">
+            <tr>
+              <td style="padding:0 0 14px 0;">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                  <tr>
+                    <td align="left" style="font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;">
+                      <div style="display:inline-block; padding:8px 12px; border-radius:999px; background:#dcfce7; color:#166534; font-weight:900; letter-spacing:0.18em; text-transform:uppercase; font-size:11px;">
+                        Pupen
+                      </div>
+                    </td>
+                    <td align="right" style="font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; font-size:12px; color:#78716c;">
+                      <a href="https://pupen.org" style="color:#16a34a; text-decoration:none; font-weight:800;">pupen.org</a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="background:#ffffff; border:1px solid #e7e5e4; border-radius:24px; overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,0.06);">
+                <div style="height:8px; background:linear-gradient(90deg, #16a34a, #22c55e);"></div>
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                  <tr>
+                    <td style="padding:26px 28px 8px 28px; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color:#1c1917;">
+                      ${badge ? `<div style="display:inline-block; padding:6px 10px; border-radius:999px; background:#f5f5f4; border:1px solid #e7e5e4; color:#57534e; font-weight:900; letter-spacing:0.18em; text-transform:uppercase; font-size:10px;">${escapeHtml(badge)}</div>` : ''}
+                      <h1 style="margin:${badge ? '10px' : '0'} 0 0 0; font-size:28px; line-height:1.15; font-weight:950; letter-spacing:-0.02em;">
+                        ${escapeHtml(title)}
+                      </h1>
+                    </td>
+                  </tr>
+                  ${introHtml ? `<tr><td style="padding:10px 28px 0 28px; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color:#292524; font-size:16px; line-height:1.6;">${introHtml}</td></tr>` : ''}
+                  ${contentHtml ? `<tr><td style="padding:14px 28px 0 28px; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color:#292524; font-size:15px; line-height:1.6;">${contentHtml}</td></tr>` : ''}
+                </table>
+                ${ctaBlock}
+                ${secondaryBlock}
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:16px 6px 0 6px; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color:#78716c; font-size:12px; line-height:1.5; text-align:center;">
+                ${footerText ? `<div style="margin-top:10px;">${escapeHtml(footerText)}</div>` : `<div style="margin-top:10px;">${lang === 'en' ? 'Student club Pupen, z.s.' : 'Studentský spolek Pupen, z.s.'}</div>`}
+                ${toEmail ? `<div style="margin-top:8px;">${lang === 'en' ? 'This email was sent to' : 'Tento e‑mail byl odeslán na'} <span style="font-weight:800; color:#44403c;">${escapeHtml(toEmail)}</span>.</div>` : ''}
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+}
+
 export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject: string; html: string; text?: string } {
   if (key === 'contact_message') {
     const name = String(vars?.name || '');
@@ -153,22 +265,26 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
     const messageId = String(vars?.messageId || '').trim();
 
     const subject = `Pupen — Nová zpráva z webu${subjectLine ? `: ${subjectLine}` : ''}`;
-    const html = `
-      <div style="font-family: sans-serif; padding: 20px; color: #1c1917; max-width: 700px; margin: auto; border: 1px solid #e7e5e4; border-radius: 20px;">
-        <h2 style="color: #16a34a; text-align: center;">Nová zpráva z webu</h2>
-        <div style="background-color: #f5f5f4; padding: 20px; border-radius: 15px; margin: 20px 0;">
+    const html = emailDoc({
+      subject,
+      title: 'Nová zpráva z webu',
+      badge: 'Kontakt',
+      preheader: subjectLine ? `Nová zpráva: ${subjectLine}` : 'Nová zpráva z webu.',
+      introHtml: `<p style="margin:0;">Doručila se nová zpráva z webového formuláře.</p>`,
+      contentHtml: `
+        <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px;">
           ${section('Jméno', name)}
           ${section('E‑mail', email)}
           ${subjectLine ? section('Předmět', subjectLine) : ''}
           ${createdAt ? section('Čas', createdAt) : ''}
           ${messageId ? section('ID', messageId) : ''}
-          <hr style="border: none; border-top: 1px solid #e7e5e4; margin: 16px 0;" />
-          <p style="margin: 8px 0;"><strong>Zpráva:</strong></p>
-          <div style="background: #ffffff; border: 1px solid #e7e5e4; border-radius: 14px; padding: 14px; white-space: pre-wrap;">${escapeHtml(message)}</div>
+          <hr style="border:none; border-top:1px solid #e7e5e4; margin:14px 0;" />
+          <div style="font-weight:900; margin:0 0 8px 0;">Zpráva</div>
+          <div style="background:#ffffff; border:1px solid #e7e5e4; border-radius:14px; padding:14px; white-space:pre-wrap;">${escapeHtml(message)}</div>
         </div>
-        <p style="font-size: 12px; color: #78716c; text-align: center;">Odpověď pošlete na ${escapeHtml(email)}.</p>
-      </div>
-    `;
+        <div style="margin-top:12px; font-size:13px; color:#57534e; font-weight:800;">Odpověď pošlete na ${escapeHtml(email)}.</div>
+      `,
+    });
     return { subject, html };
   }
 
@@ -256,18 +372,22 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
     const code = String(vars?.code || '').trim();
     const lang = vars?.lang === 'en' ? 'en' : 'cs';
     const subject = lang === 'en' ? 'Pupen — Trust Box verification' : 'Pupen — Ověření schránky důvěry';
-    const html = `
-      <div style="font-family: sans-serif; padding: 20px; color: #1c1917; max-width: 700px; margin: auto; border: 1px solid #e7e5e4; border-radius: 20px;">
-        <h2 style="color: #16a34a; text-align: center;">${lang === 'en' ? 'Verify your email' : 'Ověřte svůj e‑mail'}</h2>
-        <div style="background-color: #f5f5f4; padding: 20px; border-radius: 15px; margin: 20px 0;">
-          <p style="margin: 8px 0;">${lang === 'en' ? 'Hello' : 'Dobrý den'}${firstName ? ` ${escapeHtml(firstName)}` : ''},</p>
-          <p style="margin: 8px 0;">${lang === 'en' ? 'To submit a message to the Trust Box, please verify your email.' : 'Pro odeslání podnětu do schránky důvěry prosím ověřte svůj e‑mail.'}</p>
-          ${verifyUrl ? `<p style="margin: 16px 0;"><a href="${escapeHtml(verifyUrl)}" style="display:inline-block; background:#16a34a; color:#ffffff; text-decoration:none; padding:12px 16px; border-radius:14px; font-weight:900;">${lang === 'en' ? 'Verify' : 'Ověřit'}</a></p>` : ''}
-          ${code ? `<p style="margin: 8px 0;"><strong>${lang === 'en' ? 'Code' : 'Kód'}:</strong> ${escapeHtml(code)}</p>` : ''}
-          <p style="margin: 8px 0; font-size: 12px; color:#78716c;">${lang === 'en' ? `This email was sent to ${escapeHtml(toEmail)}.` : `Tento e‑mail byl odeslán na ${escapeHtml(toEmail)}.`}</p>
+    const html = emailDoc({
+      subject,
+      title: lang === 'en' ? 'Verify your email' : 'Ověřte svůj e‑mail',
+      badge: lang === 'en' ? 'Trust Box' : 'Schránka důvěry',
+      preheader: lang === 'en' ? 'Verification code inside.' : 'Uvnitř je ověřovací kód.',
+      introHtml: `<p style="margin:0;">${lang === 'en' ? 'To submit a message to the Trust Box, verify your email.' : 'Pro odeslání podnětu do schránky důvěry prosím ověřte svůj e‑mail.'}</p>`,
+      contentHtml: `
+        <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px;">
+          <div style="font-weight:900; font-size:13px; color:#44403c; margin-bottom:10px;">${lang === 'en' ? 'Hello' : 'Dobrý den'}${firstName ? ` ${escapeHtml(firstName)}` : ''}</div>
+          ${code ? `<div style="margin:10px 0; font-weight:900;">${escapeHtml(lang === 'en' ? 'Code' : 'Kód')}:</div><div style="display:inline-block; background:#ffffff; border:1px solid #e7e5e4; border-radius:14px; padding:10px 12px; font-weight:950; letter-spacing:0.22em; font-size:18px;">${escapeHtml(code)}</div>` : ''}
         </div>
-      </div>
-    `;
+      `,
+      cta: verifyUrl ? { href: verifyUrl, label: lang === 'en' ? 'Verify' : 'Ověřit' } : undefined,
+      toEmail,
+      lang,
+    });
     return { subject, html };
   }
 
@@ -277,17 +397,16 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
     const threadUrl = String(vars?.threadUrl || '').trim();
     const lang = vars?.lang === 'en' ? 'en' : 'cs';
     const subject = lang === 'en' ? 'Pupen — Trust Box received' : 'Pupen — Schránka důvěry: přijato';
-    const html = `
-      <div style="font-family: sans-serif; padding: 20px; color: #1c1917; max-width: 700px; margin: auto; border: 1px solid #e7e5e4; border-radius: 20px;">
-        <h2 style="color: #16a34a; text-align: center;">${lang === 'en' ? 'Thank you' : 'Děkujeme za důvěru'}</h2>
-        <div style="background-color: #f5f5f4; padding: 20px; border-radius: 15px; margin: 20px 0;">
-          <p style="margin: 8px 0;">${lang === 'en' ? 'Hello' : 'Dobrý den'}${firstName ? ` ${escapeHtml(firstName)}` : ''},</p>
-          <p style="margin: 8px 0;">${lang === 'en' ? 'Your message was received.' : 'Váš podnět byl přijat.'}</p>
-          ${threadUrl ? `<p style="margin: 16px 0;"><a href="${escapeHtml(threadUrl)}" style="display:inline-block; background:#16a34a; color:#ffffff; text-decoration:none; padding:12px 16px; border-radius:14px; font-weight:900;">${lang === 'en' ? 'Open thread' : 'Otevřít vlákno'}</a></p>` : ''}
-          <p style="margin: 8px 0; font-size: 12px; color:#78716c;">${lang === 'en' ? `This email was sent to ${escapeHtml(toEmail)}.` : `Tento e‑mail byl odeslán na ${escapeHtml(toEmail)}.`}</p>
-        </div>
-      </div>
-    `;
+    const html = emailDoc({
+      subject,
+      title: lang === 'en' ? 'Thank you' : 'Děkujeme za důvěru',
+      badge: lang === 'en' ? 'Trust Box' : 'Schránka důvěry',
+      preheader: lang === 'en' ? 'We received your report.' : 'Váš podnět byl přijat.',
+      introHtml: `<p style="margin:0;">${lang === 'en' ? 'Hello' : 'Dobrý den'}${firstName ? ` ${escapeHtml(firstName)}` : ''}, ${lang === 'en' ? 'your message was received.' : 'váš podnět byl přijat.'}</p>`,
+      cta: threadUrl ? { href: threadUrl, label: lang === 'en' ? 'Open thread' : 'Otevřít vlákno' } : undefined,
+      toEmail,
+      lang,
+    });
     return { subject, html };
   }
 
@@ -298,18 +417,19 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
     const authorName = String(vars?.authorName || '').trim();
     const lang = vars?.lang === 'en' ? 'en' : 'cs';
     const subject = lang === 'en' ? 'Pupen — Trust Box update' : 'Pupen — Schránka důvěry: nová zpráva';
-    const html = `
-      <div style="font-family: sans-serif; padding: 20px; color: #1c1917; max-width: 700px; margin: auto; border: 1px solid #e7e5e4; border-radius: 20px;">
-        <h2 style="color: #16a34a; text-align: center;">${lang === 'en' ? 'New message' : 'Nová zpráva'}</h2>
-        <div style="background-color: #f5f5f4; padding: 20px; border-radius: 15px; margin: 20px 0;">
-          <p style="margin: 8px 0;">${lang === 'en' ? 'Hello' : 'Dobrý den'}${firstName ? ` ${escapeHtml(firstName)}` : ''},</p>
-          <p style="margin: 8px 0;">${lang === 'en' ? 'There is a new message in your Trust Box thread.' : 'Ve vašem vlákně schránky důvěry je nová zpráva.'}</p>
-          ${authorName ? `<p style="margin: 8px 0; color:#57534e; font-size: 12px; font-weight: 700;">${lang === 'en' ? 'Replied by' : 'Odpověděl'}: ${escapeHtml(authorName)}</p>` : ''}
-          ${threadUrl ? `<p style="margin: 16px 0;"><a href="${escapeHtml(threadUrl)}" style="display:inline-block; background:#16a34a; color:#ffffff; text-decoration:none; padding:12px 16px; border-radius:14px; font-weight:900;">${lang === 'en' ? 'Open thread' : 'Otevřít vlákno'}</a></p>` : ''}
-          <p style="margin: 8px 0; font-size: 12px; color:#78716c;">${lang === 'en' ? `This email was sent to ${escapeHtml(toEmail)}.` : `Tento e‑mail byl odeslán na ${escapeHtml(toEmail)}.`}</p>
-        </div>
-      </div>
-    `;
+    const html = emailDoc({
+      subject,
+      title: lang === 'en' ? 'New message' : 'Nová zpráva',
+      badge: lang === 'en' ? 'Trust Box' : 'Schránka důvěry',
+      preheader: lang === 'en' ? 'There is a new message in your thread.' : 'Ve vlákně je nová zpráva.',
+      introHtml: `<p style="margin:0;">${lang === 'en' ? 'Hello' : 'Dobrý den'}${firstName ? ` ${escapeHtml(firstName)}` : ''}, ${lang === 'en' ? 'there is a new message in your Trust Box thread.' : 've vašem vlákně schránky důvěry je nová zpráva.'}</p>`,
+      contentHtml: authorName
+        ? `<div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:14px; font-weight:900; color:#57534e; font-size:13px;">${escapeHtml(lang === 'en' ? 'Replied by' : 'Odpověděl')}: ${escapeHtml(authorName)}</div>`
+        : '',
+      cta: threadUrl ? { href: threadUrl, label: lang === 'en' ? 'Open thread' : 'Otevřít vlákno' } : undefined,
+      toEmail,
+      lang,
+    });
     return { subject, html };
   }
 
@@ -317,18 +437,22 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
     const firstName = vars?.firstName ? String(vars.firstName) : '';
     const password = String(vars?.password || '');
     const subject = 'Pupen — Přístup do administrace';
-    const html = `
-      <div style="font-family: sans-serif; padding: 20px; color: #1c1917; max-width: 700px; margin: auto; border: 1px solid #e7e5e4; border-radius: 20px;">
-        <h2 style="color: #16a34a; text-align: center;">Přístup do administrace</h2>
-        <p style="text-align: center; font-weight: bold; font-size: 18px;">Ahoj${firstName ? ` ${escapeHtml(firstName)}` : ''}!</p>
-        <div style="background-color: #f5f5f4; padding: 20px; border-radius: 15px; margin: 20px 0;">
-          <p><strong>Vaše nové heslo:</strong></p>
-          <p style="font-size: 22px; font-weight: 800; letter-spacing: 0.2em; background: white; padding: 12px 16px; border-radius: 12px; display: inline-block;">${escapeHtml(password)}</p>
-          <p style="font-size: 12px; color: #78716c; margin-top: 16px;">Heslo si po přihlášení změňte.</p>
+    const html = emailDoc({
+      subject,
+      title: 'Přístup do administrace',
+      badge: 'Admin',
+      preheader: 'V e‑mailu je dočasné heslo pro přihlášení.',
+      introHtml: `<p style="margin:0;">Ahoj${firstName ? ` ${escapeHtml(firstName)}` : ''}! Níže je dočasné heslo pro přístup do administrace.</p>`,
+      contentHtml: `
+        <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px; text-align:center;">
+          <div style="font-weight:900; margin-bottom:10px;">Dočasné heslo</div>
+          <div style="display:inline-block; background:#ffffff; border:1px solid #e7e5e4; border-radius:14px; padding:10px 12px; font-weight:950; letter-spacing:0.18em; font-size:18px;">${escapeHtml(password)}</div>
+          <div style="margin-top:12px; font-size:12px; color:#78716c; font-weight:800;">Heslo si po přihlášení změňte.</div>
         </div>
-        <p style="font-size: 12px; color: #78716c; text-align: center;">Tento e-mail byl odeslán automaticky systémem Pupen.</p>
-      </div>
-    `;
+      `,
+      footerText: 'Tento e‑mail byl odeslán automaticky systémem Pupen.',
+      lang: 'cs',
+    });
     return { subject, html };
   }
 
@@ -346,19 +470,16 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
       lang === 'en'
         ? 'If you did not request this, you can ignore this email.'
         : 'Pokud jste o obnovu nepožádali, tento e‑mail ignorujte.';
-    const html = `
-      <div style="font-family: sans-serif; padding: 20px; color: #1c1917; max-width: 700px; margin: auto; border: 1px solid #e7e5e4; border-radius: 20px;">
-        <h2 style="color: #16a34a; text-align: center;">${escapeHtml(title)}</h2>
-        <p style="text-align: center; font-weight: 700; font-size: 16px;">${escapeHtml(intro)}</p>
-        <div style="background-color: #f5f5f4; padding: 20px; border-radius: 15px; margin: 20px 0; text-align: center;">
-          <a href="${escapeHtml(resetUrl)}" style="display: inline-block; background: #16a34a; color: #fff; padding: 14px 18px; border-radius: 14px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none; font-size: 12px;">
-            ${escapeHtml(cta)}
-          </a>
-          <p style="margin-top: 16px; font-size: 12px; color: #78716c;">${escapeHtml(resetUrl)}</p>
-        </div>
-        <p style="font-size: 12px; color: #78716c; text-align: center;">${escapeHtml(note)}</p>
-      </div>
-    `;
+    const html = emailDoc({
+      subject,
+      title,
+      badge: lang === 'en' ? 'Security' : 'Bezpečnost',
+      preheader: lang === 'en' ? 'Use the link to set a new password.' : 'Odkaz pro nastavení nového hesla.',
+      introHtml: `<p style="margin:0;">${escapeHtml(intro)}</p>`,
+      cta: resetUrl ? { href: resetUrl, label: cta } : undefined,
+      contentHtml: `<div style="margin-top:12px; font-size:12px; color:#78716c; font-weight:800;">${escapeHtml(note)}</div>`,
+      lang,
+    });
     return { subject, html };
   }
 
@@ -380,20 +501,17 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
         ? 'If you already have a password, you can still use this link to set a new one.'
         : 'Pokud už heslo máš, tímto odkazem si ho můžeš případně znovu nastavit.';
 
-    const html = `
-      <div style="font-family: sans-serif; padding: 20px; color: #1c1917; max-width: 700px; margin: auto; border: 1px solid #e7e5e4; border-radius: 20px;">
-        <h2 style="color: #16a34a; text-align: center;">${escapeHtml(title)}</h2>
-        <p style="text-align: center; font-weight: 700; font-size: 16px;">${intro}</p>
-        <div style="background-color: #f5f5f4; padding: 20px; border-radius: 15px; margin: 20px 0; text-align: center;">
-          <a href="${escapeHtml(actionUrl)}" style="display: inline-block; background: #16a34a; color: #fff; padding: 14px 18px; border-radius: 14px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none; font-size: 12px;">
-            ${escapeHtml(cta)}
-          </a>
-          <p style="margin-top: 16px; font-size: 12px; color: #78716c;">${escapeHtml(actionUrl)}</p>
-        </div>
-        <p style="font-size: 12px; color: #78716c; text-align: center;">${escapeHtml(note)}</p>
-        ${toEmail ? `<p style="font-size: 12px; color: #78716c; text-align: center;">${escapeHtml(toEmail)}</p>` : ''}
-      </div>
-    `;
+    const html = emailDoc({
+      subject,
+      title,
+      badge: lang === 'en' ? 'Member' : 'Člen',
+      preheader: lang === 'en' ? 'Your access is approved.' : 'Váš přístup je schválen.',
+      introHtml: `<p style="margin:0;">${intro}</p>`,
+      cta: actionUrl ? { href: actionUrl, label: cta } : undefined,
+      contentHtml: `<div style="margin-top:12px; font-size:12px; color:#78716c; font-weight:800;">${escapeHtml(note)}</div>`,
+      toEmail,
+      lang,
+    });
     return { subject, html };
   }
 
@@ -413,16 +531,16 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
         ? 'You can now access the member portal and stay updated.'
         : 'Můžeš teď využívat členský portál a mít přehled o dění.';
 
-    const html = `
-      <div style="font-family: sans-serif; padding: 20px; color: #1c1917; max-width: 700px; margin: auto; border: 1px solid #e7e5e4; border-radius: 20px;">
-        <h2 style="color: #16a34a; text-align: center;">${escapeHtml(title)}</h2>
-        <p style="text-align: center; font-weight: 700; font-size: 16px;">${intro}</p>
-        <div style="background-color: #f5f5f4; padding: 20px; border-radius: 15px; margin: 20px 0; text-align: center;">
-          <p style="margin: 0; font-size: 14px; color: #292524; font-weight: 700;">${escapeHtml(body)}</p>
-        </div>
-        ${toEmail ? `<p style="font-size: 12px; color: #78716c; text-align: center;">${escapeHtml(toEmail)}</p>` : ''}
-      </div>
-    `;
+    const html = emailDoc({
+      subject,
+      title,
+      badge: lang === 'en' ? 'Member' : 'Člen',
+      preheader: lang === 'en' ? 'Welcome to Pupen.' : 'Vítej v Pupen.',
+      introHtml: `<p style="margin:0;">${intro}</p>`,
+      contentHtml: `<div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px; font-weight:800;">${escapeHtml(body)}</div>`,
+      toEmail,
+      lang,
+    });
     return { subject, html };
   }
 
@@ -442,16 +560,16 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
         ? 'We will review it and then email you the result. After approval you will get access to the member portal.'
         : 'Přihlášku zkontrolujeme a výsledek pošleme e-mailem. Po schválení přijde i přístup do členského portálu.';
 
-    const html = `
-      <div style="font-family: sans-serif; padding: 20px; color: #1c1917; max-width: 700px; margin: auto; border: 1px solid #e7e5e4; border-radius: 20px;">
-        <h2 style="color: #16a34a; text-align: center;">${escapeHtml(title)}</h2>
-        <p style="text-align: center; font-weight: 800; font-size: 16px;">${intro}</p>
-        <div style="background-color: #f5f5f4; padding: 20px; border-radius: 15px; margin: 20px 0; text-align: center;">
-          <p style="margin: 0; font-size: 14px; color: #292524; font-weight: 700;">${escapeHtml(body)}</p>
-        </div>
-        ${toEmail ? `<p style="font-size: 12px; color: #78716c; text-align: center;">${escapeHtml(toEmail)}</p>` : ''}
-      </div>
-    `;
+    const html = emailDoc({
+      subject,
+      title,
+      badge: lang === 'en' ? 'Application' : 'Přihláška',
+      preheader: lang === 'en' ? 'We received your application.' : 'Přihláška dorazila.',
+      introHtml: `<p style="margin:0;">${intro}</p>`,
+      contentHtml: `<div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px; font-weight:800;">${escapeHtml(body)}</div>`,
+      toEmail,
+      lang,
+    });
     return { subject, html };
   }
 
@@ -467,17 +585,21 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
     const title = lang === 'en' ? 'New application submitted' : 'Byla podána nová přihláška';
     const fullName = `${String(firstName || '').trim()} ${String(lastName || '').trim()}`.trim();
 
-    const html = `
-      <div style="font-family: sans-serif; padding: 20px; color: #1c1917; max-width: 700px; margin: auto; border: 1px solid #e7e5e4; border-radius: 20px;">
-        <h2 style="color: #16a34a; text-align: center;">${escapeHtml(title)}</h2>
-        <div style="background-color: #f5f5f4; padding: 18px; border-radius: 15px; margin: 20px 0;">
+    const html = emailDoc({
+      subject,
+      title,
+      badge: 'Admin',
+      preheader: lang === 'en' ? 'A new application was submitted.' : 'Byla podána nová přihláška.',
+      contentHtml: `
+        <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px;">
           ${fullName ? section(lang === 'en' ? 'Name' : 'Jméno', fullName) : ''}
           ${toEmail ? section('E-mail', toEmail) : ''}
           ${membershipType ? section(lang === 'en' ? 'Type' : 'Typ', membershipType) : ''}
         </div>
-        ${adminLink ? `<div style="text-align:center; margin-top: 10px;"><a href="${escapeHtml(adminLink)}" style="display:inline-block; background:#16a34a; color:#fff; padding: 12px 16px; border-radius: 14px; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; text-decoration:none; font-size:12px;">${escapeHtml(lang === 'en' ? 'Open in admin' : 'Otevřít v administraci')}</a></div>` : ''}
-      </div>
-    `;
+      `,
+      cta: adminLink ? { href: adminLink, label: lang === 'en' ? 'Open in admin' : 'Otevřít v administraci' } : undefined,
+      lang,
+    });
     return { subject, html };
   }
 
@@ -497,15 +619,17 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
     const cta = lang === 'en' ? 'Set password and sign in' : 'Nastavit heslo a přihlásit se';
     const pdfLabel = lang === 'en' ? 'Download application PDF' : 'Stáhnout PDF přihlášky';
 
-    const html = `
-      <div style="font-family: sans-serif; padding: 20px; color: #1c1917; max-width: 700px; margin: auto; border: 1px solid #e7e5e4; border-radius: 20px;">
-        <h2 style="color: #16a34a; text-align: center;">${escapeHtml(title)}</h2>
-        <p style="text-align: center; font-weight: 800; font-size: 16px;">${intro}</p>
-        ${actionUrl ? `<div style="background-color: #f5f5f4; padding: 20px; border-radius: 15px; margin: 20px 0; text-align: center;"><a href="${escapeHtml(actionUrl)}" style="display: inline-block; background: #16a34a; color: #fff; padding: 14px 18px; border-radius: 14px; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none; font-size: 12px;">${escapeHtml(cta)}</a><p style="margin-top: 16px; font-size: 12px; color: #78716c;">${escapeHtml(actionUrl)}</p></div>` : ''}
-        ${pdfUrl ? `<div style="text-align:center; margin-top: 8px;"><a href="${escapeHtml(pdfUrl)}" style="color:#16a34a; font-weight: 900; text-decoration: underline;">${escapeHtml(pdfLabel)}</a></div>` : ''}
-        ${toEmail ? `<p style="font-size: 12px; color: #78716c; text-align: center; margin-top: 18px;">${escapeHtml(toEmail)}</p>` : ''}
-      </div>
-    `;
+    const html = emailDoc({
+      subject,
+      title,
+      badge: lang === 'en' ? 'Application' : 'Přihláška',
+      preheader: lang === 'en' ? 'Application approved.' : 'Přihláška schválena.',
+      introHtml: `<p style="margin:0;">${intro}</p>`,
+      cta: actionUrl ? { href: actionUrl, label: cta } : undefined,
+      secondaryCta: pdfUrl ? { href: pdfUrl, label: pdfLabel } : undefined,
+      toEmail,
+      lang,
+    });
     return { subject, html };
   }
 
@@ -560,18 +684,22 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
             ? 'We will contact you after review.'
             : 'Po posouzení vás budeme kontaktovat.';
 
-    const html = `
-      <div style="font-family: sans-serif; padding: 20px; color: #1c1917; max-width: 700px; margin: auto; border: 1px solid #e7e5e4; border-radius: 20px;">
-        <h2 style="color: #16a34a; text-align: center;">${escapeHtml(title)}</h2>
-        <p style="text-align: center; font-weight: 700; font-size: 16px;">${intro}</p>
-        <div style="background-color: #f5f5f4; padding: 20px; border-radius: 15px; margin: 20px 0; text-align: center;">
-          <p style="margin: 0; font-size: 14px; color: #292524; font-weight: 800;">${escapeHtml(lang === 'en' ? 'Status' : 'Stav')}: ${escapeHtml(statusLabel)}</p>
-          ${reason ? `<p style="margin: 10px 0 0; font-size: 13px; color: #44403c; font-weight: 700;">${escapeHtml(lang === 'en' ? 'Reason' : 'Důvod')}: ${escapeHtml(reason)}</p>` : ''}
+    const html = emailDoc({
+      subject,
+      title,
+      badge: lang === 'en' ? 'Application' : 'Přihláška',
+      preheader: `${lang === 'en' ? 'Status' : 'Stav'}: ${statusLabel}`,
+      introHtml: `<p style="margin:0;">${intro}</p>`,
+      contentHtml: `
+        <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px;">
+          <div style="font-weight:950; font-size:16px;">${escapeHtml(lang === 'en' ? 'Status' : 'Stav')}: ${escapeHtml(statusLabel)}</div>
+          ${reason ? `<div style="margin-top:10px; font-weight:800; color:#44403c;">${escapeHtml(lang === 'en' ? 'Reason' : 'Důvod')}: ${escapeHtml(reason)}</div>` : ''}
+          <div style="margin-top:12px; font-size:12px; color:#78716c; font-weight:800;">${escapeHtml(hint)}</div>
         </div>
-        <p style="font-size: 12px; color: #78716c; text-align: center;">${escapeHtml(hint)}</p>
-        ${toEmail ? `<p style="font-size: 12px; color: #78716c; text-align: center;">${escapeHtml(toEmail)}</p>` : ''}
-      </div>
-    `;
+      `,
+      toEmail,
+      lang,
+    });
     return { subject, html };
   }
 
@@ -601,18 +729,22 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
     const title = lang === 'en' ? 'Application status changed' : 'Změna stavu přihlášky';
     const fullName = `${String(firstName || '').trim()} ${String(lastName || '').trim()}`.trim();
 
-    const html = `
-      <div style="font-family: sans-serif; padding: 20px; color: #1c1917; max-width: 700px; margin: auto; border: 1px solid #e7e5e4; border-radius: 20px;">
-        <h2 style="color: #16a34a; text-align: center;">${escapeHtml(title)}</h2>
-        <div style="background-color: #f5f5f4; padding: 18px; border-radius: 15px; margin: 20px 0;">
+    const html = emailDoc({
+      subject,
+      title,
+      badge: 'Admin',
+      preheader: `${lang === 'en' ? 'Status' : 'Stav'}: ${statusLabel}`,
+      contentHtml: `
+        <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px;">
           ${fullName ? section(lang === 'en' ? 'Name' : 'Jméno', fullName) : ''}
           ${toEmail ? section('E-mail', toEmail) : ''}
           ${section(lang === 'en' ? 'Status' : 'Stav', statusLabel)}
           ${reason ? section(lang === 'en' ? 'Reason' : 'Důvod', reason) : ''}
         </div>
-        ${adminLink ? `<div style="text-align:center; margin-top: 10px;"><a href="${escapeHtml(adminLink)}" style="display:inline-block; background:#16a34a; color:#fff; padding: 12px 16px; border-radius: 14px; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; text-decoration:none; font-size:12px;">${escapeHtml(lang === 'en' ? 'Open in admin' : 'Otevřít v administraci')}</a></div>` : ''}
-      </div>
-    `;
+      `,
+      cta: adminLink ? { href: adminLink, label: lang === 'en' ? 'Open in admin' : 'Otevřít v administraci' } : undefined,
+      lang,
+    });
     return { subject, html };
   }
 
@@ -653,18 +785,22 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
         ? 'If you have questions about renewal, reply to this email.'
         : 'Pokud máte dotazy k prodloužení, odpovězte na tento e-mail.';
 
-    const html = `
-      <div style="font-family: sans-serif; padding: 20px; color: #1c1917; max-width: 700px; margin: auto; border: 1px solid #e7e5e4; border-radius: 20px;">
-        <h2 style="color: #16a34a; text-align: center;">${escapeHtml(title)}</h2>
-        <p style="text-align: center; font-weight: 700; font-size: 16px;">${intro}</p>
-        <div style="background-color: #f5f5f4; padding: 20px; border-radius: 15px; margin: 20px 0; text-align: center;">
-          ${body ? `<p style="margin: 0; font-size: 14px; color: #292524; font-weight: 700;">${body}</p>` : ''}
-          ${daysLeft >= 0 ? `<p style="margin: 10px 0 0; font-size: 12px; color: #78716c;">${escapeHtml(lang === 'en' ? `Days left: ${Math.ceil(daysLeft)}` : `Zbývá dní: ${Math.ceil(daysLeft)}`)}</p>` : ''}
+    const html = emailDoc({
+      subject,
+      title,
+      badge: lang === 'en' ? 'Membership' : 'Členství',
+      preheader: isExpired ? (lang === 'en' ? 'Membership expired.' : 'Členství vypršelo.') : (lang === 'en' ? 'Membership expires soon.' : 'Členství brzy vyprší.'),
+      introHtml: `<p style="margin:0;">${intro}</p>`,
+      contentHtml: `
+        <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px;">
+          ${body ? `<div style="font-weight:900;">${body}</div>` : ''}
+          ${daysLeft >= 0 ? `<div style="margin-top:10px; font-size:12px; color:#78716c; font-weight:900;">${escapeHtml(lang === 'en' ? `Days left: ${Math.ceil(daysLeft)}` : `Zbývá dní: ${Math.ceil(daysLeft)}`)}</div>` : ''}
+          <div style="margin-top:12px; font-size:12px; color:#78716c; font-weight:800;">${escapeHtml(hint)}</div>
         </div>
-        <p style="font-size: 12px; color: #78716c; text-align: center;">${escapeHtml(hint)}</p>
-        ${toEmail ? `<p style="font-size: 12px; color: #78716c; text-align: center;">${escapeHtml(toEmail)}</p>` : ''}
-      </div>
-    `;
+      `,
+      toEmail,
+      lang,
+    });
     return { subject, html };
   }
 
@@ -673,24 +809,28 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
     const eventTitle = String(vars?.eventTitle || '');
     const buyerType = vars?.buyerType === 'company' ? 'Firma' : 'Osoba';
     const subject = `Žádost o fakturu: ${eventTitle} (${rsvpId})`;
-    const html = `
-      <div style="font-family: sans-serif; padding: 20px; color: #1c1917; max-width: 700px; margin: auto; border: 1px solid #e7e5e4; border-radius: 20px;">
-        <h2 style="color: #16a34a; text-align: center;">Žádost o fakturu</h2>
-        <p style="text-align: center; font-weight: bold; font-size: 18px;">${escapeHtml(eventTitle)}</p>
-        <div style="background-color: #f5f5f4; padding: 20px; border-radius: 15px; margin: 20px 0;">
+    const html = emailDoc({
+      subject,
+      title: 'Žádost o fakturu',
+      badge: 'Finance',
+      preheader: `Žádost o fakturu: ${eventTitle}`,
+      contentHtml: `
+        <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px;">
+          <div style="font-weight:950; font-size:16px; margin-bottom:10px;">${escapeHtml(eventTitle)}</div>
           ${section('RSVP ID', rsvpId)}
           ${vars?.eventId ? section('Event ID', vars.eventId) : ''}
           ${section('Kontakt', vars?.email)}
-          <hr style="border: none; border-top: 1px solid #e7e5e4; margin: 16px 0;" />
+          <hr style="border:none; border-top:1px solid #e7e5e4; margin:14px 0;" />
           ${section('Typ odběratele', buyerType)}
           ${section('Název / jméno', vars?.buyerName)}
           ${section('Adresa', vars?.buyerAddress)}
           ${vars?.buyerType === 'company' ? `${section('IČO', vars?.ico || '-')}${section('DIČ', vars?.dic || '-')}` : ''}
-          ${vars?.note ? `<hr style="border: none; border-top: 1px solid #e7e5e4; margin: 16px 0;" />${section('Poznámka', vars?.note)}` : ''}
+          ${vars?.note ? `<hr style="border:none; border-top:1px solid #e7e5e4; margin:14px 0;" />${section('Poznámka', vars?.note)}` : ''}
         </div>
-        <p style="font-size: 12px; color: #78716c; text-align: center;">Tento e-mail byl odeslán automaticky systémem Pupen.</p>
-      </div>
-    `;
+      `,
+      footerText: 'Tento e‑mail byl odeslán automaticky systémem Pupen.',
+      lang: 'cs',
+    });
     return { subject, html };
   }
 
@@ -699,21 +839,25 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
     const eventTitle = String(vars?.eventTitle || '');
     const reason = String(vars?.reason || '');
     const subject = `Žádost o refund: ${eventTitle} (${rsvpId})`;
-    const html = `
-      <div style="font-family: sans-serif; padding: 20px; color: #1c1917; max-width: 700px; margin: auto; border: 1px solid #e7e5e4; border-radius: 20px;">
-        <h2 style="color: #16a34a; text-align: center;">Žádost o refund</h2>
-        <p style="text-align: center; font-weight: bold; font-size: 18px;">${escapeHtml(eventTitle)}</p>
-        <div style="background-color: #f5f5f4; padding: 20px; border-radius: 15px; margin: 20px 0;">
+    const html = emailDoc({
+      subject,
+      title: 'Žádost o refund',
+      badge: 'Finance',
+      preheader: `Žádost o refund: ${eventTitle}`,
+      contentHtml: `
+        <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px;">
+          <div style="font-weight:950; font-size:16px; margin-bottom:10px;">${escapeHtml(eventTitle)}</div>
           ${section('RSVP ID', rsvpId)}
           ${vars?.eventId ? section('Event ID', vars.eventId) : ''}
           ${section('Kontakt', vars?.email)}
-          <hr style="border: none; border-top: 1px solid #e7e5e4; margin: 16px 0;" />
+          <hr style="border:none; border-top:1px solid #e7e5e4; margin:14px 0;" />
           ${section('Důvod', reason)}
-          ${vars?.note ? `<hr style="border: none; border-top: 1px solid #e7e5e4; margin: 16px 0;" />${section('Poznámka', vars?.note)}` : ''}
+          ${vars?.note ? `<hr style="border:none; border-top:1px solid #e7e5e4; margin:14px 0;" />${section('Poznámka', vars?.note)}` : ''}
         </div>
-        <p style="font-size: 12px; color: #78716c; text-align: center;">Tento e-mail byl odeslán automaticky systémem Pupen.</p>
-      </div>
-    `;
+      `,
+      footerText: 'Tento e‑mail byl odeslán automaticky systémem Pupen.',
+      lang: 'cs',
+    });
     return { subject, html };
   }
 
@@ -730,22 +874,26 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
       status === 'approved' ? 'Schváleno' : status === 'denied' ? 'Zamítnuto' : status === 'paid' ? 'Vyplaceno' : status;
 
     const subject = `Refund – ${statusLabel}: ${eventTitle}`;
-    const html = `
-      <div style="font-family: sans-serif; padding: 20px; color: #1c1917; max-width: 700px; margin: auto; border: 1px solid #e7e5e4; border-radius: 20px;">
-        <h2 style="color: #16a34a; text-align: center;">Refund – změna stavu</h2>
-        <p style="text-align: center; font-weight: bold; font-size: 18px;">${escapeHtml(eventTitle)}</p>
-        <div style="background-color: #f5f5f4; padding: 20px; border-radius: 15px; margin: 20px 0;">
+    const html = emailDoc({
+      subject,
+      title: 'Refund – změna stavu',
+      badge: 'Finance',
+      preheader: `${statusLabel}: ${eventTitle}`,
+      contentHtml: `
+        <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px;">
+          <div style="font-weight:950; font-size:16px; margin-bottom:10px;">${escapeHtml(eventTitle)}</div>
           ${refundLogId ? section('Žádost ID', refundLogId) : ''}
           ${rsvpId ? section('RSVP ID', rsvpId) : ''}
           ${vars?.eventId ? section('Event ID', vars.eventId) : ''}
-          <hr style="border: none; border-top: 1px solid #e7e5e4; margin: 16px 0;" />
+          <hr style="border:none; border-top:1px solid #e7e5e4; margin:14px 0;" />
           ${section('Stav', statusLabel)}
           ${amount ? section('Částka', `${amount} ${currency}`) : ''}
-          ${note ? `<hr style="border: none; border-top: 1px solid #e7e5e4; margin: 16px 0;" />${section('Poznámka', note)}` : ''}
+          ${note ? `<hr style="border:none; border-top:1px solid #e7e5e4; margin:14px 0;" />${section('Poznámka', note)}` : ''}
         </div>
-        <p style="font-size: 12px; color: #78716c; text-align: center;">Tento e-mail byl odeslán automaticky systémem Pupen.</p>
-      </div>
-    `;
+      `,
+      footerText: 'Tento e‑mail byl odeslán automaticky systémem Pupen.',
+      lang: 'cs',
+    });
     return { subject, html };
   }
 
@@ -767,35 +915,37 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
     .map((a: any) => `<li style="margin: 4px 0;">${escapeHtml(a?.name || '')}</li>`)
     .join('');
 
-  const html = `
-    <div style="font-family: sans-serif; padding: 20px; color: #1c1917; max-width: 700px; margin: auto; border: 1px solid #e7e5e4; border-radius: 20px;">
-      <h2 style="color: #16a34a; text-align: center;">${escapeHtml(eventTitle)}</h2>
-      <p style="text-align: center; font-weight: bold; font-size: 18px;">${escapeHtml(name)}</p>
-      <div style="background-color: #f5f5f4; padding: 20px; border-radius: 15px; margin: 20px 0;">
-        <p style="margin-top: 0;"><strong>Status:</strong> ${escapeHtml(status)}</p>
-        ${attendeeList ? `<p><strong>Účastníci:</strong></p><ul style="padding-left: 18px; margin-top: 8px;">${attendeeList}</ul>` : ''}
-        <hr style="border: none; border-top: 1px solid #e7e5e4; margin: 16px 0;" />
-        <p><strong>QR Token:</strong></p>
-        <p style="font-size: 22px; font-weight: 800; letter-spacing: 0.2em; background: white; padding: 12px 16px; border-radius: 12px; display: inline-block;">${escapeHtml(qrToken)}</p>
-        <p style="font-size: 12px; color: #78716c; margin-top: 12px;">Při vstupu ukažte QR token (nebo QR kód v portálu).</p>
+  const html = emailDoc({
+    subject,
+    title: eventTitle || 'Vstupenka',
+    badge: isWaitlist ? 'Waitlist' : 'Vstupenka',
+    preheader: isWaitlist ? `Čekací listina: ${eventTitle}` : `Vstupenka: ${eventTitle}`,
+    introHtml: `<p style="margin:0;">${escapeHtml(name)}</p>`,
+    contentHtml: `
+      <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px;">
+        <div style="font-weight:900;">Status: ${escapeHtml(status)}</div>
+        ${attendeeList ? `<div style="margin-top:12px; font-weight:900;">Účastníci:</div><ul style="padding-left:18px; margin:8px 0 0 0;">${attendeeList}</ul>` : ''}
+        <hr style="border:none; border-top:1px solid #e7e5e4; margin:14px 0;" />
+        <div style="font-weight:900; margin-bottom:8px;">QR Token</div>
+        <div style="display:inline-block; background:#ffffff; border:1px solid #e7e5e4; border-radius:14px; padding:10px 12px; font-weight:950; letter-spacing:0.22em; font-size:18px;">${escapeHtml(qrToken)}</div>
+        <div style="margin-top:10px; font-size:12px; color:#78716c; font-weight:800;">Při vstupu ukažte QR token (nebo QR kód v portálu).</div>
       </div>
       ${
         isPrevod && !isWaitlist
-          ? `
-        <div style="border: 2px dashed #16a34a; padding: 20px; border-radius: 15px; text-align: center; margin: 20px 0;">
-          <h3 style="margin-top: 0;">Platební údaje</h3>
-          <p>Prosíme o úhradu do 24 hodin, jinak bude rezervace zrušena.</p>
-          <p style="font-size: 12px; color: #78716c;">Účet: ${escapeHtml(bankAccount || '—')}</p>
-          <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
-            `SPD:1.0*ACC:${bankAccount}*AM:100.00*CC:CZK*MSG:Pupen ${qrToken}`
-          )}" alt="QR Platba" style="margin: 10px 0;" />
-        </div>
-      `
+          ? `<div style="margin-top:14px; border:2px dashed #16a34a; border-radius:18px; padding:16px; text-align:center;">
+              <div style="font-weight:950; font-size:16px;">Platební údaje</div>
+              <div style="margin-top:8px; font-weight:800;">Prosíme o úhradu do 24 hodin, jinak bude rezervace zrušena.</div>
+              <div style="margin-top:10px; font-size:12px; color:#78716c; font-weight:900;">Účet: ${escapeHtml(bankAccount || '—')}</div>
+              <div style="margin-top:10px;">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`SPD:1.0*ACC:${bankAccount}*AM:100.00*CC:CZK*MSG:Pupen ${qrToken}`)}" alt="QR Platba" style="margin:0; border-radius:14px;" />
+              </div>
+            </div>`
           : ''
       }
-      <p style="font-size: 12px; color: #78716c; text-align: center;">Tento e-mail byl odeslán automaticky systémem Pupen.</p>
-    </div>
-  `;
+    `,
+    footerText: 'Tento e‑mail byl odeslán automaticky systémem Pupen.',
+    lang: 'cs',
+  });
 
   return { subject, html };
 }
