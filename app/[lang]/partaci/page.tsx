@@ -20,6 +20,8 @@ export default function PartaciPage() {
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState({ author_name: '', sport: '', description: '', contact: '' });
   const [dict, setDict] = useState<any>(null);
+  const [pageHtml, setPageHtml] = useState<string>('');
+  const [pageTitle, setPageTitle] = useState<string>('');
 
   React.useEffect(() => {
     let isMounted = true;
@@ -27,6 +29,33 @@ export default function PartaciPage() {
       if (isMounted) setDict(d.sports);
     });
     return () => { isMounted = false; };
+  }, [lang]);
+
+  React.useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const url = new URL('/api/site-page', window.location.origin);
+        url.searchParams.set('slug', 'partaci');
+        url.searchParams.set('lang', lang);
+        const res = await fetch(url.toString());
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) return;
+        const page = json?.page || null;
+        if (mounted) {
+          setPageHtml(String(page?.content_html || ''));
+          setPageTitle(String(page?.title || ''));
+        }
+      } catch {
+        if (mounted) {
+          setPageHtml('');
+          setPageTitle('');
+        }
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
   }, [lang]);
 
   const { data: partners = [], isLoading } = useQuery({
@@ -62,6 +91,13 @@ export default function PartaciPage() {
           <h1 className="text-4xl md:text-6xl font-black text-stone-900 tracking-tighter mb-4">{dict.title}</h1>
           <p className="text-stone-500 text-lg font-medium">{dict.subtitle}</p>
         </header>
+
+        {pageHtml ? (
+          <div className="bg-white border border-stone-100 rounded-[2.5rem] p-8 md:p-10 shadow-sm mb-8">
+            {pageTitle ? <div className="text-2xl font-black text-stone-900 mb-4">{pageTitle}</div> : null}
+            <div className="prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: pageHtml }} />
+          </div>
+        ) : null}
 
         <div className="flex justify-center mb-12">
           <button 

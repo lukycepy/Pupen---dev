@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getDictionary } from '@/lib/get-dictionary';
 import { useQuery } from '@tanstack/react-query';
-import { ShieldCheck, X, Loader2, Search } from 'lucide-react';
+import { ShieldCheck, X, Loader2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 // Dynamic import tabs for optimization with proper props typing
@@ -72,10 +72,10 @@ const TrustBoxTab = dynamic<any>(() => import('./components/TrustBoxTab'), { loa
 import { useToast } from '@/app/context/ToastContext';
 import Skeleton, { SkeletonTabContent } from '@/app/[lang]/components/Skeleton';
 
-import AdminSidebar from './components/AdminSidebar';
 import AdminCommandPalette from './components/AdminCommandPalette';
 import { buildAdminMenuGroups } from './components/adminMenu';
 import Dialog from '@/app/components/ui/Dialog';
+import AdminShell from './components/AdminShell';
 
 export default function AdminDashboard() {
   const params = useParams();
@@ -353,39 +353,34 @@ export default function AdminDashboard() {
     }
   };
 
-  if (!dict || !currentUser) return (
-    <div className="min-h-screen bg-stone-50 lg:pl-72">
-      <div className="hidden lg:block fixed left-0 top-0 bottom-0 w-72 bg-white border-r border-stone-100 p-8 space-y-10">
-        <Skeleton className="h-10 w-32 rounded-xl" />
-        <div className="space-y-4">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Skeleton key={i} className="h-12 w-full rounded-2xl" />
-          ))}
-        </div>
-      </div>
-      <main className="lg:p-10 p-4 pt-20 lg:pt-10">
-        <div className="max-w-7xl mx-auto space-y-8">
-          <div className="flex items-center justify-between mb-8">
-            <Skeleton className="h-12 w-48 rounded-2xl" />
-            <Skeleton className="h-12 w-32 rounded-xl" />
+  if (!dict || !currentUser)
+    return (
+      <div className="min-h-screen bg-stone-50">
+        <header className="sticky top-0 z-40 border-b border-stone-100 bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/70">
+          <div className="mx-auto max-w-7xl px-4 py-3 lg:px-8">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-[10px] font-black uppercase tracking-[0.22em] text-stone-400 truncate">Administrace</div>
+                <Skeleton className="h-7 w-40 rounded-xl" />
+              </div>
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-10 w-28 rounded-2xl" />
+                <Skeleton className="h-10 w-10 rounded-2xl" />
+              </div>
+            </div>
           </div>
-          <SkeletonTabContent />
-        </div>
-      </main>
-    </div>
-  );
+        </header>
+        <main className="mx-auto max-w-7xl px-4 py-6 lg:px-8">
+          <div className="space-y-4">
+            <Skeleton className="h-10 w-72 rounded-2xl" />
+            <SkeletonTabContent />
+          </div>
+        </main>
+      </div>
+    );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-stone-50 to-stone-100/40 font-sans lg:pl-72">
-      <AdminSidebar 
-        lang={lang}
-        dict={dict}
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-        userProfile={userProfile}
-        permissions={permissions}
-        onLogout={handleLogout}
-      />
+    <>
       <AdminCommandPalette
         open={isPaletteOpen}
         onClose={() => setIsPaletteOpen(false)}
@@ -397,109 +392,86 @@ export default function AdminDashboard() {
         permissions={permissions}
       />
 
-      <main className="lg:p-10 p-4 pt-4 lg:pt-8 overflow-x-hidden">
-        <div className="max-w-7xl mx-auto">
-          <div className="sticky top-0 z-20 -mx-4 lg:-mx-10 px-4 lg:px-10 py-4 bg-stone-50/90 backdrop-blur border-b border-stone-100 mb-6">
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">Pupen Control</div>
-                <h1 className="text-2xl lg:text-3xl font-black text-stone-900 tracking-tight truncate">
-                  {activeTitle}
-                </h1>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsPaletteOpen(true)}
-                  className="inline-flex items-center gap-2 px-4 py-3 bg-white rounded-2xl border border-stone-200 shadow-sm hover:bg-stone-50 transition text-stone-700 font-bold"
-                >
-                  <Search size={18} className="text-stone-400" />
-                  <span className="hidden sm:inline">Hledat</span>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-stone-300 hidden md:inline">Ctrl K</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsProfileOpen(true)}
-                  className="inline-flex items-center gap-3 px-4 py-3 bg-white rounded-2xl border border-stone-200 shadow-sm hover:bg-stone-50 transition"
-                >
-                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-700 font-black text-xs shrink-0">
-                    {userProfile?.first_name?.charAt(0) || userProfile?.email?.charAt(0)?.toUpperCase()}
-                  </div>
-                  <span className="text-sm font-bold text-stone-700 hidden lg:inline truncate max-w-[180px]">{userProfile?.first_name} {userProfile?.last_name}</span>
-                </button>
-              </div>
+      <AdminShell
+        lang={lang}
+        title={activeTitle}
+        subtitle="Administrace"
+        userProfile={userProfile}
+        dict={dict}
+        permissions={permissions}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        onOpenCommandPalette={() => setIsPaletteOpen(true)}
+        onOpenProfile={() => setIsProfileOpen(true)}
+        onLogout={handleLogout}
+      >
+        {isProfileOpen && (
+          <Dialog
+            open={isProfileOpen}
+            onClose={() => setIsProfileOpen(false)}
+            overlayClassName="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[10000] flex items-center justify-center p-6 animate-in fade-in duration-300 text-left"
+            panelClassName="bg-white w-full max-w-md rounded-[2rem] p-8 shadow-2xl animate-in zoom-in-95 duration-300"
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-black text-stone-900">{lang === 'cs' ? 'Nastavení profilu' : 'Profile Settings'}</h2>
+              <button onClick={() => setIsProfileOpen(false)} className="p-2 hover:bg-stone-100 rounded-full transition text-stone-400">
+                <X size={24} />
+              </button>
             </div>
-          </div>
 
-          {/* PROFILE SETTINGS MODAL */}
-          {isProfileOpen && (
-            <Dialog
-              open={isProfileOpen}
-              onClose={() => setIsProfileOpen(false)}
-              overlayClassName="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[10000] flex items-center justify-center p-6 animate-in fade-in duration-300 text-left"
-              panelClassName="bg-white w-full max-w-md rounded-[2rem] p-8 shadow-2xl animate-in zoom-in-95 duration-300"
-            >
-              <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-black text-stone-900">{lang === 'cs' ? 'Nastavení profilu' : 'Profile Settings'}</h2>
-                  <button onClick={() => setIsProfileOpen(false)} className="p-2 hover:bg-stone-100 rounded-full transition text-stone-400">
-                    <X size={24} />
-                  </button>
-                </div>
+            <form onSubmit={handleUpdateProfile} className="space-y-4">
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{lang === 'cs' ? 'Jméno' : 'First Name'}</label>
+                <input
+                  type="text"
+                  required
+                  value={editProfile.first_name}
+                  onChange={(e) => setEditProfile({ ...editProfile, first_name: e.target.value })}
+                  className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{lang === 'cs' ? 'Příjmení' : 'Last Name'}</label>
+                <input
+                  type="text"
+                  required
+                  value={editProfile.last_name}
+                  onChange={(e) => setEditProfile({ ...editProfile, last_name: e.target.value })}
+                  className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{lang === 'cs' ? 'E-mail (nelze měnit)' : 'Email (cannot change)'}</label>
+                <input
+                  type="email"
+                  disabled
+                  value={currentUser?.email || ''}
+                  className="w-full bg-stone-100 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-400 cursor-not-allowed outline-none"
+                />
+              </div>
 
-                <form onSubmit={handleUpdateProfile} className="space-y-4">
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{lang === 'cs' ? 'Jméno' : 'First Name'}</label>
-                    <input 
-                      type="text"
-                      required
-                      value={editProfile.first_name}
-                      onChange={e => setEditProfile({...editProfile, first_name: e.target.value})}
-                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{lang === 'cs' ? 'Příjmení' : 'Last Name'}</label>
-                    <input 
-                      type="text"
-                      required
-                      value={editProfile.last_name}
-                      onChange={e => setEditProfile({...editProfile, last_name: e.target.value})}
-                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{lang === 'cs' ? 'E-mail (nelze měnit)' : 'Email (cannot change)'}</label>
-                    <input 
-                      type="email"
-                      disabled
-                      value={currentUser?.email || ''}
-                      className="w-full bg-stone-100 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-400 cursor-not-allowed outline-none"
-                    />
-                  </div>
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsProfileOpen(false)}
+                  className="flex-1 py-3 bg-stone-100 text-stone-600 rounded-xl font-bold hover:bg-stone-200 transition"
+                >
+                  {lang === 'cs' ? 'Zrušit' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingProfile}
+                  className="flex-[2] py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition shadow-lg shadow-green-600/20 flex items-center justify-center gap-2"
+                >
+                  {isSavingProfile ? <Loader2 size={20} className="animate-spin" /> : <ShieldCheck size={20} />}
+                  {lang === 'cs' ? 'Uložit změny' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </Dialog>
+        )}
 
-                  <div className="flex gap-3 pt-4">
-                    <button 
-                      type="button"
-                      onClick={() => setIsProfileOpen(false)}
-                      className="flex-1 py-3 bg-stone-100 text-stone-600 rounded-xl font-bold hover:bg-stone-200 transition"
-                    >
-                      {lang === 'cs' ? 'Zrušit' : 'Cancel'}
-                    </button>
-                    <button 
-                      type="submit"
-                      disabled={isSavingProfile}
-                      className="flex-[2] py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition shadow-lg shadow-green-600/20 flex items-center justify-center gap-2"
-                    >
-                      {isSavingProfile ? <Loader2 size={20} className="animate-spin" /> : <ShieldCheck size={20} />}
-                      {lang === 'cs' ? 'Uložit změny' : 'Save Changes'}
-                    </button>
-                  </div>
-                </form>
-            </Dialog>
-          )}
-
-          {/* CONTENT AREA */}
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             {activeTab === 'analytics' && canView('logs') && (
               <AnalyticsTab />
             )}
@@ -606,11 +578,11 @@ export default function AdminDashboard() {
               <InvoicesTab />
             )}
 
-            {activeTab === 'refunds' && canView('logs') && (
+            {activeTab === 'refunds' && canView('refunds') && (
               <RefundsTab dict={dict} />
             )}
 
-            {activeTab === 'ticket_security' && canView('logs') && (
+            {activeTab === 'ticket_security' && canView('ticket_security') && (
               <TicketSecurityTab dict={dict} />
             )}
 
@@ -618,11 +590,11 @@ export default function AdminDashboard() {
               <PromoRulesTab dict={dict} />
             )}
 
-            {activeTab === 'moderation' && canView('logs') && (
+            {activeTab === 'moderation' && canView('moderation') && (
               <ModerationTab currentUser={currentUser} userProfile={userProfile} />
             )}
 
-            {activeTab === 'projects' && canView('logs') && (
+            {activeTab === 'projects' && canView('projects') && (
               <ProjectsTab currentUser={currentUser} userProfile={userProfile} />
             )}
 
@@ -721,7 +693,7 @@ export default function AdminDashboard() {
               <GalleryTab dict={dict} uploadImage={uploadImage} readOnly={!canEdit('gallery')} currentUser={currentUser} events={events} posts={posts} />
             )}
 
-            {activeTab === 'og_preview' && canViewContent && (
+            {activeTab === 'og_preview' && canView('og_preview') && (
               <OgPreviewTab />
             )}
 
@@ -736,9 +708,8 @@ export default function AdminDashboard() {
             {activeTab === 'map' && canView('map') && (
               <MapTab dict={dict} readOnly={!canEdit('map')} />
             )}
-          </div>
         </div>
-      </main>
-    </div>
+      </AdminShell>
+    </>
   );
 }

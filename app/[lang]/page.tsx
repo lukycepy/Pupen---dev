@@ -195,6 +195,9 @@ export default function PupenWeb() {
   }
 
   const widgets = (homeCfg?.widgets && typeof homeCfg.widgets === 'object' ? homeCfg.widgets : {}) as any;
+  const ctaCfg = homeCfg?.cta && typeof homeCfg.cta === 'object' ? homeCfg.cta : {};
+  const testimonialsCfg = homeCfg?.testimonials && typeof homeCfg.testimonials === 'object' ? homeCfg.testimonials : {};
+  const testimonialsHtml = String(lang) === 'en' ? String((testimonialsCfg as any).html_en || '') : String((testimonialsCfg as any).html_cs || '');
 
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900 font-sans selection:bg-green-100 selection:text-green-900">
@@ -467,7 +470,14 @@ export default function PupenWeb() {
         </section>
       )}
 
-      {widgets.testimonials !== false && <TestimonialsSlider lang={lang} />}
+      {widgets.testimonials !== false &&
+        (testimonialsHtml ? (
+          <section className="py-20 px-6 max-w-6xl mx-auto">
+            <div className="bg-white border border-stone-100 shadow-sm rounded-[3rem] p-10 md:p-16 prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: testimonialsHtml }} />
+          </section>
+        ) : (
+          <TestimonialsSlider lang={lang} />
+        ))}
       {widgets.instagram !== false && (
         <InstagramFeedGrid url={homeCfg?.instagram?.url} handle={homeCfg?.instagram?.handle} />
       )}
@@ -564,26 +574,27 @@ export default function PupenWeb() {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-[radial-gradient(circle_at_center,rgba(22,163,74,0.08)_0%,transparent_70%)] pointer-events-none" />
         <div className="relative z-10 max-w-4xl mx-auto">
           <span className="block text-green-600 font-bold uppercase tracking-widest text-xs sm:text-sm mb-4">
-            {dict.ctaBadge}
+            {(lang === 'en' ? (ctaCfg as any).badge_en : (ctaCfg as any).badge_cs) || dict.ctaBadge}
           </span>
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-stone-900 mb-8 leading-tight tracking-tight">
-            {dict.ctaTitle}
+            {(lang === 'en' ? (ctaCfg as any).title_en : (ctaCfg as any).title_cs) || dict.ctaTitle}
           </h2>
           <p className="text-stone-600 text-base sm:text-xl mb-12 leading-relaxed max-w-2xl mx-auto px-4 font-light">
-            {dict.ctaSub}
+            {(lang === 'en' ? (ctaCfg as any).sub_en : (ctaCfg as any).sub_cs) || dict.ctaSub}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center px-6">
             <Link 
-              href={`/${lang}/kontakt`} 
+              href={String(((ctaCfg as any).primary_href || '').trim()) ? String((ctaCfg as any).primary_href).trim() : `/${lang}/kontakt`} 
               className="bg-green-600 text-white px-10 py-4 rounded-xl font-bold hover:bg-green-700 transition-all shadow-lg shadow-green-900/20 flex items-center justify-center gap-2 group hover:scale-105 active:scale-95 w-full sm:w-auto"
             >
-              {dict.ctaBtnJoin} <ArrowRight className="group-hover:translate-x-1 transition-transform" size={20} />
+              {(lang === 'en' ? (ctaCfg as any).primary_label_en : (ctaCfg as any).primary_label_cs) || dict.ctaBtnJoin}{' '}
+              <ArrowRight className="group-hover:translate-x-1 transition-transform" size={20} />
             </Link>
             <Link 
-              href={`/${lang}/akce`} 
+              href={String(((ctaCfg as any).secondary_href || '').trim()) ? String((ctaCfg as any).secondary_href).trim() : `/${lang}/akce`} 
               className="bg-white border-2 border-stone-200 text-stone-700 px-10 py-4 rounded-xl font-bold hover:border-green-600 hover:text-green-600 transition-all flex items-center justify-center hover:scale-105 active:scale-95 w-full sm:w-auto shadow-sm"
             >
-              {dict.ctaBtnEvents}
+              {(lang === 'en' ? (ctaCfg as any).secondary_label_en : (ctaCfg as any).secondary_label_cs) || dict.ctaBtnEvents}
             </Link>
           </div>
         </div>

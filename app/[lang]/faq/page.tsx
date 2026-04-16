@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation';
 import { HelpCircle, Search, ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
 import { getDictionary } from '@/lib/get-dictionary';
 import { supabase } from '@/lib/supabase';
+import { useSitePageContent } from '@/app/[lang]/components/useSitePageContent';
 
 type FaqRow = {
   id: string;
@@ -21,8 +22,9 @@ type FaqRow = {
 export default function FaqPage() {
   const params = useParams();
   const lang = (params?.lang as string) || 'cs';
+  const page = useSitePageContent('faq', lang);
 
-  const [dict, setDict] = useState<any>(null);
+  const [dict, setDict] = useState<any>({});
   const [faqs, setFaqs] = useState<FaqRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
@@ -109,6 +111,12 @@ export default function FaqPage() {
   return (
     <div className="min-h-screen bg-stone-50 pt-24 pb-32">
       <div className="max-w-5xl mx-auto px-6">
+        {page.html ? (
+          <div className="bg-white border border-stone-100 rounded-[2.5rem] p-8 md:p-10 shadow-sm mb-8">
+            {page.title ? <div className="text-2xl md:text-4xl font-black text-stone-900 tracking-tight mb-6">{page.title}</div> : null}
+            <div className="prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: page.html }} />
+          </div>
+        ) : null}
         <header className="mb-12">
           <Link href={`/${lang}`} className="inline-flex items-center gap-2 text-stone-400 font-bold hover:text-green-600 transition mb-6 group">
             <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> {lang === 'cs' ? 'Zpět domů' : 'Back home'}

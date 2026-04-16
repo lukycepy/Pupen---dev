@@ -26,6 +26,7 @@ export default function UsersTab({ dict }: UsersTabProps) {
     { id: 'news', label: dict.admin?.navNews || 'Novinky' },
     { id: 'messages', label: dict.admin?.tabMessages || 'Zprávy' },
     { id: 'partners', label: dict.admin?.navPartners || 'Partneři' },
+    { id: 'banners', label: dict.admin?.tabBanners || 'Bannery' },
     { id: 'faq', label: dict.admin?.navFaq || 'FAQ' },
     { id: 'feedback', label: dict.admin?.tabFeedback || 'Feedback' },
     { id: 'apps', label: dict.admin?.tabApplications || 'Přihlášky' },
@@ -36,6 +37,7 @@ export default function UsersTab({ dict }: UsersTabProps) {
     { id: 'hunts', label: dict.admin?.navHunts || 'Bojovky' },
     { id: 'map', label: dict.admin?.navMap || 'Mapa' },
     { id: 'meetings', label: dict.admin?.navMeetings || 'Schůze' },
+    { id: 'governance', label: dict.admin?.tabGovernance || 'Governance' },
     { id: 'polls', label: dict.admin?.navPolls || 'Ankety' },
     { id: 'quizzes', label: dict.admin?.navQuizzes || 'Kvízy' },
     { id: 'jobs', label: dict.admin?.navJobs || 'Práce' },
@@ -47,10 +49,17 @@ export default function UsersTab({ dict }: UsersTabProps) {
     { id: 'gallery', label: dict.admin?.tabGallery || 'Galerie' },
     { id: 'logs', label: dict.admin?.navLogs || 'Logy' },
     { id: 'analytics', label: dict.admin?.tabAnalytics || 'Analytika' },
+    { id: 'projects', label: dict.admin?.tabProjects || 'Projekty' },
+    { id: 'moderation', label: dict.admin?.tabModeration || 'Moderace' },
+    { id: 'refunds', label: dict.admin?.tabRefunds || 'Refundy' },
+    { id: 'ticket_security', label: dict.admin?.tabTicketSecurity || 'Anti-fraud' },
     { id: 'blog_mod', label: dict.admin?.tabBlog || 'Moderace blogu' },
+    { id: 'og_preview', label: dict.admin?.tabOgPreview || 'OG Preview' },
     { id: 'member_portal', label: dict.nav?.memberPortal || 'Členský portál' },
     { id: 'reviews', label: dict.admin?.tabReviews || 'Recenze' },
     { id: 'books', label: dict.admin?.navBooks || 'Knihy' },
+    { id: 'newsletter', label: 'Newsletter' },
+    { id: 'email_settings', label: 'E-mail Nastavení' },
   ];
   const permsSchema: any = {};
   modules.forEach(m => {
@@ -76,6 +85,7 @@ export default function UsersTab({ dict }: UsersTabProps) {
     ...permsSchema,
     // Zpětná kompatibilita
     can_manage_admins: z.boolean().optional(),
+    trustbox_admin: z.boolean().optional(),
   });
 
   const queryClient = useQueryClient();
@@ -211,6 +221,7 @@ export default function UsersTab({ dict }: UsersTabProps) {
       is_admin: false,
       is_member: false,
       can_manage_admins: false,
+      trustbox_admin: false,
       ...defaultPerms
     }
   });
@@ -297,6 +308,22 @@ export default function UsersTab({ dict }: UsersTabProps) {
         });
         const json = await res.json();
         if (!res.ok) throw new Error(json?.error || 'Chyba');
+
+        try {
+          const shouldBeTrustbox = data.trustbox_admin === true;
+          if (shouldBeTrustbox) {
+            await fetch('/api/admin/trustbox/admins', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+              body: JSON.stringify({ userId: editingAdmin.id, canViewPii: false }),
+            });
+          } else {
+            await fetch(`/api/admin/trustbox/admins/${editingAdmin.id}`, {
+              method: 'DELETE',
+              headers: { Authorization: `Bearer ${token}` },
+            });
+          }
+        } catch {}
 
         const adminProfilePayload: any = {
           member_id: editingAdmin.id,
@@ -491,6 +518,11 @@ export default function UsersTab({ dict }: UsersTabProps) {
     }
 
     setEditingAdmin(full);
+    let trustboxAdmin = false;
+    try {
+      const tb = await supabase.from('trust_box_admins').select('user_id').eq('user_id', full.id).maybeSingle();
+      trustboxAdmin = !!tb.data?.user_id;
+    } catch {}
     const resetData: any = {
       email: full.email,
       first_name: full.first_name || '',
@@ -506,6 +538,7 @@ export default function UsersTab({ dict }: UsersTabProps) {
       application_received_at: '',
       notes_internal: '',
       can_manage_admins: full.can_manage_admins || false,
+      trustbox_admin: trustboxAdmin,
     };
     
     modules.forEach(m => {
@@ -814,6 +847,17 @@ export default function UsersTab({ dict }: UsersTabProps) {
               <div className="flex items-center gap-3 text-stone-900">
                 <ShieldCheck size={20} className="text-green-600" /> 
                 <h3 className="text-sm font-black uppercase tracking-widest">{dict.admin.permissions}</h3>
+              </div>
+
+              <div className="bg-white rounded-[2rem] border border-stone-100 p-6">
+                <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-4">Nástroje</div>
+                <label className="flex items-center justify-between gap-4">
+                  <div className="flex flex-col">
+                    <div className="text-sm font-black text-stone-900">Schránka důvěry</div>
+                    <div className="text-xs text-stone-500 font-medium">Přístup do TrustBox sekce v adminu</div>
+                  </div>
+                  <input type="checkbox" {...register('trustbox_admin')} className="w-5 h-5 accent-green-600 rounded-lg" />
+                </label>
               </div>
               
               <div className="bg-stone-50/50 rounded-[2rem] border border-stone-100 overflow-hidden">

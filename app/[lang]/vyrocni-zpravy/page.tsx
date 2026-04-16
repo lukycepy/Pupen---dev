@@ -18,9 +18,38 @@ export default function AnnualReportsPage() {
   const [dict, setDict] = useState<any>(null);
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pageHtml, setPageHtml] = useState<string>('');
+  const [pageTitle, setPageTitle] = useState<string>('');
 
   useEffect(() => {
     getDictionary(lang).then((d) => setDict(d));
+  }, [lang]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const url = new URL('/api/site-page', window.location.origin);
+        url.searchParams.set('slug', 'vyrocni-zpravy');
+        url.searchParams.set('lang', lang);
+        const res = await fetch(url.toString());
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) return;
+        const page = json?.page || null;
+        if (mounted) {
+          setPageHtml(String(page?.content_html || ''));
+          setPageTitle(String(page?.title || ''));
+        }
+      } catch {
+        if (mounted) {
+          setPageHtml('');
+          setPageTitle('');
+        }
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
   }, [lang]);
 
   useEffect(() => {
@@ -71,6 +100,12 @@ export default function AnnualReportsPage() {
         />
 
         <div className="mt-8">
+          {pageHtml ? (
+            <div className="bg-white border border-stone-100 rounded-[2rem] p-8 shadow-sm mb-6">
+              {pageTitle ? <div className="text-xl font-black text-stone-900 mb-4">{pageTitle}</div> : null}
+              <div className="prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: pageHtml }} />
+            </div>
+          ) : null}
           {loading ? (
               <div className="py-16 flex items-center justify-center">
                 <InlinePulse className="bg-stone-200" size={18} />

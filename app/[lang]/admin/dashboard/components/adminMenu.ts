@@ -66,7 +66,7 @@ export function buildAdminMenuGroups(dict: any, permissions: any): AdminMenuGrou
         { id: 'faq', label: dict.admin.tabFaq, icon: HelpCircle, visible: canView('faq') },
         { id: 'partners', label: dict.admin.tabPartners, icon: Users, visible: canView('partners') },
         { id: 'reviews', label: dict.admin.tabReviews || 'Recenze', icon: Star, visible: canView('reviews') },
-        { id: 'og_preview', label: dict.admin?.tabOgPreview || 'OG Preview', icon: Globe, visible: canViewContent },
+        { id: 'og_preview', label: dict.admin?.tabOgPreview || 'OG Preview', icon: Globe, visible: canView('og_preview') },
       ],
     },
     {
@@ -92,8 +92,8 @@ export function buildAdminMenuGroups(dict: any, permissions: any): AdminMenuGrou
         { id: 'trustbox', label: 'Schránka důvěry', icon: Inbox, visible: permissions.can_manage_admins || permissions.trustbox_admin },
         { id: 'polls', label: dict.admin.tabPolls || 'Ankety', icon: BarChart3, visible: canView('polls') },
         { id: 'feedback', label: dict.admin.tabFeedback || 'Feedback', icon: MessageSquare, visible: canView('feedback') },
-        { id: 'projects', label: dict.admin?.tabProjects || 'Projekty', icon: FolderKanban, visible: canView('logs') },
-        { id: 'moderation', label: dict.admin?.tabModeration || 'Moderace', icon: Shield, visible: canView('logs') },
+        { id: 'projects', label: dict.admin?.tabProjects || 'Projekty', icon: FolderKanban, visible: canView('projects') },
+        { id: 'moderation', label: dict.admin?.tabModeration || 'Moderace', icon: Shield, visible: canView('moderation') },
       ],
     },
     {
@@ -105,9 +105,9 @@ export function buildAdminMenuGroups(dict: any, permissions: any): AdminMenuGrou
         { id: 'lost_found', label: 'Ztráty a nálezy', icon: KeyRound, visible: permissions.can_manage_admins },
         { id: 'sos', label: 'SOS kontakty', icon: Siren, visible: permissions.can_manage_admins },
         { id: 'meetings', label: dict.admin.tabMeetings || 'Schůze', icon: Users, visible: canView('meetings') },
-        { id: 'governance', label: dict.admin?.tabGovernance || 'Governance', icon: ShieldCheck, visible: canView('meetings') },
+        { id: 'governance', label: dict.admin?.tabGovernance || 'Governance', icon: ShieldCheck, visible: canView('governance') },
         { id: 'assets', label: dict.admin.tabAssets || 'Majetek', icon: ShieldCheck, visible: canView('assets') },
-        { id: 'board', label: dict.admin?.tabBoard || 'Vedení', icon: Users, visible: permissions.can_manage_admins },
+        { id: 'board', label: dict.admin?.tabFaces || 'Tváře spolku', icon: Users, visible: permissions.can_manage_admins },
       ],
     },
     {
@@ -115,10 +115,10 @@ export function buildAdminMenuGroups(dict: any, permissions: any): AdminMenuGrou
       items: [
         { id: 'budget', label: dict.admin.tabBudget || 'Účetnictví', icon: Wallet, visible: canView('budget') },
         { id: 'invoices', label: dict.admin?.tabInvoices || 'Faktury', icon: FileText, visible: canViewFinance },
-        { id: 'refunds', label: dict.admin?.tabRefunds || 'Refundy', icon: RefreshCcw, visible: canView('logs') },
+        { id: 'refunds', label: dict.admin?.tabRefunds || 'Refundy', icon: RefreshCcw, visible: canView('refunds') },
         { id: 'promo_rules', label: dict.admin?.tabPromoRules || 'Promo kódy', icon: Tag, visible: canView('events') },
         { id: 'tickets', label: dict.admin.tabTickets || 'Vstupenky', icon: QrCode, visible: canView('events') },
-        { id: 'ticket_security', label: dict.admin?.tabTicketSecurity || 'Anti-fraud', icon: Shield, visible: canView('logs') },
+        { id: 'ticket_security', label: dict.admin?.tabTicketSecurity || 'Anti-fraud', icon: Shield, visible: canView('ticket_security') },
       ],
     },
     {

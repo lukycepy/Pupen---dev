@@ -18,6 +18,8 @@ export default function PrihlaskaPage() {
   const [dict, setDict] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [pageHtml, setPageHtml] = useState<string>('');
+  const [pageTitle, setPageTitle] = useState<string>('');
   const [formData, setFormData] = useState({
     membership_type: 'regular' as 'regular' | 'external',
     first_name: '',
@@ -36,6 +38,33 @@ export default function PrihlaskaPage() {
 
   useEffect(() => {
     getDictionary(lang).then(d => setDict(d.recruitment));
+  }, [lang]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const url = new URL('/api/site-page', window.location.origin);
+        url.searchParams.set('slug', 'prihlaska');
+        url.searchParams.set('lang', lang);
+        const res = await fetch(url.toString());
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) return;
+        const page = json?.page || null;
+        if (mounted) {
+          setPageHtml(String(page?.content_html || ''));
+          setPageTitle(String(page?.title || ''));
+        }
+      } catch {
+        if (mounted) {
+          setPageHtml('');
+          setPageTitle('');
+        }
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
   }, [lang]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -194,6 +223,13 @@ export default function PrihlaskaPage() {
           <h1 className="text-4xl md:text-6xl font-black text-stone-900 tracking-tighter mb-4">{dict.title}</h1>
           <p className="text-stone-500 text-lg font-medium">{dict.subtitle}</p>
         </header>
+
+        {pageHtml ? (
+          <div className="bg-white border border-stone-100 rounded-[2.5rem] p-8 md:p-10 shadow-sm mb-8">
+            {pageTitle ? <div className="text-2xl font-black text-stone-900 mb-4">{pageTitle}</div> : null}
+            <div className="prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: pageHtml }} />
+          </div>
+        ) : null}
 
         <form onSubmit={handleSubmit} className="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-xl border border-stone-100 space-y-8">
           <div className="space-y-3">

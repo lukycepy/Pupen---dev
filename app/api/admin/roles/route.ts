@@ -1,75 +1,14 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { PROFILE_PERMISSION_KEYS_SET } from '@/lib/rbac/registry';
 
 function isSchemaCacheMissingTable(e: any) {
   const msg = String(e?.message || '');
   return msg.includes("Could not find the table") && msg.includes("in the schema cache");
 }
 
-const ALLOWED_PROFILE_FIELDS = new Set([
-  'is_admin',
-  'is_member',
-  'can_manage_admins',
-  'can_view_events',
-  'can_edit_events',
-  'can_view_news',
-  'can_edit_news',
-  'can_view_faq',
-  'can_edit_faq',
-  'can_view_partners',
-  'can_edit_partners',
-  'can_view_apps',
-  'can_edit_apps',
-  'can_view_documents',
-  'can_edit_documents',
-  'can_view_gallery',
-  'can_edit_gallery',
-  'can_view_map',
-  'can_edit_map',
-  'can_view_hunts',
-  'can_edit_hunts',
-  'can_view_budget',
-  'can_edit_budget',
-  'can_view_logs',
-  'can_edit_logs',
-  'can_view_messages',
-  'can_edit_messages',
-  'can_view_meetings',
-  'can_edit_meetings',
-  'can_view_polls',
-  'can_edit_polls',
-  'can_view_quizzes',
-  'can_edit_quizzes',
-  'can_view_jobs',
-  'can_edit_jobs',
-  'can_view_schedule',
-  'can_edit_schedule',
-  'can_view_guide',
-  'can_edit_guide',
-  'can_view_hours',
-  'can_edit_hours',
-  'can_view_discounts',
-  'can_edit_discounts',
-  'can_view_feedback',
-  'can_edit_feedback',
-  'can_view_qr',
-  'can_edit_qr',
-  'can_view_assets',
-  'can_edit_assets',
-  'can_view_archive',
-  'can_edit_archive',
-  'can_view_books',
-  'can_edit_books',
-  'can_view_blog_mod',
-  'can_edit_blog_mod',
-  'can_view_reviews',
-  'can_edit_reviews',
-  'can_view_analytics',
-  'can_edit_analytics',
-  'can_view_member_portal',
-  'can_edit_member_portal',
-]);
+const ALLOWED_PROFILE_FIELDS = new Set([...PROFILE_PERMISSION_KEYS_SET, 'trustbox_admin']);
 
 function pickPermissions(input: any) {
   const out: any = {};

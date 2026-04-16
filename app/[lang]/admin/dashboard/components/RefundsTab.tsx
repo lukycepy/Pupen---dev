@@ -6,6 +6,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { RefreshCcw, Save, Search, CheckCircle, X, Mail } from 'lucide-react';
 import InlinePulse from '@/app/components/InlinePulse';
 import { useToast } from '@/app/context/ToastContext';
+import AdminModuleHeader from './ui/AdminModuleHeader';
+import AdminPanel from './ui/AdminPanel';
+import AdminEmptyState from './ui/AdminEmptyState';
 
 export default function RefundsTab({ dict }: { dict: any }) {
   const qc = useQueryClient();
@@ -150,20 +153,10 @@ export default function RefundsTab({ dict }: { dict: any }) {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="bg-white p-8 rounded-[2.5rem] border shadow-sm">
-        <div className="flex items-start justify-between gap-6">
-          <div>
-            <h2 className="text-xl font-bold mb-2 flex items-center gap-3">
-              <RefreshCcw className="text-green-600" />
-              {dict?.admin?.tabRefunds || 'Refundy'}
-            </h2>
-            <p className="text-stone-500 font-medium">Politika refundů a žádosti.</p>
-          </div>
-        </div>
-      </div>
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <AdminModuleHeader title={dict?.admin?.tabRefunds || 'Refundy'} description="Politika refundů a žádosti." />
 
-      <div className="bg-white p-8 rounded-[2.5rem] border shadow-sm">
+      <AdminPanel className="p-8">
         <div className="flex items-center justify-between gap-4 mb-4">
           <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">Refund politika</div>
           <button
@@ -180,13 +173,13 @@ export default function RefundsTab({ dict }: { dict: any }) {
           value={policyDraft}
           onChange={(e) => setPolicyDraft(e.target.value)}
           rows={6}
-          className="w-full bg-stone-50 border-none rounded-2xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none resize-none"
+          className="w-full focus:ring-2 focus:ring-green-500 transition resize-none"
           placeholder="Popište pravidla refundu…"
         />
         {policyLoading && <div className="mt-2 text-[10px] font-black uppercase tracking-widest text-stone-300">Načítání…</div>}
-      </div>
+      </AdminPanel>
 
-      <div className="bg-white p-8 rounded-[2.5rem] border shadow-sm">
+      <AdminPanel className="p-8">
         <div className="grid md:grid-cols-12 gap-3 items-center">
           <div className="md:col-span-7 relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-300" size={18} />
@@ -194,7 +187,7 @@ export default function RefundsTab({ dict }: { dict: any }) {
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Hledat…"
-              className="w-full bg-stone-50 border-none rounded-2xl pl-12 pr-4 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none"
+              className="w-full pl-11 focus:ring-2 focus:ring-green-500 transition"
             />
           </div>
           <div className="md:col-span-5 flex items-center gap-2">
@@ -212,16 +205,16 @@ export default function RefundsTab({ dict }: { dict: any }) {
             ))}
           </div>
         </div>
-      </div>
+      </AdminPanel>
 
-      <div className="bg-white p-6 rounded-[2.5rem] border shadow-sm overflow-hidden">
+      <AdminPanel className="p-6 overflow-hidden">
         {isLoading ? (
           <div className="py-16 flex items-center justify-center">
             <InlinePulse className="bg-stone-200" size={18} />
           </div>
         ) : rows.length === 0 ? (
-          <div className="py-16 text-center text-stone-400 font-bold uppercase tracking-widest text-xs">
-            Žádné žádosti.
+          <div className="py-10">
+            <AdminEmptyState icon={RefreshCcw} title="Žádné žádosti" description="Pro zobrazení změň filtr stavu nebo vyhledávání." />
           </div>
         ) : (
           <div className="space-y-3">
@@ -369,7 +362,7 @@ export default function RefundsTab({ dict }: { dict: any }) {
             })}
           </div>
         )}
-      </div>
+      </AdminPanel>
     </div>
   );
 }

@@ -127,8 +127,8 @@ export default function BoardTab({ uploadImage }: { uploadImage: (file: File, bu
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <AdminModuleHeader
-        title="Tým a Vedení"
-        description="Správa členů týmu, karet a sociálních odkazů"
+        title="Tváře spolku"
+        description="Správa členů, karet a sociálních odkazů"
         actions={
           <div className="flex gap-2">
             <label className="flex items-center gap-2 px-4 py-2 bg-stone-100 text-stone-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-stone-200 transition cursor-pointer">

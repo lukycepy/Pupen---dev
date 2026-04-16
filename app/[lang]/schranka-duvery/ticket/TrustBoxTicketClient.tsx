@@ -88,7 +88,7 @@ export default function TrustBoxTicketClient() {
                   <div key={m.id} className="bg-stone-50 rounded-2xl p-5 border border-stone-100">
                     <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">
                       {String(m.author_type || '').toLowerCase() === 'reporter'
-                        ? 'reporter'
+                        ? (lang === 'en' ? 'You' : 'Vy')
                         : `${String(m.author_type || '')}${m.author_name ? ` (${String(m.author_name)})` : ''}`}
                     </div>
                     <div className="font-bold text-stone-800 whitespace-pre-wrap">{m.body}</div>

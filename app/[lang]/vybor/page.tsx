@@ -28,9 +28,38 @@ export default function BoardPage() {
   const [dict, setDict] = useState<any>(null);
   const [items, setItems] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pageHtml, setPageHtml] = useState<string>('');
+  const [pageTitle, setPageTitle] = useState<string>('');
 
   useEffect(() => {
     getDictionary(lang).then((d) => setDict(d));
+  }, [lang]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const url = new URL('/api/site-page', window.location.origin);
+        url.searchParams.set('slug', 'vybor');
+        url.searchParams.set('lang', lang);
+        const res = await fetch(url.toString());
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) return;
+        const page = json?.page || null;
+        if (mounted) {
+          setPageHtml(String(page?.content_html || ''));
+          setPageTitle(String(page?.title || ''));
+        }
+      } catch {
+        if (mounted) {
+          setPageHtml('');
+          setPageTitle('');
+        }
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
   }, [lang]);
 
   useEffect(() => {
@@ -71,8 +100,8 @@ export default function BoardPage() {
       <div className="max-w-5xl mx-auto px-6">
         <PageHeader
           icon={Users}
-          badge={t.badge || (isEn ? 'Board' : 'Výbor')}
-          title={t.title || (isEn ? 'Board members' : 'Členové výboru')}
+          badge={t.badge || (isEn ? 'Faces' : 'Tváře spolku')}
+          title={t.title || (isEn ? 'Faces of the club' : 'Tváře spolku')}
           subtitle={t.subtitle || ''}
           actions={
             <Link
@@ -85,13 +114,20 @@ export default function BoardPage() {
           }
         />
 
+        {pageHtml ? (
+          <div className="mt-8 bg-white border border-stone-100 rounded-[2rem] p-8 shadow-sm">
+            {pageTitle ? <div className="text-2xl font-black text-stone-900 mb-4">{pageTitle}</div> : null}
+            <div className="prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: pageHtml }} />
+          </div>
+        ) : null}
+
         <div className="mt-8">
           {loading ? (
               <div className="py-16 flex items-center justify-center">
                 <InlinePulse className="bg-stone-200" size={18} />
               </div>
             ) : board.length === 0 ? (
-              <EmptyState icon={Users} title={t.empty || (isEn ? 'No board members yet' : 'Zatím žádní členové výboru')} />
+              <EmptyState icon={Users} title={t.empty || (isEn ? 'No entries yet' : 'Zatím žádné tváře spolku')} />
             ) : (
               <div className="grid md:grid-cols-2 gap-4">
                 {board.map((m) => (

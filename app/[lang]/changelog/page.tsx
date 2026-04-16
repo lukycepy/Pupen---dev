@@ -10,10 +10,12 @@ import InlinePulse from '@/app/components/InlinePulse';
 import PageHeader from '@/app/components/ui/PageHeader';
 import EmptyState from '@/app/components/ui/EmptyState';
 import { richTextToClientHtml } from '@/lib/richtext-client';
+import { useSitePageContent } from '@/app/[lang]/components/useSitePageContent';
 
 export default function ChangelogPage() {
   const params = useParams();
   const lang = (params?.lang as string) || 'cs';
+  const { title: pageTitle, html: pageHtml } = useSitePageContent('changelog', lang);
 
   const [dict, setDict] = useState<any>(null);
   const [items, setItems] = useState<any[]>([]);
@@ -59,6 +61,12 @@ export default function ChangelogPage() {
         />
 
         <div className="mt-8">
+          {pageHtml ? (
+            <div className="bg-white border border-stone-100 rounded-[2rem] p-8 shadow-sm mb-6">
+              {pageTitle ? <div className="text-xl font-black text-stone-900 mb-4">{pageTitle}</div> : null}
+              <div className="prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: pageHtml }} />
+            </div>
+          ) : null}
           {loading ? (
             <div className="py-16 flex items-center justify-center">
               <InlinePulse className="bg-stone-200" size={18} />

@@ -5,6 +5,7 @@
     "events": "Events",
     "about": "About Us",
     "contact": "Contact",
+    "board": "Faces of the club",
     "map": "Campus Map",
     "subjects": "Courses",
     "citations": "Citations",
@@ -53,7 +54,7 @@
     "changelog": "Changelog",
     "firstAid": "First aid",
     "safety": "Safety",
-    "board": "Board",
+    "board": "Faces of the club",
     "annualReports": "Annual reports",
     "contactEmail": "info@pupen.org",
     "address": "CULS Prague, FAPPZ\nKamýcká 129\n165 00 Prague - Suchdol"
@@ -141,10 +142,10 @@
     "empty": "No reports yet"
   },
   "boardPage": {
-    "badge": "Board",
-    "title": "Board members",
-    "subtitle": "Contacts for the association board.",
-    "empty": "No board members yet"
+    "badge": "Faces",
+    "title": "Faces of the club",
+    "subtitle": "Contacts for the club.",
+    "empty": "No entries yet"
   },
   "memberDirectory": {
     "mapTitle": "Member locations (by city)",
@@ -1041,7 +1042,7 @@
     "tabMessages": "Messages",
     "tabProjects": "Projects",
     "tabPolls": "Polls",
-    "tabBoard": "Board",
+    "tabBoard": "Faces",
     "tabSettings": "My Profile",
     "navOverview": "Overview",
     "navContentBenefits": "Content & benefits",

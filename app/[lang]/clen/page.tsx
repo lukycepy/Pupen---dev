@@ -24,6 +24,7 @@ import AddressAutocomplete from '@/app/components/AddressAutocomplete';
 import ConfirmModal from '@/app/components/ConfirmModal';
 import Dialog from '@/app/components/ui/Dialog';
 import { evaluatePassword, passwordScoreLabel } from '@/lib/auth/password-policy';
+import { useSitePageContent } from '@/app/[lang]/components/useSitePageContent';
 
 const passthroughLoader = ({ src }: { src: string }) => src;
 
@@ -47,6 +48,7 @@ export default function ClenskaSekcePage() {
   const router = useRouter();
   const { showToast } = useToast();
   const didInitTabRef = useRef(false);
+  const { title: directoryPageTitle, html: directoryPageHtml } = useSitePageContent('adresar-clenu', lang);
   
   const [activeTab, setActiveTab] = useState('dashboard');
   const [memberPortalCfg, setMemberPortalCfg] = useState<{
@@ -56,9 +58,11 @@ export default function ClenskaSekcePage() {
     supportEmail?: string;
     supportPhone?: string;
     quickLinks?: Array<{ label_cs?: string; label_en?: string; url?: string }>;
+    directory?: { showMap: boolean; fields: string[] };
   }>({
     hiddenTabs: [],
     showOnboarding: true,
+    directory: { showMap: true, fields: ['email', 'member_since', 'city'] },
   });
   const [memberDefaultTab, setMemberDefaultTab] = useState('dashboard');
   const [uiPrefsSaving, setUiPrefsSaving] = useState(false);
@@ -80,9 +84,15 @@ export default function ClenskaSekcePage() {
 
   useEffect(() => {
     try {
-      const raw = window.localStorage.getItem('pupen_blocklist_v1');
-      const parsed = raw ? JSON.parse(raw) : {};
-      setBlocked(parsed && typeof parsed === 'object' ? parsed : {});
+      const rawV2 = window.localStorage.getItem('pupen_blocklist_v2');
+      const parsedV2 = rawV2 ? JSON.parse(rawV2) : {};
+      if (parsedV2 && typeof parsedV2 === 'object') {
+        setBlocked(parsedV2);
+        return;
+      }
+      const rawV1 = window.localStorage.getItem('pupen_blocklist_v1');
+      const parsedV1 = rawV1 ? JSON.parse(rawV1) : {};
+      setBlocked(parsedV1 && typeof parsedV1 === 'object' ? parsedV1 : {});
     } catch {
       setBlocked({});
     }
@@ -100,7 +110,12 @@ export default function ClenskaSekcePage() {
       const supportEmail = typeof mp.support_email === 'string' ? mp.support_email : undefined;
       const supportPhone = typeof mp.support_phone === 'string' ? mp.support_phone : undefined;
       const quickLinks = Array.isArray(mp.quick_links) ? mp.quick_links : [];
-      if (mounted) setMemberPortalCfg({ hiddenTabs, showOnboarding, defaultTab, supportEmail, supportPhone, quickLinks });
+      const dir = mp.directory && typeof mp.directory === 'object' ? mp.directory : {};
+      const directory = {
+        showMap: typeof dir.show_map === 'boolean' ? dir.show_map : true,
+        fields: Array.isArray(dir.fields) ? dir.fields.map((x: any) => String(x)) : ['email', 'member_since', 'city'],
+      };
+      if (mounted) setMemberPortalCfg({ hiddenTabs, showOnboarding, defaultTab, supportEmail, supportPhone, quickLinks, directory });
     })().catch(() => {});
     return () => {
       mounted = false;
@@ -114,13 +129,13 @@ export default function ClenskaSekcePage() {
     setActiveTab((prev) => (hidden.has(prev) ? preferred : prev));
   }, [memberPortalCfg.hiddenTabs, memberPortalCfg.defaultTab]);
 
-  const toggleBlocked = (email: string) => {
-    const key = String(email || '').toLowerCase();
+  const toggleBlocked = (id: string) => {
+    const key = String(id || '').toLowerCase();
     const next = { ...blocked, [key]: !blocked[key] };
     if (!next[key]) delete next[key];
     setBlocked(next);
     try {
-      window.localStorage.setItem('pupen_blocklist_v1', JSON.stringify(next));
+      window.localStorage.setItem('pupen_blocklist_v2', JSON.stringify(next));
     } catch {}
   };
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -700,6 +715,24 @@ export default function ClenskaSekcePage() {
     }
   };
 
+  const directoryCfg = memberPortalCfg?.directory && typeof memberPortalCfg.directory === 'object'
+    ? memberPortalCfg.directory
+    : { showMap: true, fields: ['email', 'member_since', 'city'] };
+  const directoryFieldSet = new Set((Array.isArray(directoryCfg.fields) ? directoryCfg.fields : []).map(String));
+  const directoryShowMap = directoryCfg.showMap !== false;
+  const directoryShowEmail = directoryFieldSet.has('email');
+  const directoryShowMemberSince = directoryFieldSet.has('member_since');
+  const directoryShowCity = directoryFieldSet.has('city');
+  const directoryShowMemberNo = directoryFieldSet.has('member_no');
+  const directoryShowAddress = directoryFieldSet.has('address');
+  const directorySelectParts = ['id', 'first_name', 'last_name'];
+  if (directoryShowEmail) directorySelectParts.push('email');
+  if (directoryShowMemberSince) directorySelectParts.push('member_since');
+  if (directoryShowMemberNo) directorySelectParts.push('member_no');
+  if (directoryShowAddress) directorySelectParts.push('address');
+  if (directoryShowMap || directoryShowCity) directorySelectParts.push('address_meta');
+  const directorySelect = directorySelectParts.join(', ');
+
   // Načtení dat (Queries)
   const { data: internalDocs = [] } = useQuery({
     queryKey: ['internal_docs'],
@@ -757,11 +790,15 @@ export default function ClenskaSekcePage() {
 
   const { data: directory = [] } = useQuery({
     queryKey: ['member_directory'],
-    enabled: !!user && !!profile?.is_member && activeTab === 'directory',
+    enabled:
+      !!user &&
+      !!profile &&
+      activeTab === 'directory' &&
+      !!(profile?.is_member || profile?.is_admin || profile?.can_manage_admins || profile?.can_view_member_portal || profile?.can_edit_member_portal),
     queryFn: async () => {
       const { data } = await supabase
         .from('profiles')
-        .select('first_name, last_name, email, member_since, address_meta')
+        .select(directorySelect)
         .eq('is_member', true)
         .order('last_name', { ascending: true })
         .limit(500);
@@ -1379,82 +1416,142 @@ export default function ClenskaSekcePage() {
                 </div>
               </div>
 
-              <div className="mb-8">
-                <MemberDirectoryMap
-                  labels={{
-                    title: (dict as any)?.memberDirectory?.mapTitle || (lang === 'en' ? 'Member locations (by city)' : 'Lokace členů (po městech)'),
-                    membersLabel: (dict as any)?.memberDirectory?.membersLabel || (lang === 'en' ? 'members' : 'členů'),
-                  }}
-                  members={directory
-                    .filter((m: any) => showBlocked || !blocked[String(m.email || '').toLowerCase()])
-                    .filter((m: any) => {
-                      const q = String(directoryQuery || '').trim().toLowerCase();
-                      if (!q) return true;
-                      const hay = [
-                        m?.first_name,
-                        m?.last_name,
-                        m?.email,
-                        m?.address_meta?.city,
-                      ]
-                        .map((x: any) => String(x || '').toLowerCase())
-                        .join(' ');
-                      return hay.includes(q);
-                    })}
-                />
-              </div>
-              <div className="overflow-hidden rounded-[2rem] border border-stone-100">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-stone-50 border-b border-stone-100">
-                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">{dict.member.firstName || (lang === 'en' ? 'First name' : 'Jméno')}</th>
-                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">{dict.member.lastName || (lang === 'en' ? 'Last name' : 'Příjmení')}</th>
-                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">E-mail</th>
-                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">{dict.member.memberSince || (lang === 'en' ? 'Member since' : 'Členem od')}</th>
-                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-stone-50">
-                    {directory
-                      .filter((m: any) => showBlocked || !blocked[String(m.email || '').toLowerCase()])
+              {directoryPageHtml ? (
+                <div className="mb-8 bg-stone-50 border border-stone-100 rounded-[2rem] p-8">
+                  {directoryPageTitle ? <div className="text-xl font-black text-stone-900 mb-4">{directoryPageTitle}</div> : null}
+                  <div className="prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: directoryPageHtml }} />
+                </div>
+              ) : null}
+
+              {directoryShowMap ? (
+                <div className="mb-8">
+                  <MemberDirectoryMap
+                    labels={{
+                      title: (dict as any)?.memberDirectory?.mapTitle || (lang === 'en' ? 'Member locations (by city)' : 'Lokace členů (po městech)'),
+                      membersLabel: (dict as any)?.memberDirectory?.membersLabel || (lang === 'en' ? 'members' : 'členů'),
+                    }}
+                    members={directory
+                      .filter((m: any) => {
+                        const idKey = String(m.id || '').toLowerCase();
+                        const emailKey = String(m.email || '').toLowerCase();
+                        const isBlocked = !!(blocked[idKey] || (emailKey && blocked[emailKey]));
+                        return showBlocked || !isBlocked;
+                      })
                       .filter((m: any) => {
                         const q = String(directoryQuery || '').trim().toLowerCase();
                         if (!q) return true;
                         const hay = [
                           m?.first_name,
                           m?.last_name,
-                          m?.email,
-                          m?.address_meta?.city,
+                          directoryShowMemberNo ? m?.member_no : null,
+                          directoryShowEmail ? m?.email : null,
+                          directoryShowCity || directoryShowMap ? m?.address_meta?.city : null,
+                          directoryShowAddress ? m?.address : null,
+                        ]
+                          .map((x: any) => String(x || '').toLowerCase())
+                          .join(' ');
+                        return hay.includes(q);
+                      })}
+                  />
+                </div>
+              ) : null}
+              <div className="overflow-hidden rounded-[2rem] border border-stone-100">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-stone-50 border-b border-stone-100">
+                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">{dict.member.firstName || (lang === 'en' ? 'First name' : 'Jméno')}</th>
+                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">{dict.member.lastName || (lang === 'en' ? 'Last name' : 'Příjmení')}</th>
+                      {directoryShowMemberNo ? (
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">
+                          {(dict as any)?.memberDirectory?.memberNo || (lang === 'en' ? 'Member no.' : 'Členské číslo')}
+                        </th>
+                      ) : null}
+                      {directoryShowEmail ? (
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">E-mail</th>
+                      ) : null}
+                      {directoryShowCity ? (
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">
+                          {(dict as any)?.memberDirectory?.city || (lang === 'en' ? 'City' : 'Město')}
+                        </th>
+                      ) : null}
+                      {directoryShowMemberSince ? (
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">{dict.member.memberSince || (lang === 'en' ? 'Member since' : 'Členem od')}</th>
+                      ) : null}
+                      {directoryShowAddress ? (
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">
+                          {(dict as any)?.memberDirectory?.address || (lang === 'en' ? 'Address' : 'Adresa')}
+                        </th>
+                      ) : null}
+                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-stone-50">
+                    {directory
+                      .filter((m: any) => {
+                        const idKey = String(m.id || '').toLowerCase();
+                        const emailKey = String(m.email || '').toLowerCase();
+                        const isBlocked = !!(blocked[idKey] || (emailKey && blocked[emailKey]));
+                        return showBlocked || !isBlocked;
+                      })
+                      .filter((m: any) => {
+                        const q = String(directoryQuery || '').trim().toLowerCase();
+                        if (!q) return true;
+                        const hay = [
+                          m?.first_name,
+                          m?.last_name,
+                          directoryShowMemberNo ? m?.member_no : null,
+                          directoryShowEmail ? m?.email : null,
+                          directoryShowCity ? m?.address_meta?.city : null,
+                          directoryShowAddress ? m?.address : null,
                         ]
                           .map((x: any) => String(x || '').toLowerCase())
                           .join(' ');
                         return hay.includes(q);
                       })
-                      .map((m: any, idx: number) => (
-                      <tr key={idx} className="hover:bg-stone-50/50 transition">
+                      .map((m: any) => (
+                      <tr key={String(m.id || '')} className="hover:bg-stone-50/50 transition">
                         <td className="px-6 py-4 font-bold text-stone-700">{m.first_name}</td>
                         <td className="px-6 py-4 font-bold text-stone-700">{m.last_name}</td>
-                        <td className="px-6 py-4 text-stone-500 font-medium">{m.email}</td>
-                        <td className="px-6 py-4 text-stone-400 text-sm font-medium">
-                          {m.member_since ? new Date(m.member_since).toLocaleDateString(lang === 'en' ? 'en-US' : 'cs-CZ') : '-'}
-                        </td>
+                        {directoryShowMemberNo ? (
+                          <td className="px-6 py-4 text-stone-500 font-medium">{m.member_no ? String(m.member_no) : '-'}</td>
+                        ) : null}
+                        {directoryShowEmail ? (
+                          <td className="px-6 py-4 text-stone-500 font-medium">{m.email}</td>
+                        ) : null}
+                        {directoryShowCity ? (
+                          <td className="px-6 py-4 text-stone-500 font-medium">{m?.address_meta?.city || '-'}</td>
+                        ) : null}
+                        {directoryShowMemberSince ? (
+                          <td className="px-6 py-4 text-stone-400 text-sm font-medium">
+                            {m.member_since ? new Date(m.member_since).toLocaleDateString(lang === 'en' ? 'en-US' : 'cs-CZ') : '-'}
+                          </td>
+                        ) : null}
+                        {directoryShowAddress ? (
+                          <td className="px-6 py-4 text-stone-500 font-medium">{m.address || '-'}</td>
+                        ) : null}
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <button
                               type="button"
-                              onClick={() => toggleBlocked(String(m.email))}
+                              onClick={() => toggleBlocked(String(m.id || ''))}
                               className="inline-flex items-center justify-center rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
                             >
-                              {blocked[String(m.email || '').toLowerCase()]
-                                ? (ms.directoryUnblock || (lang === 'en' ? 'Unblock' : 'Odblokovat'))
-                                : (ms.directoryBlock || (lang === 'en' ? 'Block' : 'Blokovat'))}
+                              {(() => {
+                                const idKey = String(m.id || '').toLowerCase();
+                                const emailKey = String(m.email || '').toLowerCase();
+                                const isBlocked = !!(blocked[idKey] || (emailKey && blocked[emailKey]));
+                                return isBlocked
+                                  ? (ms.directoryUnblock || (lang === 'en' ? 'Unblock' : 'Odblokovat'))
+                                  : (ms.directoryBlock || (lang === 'en' ? 'Block' : 'Blokovat'));
+                              })()}
                             </button>
                             <button
                               type="button"
                               onClick={() =>
                                 setReportOpen({
                                   type: 'user',
-                                  id: String(m.email),
-                                  label: `${m.first_name || ''} ${m.last_name || ''}`.trim() || String(m.email),
+                                  id: String(m.id || ''),
+                                  label: `${m.first_name || ''} ${m.last_name || ''}`.trim() || String(m.email || m.id || ''),
                                 })
                               }
                               className="inline-flex items-center justify-center rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"

@@ -10,10 +10,12 @@ import { getDictionary } from '@/lib/get-dictionary';
 import { SkeletonGrid } from '../components/Skeleton';
 import { richTextToClientHtml } from '@/lib/richtext-client';
 import { stripHtmlToText } from '@/lib/richtext-shared';
+import { useSitePageContent } from '@/app/[lang]/components/useSitePageContent';
 
 export default function GuidePage() {
   const params = useParams();
   const lang = (params?.lang as string) || 'cs';
+  const page = useSitePageContent('pruvodce', lang);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [dict, setDict] = useState<any>(null);
@@ -53,6 +55,12 @@ export default function GuidePage() {
   return (
     <div className="min-h-screen bg-stone-50 pt-24 pb-32">
       <div className="max-w-6xl mx-auto px-6">
+        {page.html ? (
+          <div className="bg-white border border-stone-100 rounded-[2.5rem] p-8 md:p-10 shadow-sm mb-8">
+            {page.title ? <div className="text-2xl md:text-4xl font-black text-stone-900 tracking-tight mb-6">{page.title}</div> : null}
+            <div className="prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: page.html }} />
+          </div>
+        ) : null}
         <header className="text-center mb-16">
           <div className="inline-flex p-3 bg-green-100 text-green-600 rounded-2xl mb-6">
             <BookOpen size={32} />

@@ -1,0 +1,349 @@
+import Link from 'next/link';
+import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
+import { getDictionary } from '@/lib/get-dictionary';
+import { getPublicBaseUrl } from '@/lib/public-base-url';
+import sanitizeHtml from 'sanitize-html';
+import { decodeHtmlEntitiesDeep } from '@/lib/richtext-shared';
+import ScrollProgressBar from '../../components/ScrollProgressBar';
+import SocialShareInline from '@/app/components/SocialShareInline';
+import { ArrowLeft, Calendar, Clock, MapPin, Navigation, Ticket } from 'lucide-react';
+
+function formatGoogleCalDateUtc(d: Date) {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`;
+}
+
+function addHours(date: Date, hours: number) {
+  const d = new Date(date);
+  d.setHours(d.getHours() + hours);
+  return d;
+}
+
+async function getPublicEvent(id: string, nowIso: string) {
+  const run = (withMemberFilter: boolean) => {
+    let q = supabase.from('events').select('*').eq('id', id).lte('published_at', nowIso);
+    if (withMemberFilter) q = q.eq('is_member_only', false);
+    return q.maybeSingle();
+  };
+  let res = await run(true);
+  if (res.error && /is_member_only/i.test(res.error.message) && /schema cache/i.test(res.error.message)) {
+    res = await run(false);
+  }
+  return res.data;
+}
+
+async function isMapaEnabled() {
+  const { data } = await supabase.from('site_public_config').select('pages').limit(1).maybeSingle();
+  const pages = (data as any)?.pages || {};
+  return pages?.mapa?.enabled !== false;
+}
+
+async function getMapPointForLocation(location: string) {
+  const loc = String(location || '').trim();
+  if (!loc) return null;
+  const tokens = loc.split(/[,]/).map((s) => s.trim()).filter(Boolean);
+  const first = tokens[0] || loc;
+  const lastToken = loc.split(/\s+/).filter(Boolean).slice(-1)[0] || '';
+  const { data } = await supabase
+    .from('campus_map_points')
+    .select('id')
+    .or(`name.ilike.%${first}%,building_code.ilike.%${lastToken}%`)
+    .limit(1);
+  return data?.[0] || null;
+}
+
+function parseTimeline(description: string) {
+  const lines = description
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const items = lines
+    .map((l) => {
+      const m = l.match(/^(\d{1,2}:\d{2})\s*(.*)$/);
+      if (!m) return null;
+      return { time: m[1], title: m[2] || '' };
+    })
+    .filter(Boolean) as { time: string; title: string }[];
+  return items;
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ lang: string; id: string }>;
+}): Promise<Metadata> {
+  const { lang, id } = await params;
+  const now = new Date().toISOString();
+  const event = await getPublicEvent(id, now);
+  if (!event) return {};
+
+  const title = lang === 'en' && event.title_en ? event.title_en : event.title;
+  const description =
+    (lang === 'en' ? (event.description_en || event.description) : event.description) ||
+    (lang === 'en' ? 'Event by Pupen.' : 'Akce pořádaná spolkem Pupen.');
+
+  const baseUrl = getPublicBaseUrl();
+  const url = `${baseUrl}/${lang}/akce/${id}`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: `/${lang}/akce/${id}`,
+      languages: {
+        'cs-CZ': `/cs/akce/${id}`,
+        'en-US': `/en/akce/${id}`,
+      },
+    },
+    openGraph: {
+      title,
+      description,
+      url,
+      type: 'article',
+    },
+  };
+}
+
+export default async function EventDetailPage({ params }: { params: Promise<{ lang: string; id: string }> }) {
+  const { lang, id } = await params;
+  const dict = await getDictionary(lang);
+
+  const now = new Date().toISOString();
+  const event = await getPublicEvent(id, now);
+  if (!event) return notFound();
+
+  const title = lang === 'en' && event.title_en ? event.title_en : event.title;
+  const descriptionText = (lang === 'en' ? (event.description_en || event.description) : event.description) || '';
+  const descriptionHtmlRaw =
+    lang === 'en'
+      ? event.description_html_en || event.description_html || ''
+      : event.description_html || '';
+  const decodedDescriptionHtmlRaw = decodeHtmlEntitiesDeep(String(descriptionHtmlRaw || ''), 3);
+  const descriptionHtml = decodedDescriptionHtmlRaw
+    ? sanitizeHtml(decodedDescriptionHtmlRaw, {
+        allowedTags: ['a', 'b', 'strong', 'i', 'em', 'u', 'br', 'p', 'div', 'span', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'blockquote'],
+        allowedAttributes: { a: ['href', 'target', 'rel'], '*': ['class'] },
+        allowedSchemes: ['http', 'https', 'mailto', 'tel'],
+        allowProtocolRelative: false,
+      })
+    : '';
+  const timeline = descriptionText ? parseTimeline(descriptionText) : [];
+
+  const location = event.location || '';
+  const googleMaps = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(location)}`;
+  const appleMaps = `https://maps.apple.com/?daddr=${encodeURIComponent(location)}`;
+  const waze = `https://waze.com/ul?q=${encodeURIComponent(location)}&navigate=yes`;
+
+  const start = event.date ? new Date(event.date) : null;
+  const end = event.end_date ? new Date(event.end_date) : start ? addHours(start, 2) : null;
+  const baseUrl = getPublicBaseUrl();
+  const canRegister = Number(event.capacity || 0) > 0;
+  const mapEnabled = await isMapaEnabled();
+  const mapPoint = mapEnabled ? await getMapPointForLocation(location) : null;
+  const mapaUrl = mapEnabled
+    ? mapPoint
+      ? `/${lang}/mapa?point=${encodeURIComponent(String(mapPoint.id))}`
+      : `/${lang}/mapa?q=${encodeURIComponent(location)}`
+    : '';
+  const googleCalUrl =
+    start && end
+      ? `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${encodeURIComponent(`${formatGoogleCalDateUtc(start)}/${formatGoogleCalDateUtc(end)}`)}&details=${encodeURIComponent(descriptionText || '')}&location=${encodeURIComponent(location)}&sprop=website:${encodeURIComponent(`${baseUrl}/${lang}/akce/${event.id}`)}`
+      : '';
+  const icsUrl = `/api/ical/events/${event.id}?lang=${lang}`;
+
+  return (
+    <div className="min-h-screen bg-stone-50 font-sans">
+      <ScrollProgressBar />
+
+      <div className="max-w-6xl mx-auto px-6 py-10">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+          <Link
+            href={`/${lang}/akce`}
+            className="inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
+          >
+            <ArrowLeft size={16} />
+            {lang === 'en' ? 'Back to events' : 'Zpět na akce'}
+          </Link>
+
+          {canRegister ? (
+            <Link
+              href={`/${lang}/akce?rsvp=1#event-${event.id}`}
+              className="inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-green-200 bg-green-600 text-white hover:bg-green-700 transition shadow-lg shadow-green-600/20"
+            >
+              <Ticket size={16} />
+              {lang === 'en' ? 'Register' : 'Registrovat'}
+            </Link>
+          ) : null}
+        </div>
+
+        <div className="bg-white border border-stone-100 shadow-sm rounded-[3rem] p-10 md:p-16">
+          <div className="space-y-6">
+            <div className="text-[10px] font-black uppercase tracking-[0.3em] text-stone-400">
+              {dict?.eventsPage?.title || (lang === 'en' ? 'Events' : 'Akce')}
+            </div>
+            <h1 className="text-4xl md:text-6xl font-black text-stone-900 tracking-tight leading-none">{title}</h1>
+
+            <div className="flex flex-wrap items-center gap-3">
+              {event.date && (
+                <span className="inline-flex items-center gap-2 bg-stone-50 border border-stone-100 px-4 py-2 rounded-xl text-sm font-bold text-stone-700">
+                  <Calendar size={16} className="text-green-600" />
+                  {new Date(event.date).toLocaleDateString(lang === 'en' ? 'en-US' : 'cs-CZ')}
+                </span>
+              )}
+              {event.time && (
+                <span className="inline-flex items-center gap-2 bg-stone-50 border border-stone-100 px-4 py-2 rounded-xl text-sm font-bold text-stone-700">
+                  <Clock size={16} className="text-green-600" />
+                  {event.time}
+                </span>
+              )}
+              {location && (
+                <span className="inline-flex items-center gap-2 bg-stone-50 border border-stone-100 px-4 py-2 rounded-xl text-sm font-bold text-stone-700">
+                  <MapPin size={16} className="text-green-600" />
+                  {location}
+                </span>
+              )}
+            </div>
+
+            <div className="pt-2">
+              <SocialShareInline title={title} />
+            </div>
+          </div>
+
+          <div className="mt-12 grid lg:grid-cols-12 gap-10">
+            <div className="lg:col-span-7 space-y-10">
+              <section className="bg-stone-50 border border-stone-100 rounded-[2.5rem] p-8">
+                <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-4">
+                  {lang === 'en' ? 'About' : 'O akci'}
+                </div>
+                {descriptionHtml || descriptionText ? (
+                  descriptionHtml ? (
+                    <div
+                      className="prose prose-stone max-w-none prose-p:leading-relaxed prose-headings:font-black prose-headings:tracking-tight prose-a:text-green-600"
+                      dangerouslySetInnerHTML={{ __html: descriptionHtml }}
+                    />
+                  ) : (
+                    <div className="prose prose-stone max-w-none prose-p:leading-relaxed prose-headings:font-black prose-headings:tracking-tight prose-a:text-green-600">
+                      {descriptionText.split('\n').map((p: string, idx: number) => (p.trim() ? <p key={idx}>{p}</p> : null))}
+                    </div>
+                  )
+                ) : (
+                  <div className="text-stone-400 font-bold uppercase tracking-widest text-xs">
+                    {lang === 'en' ? 'No description yet.' : 'Zatím bez popisu.'}
+                  </div>
+                )}
+              </section>
+
+              {timeline.length > 0 && (
+                <section className="bg-white border border-stone-100 rounded-[2.5rem] p-8 shadow-sm">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-6">
+                    {lang === 'en' ? 'Schedule' : 'Program'}
+                  </div>
+                  <div className="space-y-3">
+                    {timeline.map((t, idx) => (
+                      <div key={idx} className="flex items-start gap-4 p-4 bg-stone-50 rounded-2xl border border-stone-100">
+                        <div className="w-16 shrink-0 text-center rounded-xl bg-white border border-stone-100 py-2 text-sm font-black text-stone-900">
+                          {t.time}
+                        </div>
+                        <div className="font-bold text-stone-700">{t.title || (lang === 'en' ? 'Item' : 'Bod')}</div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+            </div>
+
+            <div className="lg:col-span-5 space-y-6">
+              <section className="bg-stone-50 border border-stone-100 rounded-[2.5rem] p-8">
+                <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-4">
+                  {lang === 'en' ? 'Location' : 'Místo'}
+                </div>
+                <div className="space-y-3">
+                  {mapaUrl ? (
+                    <Link
+                      href={mapaUrl}
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
+                    >
+                      <MapPin size={16} />
+                      {lang === 'en' ? 'Our map' : 'Naše mapa'}
+                    </Link>
+                  ) : null}
+                  <a
+                    href={googleMaps}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
+                  >
+                    <Navigation size={16} />
+                    {lang === 'en' ? 'Route (Google)' : 'Trasa (Google)'}
+                  </a>
+                  <a
+                    href={appleMaps}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
+                  >
+                    <Navigation size={16} />
+                    {lang === 'en' ? 'Route (Apple)' : 'Trasa (Apple)'}
+                  </a>
+                  <a
+                    href={waze}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
+                  >
+                    <Navigation size={16} />
+                    {lang === 'en' ? 'Navigate (Waze)' : 'Navigovat (Waze)'}
+                  </a>
+                </div>
+              </section>
+
+              <section className="bg-white border border-stone-100 rounded-[2.5rem] p-8 shadow-sm">
+                <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-4">
+                  {lang === 'en' ? 'Quick actions' : 'Rychlé akce'}
+                </div>
+                <div className="space-y-3">
+                  {canRegister ? (
+                    <Link
+                      href={`/${lang}/akce?rsvp=1#event-${event.id}`}
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-green-200 bg-green-600 text-white hover:bg-green-700 transition shadow-lg shadow-green-600/20"
+                    >
+                      <Ticket size={16} />
+                      {lang === 'en' ? 'Register' : 'Registrovat'}
+                    </Link>
+                  ) : null}
+                  <Link
+                    href={`/${lang}/akce#event-${event.id}`}
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
+                  >
+                    <ArrowLeft size={16} className="rotate-180" />
+                    {lang === 'en' ? 'Open list view' : 'Otevřít seznam'}
+                  </Link>
+                  {googleCalUrl ? (
+                    <a
+                      href={googleCalUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
+                    >
+                      <Calendar size={16} />
+                      {lang === 'en' ? 'Add to Google Calendar' : 'Přidat do Kalendáře Google'}
+                    </a>
+                  ) : null}
+                  <a
+                    href={icsUrl}
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
+                  >
+                    <Calendar size={16} />
+                    {lang === 'en' ? 'Download iCal (.ics)' : 'Stáhnout iCal (.ics)'}
+                  </a>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

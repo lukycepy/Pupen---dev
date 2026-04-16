@@ -1,0 +1,3792 @@
+[
+  {
+    "name": "Bioklimatologie",
+    "code": "AAA11E",
+    "type": "Bc."
+  },
+  {
+    "name": "Základní agrotechnika I.",
+    "code": "AAA12E",
+    "type": "Bc."
+  },
+  {
+    "name": "Základní agrotechnika II.",
+    "code": "AAA13E",
+    "type": "Bc."
+  },
+  {
+    "name": "Obecná produkce rostlinná",
+    "code": "AAA17E",
+    "type": "Bc."
+  },
+  {
+    "name": "Agroekologie",
+    "code": "AAA22E",
+    "type": "Bc."
+  },
+  {
+    "name": "Základy agroekologie",
+    "code": "AAA23E",
+    "type": "Bc."
+  },
+  {
+    "name": "Politika rozvoje venkova v EU",
+    "code": "AAA33E",
+    "type": "Bc."
+  },
+  {
+    "name": "Základy bioklimatologie a agroekologie",
+    "code": "AAA36E",
+    "type": "Bc."
+  },
+  {
+    "name": "Agrometeorologie a bioklimatologie",
+    "code": "AAA37E",
+    "type": "Bc."
+  },
+  {
+    "name": "Hydroponie",
+    "code": "AAA38E",
+    "type": "Bc."
+  },
+  {
+    "name": "Fyziologie rostlin",
+    "code": "ABA03E",
+    "type": "Bc."
+  },
+  {
+    "name": "Botanika",
+    "code": "ABA09E",
+    "type": "Bc."
+  },
+  {
+    "name": "Pěstování a tvorba bonsají",
+    "code": "ABA17E",
+    "type": "Bc."
+  },
+  {
+    "name": "Sběr, preparace a konzervace přírodnin",
+    "code": "ABA21E",
+    "type": "Bc."
+  },
+  {
+    "name": "Botanika obecná",
+    "code": "ABA22E",
+    "type": "Bc."
+  },
+  {
+    "name": "Botanika systematická",
+    "code": "ABA23E",
+    "type": "Bc."
+  },
+  {
+    "name": "Základy biologie rostlin",
+    "code": "ABA27E",
+    "type": "Bc."
+  },
+  {
+    "name": "Chemie organická",
+    "code": "ACA03E",
+    "type": "Bc."
+  },
+  {
+    "name": "Biochemie",
+    "code": "ACA05E",
+    "type": "Bc."
+  },
+  {
+    "name": "Obecná a anorganická chemie",
+    "code": "ACA15E",
+    "type": "Bc."
+  },
+  {
+    "name": "Chemie pro chovatele",
+    "code": "ACA16E",
+    "type": "Bc."
+  },
+  {
+    "name": "Biochemie pro chovatele",
+    "code": "ACA17E",
+    "type": "Bc."
+  },
+  {
+    "name": "Základy analytické chemie",
+    "code": "ACA18E",
+    "type": "Bc."
+  },
+  {
+    "name": "Základy chemie a analýzy potravin",
+    "code": "ACA19E",
+    "type": "Bc."
+  },
+  {
+    "name": "Chemie - speciální",
+    "code": "ACA26E",
+    "type": "Bc."
+  },
+  {
+    "name": "Biochemie - speciální",
+    "code": "ACA27E",
+    "type": "Bc."
+  },
+  {
+    "name": "Chov drobných hospodářských zvířat",
+    "code": "ADA10E",
+    "type": "Bc."
+  },
+  {
+    "name": "Chov okrasného ptactva",
+    "code": "ADA14E",
+    "type": "Bc."
+  },
+  {
+    "name": "Chov prasat I",
+    "code": "ADA19E",
+    "type": "Bc."
+  },
+  {
+    "name": "Chov drůbeže I",
+    "code": "ADA20E",
+    "type": "Bc."
+  },
+  {
+    "name": "Chov skotu I",
+    "code": "ADA31E",
+    "type": "Bc."
+  },
+  {
+    "name": "Základy technologie zpracování masa",
+    "code": "ADA33E",
+    "type": "Bc."
+  },
+  {
+    "name": "Jezdecký sport a dostihy",
+    "code": "ADA34E",
+    "type": "Bc."
+  },
+  {
+    "name": "Chov malých přežvýkavců",
+    "code": "ADA40E",
+    "type": "Bc."
+  },
+  {
+    "name": "Parazitologie",
+    "code": "AEA03E",
+    "type": "Bc."
+  },
+  {
+    "name": "Včelařství",
+    "code": "AEA05E",
+    "type": "Bc."
+  },
+  {
+    "name": "Zoologie",
+    "code": "AEA09E",
+    "type": "Bc."
+  },
+  {
+    "name": "Terénní cvičení (40 h)",
+    "code": "AEA10Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Terénní cvičení (12 h / 3 dny)",
+    "code": "AEA11Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Systematika ryb",
+    "code": "AEA12E",
+    "type": "Bc."
+  },
+  {
+    "name": "Chov terarijních živočichů",
+    "code": "AEA13E",
+    "type": "Bc."
+  },
+  {
+    "name": "Akvaristika",
+    "code": "AEA14E",
+    "type": "Bc."
+  },
+  {
+    "name": "Aplikovaná ekologie",
+    "code": "AEA19E",
+    "type": "Bc."
+  },
+  {
+    "name": "Základy chovu exotických zvířat",
+    "code": "AEA21E",
+    "type": "Bc."
+  },
+  {
+    "name": "Aquaculture (anglicky)",
+    "code": "AEA22E",
+    "type": "Bc."
+  },
+  {
+    "name": "Zoologie bezobratlých",
+    "code": "AEA25E",
+    "type": "Bc."
+  },
+  {
+    "name": "Zoologie obratlovců",
+    "code": "AEA26E",
+    "type": "Bc."
+  },
+  {
+    "name": "Mořská biologie",
+    "code": "AEA27E",
+    "type": "Bc."
+  },
+  {
+    "name": "Hydrobiologie",
+    "code": "AEA30E",
+    "type": "Bc."
+  },
+  {
+    "name": "Základy biomonitoringu",
+    "code": "AEA31E",
+    "type": "Bc."
+  },
+  {
+    "name": "Akvakultura",
+    "code": "AEA33E",
+    "type": "Bc."
+  },
+  {
+    "name": "Základy fotografování zvířat",
+    "code": "AEA36E",
+    "type": "Bc."
+  },
+  {
+    "name": "Biologie ryb",
+    "code": "AEA40E",
+    "type": "Bc."
+  },
+  {
+    "name": "Rybářství a rybníkářství",
+    "code": "AEA41E",
+    "type": "Bc."
+  },
+  {
+    "name": "Péče o vodní ekosystémy",
+    "code": "AEA42E",
+    "type": "Bc."
+  },
+  {
+    "name": "Invazní biologie",
+    "code": "AEA43E",
+    "type": "Bc."
+  },
+  {
+    "name": "Anatomie a fyziologie ryb",
+    "code": "AEA59E",
+    "type": "Bc."
+  },
+  {
+    "name": "Péče o pohybový aparát",
+    "code": "AEA61E",
+    "type": "Bc."
+  },
+  {
+    "name": "Chov hmyzu pro potravinářské účely",
+    "code": "AEA63E",
+    "type": "Bc."
+  },
+  {
+    "name": "Hydrobiologie (ARCHIB)",
+    "code": "AEA65E",
+    "type": "Bc."
+  },
+  {
+    "name": "Chov bezobratlých živočichů",
+    "code": "AEX04E",
+    "type": "Bc."
+  },
+  {
+    "name": "Zakládání a ošetřování zeleně",
+    "code": "AFA04E",
+    "type": "Bc."
+  },
+  {
+    "name": "Green Infrastructure and Social Ecology",
+    "code": "AFA09E",
+    "type": "Bc."
+  },
+  {
+    "name": "Obecná genetika",
+    "code": "AGA01E",
+    "type": "Bc."
+  },
+  {
+    "name": "Úvod do šlechtění zvířat",
+    "code": "AGA14E",
+    "type": "Bc."
+  },
+  {
+    "name": "Šlechtění a semenářství",
+    "code": "AGA15E",
+    "type": "Bc."
+  },
+  {
+    "name": "Odborná exkurze",
+    "code": "AHA01Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Toxikologie",
+    "code": "AHA07E",
+    "type": "Bc."
+  },
+  {
+    "name": "Agrochemie",
+    "code": "AHA09E",
+    "type": "Bc."
+  },
+  {
+    "name": "Výživa a hnojení zahradních plodin",
+    "code": "AHA10E",
+    "type": "Bc."
+  },
+  {
+    "name": "Principy výživy rostlin",
+    "code": "AHA14E",
+    "type": "Bc."
+  },
+  {
+    "name": "Odpady a odpadní vody",
+    "code": "AHA15E",
+    "type": "Bc."
+  },
+  {
+    "name": "Výživa rostlin v ekol. zemědělství",
+    "code": "AHA34E",
+    "type": "Bc."
+  },
+  {
+    "name": "Základy ekotoxikologie",
+    "code": "AHA35E",
+    "type": "Bc."
+  },
+  {
+    "name": "Výživa rostlin ve vztahu k potravinám",
+    "code": "AHA44E",
+    "type": "Bc."
+  },
+  {
+    "name": "Biochemie rostlin",
+    "code": "AHA45E",
+    "type": "Bc."
+  },
+  {
+    "name": "Výživa a ochrana rostlin",
+    "code": "AHA46E",
+    "type": "Bc."
+  },
+  {
+    "name": "Příčiny a zdroje kontaminace prostředí",
+    "code": "AHA47E",
+    "type": "Bc."
+  },
+  {
+    "name": "Obnovitelné a neobnovitelné zdroje",
+    "code": "AHA48E",
+    "type": "Bc."
+  },
+  {
+    "name": "Hydrologie a hydrogeologie",
+    "code": "AIA03E",
+    "type": "Bc."
+  },
+  {
+    "name": "Hydrologie a vodní toky",
+    "code": "AIA19E",
+    "type": "Bc."
+  },
+  {
+    "name": "Rybníky a vodní nádrže",
+    "code": "AIA21E",
+    "type": "Bc."
+  },
+  {
+    "name": "Vodohospodářské právo",
+    "code": "AIA23E",
+    "type": "Bc."
+  },
+  {
+    "name": "Voda v krajině a závlahy",
+    "code": "AIA29E",
+    "type": "Bc."
+  },
+  {
+    "name": "Potravinářská praxe",
+    "code": "AKA02Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Bakalářský seminář",
+    "code": "AKA03Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Potravinářské zbožíznalství",
+    "code": "AKA24E",
+    "type": "Bc."
+  },
+  {
+    "name": "Živiny a živinové potřeby člověka",
+    "code": "AKA25E",
+    "type": "Bc."
+  },
+  {
+    "name": "Výživa zvířat a nauka o krmivech",
+    "code": "AKA26E",
+    "type": "Bc."
+  },
+  {
+    "name": "Výživa zvířat ve vztahu k potravinám",
+    "code": "AKA35E",
+    "type": "Bc."
+  },
+  {
+    "name": "Racionální výživa a základy dietologie",
+    "code": "AKA36E",
+    "type": "Bc."
+  },
+  {
+    "name": "Úvod do potravinářství",
+    "code": "AKA43E",
+    "type": "Bc."
+  },
+  {
+    "name": "Výživa zvířat v zájmových chovech",
+    "code": "AKA44E",
+    "type": "Bc."
+  },
+  {
+    "name": "Krmení hospodářských zvířat",
+    "code": "AKA47E",
+    "type": "Bc."
+  },
+  {
+    "name": "Etika chovu a etologie hosp. zvířat",
+    "code": "ALA02E",
+    "type": "Bc."
+  },
+  {
+    "name": "Obecná zootechnika",
+    "code": "ALA03E",
+    "type": "Bc."
+  },
+  {
+    "name": "Etologie",
+    "code": "ALA05E",
+    "type": "Bc."
+  },
+  {
+    "name": "Zootechnika",
+    "code": "ALA06E",
+    "type": "Bc."
+  },
+  {
+    "name": "Obecná kynologie",
+    "code": "ALA07E",
+    "type": "Bc."
+  },
+  {
+    "name": "Chov exotických savců I.",
+    "code": "ALA08E",
+    "type": "Bc."
+  },
+  {
+    "name": "Chov psů",
+    "code": "ALA09E",
+    "type": "Bc."
+  },
+  {
+    "name": "Etologie psa",
+    "code": "ALA10E",
+    "type": "Bc."
+  },
+  {
+    "name": "Etika a welfare chovu koní",
+    "code": "ALA12E",
+    "type": "Bc."
+  },
+  {
+    "name": "Etologie koní",
+    "code": "ALA13E",
+    "type": "Bc."
+  },
+  {
+    "name": "Plemenitba koní",
+    "code": "ALA14E",
+    "type": "Bc."
+  },
+  {
+    "name": "Zapojení zvířat v zoorehabilitaci",
+    "code": "ALA18E",
+    "type": "Bc."
+  },
+  {
+    "name": "Plemenitba psů",
+    "code": "ALA19E",
+    "type": "Bc."
+  },
+  {
+    "name": "Praktické zapojení psa v zoorehabilitaci",
+    "code": "ALA21E",
+    "type": "Bc."
+  },
+  {
+    "name": "Služební kynologie",
+    "code": "ALA31E",
+    "type": "Bc."
+  },
+  {
+    "name": "Chov exotických savců II.",
+    "code": "ALA32E",
+    "type": "Bc."
+  },
+  {
+    "name": "Senzorická percepce psa",
+    "code": "ALA38E",
+    "type": "Bc."
+  },
+  {
+    "name": "Základy chovu zájmových zvířat",
+    "code": "ALA40E",
+    "type": "Bc."
+  },
+  {
+    "name": "Canisterapie",
+    "code": "ALA41Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Praktická hipoterapie ve fyzioterapii",
+    "code": "ALA42Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Úvod do sociálních služeb I.",
+    "code": "ALA44E",
+    "type": "Bc."
+  },
+  {
+    "name": "Zdraví a nemoc",
+    "code": "ALA46E",
+    "type": "Bc."
+  },
+  {
+    "name": "Ucelená rehabilitace",
+    "code": "ALA47E",
+    "type": "Bc."
+  },
+  {
+    "name": "Etika chovu zvířat",
+    "code": "ALX03E",
+    "type": "Bc."
+  },
+  {
+    "name": "Kynologie - využití psů",
+    "code": "ALX05E",
+    "type": "Bc."
+  },
+  {
+    "name": "Mikrobiologie A",
+    "code": "AMA06E",
+    "type": "Bc."
+  },
+  {
+    "name": "Mikrobiologie E",
+    "code": "AMA08E",
+    "type": "Bc."
+  },
+  {
+    "name": "General Microbiology (anglicky)",
+    "code": "AMA11E",
+    "type": "Bc."
+  },
+  {
+    "name": "Základy kvasných technologií",
+    "code": "AMA16E",
+    "type": "Bc."
+  },
+  {
+    "name": "Základy ochrany rostlin",
+    "code": "AOA36E",
+    "type": "Bc."
+  },
+  {
+    "name": "Pedologie pro zahradníky",
+    "code": "APA12E",
+    "type": "Bc."
+  },
+  {
+    "name": "Pedologie pro fytotechniky",
+    "code": "APA13E",
+    "type": "Bc."
+  },
+  {
+    "name": "Pedologie",
+    "code": "APA15E",
+    "type": "Bc."
+  },
+  {
+    "name": "Základy geologie",
+    "code": "APA16E",
+    "type": "Bc."
+  },
+  {
+    "name": "Aplikovaná a účelová kartografie",
+    "code": "APA33E",
+    "type": "Bc."
+  },
+  {
+    "name": "Pedologie a ochrana půd",
+    "code": "APA40E",
+    "type": "Bc."
+  },
+  {
+    "name": "Potravinové systémy",
+    "code": "AQA17Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Technologie zpracování zem. plodin",
+    "code": "AQA19E",
+    "type": "Bc."
+  },
+  {
+    "name": "Potravinářská praxe",
+    "code": "AQA35Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Koloidní systémy v potravinách",
+    "code": "AQA36E",
+    "type": "Bc."
+  },
+  {
+    "name": "Konzervování a skladování potravin",
+    "code": "AQA40E",
+    "type": "Bc."
+  },
+  {
+    "name": "Technologie zpracování mléka",
+    "code": "AQA41E",
+    "type": "Bc."
+  },
+  {
+    "name": "Základy technologie výroby sýrů",
+    "code": "AQA42E",
+    "type": "Bc."
+  },
+  {
+    "name": "Hodnocení kvality potravin rostl. původu",
+    "code": "AQA43E",
+    "type": "Bc."
+  },
+  {
+    "name": "Food Storage and Preservation (anglicky)",
+    "code": "AQA58E",
+    "type": "Bc."
+  },
+  {
+    "name": "Food Tech. and Processing of Plant Prod.",
+    "code": "AQA61E",
+    "type": "Bc."
+  },
+  {
+    "name": "Hodnocení kvality potravin živoč. původu",
+    "code": "AQA64E",
+    "type": "Bc."
+  },
+  {
+    "name": "Rostliny aromatické, kořen. a léčivé",
+    "code": "ARA12E",
+    "type": "Bc."
+  },
+  {
+    "name": "Základy rostlinné produkce",
+    "code": "ARA18E",
+    "type": "Bc."
+  },
+  {
+    "name": "Pěstování rostlin a prostředí",
+    "code": "ARA25E",
+    "type": "Bc."
+  },
+  {
+    "name": "Odborná exkurze",
+    "code": "ARA27Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Pěstování rostlin v ekol. zemědělství",
+    "code": "ARA38E",
+    "type": "Bc."
+  },
+  {
+    "name": "Principy ekologického zemědělství",
+    "code": "ARA52E",
+    "type": "Bc."
+  },
+  {
+    "name": "Speciální plodiny",
+    "code": "ARA60E",
+    "type": "Bc."
+  },
+  {
+    "name": "Základy reprodukce zvířat",
+    "code": "ASA16E",
+    "type": "Bc."
+  },
+  {
+    "name": "Základy chovu hospodářských zvířat",
+    "code": "ASA19E",
+    "type": "Bc."
+  },
+  {
+    "name": "Chov zvířat a prostředí",
+    "code": "ASA23E",
+    "type": "Bc."
+  },
+  {
+    "name": "Chov koček",
+    "code": "ASA24E",
+    "type": "Bc."
+  },
+  {
+    "name": "Chov koní",
+    "code": "ASA25E",
+    "type": "Bc."
+  },
+  {
+    "name": "Jezdectví a vozatajství",
+    "code": "ASA26E",
+    "type": "Bc."
+  },
+  {
+    "name": "Výcvik koně a jezdce",
+    "code": "ASA31E",
+    "type": "Bc."
+  },
+  {
+    "name": "Chov malých zvířat v ekol. zemědělství",
+    "code": "ASA39E",
+    "type": "Bc."
+  },
+  {
+    "name": "Chov velkých zvířat v ekol. zemědělství",
+    "code": "ASA40E",
+    "type": "Bc."
+  },
+  {
+    "name": "Chov lam",
+    "code": "ASA42E",
+    "type": "Bc."
+  },
+  {
+    "name": "Hiporehabilitace",
+    "code": "ASA50E",
+    "type": "Bc."
+  },
+  {
+    "name": "Jezdecká hipologie",
+    "code": "ASA53E",
+    "type": "Bc."
+  },
+  {
+    "name": "Food Tech. and Proc. of Animal Prod.",
+    "code": "ASA59E",
+    "type": "Bc."
+  },
+  {
+    "name": "Pícninářství na orné půdě",
+    "code": "ATA06E",
+    "type": "Bc."
+  },
+  {
+    "name": "Lukařství a pastvinářství",
+    "code": "ATA07E",
+    "type": "Bc."
+  },
+  {
+    "name": "Základy trávníkářství",
+    "code": "ATA21E",
+    "type": "Bc."
+  },
+  {
+    "name": "Pícninářství a pastvinářství",
+    "code": "ATA24E",
+    "type": "Bc."
+  },
+  {
+    "name": "Pěstování polních plodin I.",
+    "code": "ATA28E",
+    "type": "Bc."
+  },
+  {
+    "name": "Pěstování polních plodin II.",
+    "code": "ATA29E",
+    "type": "Bc."
+  },
+  {
+    "name": "Principy precizního zemědělství",
+    "code": "ATA30E",
+    "type": "Bc."
+  },
+  {
+    "name": "Polní plodiny",
+    "code": "ATA31E",
+    "type": "Bc."
+  },
+  {
+    "name": "Účelové travní porosty",
+    "code": "ATX03E",
+    "type": "Bc."
+  },
+  {
+    "name": "Praxe odborná (AKVAB)",
+    "code": "AUA28Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Praxe odborná (PETIBC)",
+    "code": "AUA29Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Praxe odborná (ANIMAB)",
+    "code": "AUA30Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Praxe odborná (FYTOB)",
+    "code": "AUA33Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Praxe odborná (HORTIB)",
+    "code": "AUA34Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Praxe odborná (PETIBH)",
+    "code": "AUA38Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Praxe odborná (PETIBE)",
+    "code": "AUA39Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Praxe odborná (AGRIBE)",
+    "code": "AUA40Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Praxe odborná (AGRIBF)",
+    "code": "AUA41Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Praxe odborná (AGRIBR)",
+    "code": "AUA42Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Praxe učební (LANDAB/FYTOB/HORTIB/AGRI)",
+    "code": "AUA51Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Praxe učební (AKVAB/ANIMAB/PETIB)",
+    "code": "AUA52Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Praxe učební (REHAB)",
+    "code": "AUA56Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Porodnictví",
+    "code": "AVA08E",
+    "type": "Bc."
+  },
+  {
+    "name": "Klinická mikrobiologie",
+    "code": "AVA0AE",
+    "type": "Bc."
+  },
+  {
+    "name": "Histologie a embryologie",
+    "code": "AVA0BE",
+    "type": "Bc."
+  },
+  {
+    "name": "Zdravotní prob. plazů a obojživelníků",
+    "code": "AVA0CE",
+    "type": "Bc."
+  },
+  {
+    "name": "Veterinární dermatologie",
+    "code": "AVA0DE",
+    "type": "Bc."
+  },
+  {
+    "name": "Aplikovaná etologie koček",
+    "code": "AVA0FE",
+    "type": "Bc."
+  },
+  {
+    "name": "Praktická anatomie zvířat",
+    "code": "AVA10E",
+    "type": "Bc."
+  },
+  {
+    "name": "Veterinární praxe",
+    "code": "AVA12Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Zoohygiena a prevence chorob",
+    "code": "AVA17E",
+    "type": "Bc."
+  },
+  {
+    "name": "Angličtina pro vet. programy",
+    "code": "AVA1FE",
+    "type": "Bc."
+  },
+  {
+    "name": "Angličtina pro vet. programy (zápočet)",
+    "code": "AVA1FZ",
+    "type": "Bc."
+  },
+  {
+    "name": "Základy anatomie a fyziologie zvířat",
+    "code": "AVA29E",
+    "type": "Bc."
+  },
+  {
+    "name": "Klinická stáž I",
+    "code": "AVA31Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Klinická stáž II",
+    "code": "AVA32Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Klinická stáž III",
+    "code": "AVA33Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Fyziologie zvířat I",
+    "code": "AVA48E",
+    "type": "Bc."
+  },
+  {
+    "name": "Fyziologie zvířat II",
+    "code": "AVA49E",
+    "type": "Bc."
+  },
+  {
+    "name": "Kynopraxe",
+    "code": "AVA51E",
+    "type": "Bc."
+  },
+  {
+    "name": "Péče o zdraví zvířat",
+    "code": "AVA52E",
+    "type": "Bc."
+  },
+  {
+    "name": "Provoz veterinárního zařízení",
+    "code": "AVA56E",
+    "type": "Bc."
+  },
+  {
+    "name": "Základy farmakologie a medikace",
+    "code": "AVA57E",
+    "type": "Bc."
+  },
+  {
+    "name": "Patofyziologie a patologie zvířat",
+    "code": "AVA58E",
+    "type": "Bc."
+  },
+  {
+    "name": "Základy klinické diagnostiky",
+    "code": "AVA59E",
+    "type": "Bc."
+  },
+  {
+    "name": "Základy laboratorní diagnostiky",
+    "code": "AVA60E",
+    "type": "Bc."
+  },
+  {
+    "name": "Ambulantní péče",
+    "code": "AVA61E",
+    "type": "Bc."
+  },
+  {
+    "name": "Asistence při anestezii",
+    "code": "AVA62E",
+    "type": "Bc."
+  },
+  {
+    "name": "Management infekčních onemocnění",
+    "code": "AVA63E",
+    "type": "Bc."
+  },
+  {
+    "name": "Prevence a profylaxe",
+    "code": "AVA64E",
+    "type": "Bc."
+  },
+  {
+    "name": "Základy chirurgie a zobraz. diagnostiky",
+    "code": "AVA65E",
+    "type": "Bc."
+  },
+  {
+    "name": "Hospitalizační péče",
+    "code": "AVA66E",
+    "type": "Bc."
+  },
+  {
+    "name": "Neodkladná a intenzivní péče",
+    "code": "AVA67E",
+    "type": "Bc."
+  },
+  {
+    "name": "Zdravotní problematika koní I",
+    "code": "AVA68E",
+    "type": "Bc."
+  },
+  {
+    "name": "Zdravotní problematika koní II",
+    "code": "AVA69E",
+    "type": "Bc."
+  },
+  {
+    "name": "Zdravotní prob. drobných savců",
+    "code": "AVADEE",
+    "type": "Bc."
+  },
+  {
+    "name": "Fyziologie člověka (FTVS)",
+    "code": "AWA03E",
+    "type": "Bc."
+  },
+  {
+    "name": "Start up modul I.",
+    "code": "AWA08Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Start up modul II.",
+    "code": "AWA09Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Bakalářská práce I.",
+    "code": "AWA10Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Základy patofyziologie (FTVS)",
+    "code": "AWA11E",
+    "type": "Bc."
+  },
+  {
+    "name": "Základy anatomie a kineziologie (FTVS)",
+    "code": "AWA12E",
+    "type": "Bc."
+  },
+  {
+    "name": "Bakalářská práce II. (QUALIB/NUTRIB)",
+    "code": "AWA30Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Bakalářská práce II.",
+    "code": "AWA67Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Dendrologie I",
+    "code": "AZA01E",
+    "type": "Bc."
+  },
+  {
+    "name": "Dendrologie II",
+    "code": "AZA02E",
+    "type": "Bc."
+  },
+  {
+    "name": "CAD a základy technického kreslení",
+    "code": "AZA09Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Venkovská sídla a proměny krajiny",
+    "code": "AZA10E",
+    "type": "Bc."
+  },
+  {
+    "name": "Biotechnické úpravy I.",
+    "code": "AZA13E",
+    "type": "Bc."
+  },
+  {
+    "name": "Biotechnické úpravy II.",
+    "code": "AZA14E",
+    "type": "Bc."
+  },
+  {
+    "name": "Technologie zpracování ovoce a zel.",
+    "code": "AZA16E",
+    "type": "Bc."
+  },
+  {
+    "name": "Plenér",
+    "code": "AZA16Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Exkurze tuzemská",
+    "code": "AZA18Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Základy 3D modelování",
+    "code": "AZA20Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Odborná exkurze (HORTIB)",
+    "code": "AZA22Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Krajina a krajinný ráz",
+    "code": "AZA23E",
+    "type": "Bc."
+  },
+  {
+    "name": "Vinohradnictví a vinařství I",
+    "code": "AZA27E",
+    "type": "Bc."
+  },
+  {
+    "name": "Sadovnictví",
+    "code": "AZA29E",
+    "type": "Bc."
+  },
+  {
+    "name": "Zakládání a údržba zeleně",
+    "code": "AZA31E",
+    "type": "Bc."
+  },
+  {
+    "name": "Ateliér BP1.- Bakalářský projekt",
+    "code": "AZA31Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Ateliér BP2 - Bakalářský projekt (ZS)",
+    "code": "AZA32Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Ateliér BP2 - Bakalářský projekt (LS)",
+    "code": "AZA33Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Systémy sídelní zeleně a veřejný prostor",
+    "code": "AZA35E",
+    "type": "Bc."
+  },
+  {
+    "name": "Zelinářství obecné",
+    "code": "AZA37E",
+    "type": "Bc."
+  },
+  {
+    "name": "Ovocnictví obecné",
+    "code": "AZA38E",
+    "type": "Bc."
+  },
+  {
+    "name": "Květinářství obecné",
+    "code": "AZA40E",
+    "type": "Bc."
+  },
+  {
+    "name": "Základy sadovnictví a krajinářství",
+    "code": "AZA41E",
+    "type": "Bc."
+  },
+  {
+    "name": "Výtvarná tvorba I.",
+    "code": "AZA41Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Výtvarná tvorba II.",
+    "code": "AZA42Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Výtvarná tvorba III.",
+    "code": "AZA43Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Výtvarná tvorba IV.",
+    "code": "AZA44Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Výtvarná tvorba V.",
+    "code": "AZA45Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Zahradní a krajinářská kompozice",
+    "code": "AZA52E",
+    "type": "Bc."
+  },
+  {
+    "name": "Dendrologie III.",
+    "code": "AZA53Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Základy školkařství",
+    "code": "AZA54E",
+    "type": "Bc."
+  },
+  {
+    "name": "Květinářství v zahradní tvorbě I.",
+    "code": "AZA55E",
+    "type": "Bc."
+  },
+  {
+    "name": "Květinářství v zahradní tvorbě II.",
+    "code": "AZA56E",
+    "type": "Bc."
+  },
+  {
+    "name": "Použití rostlin v zahradní kompozici",
+    "code": "AZA58E",
+    "type": "Bc."
+  },
+  {
+    "name": "Stavitelství I.",
+    "code": "AZA60E",
+    "type": "Bc."
+  },
+  {
+    "name": "Historie umění a architektury I.",
+    "code": "AZA61E",
+    "type": "Bc."
+  },
+  {
+    "name": "Stavitelství II.",
+    "code": "AZA62E",
+    "type": "Bc."
+  },
+  {
+    "name": "Historie zahr. a kraj. architektury",
+    "code": "AZA64E",
+    "type": "Bc."
+  },
+  {
+    "name": "Komplexní péče o dřeviny",
+    "code": "AZAC8E",
+    "type": "Bc."
+  },
+  {
+    "name": "Food Tech. and Proc. of Garden Prod.",
+    "code": "AZAD1E",
+    "type": "Bc."
+  },
+  {
+    "name": "Historie umění a architektury II.",
+    "code": "AZAD2E",
+    "type": "Bc."
+  },
+  {
+    "name": "Biotechnické úpravy III.",
+    "code": "AZAD5E",
+    "type": "Bc."
+  },
+  {
+    "name": "Ateliér B1. - ZAN",
+    "code": "AZAA1E",
+    "type": "Bc."
+  },
+  {
+    "name": "Ateliér B2. - Ateliér zahr. a kraj. komp.",
+    "code": "AZAA2E",
+    "type": "Bc."
+  },
+  {
+    "name": "Ateliér B3. - krajinářské stavby",
+    "code": "AZAA3E",
+    "type": "Bc."
+  },
+  {
+    "name": "Ateliér B4. - Rodinná zahrada",
+    "code": "AZAA4E",
+    "type": "Bc."
+  },
+  {
+    "name": "Ateliér B5. - Dynamika v komp. rostlin",
+    "code": "AZAA5E",
+    "type": "Bc."
+  },
+  {
+    "name": "Základy podnikové ekonomiky",
+    "code": "EEA01E",
+    "type": "Bc."
+  },
+  {
+    "name": "Finanční praktikum",
+    "code": "EEA18E",
+    "type": "Bc."
+  },
+  {
+    "name": "Ekonomika neziskového sektoru",
+    "code": "EEA19E",
+    "type": "Bc."
+  },
+  {
+    "name": "Sociologie - metody výzkumu",
+    "code": "EHA04E",
+    "type": "Bc."
+  },
+  {
+    "name": "Sociologie venkova a zemědělství",
+    "code": "EHA07E",
+    "type": "Bc."
+  },
+  {
+    "name": "Správní právo",
+    "code": "EJA06E",
+    "type": "Bc."
+  },
+  {
+    "name": "Základy práva",
+    "code": "EJA08E",
+    "type": "Bc."
+  },
+  {
+    "name": "Obecná ekonomie I.",
+    "code": "ENA01E",
+    "type": "Bc."
+  },
+  {
+    "name": "Obecná ekonomie II.",
+    "code": "ENA02E",
+    "type": "Bc."
+  },
+  {
+    "name": "Psychologie osobnosti",
+    "code": "EPA01E",
+    "type": "Bc."
+  },
+  {
+    "name": "Sociální komunikace a rétorika",
+    "code": "EPA04E",
+    "type": "Bc."
+  },
+  {
+    "name": "Moderní prostředky ICT",
+    "code": "ETA01Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Daňová soustava",
+    "code": "EUA01E",
+    "type": "Bc."
+  },
+  {
+    "name": "Metody ošetřování dřevin",
+    "code": "LPL005E",
+    "type": "Bc."
+  },
+  {
+    "name": "Základy lesního hospodářství",
+    "code": "LTA39E",
+    "type": "Bc."
+  },
+  {
+    "name": "Tělesná výchova (ZS)",
+    "code": "RTX12Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Tělesná výchova (LS)",
+    "code": "RTX13Z",
+    "type": "Bc."
+  },
+  {
+    "name": "Početní metody",
+    "code": "TAA03E",
+    "type": "Bc."
+  },
+  {
+    "name": "Fyzika pro biology",
+    "code": "TBA02E",
+    "type": "Bc."
+  },
+  {
+    "name": "Mechanizace v zahradnictví",
+    "code": "TFA31E",
+    "type": "Bc."
+  },
+  {
+    "name": "Mechanizace zemědělské výroby I.",
+    "code": "TFA32E",
+    "type": "Bc."
+  },
+  {
+    "name": "Komunikace s handicapovanými osobami",
+    "code": "VPA01E",
+    "type": "Bc."
+  },
+  {
+    "name": "Speciální pedagogika",
+    "code": "VPA02E",
+    "type": "Bc."
+  },
+  {
+    "name": "Úvod do sociální práce",
+    "code": "VPA04E",
+    "type": "Bc."
+  },
+  {
+    "name": "Úvod do sociálních služeb II.",
+    "code": "VPA05E",
+    "type": "Bc."
+  },
+  {
+    "name": "Základy urbanismu sídel a krajiny",
+    "code": "ZBA11E",
+    "type": "Bc."
+  },
+  {
+    "name": "Územní plánování",
+    "code": "ZBX126E",
+    "type": "Bc."
+  },
+  {
+    "name": "Ochrana přírody",
+    "code": "ZEA01E",
+    "type": "Bc."
+  },
+  {
+    "name": "Odborná exkurze",
+    "code": "AAA03Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Odborná exkurze",
+    "code": "AAA04Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Herbologie",
+    "code": "AAA05E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Kvalita ovzduší",
+    "code": "AAA26E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ochrana přírodních zdrojů a krajiny v kontextu politiky rozvoje venkova",
+    "code": "AAA34E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Klimatické změny, modelování a adaptační opatření",
+    "code": "AAA42E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Zakládání a vedení porostů",
+    "code": "AAA43E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Péče o biodiverzitu v agroekosystému",
+    "code": "AAA44E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Kvalita ovzduší (komb.)",
+    "code": "AAA81E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Herbologie (komb.)",
+    "code": "AAA84E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Odborná exkurze (komb.)",
+    "code": "AAA87Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Odborná exkurze (komb.)",
+    "code": "AAA88Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ochrana přírodních zdrojů a krajiny (komb.)",
+    "code": "AAA90E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Klimatické změny (komb.)",
+    "code": "AAA93E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Zakládání a vedení porostů (komb.)",
+    "code": "AAA94E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Péče o biodiverzitu (komb.)",
+    "code": "AAA95E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Odborná exkurze",
+    "code": "ABA05Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Rostlina a stres",
+    "code": "ABA07E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Využití a kontrola léčivých a pomocných látek přírodního původu",
+    "code": "ABA08E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Fyziologie nemocné rostliny",
+    "code": "ABA10E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Speciální fyziologie rostlin",
+    "code": "ABA11E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Základy fytocenologie",
+    "code": "ABA12E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ekofyziologie rostlin",
+    "code": "ABA13E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Speciální chemie analytická",
+    "code": "ACA04E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Chemie a analýza potravin",
+    "code": "ACA08E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Food Chemistry",
+    "code": "ACA13E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Kvasné technologie",
+    "code": "ACA20E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Biochemie",
+    "code": "ACA25E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Speciální chemie analytická (komb.)",
+    "code": "ACA78E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Moderní směry v chovu prasat",
+    "code": "ADA15E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Chov netradičních druhů drůbeže",
+    "code": "ADA16E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Chov králíků",
+    "code": "ADA17E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Poultry Management",
+    "code": "ADA21E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Chov prasat II.",
+    "code": "ADA23E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Chov drůbeže II.",
+    "code": "ADA25E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Rabbit production",
+    "code": "ADA27E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Chov skotu II.",
+    "code": "ADA32E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Chov prasat II. (komb.)",
+    "code": "ADA73E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Chov skotu II. (komb.)",
+    "code": "ADA74E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Chov drůbeže II. (komb.)",
+    "code": "ADA83E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Včelařství",
+    "code": "AEA06E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Studijní seminář AKVAM",
+    "code": "AEA07Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Odborná praxe",
+    "code": "AEA08Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Produkční akvaristika",
+    "code": "AEA15E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Aquaculture",
+    "code": "AEA22E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Biomonitoring",
+    "code": "AEA24E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Determinace a biologie chráněných a CITES živočichů",
+    "code": "AEA28E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Legislativa živočichů",
+    "code": "AEA34E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Speciální aspekty chovu exotických zvířat",
+    "code": "AEA35E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Rybářství a rybníkářství",
+    "code": "AEA37E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Fish Systematic",
+    "code": "AEA38E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Zoogeografie",
+    "code": "AEA39E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ekologie vodních živočichů",
+    "code": "AEA45E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Technologie v akvakultuře",
+    "code": "AEA46E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Metody studia vodních ekosystémů",
+    "code": "AEA47E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Komerční a rekreační rybolov",
+    "code": "AEA52E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Případové studie z akvakultury a péče o vodní ekosystémy",
+    "code": "AEA53E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Etologie ryb",
+    "code": "AEA54E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Behaviorální procesy ve vodním prostředí",
+    "code": "AEA55E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Commercial and Recreational Fishing",
+    "code": "AEA56E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Invazní biologie",
+    "code": "AEA58E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Hydrobiologie",
+    "code": "AEA60E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Aquaculture (anglicky)",
+    "code": "AEA62E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Advanced Methods in Animal Biology",
+    "code": "AEA64E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Invazní biologie (komb.)",
+    "code": "AEA7BE",
+    "type": "Mgr."
+  },
+  {
+    "name": "Hydrobiologie (komb.)",
+    "code": "AEA88E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Speciální aspekty chovu exotických zvířat (komb.)",
+    "code": "AEA92E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Biomonitoring (komb.)",
+    "code": "AEA93E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Rybářství a rybníkářství (komb.)",
+    "code": "AEA94E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Determinace a biologie chráněných a CITES živočichů (komb.)",
+    "code": "AEA95E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Legislativa živočichů (komb.)",
+    "code": "AEA96E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Zoogeografie (komb.)",
+    "code": "AEA98E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Šlechtění zvířat I.",
+    "code": "AGA06E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Šlechtění zvířat II.",
+    "code": "AGA07E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Biodiverzita zvířat",
+    "code": "AGA11E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Bioinformatika",
+    "code": "AGA12E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Šlechtění rostlin",
+    "code": "AGA23E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Obecná molekulární biologie",
+    "code": "AGA24E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Cytogenetika a karyologie",
+    "code": "AGA25E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Genové technologie",
+    "code": "AGA27E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Biometrická genetika",
+    "code": "AGA28E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Genetika populací",
+    "code": "AGA29E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Šlechtitelské programy a legislativa",
+    "code": "AGA30E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Genetika a šlechtění zvířat",
+    "code": "AGA31E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Molekulární genetika zvířat",
+    "code": "AGA35E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Design experimentu a statistika",
+    "code": "AGA46E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Experimental Design and Statistics",
+    "code": "AGA47E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Molekulární genetika zvířat (komb.)",
+    "code": "AGA70E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Design experimentu a statistika (komb.)",
+    "code": "AGA73E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Šlechtitelské programy a legislativa (komb.)",
+    "code": "AGA75E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Šlechtění rostlin (komb.)",
+    "code": "AGA91E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Odborná exkurze",
+    "code": "AHA02Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Odborná exkurze",
+    "code": "AHA03Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Agronomické využití odpadů",
+    "code": "AHA06E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ekotoxikologie",
+    "code": "AHA12E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Výživa rostlin a diagnostika poruch",
+    "code": "AHA18E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Živiny v půdě a půdní úrodnost",
+    "code": "AHA19E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Hnojiva a legislativa",
+    "code": "AHA20E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Hnojení zemědělských plodin",
+    "code": "AHA21E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Substráty a hnojení zahradních rostlin",
+    "code": "AHA22E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Čištění odpadních vod",
+    "code": "AHA25E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Výživa rostlin v okrasném zahradnictví",
+    "code": "AHA28E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Obnovitelné a alternativní zdroje energie",
+    "code": "AHA31E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Péče o půdní úrodnost v ekologickém zemědělství",
+    "code": "AHA36E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Toxikologie",
+    "code": "AHA37E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Environment Pollution and Remediation",
+    "code": "AHA39E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Pevné odpady",
+    "code": "AHA40E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Kontaminace prostředí",
+    "code": "AHA41E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Biotechnologie v odpadovém hospodářství",
+    "code": "AHA42E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Remediace a sanace",
+    "code": "AHA43E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Agronomical Utilization of Waste Materials",
+    "code": "AHA49E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Biochemie rostlin",
+    "code": "AHA50E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Kontaminace prostředí (komb.)",
+    "code": "AHA79E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Pevné odpady (komb.)",
+    "code": "AHA7CE",
+    "type": "Mgr."
+  },
+  {
+    "name": "Biochemie rostlin (komb.)",
+    "code": "AHA7FE",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ekotoxikologie (komb.)",
+    "code": "AHA84E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Hnojení zemědělských plodin (komb.)",
+    "code": "AHA86E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Čištění odpadních vod (komb.)",
+    "code": "AHA87E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Agronomické využití odpadů (komb.)",
+    "code": "AHA92E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Péče o půdní úrodnost v ekologickém zemědělství (komb.)",
+    "code": "AHA95E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Toxikologie (komb.)",
+    "code": "AHA96E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Obnovitelné a alternativní zdroje energie (komb.)",
+    "code": "AHAZDE",
+    "type": "Mgr."
+  },
+  {
+    "name": "Remediace a sanace (komb.)",
+    "code": "AHAZEE",
+    "type": "Mgr."
+  },
+  {
+    "name": "Hydropedologie a ochrana vod",
+    "code": "AIA02E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ekohydrologie v krajinářské tvorbě",
+    "code": "AIA16E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Rybniční soustavy a zařízení",
+    "code": "AIA25E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Vodní hospodářství",
+    "code": "AIA27E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Revitalizace vodních toků a nádrží",
+    "code": "AIA30E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Hydropedologie a ochrana vod (komb.)",
+    "code": "AIA71E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Nové trendy ve výživě a potravinářství",
+    "code": "AKA04Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Diplomový seminář",
+    "code": "AKA07Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Potravinářská praxe",
+    "code": "AKA08Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Jadrná krmiva a komponenty krmných směsí",
+    "code": "AKA12E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Krmení monogastrů",
+    "code": "AKA14E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Doplňkové látky v krmivech",
+    "code": "AKA15E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Krmivářské poradenství",
+    "code": "AKA16E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Výživa přežvýkavců",
+    "code": "AKA17E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Objemná krmiva a konzervace krmiv",
+    "code": "AKA19E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Technologie přípravy stravy",
+    "code": "AKA21E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Výživa koní",
+    "code": "AKA23E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Výživa člověka a výživová politika",
+    "code": "AKA31E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Výživa ve zdraví a nemoci",
+    "code": "AKA32E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Senzorická analýza potravin",
+    "code": "AKA38E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Sensory Analysis of Food",
+    "code": "AKA39E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Metabolické poruchy a onemocnění člověka",
+    "code": "AKA40E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Krmiva",
+    "code": "AKA41E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Výživa psů a koček",
+    "code": "AKA42E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Mikronutrienty ve výživě člověka",
+    "code": "AKA45E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Krmení monogastrů (komb.)",
+    "code": "AKA72E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Výživa přežvýkavců (komb.)",
+    "code": "AKA73E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Výživa koní (komb.)",
+    "code": "AKA77E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Výživa psů a koček (komb.)",
+    "code": "AKA92E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Chov laboratorních zvířat",
+    "code": "ALA01E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Odborná praxe",
+    "code": "ALA04Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Aplikovaná etologie zvířat",
+    "code": "ALA15E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Srovnávací psychologie zvířat",
+    "code": "ALA20E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Chov a biologie psovitých",
+    "code": "ALA24E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Aplikovaná etologie psa",
+    "code": "ALA25E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Primatologie",
+    "code": "ALA28E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Welfare hospodářských zvířat",
+    "code": "ALA33E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Potravní ekologie živočichů a její aplikace do chovu",
+    "code": "ALA34E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Metody ve výzkumu zvířat",
+    "code": "ALA35E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Welfare zájmových zvířat",
+    "code": "ALA36E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Senzorická percepce psa",
+    "code": "ALA38E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Potravní ekologie živočichů (komb.)",
+    "code": "ALA7CE",
+    "type": "Mgr."
+  },
+  {
+    "name": "Aplikovaná etologie koně (komb.)",
+    "code": "ALA7DE",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ochrana primátů (komb.)",
+    "code": "ALA7FZ",
+    "type": "Mgr."
+  },
+  {
+    "name": "Chov a biologie psovitých (komb.)",
+    "code": "ALA87E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Aplikovaná etologie psa (komb.)",
+    "code": "ALA88E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Aplikovaná etologie zvířat (komb.)",
+    "code": "ALA89E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Welfare hospodářských zvířat (komb.)",
+    "code": "ALA96E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Metody ve výzkumu zvířat (komb.)",
+    "code": "ALAZAE",
+    "type": "Mgr."
+  },
+  {
+    "name": "Welfare zájmových zvířat (komb.)",
+    "code": "ALAZBE",
+    "type": "Mgr."
+  },
+  {
+    "name": "Aplikovaná etologie koně",
+    "code": "ALX27E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Mikrobiologie prostředí",
+    "code": "AMA03E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Pedobiologie",
+    "code": "AMA04E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Environmental Microbiology",
+    "code": "AMA09E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Hygiena a zdravotní nezávadnost potravin",
+    "code": "AMA12E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Odborná exkurze",
+    "code": "AMA15Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Food Microbiology",
+    "code": "AMA18E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Potravinářská mikrobiologie",
+    "code": "AMA22E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Základy práce s buněčnými kulturami",
+    "code": "AMA23E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Pedobiologie (komb.)",
+    "code": "AMA78E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Odborná exkurze",
+    "code": "AOA01Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Monitoring a management v ochraně rostlin",
+    "code": "AOA06E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Biologická a nechemická ochrana rostlin",
+    "code": "AOA10E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Chemická ochrana rostlin a související legislativa",
+    "code": "AOA11E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Škůdci zahradních plodin",
+    "code": "AOA12E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Choroby zahradních plodin",
+    "code": "AOA13E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Choroby a škůdci okrasných rostlin",
+    "code": "AOA17E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Škůdci polních plodin",
+    "code": "AOA19E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Choroby polních plodin",
+    "code": "AOA20E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Obecná fytopatologie",
+    "code": "AOA21E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Diagnostické metody v ochraně rostlin",
+    "code": "AOA22E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Rezistence rostlin k patogenům a škůdcům",
+    "code": "AOA23E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ochrana rostlin v sídlech a krajině",
+    "code": "AOA25E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Obecná rostlinolékařská zoologie",
+    "code": "AOA26E",
+    "type": "Mgr."
+  },
+  {
+    "name": "General Phytopathology",
+    "code": "AOA29E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ochrana rostlin v ekologickém zemědělství",
+    "code": "AOA41E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Skladištní škůdci",
+    "code": "AOA42E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ochrana rostlin a skladovaných produktů pomocí přírodních a základních látek",
+    "code": "AOA43E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Choroby polních plodin (komb.)",
+    "code": "AOA71E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Škůdci polních plodin (komb.)",
+    "code": "AOA81E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ochrana rostlin v ekologickém zemědělství (komb.)",
+    "code": "AOA88E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Chemická ochrana rostlin a související legislativa (komb.)",
+    "code": "AOA89E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Půdní genetika a systematika",
+    "code": "APA04E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Průzkum a mapování půd",
+    "code": "APA05E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Aplikovaná pedologie",
+    "code": "APA06E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ochrana půdy",
+    "code": "APA07E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Odborná exkurze",
+    "code": "APA07Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Odborná pedologická praxe",
+    "code": "APA08Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Úprava půdních režimů",
+    "code": "APA10E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Půdní chemie",
+    "code": "APA11E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Proximal and Remote Sensing in Soil Science",
+    "code": "APA23E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Modelování v pedologii",
+    "code": "APA24E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Pedometrika",
+    "code": "APA25E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Úprava degradovaných půd",
+    "code": "APA28E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Dálkový průzkum Země v pedologii",
+    "code": "APA29E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Hodnocení půd",
+    "code": "APA31E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Péče o půdu",
+    "code": "APA41E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Půdní genetika a systematika (komb.)",
+    "code": "APA83E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ochrana půdy (komb.)",
+    "code": "APA84E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Biologicky aktivní látky v potravinách",
+    "code": "AQA34E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Pokročilé analytické metody v potravinářství",
+    "code": "AQA37E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Technologie zpracování rostlinných produktů",
+    "code": "AQA38E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Potravinářská praxe",
+    "code": "AQA39Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Legislativa a certifikace potravin",
+    "code": "AQA46E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Využití léčivých, aromatických a kořeninových rostlin ve výživě člověka",
+    "code": "AQA47E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Nové trendy v kvalitě a zpracování potravin",
+    "code": "AQA48Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Pokročilé technologie v mlékařství",
+    "code": "AQA49E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Výživová epidemiologie",
+    "code": "AQA50E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Kvalita a nezávadnost potravin rostlinného původu",
+    "code": "AQA51E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Kvalita a nezávadnost potravin živočišného původu",
+    "code": "AQA52E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Quality Assessment of Plant-based Foods",
+    "code": "AQA55E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Cizorodé látky a bezpečnost potravin",
+    "code": "AQA56E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Sustainability in the Food Chain",
+    "code": "AQA59E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Quality Assessment of Animal-based Foods",
+    "code": "AQA60E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Advanced Technology in Food Processing",
+    "code": "AQA62E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Kvalita a nezávadnost potravin rostlinného původu (komb.)",
+    "code": "AQA71E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Odborná exkurze",
+    "code": "ARA03Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Chmelařství",
+    "code": "ARA05E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Rostliny léčivé, aromatické a kořeninové",
+    "code": "ARA13E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Základy rostlinné a živočišné produkce",
+    "code": "ARA17E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Semenářství",
+    "code": "ARA20E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Integrovaná rostlinná produkce",
+    "code": "ARA24E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Speciální polní plodiny",
+    "code": "ARA30E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Tvorba hospodářského výnosu",
+    "code": "ARA32E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Polní pokusnictví",
+    "code": "ARA34E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Management pěstování rostlin v ekologickém zemědělství",
+    "code": "ARA41E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Produkce potravinářských surovin",
+    "code": "ARA48E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Zemědělské poradenství, podpory a dotace",
+    "code": "ARA53E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Distribuce a marketing regionálních potravin",
+    "code": "ARA54E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Odborná exkurze (komb.)",
+    "code": "ARA72Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Zemědělské poradenství (komb.)",
+    "code": "ARA73E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Integrovaná rostlinná produkce (komb.)",
+    "code": "ARA74E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Rostliny léčivé (komb.)",
+    "code": "ARA75E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Distribuce a marketing regionálních potravin (komb.)",
+    "code": "ARA78E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Management pěstování rostlin v EZ (komb.)",
+    "code": "ARA81E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Tvorba hospodářského výnosu (komb.)",
+    "code": "ARA91E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Semenářství (komb.)",
+    "code": "ARA92E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Speciální polní plodiny (komb.)",
+    "code": "ARA97E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Technologie zpracování masa",
+    "code": "ASA02E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Chov ovcí a koz",
+    "code": "ASA05E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Odborná exkurze",
+    "code": "ASA10Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Chov koní a jezdectví",
+    "code": "ASA28E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Reprodukce zvířat se základy biotechnologických metod",
+    "code": "ASA29E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Management a technologie chovu hospodářských zvířat",
+    "code": "ASA30E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Moderní směry v chovu skotu",
+    "code": "ASA37E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Stavby pro živočišnou výrobu",
+    "code": "ASA38E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Nové směry chovu a využití koní",
+    "code": "ASA41E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Management chovu hospodářských zvířat v ekologickém zemědělství",
+    "code": "ASA46E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Technologie chovu hospodářských zvířat",
+    "code": "ASA47E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Livestock Management",
+    "code": "ASA48E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Chov zvířat v agroturistice",
+    "code": "ASA56E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Management chovu ptactva v zoo",
+    "code": "ASA58E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Management a technologie chovu hospodářských zvířat (komb.)",
+    "code": "ASA71E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Odborná exkurze (komb.)",
+    "code": "ASA73Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Technologie zpracování masa (komb.)",
+    "code": "ASA7CE",
+    "type": "Mgr."
+  },
+  {
+    "name": "Chov koní a jezdectví (komb.)",
+    "code": "ASA91E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Chov ovcí a koz (komb.)",
+    "code": "ASA92E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Nové směry chovu a využití koní (komb.)",
+    "code": "ASA94E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Reprodukce zvířat se základy biotechnologických metod (komb.)",
+    "code": "ASA98E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Stavby pro živočišnou výrobu (komb.)",
+    "code": "ASAZAE",
+    "type": "Mgr."
+  },
+  {
+    "name": "Management chovu hospodářských zvířat v EZ (komb.)",
+    "code": "ASAZDE",
+    "type": "Mgr."
+  },
+  {
+    "name": "Technologie chovu hospodářských zvířat (komb.)",
+    "code": "ASAZEE",
+    "type": "Mgr."
+  },
+  {
+    "name": "Trávníkářství",
+    "code": "ATA08E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Pícninářství",
+    "code": "ATA11E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Trvalé travní porosty",
+    "code": "ATA12E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Management of Turf and Lawn",
+    "code": "ATA17E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Produkce a dietetické účinky objemných krmiv",
+    "code": "ATA18E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Alternativní hospodaření na půdě",
+    "code": "ATA35E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Technologie precizního zemědělství",
+    "code": "ATA36E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Forage Crops and Grassland Management",
+    "code": "ATA37E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Alternativní hospodaření na půdě (komb.)",
+    "code": "ATA72E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Technologie precizního zemědělství (komb.)",
+    "code": "ATA73E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Pícninářství (komb.)",
+    "code": "ATA80E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Trvalé travní porosty (komb.)",
+    "code": "ATA86E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Odborná praxe",
+    "code": "AUA46Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Diplomová praxe",
+    "code": "AUA49Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Biologie gamet",
+    "code": "AVA02E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Vývojová biologie",
+    "code": "AVA03E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Základní metody asistované reprodukce",
+    "code": "AVA05E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Klinická anatomie a fyziologie",
+    "code": "AVA06E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Porodnictví",
+    "code": "AVA09E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Lékařská přístrojová technika",
+    "code": "AVA0HE",
+    "type": "Mgr."
+  },
+  {
+    "name": "Infektologická diagnostika",
+    "code": "AVA0JE",
+    "type": "Mgr."
+  },
+  {
+    "name": "Klinická patologie",
+    "code": "AVA0KE",
+    "type": "Mgr."
+  },
+  {
+    "name": "One health a zoonózy",
+    "code": "AVA0LE",
+    "type": "Mgr."
+  },
+  {
+    "name": "Zdravotně-chovatelská problematika exotických zvířat",
+    "code": "AVAOME",
+    "type": "Mgr."
+  },
+  {
+    "name": "Veterinární legislativa",
+    "code": "AVA0NE",
+    "type": "Mgr."
+  },
+  {
+    "name": "Anatomická patologie",
+    "code": "AVA0PE",
+    "type": "Mgr."
+  },
+  {
+    "name": "Klinická stáž I.",
+    "code": "AVA0SZ",
+    "type": "Mgr."
+  },
+  {
+    "name": "Klinická stáž II.",
+    "code": "AVA0TZ",
+    "type": "Mgr."
+  },
+  {
+    "name": "Zdravotně-chovatelská problematika psů a koček",
+    "code": "AVA0UE",
+    "type": "Mgr."
+  },
+  {
+    "name": "Zobrazovací systémy",
+    "code": "AVA0VE",
+    "type": "Mgr."
+  },
+  {
+    "name": "Zdravotně-chovatelská problematika hospodářských zvířat",
+    "code": "AVA0XE",
+    "type": "Mgr."
+  },
+  {
+    "name": "Zdravotně-chovatelská problematika koní",
+    "code": "AVA0ZE",
+    "type": "Mgr."
+  },
+  {
+    "name": "Zdravotně-chovatelská problematika laboratorních zvířat",
+    "code": "AVA1AE",
+    "type": "Mgr."
+  },
+  {
+    "name": "Zdravotní problematika lovné zvěře",
+    "code": "AVA1BE",
+    "type": "Mgr."
+  },
+  {
+    "name": "Fyzioterapie a rehabilitace malých zvířat",
+    "code": "AVA1CE",
+    "type": "Mgr."
+  },
+  {
+    "name": "Porodnictví ve veterinární praxi",
+    "code": "AVA1DE",
+    "type": "Mgr."
+  },
+  {
+    "name": "Reprodukční biologie a endokrinologie",
+    "code": "AVA19E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Reprodukční biotechnologie",
+    "code": "AVA20E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Bioetika a právo",
+    "code": "AVA21E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Anatomie zvířat se základy histologie a embryologie",
+    "code": "AVA22E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Buněčná biologie",
+    "code": "AVA24E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Prevence chorob hospodářských zvířat",
+    "code": "AVA26E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Fyziologie výživy",
+    "code": "AVA27E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Hygiena výživy a alimentární nemoci zvířat",
+    "code": "AVA28E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Prevence chorob zájmových zvířat",
+    "code": "AVA38E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Animal Physiology",
+    "code": "AVA43E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Prevence chorob ryb",
+    "code": "AVA47E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Kynopraxe",
+    "code": "AVA51E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Reproductive Biology of Livestock and Wildlife",
+    "code": "AVA55E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Klinická anatomie a fyziologie (komb.)",
+    "code": "AVA7FE",
+    "type": "Mgr."
+  },
+  {
+    "name": "Anatomie zvířat se základy histologie a embryologie (komb.)",
+    "code": "AVA91E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Prevence chorob hospodářských zvířat (komb.)",
+    "code": "AVA94E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Prevence chorob zájmových zvířat (komb.)",
+    "code": "AVA95E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Diplomová práce I.",
+    "code": "AWA05Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Diplomová práce II.",
+    "code": "AWA06Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Diplomová práce II.",
+    "code": "AWA16Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Diplomová práce I. (komb.)",
+    "code": "AWA70Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Diplomová práce II. (komb.)",
+    "code": "AWA79Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ateliér DP1. / Diplomová práce II. (komb.)",
+    "code": "AWA81Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ateliér DP2. - Diplomový projekt",
+    "code": "AWA82Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "GIS v krajinářské architektuře",
+    "code": "AZA03E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Odborná exkurze",
+    "code": "AZA03Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Tvorba krajiny",
+    "code": "AZA04E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Aplikace rostlin",
+    "code": "AZA05E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Jedlé a léčivé houby",
+    "code": "AZA06E",
+    "type": "Mgr."
+  },
+  {
+    "name": "CAD",
+    "code": "AZA06Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Zakládání a údržba zeleně",
+    "code": "AZA07E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Výtvarný plenér",
+    "code": "AZA07Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Venkovská sídla a proměny krajiny",
+    "code": "AZA11E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Metodika projektových prací - projektová příprava staveb",
+    "code": "AZA15E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Dokumentace ploch zeleně",
+    "code": "AZA17E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Vinohradnictví a vinařství II.",
+    "code": "AZA18E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Školkařství",
+    "code": "AZA19E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ochrana krajiny, životního prostředí a venkova",
+    "code": "AZA22E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Krajina a krajinný ráz",
+    "code": "AZA24E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Systémy městské zeleně",
+    "code": "AZA25E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Arboristika a metody péče o zeleň",
+    "code": "AZA26E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Sady a aleje - liniová doprovodná zeleň",
+    "code": "AZA30E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Prostorová výtvarná tvorba",
+    "code": "AZA34Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Exkurze domácí",
+    "code": "AZA37Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Exkurze zahraniční",
+    "code": "AZA38Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Workshop - prováděcí projektová dokumentace a rozpočet",
+    "code": "AZA39Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Tržní květinářství",
+    "code": "AZA44E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Zelinářství speciální",
+    "code": "AZA45E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ovocnictví speciální",
+    "code": "AZA46E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Vinařství - sklepní hospodářství",
+    "code": "AZA47E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Technologie zpracování ovoce a zeleniny",
+    "code": "AZA48E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Metody zobrazování",
+    "code": "AZA48Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Interiérové květinářství",
+    "code": "AZA50E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Zahradní stavby a stavební materiály",
+    "code": "AZA59E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Vazba a aranžování květin",
+    "code": "AZA65E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Venkovská sídla a proměny krajiny (komb.)",
+    "code": "AZA79E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Současná krajinářská architektura",
+    "code": "AZAA9E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Systémy krajinné zeleně I.",
+    "code": "AZAB0E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Systémy krajinné zeleně II.",
+    "code": "AZAB1E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ateliér M1. - Náměstí, malá parková plocha",
+    "code": "AZAC1E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ateliér M2. - Biotechnický ateliér a rozpočtování",
+    "code": "AZAC2E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ateliér M2. Park, areál rekreace",
+    "code": "AZAC3E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ateliér M3 - Venkovský prostor - urbanismus",
+    "code": "AZAC4E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ateliér M4. - Kulturní krajina",
+    "code": "AZAC5E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Údržba jednotlivých typů krajiny",
+    "code": "AZAC9E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Landscape Heritage",
+    "code": "AZAD2E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Návrh biotechnických úprav a rozpočtování",
+    "code": "AZAD6E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ekonomika veřejného sektoru",
+    "code": "EEA09E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ekonomika živočišné produkce",
+    "code": "EEA10E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Podnikání a ekonomika rostlinné výroby",
+    "code": "EEA11E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Programy rozvoje zemědělství a venkova",
+    "code": "EEA13E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ekonomika veřejného sektoru (komb.)",
+    "code": "EEA77E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ekonomika živočišné produkce (komb.)",
+    "code": "EEA78E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Podnikání a ekonomika rostlinné výroby (komb.)",
+    "code": "EEA79E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Programy rozvoje zemědělství a venkova (komb.)",
+    "code": "EEA86E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Etika ve veřejné správě",
+    "code": "EHA01E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Základy regionálního rozvoje",
+    "code": "EHA13E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Základy regionálního rozvoje (komb.)",
+    "code": "EHA76E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Správní a pozemkové právo",
+    "code": "EJA03E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Právo a životní prostředí",
+    "code": "EJA04E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Základy právních nauk",
+    "code": "EJA05E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Správní právo",
+    "code": "EJA09E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Správní právo",
+    "code": "EJA10E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Právo a životní prostředí (komb.)",
+    "code": "EJA74E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Správní právo (komb.)",
+    "code": "EJA77E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Psychologie osobnosti, sociální psychologie",
+    "code": "EPA01E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Chování člověka v krizových situacích",
+    "code": "EPA06E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Management a marketing",
+    "code": "ERA07E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Management a marketing potravin",
+    "code": "ERA11E",
+    "type": "Mgr."
+  },
+  {
+    "name": "IoT ve veterinárním lékařství",
+    "code": "ETA08E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Úvod do managementu volně žijících zvířat",
+    "code": "IZA01E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Úvod do managementu volně žijících zvířat (komb.)",
+    "code": "IZA71E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Hodnocení dřevin a stromová diagnostika",
+    "code": "LLA001E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Základy ochrany lesů",
+    "code": "LOA001E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ekonomika životního prostředí (komb.)",
+    "code": "LRA700E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ekonomika životního prostředí",
+    "code": "LRX002E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Základy lesního hospodářství",
+    "code": "LTA39E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Tělesná výchova",
+    "code": "RTX12Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Tělesná výchova",
+    "code": "RTX13Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Metody zpracování dat",
+    "code": "TAT08E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Mechanizace rostlinné výroby",
+    "code": "TFA02E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Mechanizace zahradnictví",
+    "code": "TFA30E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Mechanizace rostlinné výroby (komb.)",
+    "code": "TFA75E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Mechanizace ochrany rostlin",
+    "code": "TFX08E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Technologické zařízení staveb pro živočišnou výrobu",
+    "code": "TGA01E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Stroje a zařízení pro přípravu krmiv",
+    "code": "TGA04E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Technologie a zpracovatelské linky živočišných produktů",
+    "code": "TGA05E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Technologie a zpracovatelské linky rostlinných produktů",
+    "code": "TGA06E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Technologické zařízení staveb pro živočišnou výrobu (komb.)",
+    "code": "TGA71E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Machinery for Animal Production",
+    "code": "TGT106E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Technika a technologie odpadového hospodářství",
+    "code": "TIA02E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Mechanizace odpadového hospodářství",
+    "code": "TIA08E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Hydromeliorace",
+    "code": "ZBA02E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Pozemkové úpravy a protierozní ochrana půdy",
+    "code": "ZBA03E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Rekultivace půd",
+    "code": "ZBA04E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Voda v krajině",
+    "code": "ZBA05E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Urbanistická a krajinářská kompozice",
+    "code": "ZBA09E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Vývoj měst a regionů",
+    "code": "ZBA10E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Územní plánování",
+    "code": "ZBA12E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ochrana přírody",
+    "code": "ZEA04E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ekologie živočichů",
+    "code": "ZEA05E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ornitologie",
+    "code": "ZEA06E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Etika životního prostředí",
+    "code": "ZEA07Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ekologie živočichů (komb.)",
+    "code": "ZEA72E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Citizen Science & Crowdsourcing",
+    "code": "ZEX106Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Biologie vodních organizmů",
+    "code": "ZEZ144Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Základy programování v R",
+    "code": "ZEZ153Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "GIS II",
+    "code": "ZGZ133E",
+    "type": "Mgr."
+  },
+  {
+    "name": "GIS I.",
+    "code": "ZGZ137E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ekologické aplikace v krajině",
+    "code": "ZUA01E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Krajinná ekologie",
+    "code": "ZUA02E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Odpadové hospodářství ČR a EU",
+    "code": "ZUA03E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Ochrana vod",
+    "code": "ZUA04E",
+    "type": "Mgr."
+  },
+  {
+    "name": "EIA",
+    "code": "ZUA05E",
+    "type": "Mgr."
+  },
+  {
+    "name": "EIA (komb.)",
+    "code": "ZUA73E",
+    "type": "Mgr."
+  },
+  {
+    "name": "Aplikovaná hydrobiologie",
+    "code": "ZUZ106Z",
+    "type": "Mgr."
+  },
+  {
+    "name": "Environmentální hydrologie",
+    "code": "ZVZ107Z",
+    "type": "Mgr."
+  }
+]

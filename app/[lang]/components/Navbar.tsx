@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
   Menu, X, Search, Calendar, FileText, 
-  ChevronDown, BookOpen, ShieldCheck, Users, Tag, Clock, PenTool, BrainCircuit, Briefcase, HelpCircle, Lock as LockIcon, LogOut, KeyRound, Siren, Archive
+  ChevronDown, BookOpen, ShieldCheck, Users, Tag, Clock, PenTool, BrainCircuit, Briefcase, HelpCircle, Lock as LockIcon, LogOut, KeyRound, Siren, Archive, LifeBuoy
 } from 'lucide-react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
@@ -150,6 +150,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
   const TOOLS = [
     { href: '/ztraty-a-nalezy', slug: 'ztraty-a-nalezy', icon: <KeyRound size={18} />, key: 'lostFound' },
     { href: '/sos', slug: 'sos', icon: <Siren size={18} />, key: 'sos' },
+    { href: '/schranka-duvery', slug: 'schranka-duvery', icon: <LifeBuoy size={18} />, key: 'trustbox' },
     { href: '/predmety', slug: 'predmety', icon: <BookOpen size={18} />, key: 'subjects' },
     { href: '/harmonogram', slug: 'harmonogram', icon: <Calendar size={18} />, key: 'schedule' },
     { href: '/pruvodce', slug: 'pruvodce', icon: <ShieldCheck size={18} />, key: 'guide' },
@@ -288,10 +289,10 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                         </div>
                         <div className="flex flex-col">
                           <span className="text-sm font-bold text-stone-900 leading-tight mb-0.5 normal-case">
-                            {dict?.tools?.[tool.key]?.title}
+                            {dict?.tools?.[tool.key]?.title || tool.slug}
                           </span>
                           <span className="text-[10px] text-stone-400 font-medium group-hover/tool:text-green-600 transition-colors">
-                            {dict?.tools?.[tool.key]?.sub}
+                            {dict?.tools?.[tool.key]?.sub || ''}
                           </span>
                         </div>
                       </Link>
@@ -801,7 +802,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                     className="text-[11px] font-black text-stone-700 hover:text-green-600 flex items-center gap-3"
                   >
                     <span className="text-stone-400">{tool.icon}</span>
-                    {dict?.tools?.[tool.key]?.title}
+                    {dict?.tools?.[tool.key]?.title || tool.slug}
                   </Link>
                 ))}
               </div>

@@ -2,10 +2,16 @@ import Link from 'next/link';
 import { ArrowLeft, Route } from 'lucide-react';
 import { getDictionary } from '@/lib/get-dictionary';
 import PageHeader from '@/app/components/ui/PageHeader';
+import { getSitePageContent } from '@/lib/site/page-content';
+import DbContentPage from '@/app/[lang]/components/DbContentPage';
 
 export default async function RoadmapPage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang: rawLang } = await params;
   const lang = rawLang === 'en' ? 'en' : 'cs';
+  const page = await getSitePageContent('roadmap', lang);
+  if (page?.content_html) {
+    return <DbContentPage title={page.title || (lang === 'en' ? 'Roadmap' : 'Roadmap')} html={page.content_html} />;
+  }
   const dict = await getDictionary(lang);
   const common: any = (dict as any)?.common || {};
   const t: any = (dict as any)?.roadmapPage || {};

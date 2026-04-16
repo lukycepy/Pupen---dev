@@ -64,16 +64,17 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-stone-50 p-6">
-      <div className="bg-white p-12 rounded-[3rem] shadow-2xl w-full max-w-md text-center border border-stone-100">
-        <div className="flex justify-center mb-8">
-          <div className="bg-green-50 p-5 rounded-full shadow-inner">
-            <ShieldCheck className="w-10 h-10 text-green-600" />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-stone-50 to-stone-100/40 p-6 admin-scope">
+      <div className="bg-white p-8 sm:p-10 rounded-[2rem] shadow-xl w-full max-w-md text-center border border-stone-100">
+        <div className="flex justify-center mb-7">
+          <div className="w-14 h-14 rounded-[1.25rem] border border-green-100 bg-green-50 flex items-center justify-center">
+            <ShieldCheck className="w-7 h-7 text-green-700" />
           </div>
         </div>
 
-        <h1 className="text-3xl font-black text-stone-900 mb-2 tracking-tight">Pupen Control</h1>
-        <p className="text-stone-500 mb-10 font-medium">Administrace a správa portálu.</p>
+        <div className="text-[10px] font-black uppercase tracking-[0.22em] text-stone-400">Administrace</div>
+        <h1 className="text-2xl font-black text-stone-900 mb-2 tracking-tight">Pupen</h1>
+        <p className="text-stone-500 mb-8 font-medium">Správa obsahu a nastavení portálu.</p>
 
         {loading ? (
           <div className="flex items-center justify-center py-10">
@@ -81,17 +82,17 @@ export default function AdminLogin() {
           </div>
         ) : status === 'forbidden' ? (
           <div className="space-y-4">
-            <div className="p-4 bg-stone-50 rounded-2xl border border-stone-100">
-              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">Nemáte oprávnění</div>
-              <div className="text-stone-700 font-bold mt-2">Váš účet nemá přístup do admin portálu.</div>
+            <div className="p-4 bg-stone-50 rounded-2xl border border-stone-100 text-left">
+              <div className="text-[10px] font-black uppercase tracking-[0.22em] text-stone-400">Nemáte oprávnění</div>
+              <div className="text-stone-700 font-bold mt-2">Váš účet nemá přístup do administrace.</div>
             </div>
             <button
               onClick={logout}
-              className="w-full bg-stone-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-stone-800 transition shadow-lg flex items-center justify-center gap-2"
+              className="w-full bg-stone-900 text-white py-3.5 rounded-2xl font-black uppercase tracking-[0.22em] text-xs hover:bg-stone-800 transition shadow-sm flex items-center justify-center gap-2"
             >
               <LogOut size={18} /> Odhlásit se
             </button>
-            <Link href={`/${lang}`} className="block w-full text-stone-400 font-bold hover:text-stone-600 transition text-sm py-2">
+            <Link href={`/${lang}`} className="block w-full text-stone-500 font-bold hover:text-stone-700 transition text-sm py-2">
               Zpět na web
             </Link>
           </div>
@@ -99,11 +100,11 @@ export default function AdminLogin() {
           <div className="space-y-4">
             <Link
               href={`/${lang}/login`}
-              className="w-full bg-green-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-green-700 transition shadow-xl shadow-green-600/20 flex items-center justify-center gap-2"
+              className="w-full bg-green-600 text-white py-3.5 rounded-2xl font-black uppercase tracking-[0.22em] text-xs hover:bg-green-700 transition shadow-sm flex items-center justify-center gap-2"
             >
               <Lock size={18} /> Přihlásit se
             </Link>
-            <Link href={`/${lang}`} className="block w-full text-stone-400 font-bold hover:text-stone-600 transition text-sm py-2">
+            <Link href={`/${lang}`} className="block w-full text-stone-500 font-bold hover:text-stone-700 transition text-sm py-2">
               Zpět na web
             </Link>
           </div>

@@ -6,9 +6,10 @@ import {
   ShieldCheck,
   LogOut,
   ChevronRight,
-  Menu,
   X,
-  ChevronDown
+  ChevronDown,
+  PanelLeftClose,
+  PanelLeftOpen
 } from 'lucide-react';
 import { buildAdminMenuGroups } from './adminMenu';
 import { supabase } from '@/lib/supabase';
@@ -23,6 +24,10 @@ interface AdminSidebarProps {
   userProfile: any;
   permissions: any;
   onLogout: () => void;
+  mobileOpen: boolean;
+  onMobileOpenChange: (open: boolean) => void;
+  desktopCollapsed: boolean;
+  onToggleDesktopCollapsed: () => void;
 }
 
 interface SidebarContentProps {
@@ -34,10 +39,21 @@ interface SidebarContentProps {
   permissions: any;
   onLogout: () => void;
   setIsMobileOpen: (val: boolean) => void;
+  desktopCollapsed: boolean;
+  onToggleDesktopCollapsed: () => void;
 }
 
 const SidebarContent = ({ 
-  lang, dict, activeTab, onTabChange, userProfile, permissions, onLogout, setIsMobileOpen 
+  lang,
+  dict,
+  activeTab,
+  onTabChange,
+  userProfile,
+  permissions,
+  onLogout,
+  setIsMobileOpen,
+  desktopCollapsed,
+  onToggleDesktopCollapsed,
 }: SidebarContentProps) => {
   const menuGroups = buildAdminMenuGroups(dict, permissions);
   const appsVisible = menuGroups.some((g) => g.items.some((it) => it.id === 'apps' && it.visible));
@@ -77,38 +93,61 @@ const SidebarContent = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-stone-900 text-stone-300">
+    <div className="flex flex-col h-full bg-white text-stone-800">
       {/* BRAND */}
-      <div className="p-6 border-b border-stone-800 flex items-center justify-between">
-        <Link href={`/${lang}`} className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-green-600 rounded-xl flex items-center justify-center shadow-lg shadow-green-900/40 shrink-0">
-            <ShieldCheck size={24} className="text-white" />
+      <div className="p-4 border-b border-stone-100 flex items-center justify-between gap-3">
+        <Link href={`/${lang}`} className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 bg-green-600 rounded-2xl flex items-center justify-center shadow-sm shrink-0">
+            <ShieldCheck size={22} className="text-white" />
           </div>
-          <div>
-            <h1 className="text-lg font-black text-white leading-none">Pupen</h1>
-            <p className="text-[10px] font-black uppercase tracking-widest text-green-500 mt-1">Control</p>
-          </div>
+          {!desktopCollapsed ? (
+            <div className="min-w-0">
+              <div className="text-sm font-black text-stone-900 leading-none truncate">Pupen</div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-green-700 mt-1 truncate">Administrace</div>
+            </div>
+          ) : (
+            <span className="sr-only">Pupen Administrace</span>
+          )}
         </Link>
-        <button onClick={() => setIsMobileOpen(false)} className="lg:hidden p-2 hover:bg-stone-800 rounded-lg">
-          <X size={20} />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={onToggleDesktopCollapsed}
+            className="hidden lg:inline-flex p-2 rounded-xl hover:bg-stone-50 text-stone-500"
+            aria-label={desktopCollapsed ? 'Rozbalit navigaci' : 'Sbalit navigaci'}
+            title={desktopCollapsed ? 'Rozbalit navigaci' : 'Sbalit navigaci'}
+          >
+            {desktopCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          </button>
+          <button
+            onClick={() => setIsMobileOpen(false)}
+            className="lg:hidden inline-flex p-2 rounded-xl hover:bg-stone-50 text-stone-500"
+            aria-label="Zavřít navigaci"
+          >
+            <X size={18} />
+          </button>
+        </div>
       </div>
 
       {/* USER PROFILE */}
-      <div className="p-6 border-b border-stone-800">
-        <div className="flex items-center gap-4 mb-4">
-          <div className="w-10 h-10 bg-stone-800 rounded-full flex items-center justify-center font-black text-green-500 border border-stone-700">
+      <div className="p-4 border-b border-stone-100">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-green-50 rounded-2xl flex items-center justify-center font-black text-green-700 border border-green-100 shrink-0">
             {userProfile?.first_name?.charAt(0) || userProfile?.email?.charAt(0).toUpperCase()}
           </div>
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-white truncate">{userProfile?.first_name} {userProfile?.last_name}</p>
-            <p className="text-[10px] font-medium text-stone-500 truncate">{userProfile?.email}</p>
-          </div>
+          {!desktopCollapsed ? (
+            <div className="min-w-0">
+              <div className="text-sm font-bold text-stone-900 truncate">{userProfile?.first_name} {userProfile?.last_name}</div>
+              <div className="text-[11px] font-medium text-stone-500 truncate">{userProfile?.email}</div>
+            </div>
+          ) : (
+            <span className="sr-only">{userProfile?.email}</span>
+          )}
         </div>
       </div>
 
       {/* NAVIGATION */}
-      <nav className="flex-grow overflow-y-auto custom-scrollbar-dark p-4 space-y-8">
+      <nav className="flex-grow overflow-y-auto p-3 space-y-6">
         {menuGroups.map((group, gIdx) => {
           const visibleItems = group.items.filter((item) => item.visible);
           if (visibleItems.length === 0) return null;
@@ -116,17 +155,19 @@ const SidebarContent = ({
 
           return (
             <div key={gIdx} className="space-y-2">
-              <button
-                type="button"
-                onClick={() => toggleGroup(group.title)}
-                className="w-full flex items-center justify-between px-4 py-2 rounded-xl hover:bg-stone-800 transition"
-              >
-                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-stone-600">{group.title}</span>
-                <ChevronDown
-                  size={14}
-                  className={`text-stone-600 transition-transform ${isOpen ? 'rotate-0' : '-rotate-90'}`}
-                />
-              </button>
+              {!desktopCollapsed ? (
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(group.title)}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-stone-50 transition"
+                >
+                  <span className="text-[9px] font-black uppercase tracking-[0.22em] text-stone-400">{group.title}</span>
+                  <ChevronDown
+                    size={14}
+                    className={`text-stone-400 transition-transform ${isOpen ? 'rotate-0' : '-rotate-90'}`}
+                  />
+                </button>
+              ) : null}
               {isOpen && (
                 <div className="space-y-1">
                   {visibleItems.map(item => (
@@ -136,20 +177,30 @@ const SidebarContent = ({
                       onTabChange(item.id);
                       setIsMobileOpen(false);
                     }}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 group ${
-                      activeTab === item.id 
-                        ? 'bg-green-600 text-white shadow-lg shadow-green-900/20' 
-                        : 'hover:bg-stone-800 hover:text-white'
-                    }`}
+                    className={[
+                      'relative w-full flex items-center gap-3 rounded-xl font-bold transition-all duration-200 group',
+                      desktopCollapsed ? 'px-3 py-3 justify-center' : 'px-3 py-2.5 text-sm',
+                      activeTab === item.id
+                        ? 'bg-green-600 text-white shadow-sm'
+                        : 'hover:bg-stone-50 text-stone-700',
+                    ].join(' ')}
+                    aria-current={activeTab === item.id ? 'page' : undefined}
+                    title={desktopCollapsed ? item.label : undefined}
                   >
-                    <item.icon size={18} className={activeTab === item.id ? 'text-white' : 'text-stone-500 group-hover:text-green-500'} />
-                    <span className="flex-grow text-left">{item.label}</span>
+                    <item.icon size={18} className={activeTab === item.id ? 'text-white' : 'text-stone-400 group-hover:text-green-600'} />
+                    {!desktopCollapsed ? <span className="flex-grow text-left min-w-0 truncate">{item.label}</span> : <span className="sr-only">{item.label}</span>}
                     {item.id === 'apps' && pendingAppsCount > 0 ? (
-                      <span className="shrink-0 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border border-amber-400/30 bg-amber-400/10 text-amber-200">
+                      <span className={[
+                        'shrink-0 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest',
+                        activeTab === item.id ? 'bg-white/20 text-white' : 'border border-amber-300 bg-amber-50 text-amber-800',
+                        desktopCollapsed ? 'absolute right-2 top-2' : '',
+                      ].join(' ')}>
                         {pendingAppsCount}
                       </span>
                     ) : null}
-                    {activeTab === item.id && <ChevronRight size={14} className="opacity-50" />}
+                    {!desktopCollapsed && activeTab === item.id ? (
+                      <ChevronRight size={14} className="opacity-50" />
+                    ) : null}
                   </button>
                   ))}
                 </div>
@@ -160,22 +211,32 @@ const SidebarContent = ({
       </nav>
 
       {/* FOOTER */}
-      <div className="p-4 border-t border-stone-800 space-y-2">
+      <div className="p-3 border-t border-stone-100 space-y-1">
         {userProfile?.is_member && (
-          <Link 
+          <Link
             href={`/${lang}/clen`}
-            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold text-blue-400 hover:bg-blue-500/10 transition"
+            className={[
+              'w-full flex items-center gap-3 rounded-xl font-bold transition',
+              desktopCollapsed ? 'px-3 py-3 justify-center' : 'px-3 py-2.5 text-sm',
+              'text-blue-700 hover:bg-blue-50',
+            ].join(' ')}
+            title={desktopCollapsed ? 'Členský portál' : undefined}
           >
             <ShieldCheck size={18} />
-            <span>Členský portál</span>
+            {!desktopCollapsed ? <span>Členský portál</span> : <span className="sr-only">Členský portál</span>}
           </Link>
         )}
-        <button 
+        <button
           onClick={onLogout}
-          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold text-red-400 hover:bg-red-500/10 transition"
+          className={[
+            'w-full flex items-center gap-3 rounded-xl font-bold transition',
+            desktopCollapsed ? 'px-3 py-3 justify-center' : 'px-3 py-2.5 text-sm',
+            'text-red-700 hover:bg-red-50',
+          ].join(' ')}
+          title={desktopCollapsed ? 'Odhlásit se' : undefined}
         >
           <LogOut size={18} />
-          <span>Odhlásit se</span>
+          {!desktopCollapsed ? <span>Odhlásit se</span> : <span className="sr-only">Odhlásit se</span>}
         </button>
       </div>
     </div>
@@ -183,41 +244,46 @@ const SidebarContent = ({
 };
 
 export default function AdminSidebar({ 
-  lang, dict, activeTab, onTabChange, userProfile, permissions, onLogout,
+  lang,
+  dict,
+  activeTab,
+  onTabChange,
+  userProfile,
+  permissions,
+  onLogout,
+  mobileOpen,
+  onMobileOpenChange,
+  desktopCollapsed,
+  onToggleDesktopCollapsed,
 }: AdminSidebarProps) {
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
-
   const commonProps = {
     lang, dict, activeTab, onTabChange, userProfile, permissions, onLogout,
-    setIsMobileOpen
+    setIsMobileOpen: onMobileOpenChange,
+    desktopCollapsed,
+    onToggleDesktopCollapsed,
   };
 
   return (
     <>
-      {/* MOBILE HAMBURGER */}
-      <div className="lg:hidden fixed top-4 left-4 z-[60]">
-        <button 
-          onClick={() => setIsMobileOpen(true)}
-          className="p-3 bg-stone-900 text-white rounded-xl shadow-xl border border-stone-800"
-        >
-          <Menu size={24} />
-        </button>
-      </div>
-
       {/* SIDEBAR DESKTOP */}
-      <aside className="hidden lg:block w-72 fixed left-0 top-0 bottom-0 shrink-0 shadow-2xl z-[10000]">
+      <aside
+        className={[
+          'hidden lg:block fixed left-0 top-0 bottom-0 shrink-0 z-[10000] border-r border-stone-100 bg-white',
+          desktopCollapsed ? 'w-[72px]' : 'w-[260px]',
+        ].join(' ')}
+      >
         <SidebarContent {...commonProps} />
       </aside>
 
       {/* SIDEBAR MOBILE OVERLAY */}
-      {isMobileOpen && (
+      {mobileOpen && (
         <Drawer
-          open={isMobileOpen}
-          onClose={() => setIsMobileOpen(false)}
+          open={mobileOpen}
+          onClose={() => onMobileOpenChange(false)}
           side="left"
           overlayClassName="lg:hidden fixed inset-0 z-[100] flex"
           backdropClassName="absolute inset-0 bg-black/60 backdrop-blur-sm"
-          panelClassName="relative w-72 h-full animate-in slide-in-from-left duration-300"
+          panelClassName="relative w-[280px] h-full animate-in slide-in-from-left duration-300"
         >
           <SidebarContent {...commonProps} />
         </Drawer>

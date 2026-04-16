@@ -223,7 +223,7 @@ export default function Footer({ lang, dict }: FooterProps) {
               <Link href={`/${lang}/bezpecnost`} className="hover:text-white transition">{t.safety || (lang === 'en' ? 'Safety' : 'Bezpečnost')}</Link>
             )}
             {isPageEnabled('vybor') && (
-              <Link href={`/${lang}/vybor`} className="hover:text-white transition">{t.board || (lang === 'en' ? 'Board' : 'Výbor')}</Link>
+              <Link href={`/${lang}/vybor`} className="hover:text-white transition">{t.board || (lang === 'en' ? 'Faces' : 'Tváře spolku')}</Link>
             )}
             {isPageEnabled('vyrocni-zpravy') && (
               <Link href={`/${lang}/vyrocni-zpravy`} className="hover:text-white transition">{t.annualReports || (lang === 'en' ? 'Annual reports' : 'Výroční zprávy')}</Link>

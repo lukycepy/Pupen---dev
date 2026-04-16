@@ -7,11 +7,13 @@ import { Calendar, Sparkles } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import InlinePulse from '@/app/components/InlinePulse';
 import { richTextToClientHtml } from '@/lib/richtext-client';
+import { useSitePageContent } from '@/app/[lang]/components/useSitePageContent';
 
 export default function ReleaseNotesTab() {
   const params = useParams();
   const lang = (params?.lang as string) || 'cs';
   const isEn = lang === 'en';
+  const { title: pageTitle, html: pageHtml } = useSitePageContent('release_notes', lang);
 
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,6 +59,13 @@ export default function ReleaseNotesTab() {
           </div>
         </div>
       </div>
+
+      {pageHtml ? (
+        <div className="bg-stone-50 border border-stone-100 rounded-[2rem] p-8">
+          {pageTitle ? <div className="text-xl font-black text-stone-900 mb-4">{pageTitle}</div> : null}
+          <div className="prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: pageHtml }} />
+        </div>
+      ) : null}
 
       {loading ? (
         <div className="bg-white p-16 rounded-[3rem] border border-stone-100 shadow-sm flex items-center justify-center">

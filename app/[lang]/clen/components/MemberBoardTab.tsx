@@ -37,12 +37,12 @@ export default function MemberBoardTab({ lang }: { lang: string }) {
       <div className="bg-white p-10 rounded-[3rem] border border-stone-100 shadow-sm">
         <h2 className="text-2xl font-black text-stone-900 tracking-tight flex items-center gap-3">
           <Users className="text-green-600" />
-          {lang === 'en' ? 'Board directory' : 'Vedení'}
+          {lang === 'en' ? 'Faces' : 'Tváře spolku'}
         </h2>
         <p className="text-stone-500 font-medium mt-3">
           {lang === 'en'
-            ? 'Contacts for the association leadership.'
-            : 'Kontakty na vedení spolku.'}
+            ? 'Contacts for the club.'
+            : 'Kontakty na spolek.'}
         </p>
         {updatedAt && (
           <div className="mt-4 text-[10px] font-black uppercase tracking-widest text-stone-300">
@@ -80,4 +80,3 @@ export default function MemberBoardTab({ lang }: { lang: string }) {
     </div>
   );
 }
-

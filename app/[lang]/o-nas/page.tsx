@@ -7,10 +7,12 @@ import { useParams } from 'next/navigation';
 import { Users, Heart, Beer, Target, ArrowRight, Linkedin, Instagram, Mail, Phone, Twitter } from 'lucide-react';
 import { getDictionary } from '@/lib/get-dictionary';
 import { supabase } from '@/lib/supabase';
+import { useSitePageContent } from '@/app/[lang]/components/useSitePageContent';
 
 export default function AboutPage() {
   const params = useParams();
   const lang = (params?.lang as string) || 'cs';
+  const page = useSitePageContent('o-nas', lang);
   const [dict, setDict] = useState<any>(null);
   const [heroBg, setHeroBg] = useState('/img/listopad_pupen.jpg');
   const [dynamicTeam, setDynamicTeam] = useState<any[]>([]);
@@ -49,6 +51,14 @@ export default function AboutPage() {
 
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900 font-sans">
+      {page.html ? (
+        <div className="max-w-6xl mx-auto px-6 pt-24">
+          <div className="bg-white border border-stone-100 rounded-[3rem] p-10 md:p-14 shadow-sm">
+            {page.title ? <div className="text-3xl md:text-5xl font-black text-stone-900 tracking-tight mb-8">{page.title}</div> : null}
+            <div className="prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: page.html }} />
+          </div>
+        </div>
+      ) : null}
       
       {/* --- HERO SECTION --- */}
       <div className="relative h-[60vh] flex items-center justify-center overflow-hidden">

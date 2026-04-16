@@ -9,6 +9,7 @@ import ConfirmModal from '@/app/components/ConfirmModal';
 import { useToast } from '@/app/context/ToastContext';
 import AdminModuleHeader from './ui/AdminModuleHeader';
 import AdminPanel from './ui/AdminPanel';
+import AdminEmptyState from './ui/AdminEmptyState';
 
 export default function LogsTab() {
   const { showToast } = useToast();
@@ -235,7 +236,11 @@ export default function LogsTab() {
 
       <div className="space-y-4">
         {filtered.length === 0 ? (
-          <p className="text-center py-12 text-stone-400 font-bold uppercase tracking-widest text-xs">Zatím žádné záznamy.</p>
+          <AdminEmptyState
+            icon={Search}
+            title="Žádné záznamy"
+            description="Zatím tu nic není. Zkus upravit filtry nebo se vrať později."
+          />
         ) : (
           filtered.map((log: any) => {
             const badge = getBadge(log);

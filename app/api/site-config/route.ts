@@ -1,37 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { buildDefaultPagesConfig } from '@/lib/site/pages-registry';
 
 export const dynamic = 'force-dynamic';
 
 const SITE_CONFIG_ID = Number(process.env.SITE_CONFIG_ID || 1);
 
-const defaultPages: Record<string, any> = {
-  akce: { enabled: true, navbar: true },
-  novinky: { enabled: true, navbar: true },
-  'o-nas': { enabled: true, navbar: true },
-  kontakt: { enabled: true, navbar: true },
-  prihlaska: { enabled: true },
-  sos: { enabled: true, tools: true },
-  'ztraty-a-nalezy': { enabled: true, tools: true },
-  predmety: { enabled: true, tools: true },
-  harmonogram: { enabled: true, tools: true },
-  pruvodce: { enabled: true, tools: true },
-  partaci: { enabled: true, tools: true },
-  slevy: { enabled: true, tools: true },
-  'oteviraci-doba': { enabled: true, tools: true },
-  blog: { enabled: true, tools: true },
-  kvizy: { enabled: true, tools: true },
-  kariera: { enabled: true, tools: true },
-  faq: { enabled: true, tools: true },
-  changelog: { enabled: true, tools: true },
-  support: { enabled: true, tools: true },
-  roadmap: { enabled: true, tools: true },
-  'prvni-pomoc': { enabled: true, tools: true },
-  bezpecnost: { enabled: true, tools: true },
-  vybor: { enabled: true, tools: true },
-  'vyrocni-zpravy': { enabled: true, tools: true },
-  roman: { enabled: false },
-};
+const defaultPages: Record<string, any> = buildDefaultPagesConfig();
 
 const defaultHome: Record<string, any> = {
   widgets: {
@@ -56,6 +31,8 @@ const defaultHome: Record<string, any> = {
     url: 'https://instagram.com/pupenfappz/',
     handle: '@pupenfappz',
   },
+  cta: {},
+  testimonials: {},
 };
 
 const defaultMemberPortal: Record<string, any> = {
@@ -65,6 +42,10 @@ const defaultMemberPortal: Record<string, any> = {
   support_email: 'support@pupen.org',
   support_phone: null,
   quick_links: [],
+  directory: {
+    show_map: true,
+    fields: ['email', 'member_since', 'city'],
+  },
 };
 
 export async function GET() {
@@ -126,6 +107,12 @@ export async function GET() {
       ...memberPortalRow,
       hidden_tabs: Array.isArray(memberPortalRow.hidden_tabs) ? memberPortalRow.hidden_tabs : defaultMemberPortal.hidden_tabs,
       quick_links: Array.isArray(memberPortalRow.quick_links) ? memberPortalRow.quick_links : defaultMemberPortal.quick_links,
+      directory: {
+        ...defaultMemberPortal.directory,
+        ...(memberPortalRow.directory && typeof memberPortalRow.directory === 'object' ? memberPortalRow.directory : {}),
+        fields: Array.isArray(memberPortalRow?.directory?.fields) ? memberPortalRow.directory.fields : defaultMemberPortal.directory.fields,
+        show_map: typeof memberPortalRow?.directory?.show_map === 'boolean' ? memberPortalRow.directory.show_map : defaultMemberPortal.directory.show_map,
+      },
     };
 
     const out = NextResponse.json({

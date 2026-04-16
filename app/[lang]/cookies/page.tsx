@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Cookie, ArrowLeft, Info, Settings, ShieldCheck, BarChart3 } from 'lucide-react';
 import { getDictionary } from '@/lib/get-dictionary';
+import { getSitePageContent } from '@/lib/site/page-content';
+import DbContentPage from '@/app/[lang]/components/DbContentPage';
 
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
   const { lang: rawLang } = await params;
@@ -33,6 +35,10 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
 export default async function CookiesPage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang: rawLang } = await params;
   const lang = rawLang === 'en' ? 'en' : 'cs';
+  const page = await getSitePageContent('cookies', lang);
+  if (page?.content_html) {
+    return <DbContentPage title={page.title || (lang === 'en' ? 'Cookies' : 'Cookies')} html={page.content_html} />;
+  }
   const dict = (await getDictionary(lang)).cookiesPage;
 
   return (

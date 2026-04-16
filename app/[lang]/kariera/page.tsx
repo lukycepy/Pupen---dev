@@ -10,10 +10,12 @@ import { SkeletonList } from '../components/Skeleton';
 import { richTextToClientHtml } from '@/lib/richtext-client';
 
 import Link from 'next/link';
+import { useSitePageContent } from '@/app/[lang]/components/useSitePageContent';
 
 export default function KarieraPage() {
   const params = useParams();
   const lang = (params?.lang as string) || 'cs';
+  const page = useSitePageContent('kariera', lang);
 
   const [dict, setDict] = useState<any>(null);
 
@@ -38,6 +40,12 @@ export default function KarieraPage() {
   return (
     <div className="min-h-screen bg-stone-50 pt-24 pb-32">
       <div className="max-w-6xl mx-auto px-6">
+        {page.html ? (
+          <div className="bg-white border border-stone-100 rounded-[2.5rem] p-8 md:p-10 shadow-sm mb-10">
+            {page.title ? <div className="text-2xl md:text-4xl font-black text-stone-900 tracking-tight mb-6">{page.title}</div> : null}
+            <div className="prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: page.html }} />
+          </div>
+        ) : null}
         <header className="text-center mb-20">
           <div className="inline-flex p-3 bg-green-100 text-green-600 rounded-2xl mb-6">
             <Briefcase size={32} />

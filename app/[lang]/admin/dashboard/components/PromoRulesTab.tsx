@@ -7,6 +7,9 @@ import { Plus, Save, Tag, Trash2, Download, Edit3, X } from 'lucide-react';
 import InlinePulse from '@/app/components/InlinePulse';
 import { useToast } from '@/app/context/ToastContext';
 import { normalizePromoCode } from '@/lib/promo/rules';
+import AdminModuleHeader from './ui/AdminModuleHeader';
+import AdminPanel from './ui/AdminPanel';
+import AdminEmptyState from './ui/AdminEmptyState';
 
 type Rule = {
   code: string;
@@ -247,16 +250,11 @@ export default function PromoRulesTab({ dict }: { dict: any }) {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="bg-white p-8 rounded-[2.5rem] border shadow-sm">
-        <div className="flex items-start justify-between gap-6">
-          <div>
-            <h2 className="text-xl font-bold mb-2 flex items-center gap-3">
-              <Tag className="text-green-600" />
-              {dict?.admin?.tabPromoRules || 'Promo kódy'}
-            </h2>
-            <p className="text-stone-500 font-medium">Validace a limity použití promo kódů.</p>
-          </div>
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <AdminModuleHeader
+        title={dict?.admin?.tabPromoRules || 'Promo kódy'}
+        description="Validace a limity použití promo kódů."
+        actions={
           <button
             type="button"
             onClick={downloadUsesCsv}
@@ -265,17 +263,17 @@ export default function PromoRulesTab({ dict }: { dict: any }) {
             <Download size={16} />
             Export použití
           </button>
-        </div>
-      </div>
+        }
+      />
 
-      <div className="bg-white p-8 rounded-[2.5rem] border shadow-sm">
+      <AdminPanel className="p-8">
         <div className="grid md:grid-cols-12 gap-3 items-end">
           <div className="md:col-span-3">
             <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">Kód</div>
             <input
               value={newRule.code}
               onChange={(e) => setNewRule((p) => ({ ...p, code: e.target.value }))}
-              className="w-full bg-stone-50 border-none rounded-2xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none"
+              className="w-full focus:ring-2 focus:ring-green-500 transition"
               placeholder="PUPEN2026"
             />
           </div>
@@ -284,7 +282,7 @@ export default function PromoRulesTab({ dict }: { dict: any }) {
             <input
               value={newRule.title}
               onChange={(e) => setNewRule((p) => ({ ...p, title: e.target.value }))}
-              className="w-full bg-stone-50 border-none rounded-2xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none"
+              className="w-full focus:ring-2 focus:ring-green-500 transition"
               placeholder="Např. Partner"
             />
           </div>
@@ -293,7 +291,7 @@ export default function PromoRulesTab({ dict }: { dict: any }) {
             <select
               value={newRule.mode}
               onChange={(e) => setNewRule((p) => ({ ...p, mode: e.target.value as any }))}
-              className="w-full bg-stone-50 border-none rounded-2xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none"
+              className="w-full focus:ring-2 focus:ring-green-500 transition"
             >
               <option value="per_rsvp">per RSVP</option>
               <option value="per_attendee">per attendee</option>
@@ -304,7 +302,7 @@ export default function PromoRulesTab({ dict }: { dict: any }) {
             <input
               value={newRule.discountAmount}
               onChange={(e) => setNewRule((p) => ({ ...p, discountAmount: e.target.value }))}
-              className="w-full bg-stone-50 border-none rounded-2xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none"
+              className="w-full focus:ring-2 focus:ring-green-500 transition"
               placeholder="např. 100"
               inputMode="numeric"
             />
@@ -314,7 +312,7 @@ export default function PromoRulesTab({ dict }: { dict: any }) {
             <input
               value={newRule.discountPercentage}
               onChange={(e) => setNewRule((p) => ({ ...p, discountPercentage: e.target.value }))}
-              className="w-full bg-stone-50 border-none rounded-2xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none"
+              className="w-full focus:ring-2 focus:ring-green-500 transition"
               placeholder="např. 20"
               inputMode="numeric"
             />
@@ -324,7 +322,7 @@ export default function PromoRulesTab({ dict }: { dict: any }) {
             <input
               value={newRule.maxUses}
               onChange={(e) => setNewRule((p) => ({ ...p, maxUses: e.target.value }))}
-              className="w-full bg-stone-50 border-none rounded-2xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none"
+              className="w-full focus:ring-2 focus:ring-green-500 transition"
               placeholder="např. 50"
               inputMode="numeric"
             />
@@ -334,7 +332,7 @@ export default function PromoRulesTab({ dict }: { dict: any }) {
             <input
               value={newRule.maxUsesPerEmail}
               onChange={(e) => setNewRule((p) => ({ ...p, maxUsesPerEmail: e.target.value }))}
-              className="w-full bg-stone-50 border-none rounded-2xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none"
+              className="w-full focus:ring-2 focus:ring-green-500 transition"
               placeholder="např. 1"
               inputMode="numeric"
             />
@@ -365,7 +363,7 @@ export default function PromoRulesTab({ dict }: { dict: any }) {
             <input
               value={newRule.eventIdsCsv}
               onChange={(e) => setNewRule((p) => ({ ...p, eventIdsCsv: e.target.value }))}
-              className="w-full bg-stone-50 border-none rounded-2xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none"
+              className="w-full focus:ring-2 focus:ring-green-500 transition"
               placeholder="id1,id2"
             />
           </div>
@@ -374,7 +372,7 @@ export default function PromoRulesTab({ dict }: { dict: any }) {
             <input
               value={newRule.whitelistEmailsCsv}
               onChange={(e) => setNewRule((p) => ({ ...p, whitelistEmailsCsv: e.target.value }))}
-              className="w-full bg-stone-50 border-none rounded-2xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none"
+              className="w-full focus:ring-2 focus:ring-green-500 transition"
               placeholder="a@b.cz,c@d.cz"
             />
           </div>
@@ -383,7 +381,7 @@ export default function PromoRulesTab({ dict }: { dict: any }) {
             <input
               value={newRule.startsAt}
               onChange={(e) => setNewRule((p) => ({ ...p, startsAt: e.target.value }))}
-              className="w-full bg-stone-50 border-none rounded-2xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none"
+              className="w-full focus:ring-2 focus:ring-green-500 transition"
               placeholder="2026-01-01T00:00:00Z"
             />
           </div>
@@ -392,7 +390,7 @@ export default function PromoRulesTab({ dict }: { dict: any }) {
             <input
               value={newRule.endsAt}
               onChange={(e) => setNewRule((p) => ({ ...p, endsAt: e.target.value }))}
-              className="w-full bg-stone-50 border-none rounded-2xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none"
+              className="w-full focus:ring-2 focus:ring-green-500 transition"
               placeholder="2026-02-01T00:00:00Z"
             />
           </div>
@@ -401,20 +399,22 @@ export default function PromoRulesTab({ dict }: { dict: any }) {
             <input
               value={newRule.note}
               onChange={(e) => setNewRule((p) => ({ ...p, note: e.target.value }))}
-              className="w-full bg-stone-50 border-none rounded-2xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none"
+              className="w-full focus:ring-2 focus:ring-green-500 transition"
               placeholder="Např. interní důvod / partner"
             />
           </div>
         </div>
-      </div>
+      </AdminPanel>
 
-      <div className="bg-white p-6 rounded-[2.5rem] border shadow-sm overflow-hidden">
+      <AdminPanel className="p-6 overflow-hidden">
         {isLoading ? (
           <div className="py-16 flex items-center justify-center">
             <InlinePulse className="bg-stone-200" size={18} />
           </div>
         ) : normalizedRules.length === 0 ? (
-          <div className="py-16 text-center text-stone-400 font-bold uppercase tracking-widest text-xs">Žádné promo kódy.</div>
+          <div className="py-10">
+            <AdminEmptyState icon={Tag} title="Žádné promo kódy" description="Přidej první pravidlo nahoře." />
+          </div>
         ) : (
           <div className="space-y-3">
             {normalizedRules.map((r) => {
@@ -484,7 +484,7 @@ export default function PromoRulesTab({ dict }: { dict: any }) {
             })}
           </div>
         )}
-      </div>
+      </AdminPanel>
     </div>
   );
 }

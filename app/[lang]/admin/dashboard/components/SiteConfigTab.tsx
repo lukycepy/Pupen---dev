@@ -6,6 +6,8 @@ import { useToast } from '@/app/context/ToastContext';
 import InlinePulse from '@/app/components/InlinePulse';
 import { Globe, Save, ShieldAlert } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import { SITE_PAGES } from '@/lib/site/pages-registry';
+import { CMS_PAGES } from '@/lib/site/cms-pages-registry';
 
 type PageCfg = { enabled?: boolean; navbar?: boolean; tools?: boolean };
 type SiteCfg = {
@@ -21,33 +23,12 @@ type SiteCfg = {
   pages: Record<string, PageCfg>;
 };
 
-const DEFAULT_PAGES: { slug: string; group: 'Navbar' | 'Nástroje' | 'Ostatní'; labelKey?: string; toolKey?: string }[] = [
-  { slug: 'akce', group: 'Navbar', labelKey: 'events' },
-  { slug: 'novinky', group: 'Navbar', labelKey: 'news' },
-  { slug: 'o-nas', group: 'Navbar', labelKey: 'about' },
-  { slug: 'kontakt', group: 'Navbar', labelKey: 'contact' },
-  { slug: 'prihlaska', group: 'Ostatní' },
-  { slug: 'roman', group: 'Ostatní' },
-  { slug: 'sos', group: 'Nástroje', toolKey: 'sos' },
-  { slug: 'ztraty-a-nalezy', group: 'Nástroje', toolKey: 'lostFound' },
-  { slug: 'predmety', group: 'Nástroje', toolKey: 'subjects' },
-  { slug: 'harmonogram', group: 'Nástroje', toolKey: 'schedule' },
-  { slug: 'pruvodce', group: 'Nástroje', toolKey: 'guide' },
-  { slug: 'partaci', group: 'Nástroje', toolKey: 'partners' },
-  { slug: 'slevy', group: 'Nástroje', toolKey: 'discounts' },
-  { slug: 'oteviraci-doba', group: 'Nástroje', toolKey: 'hours' },
-  { slug: 'blog', group: 'Nástroje', toolKey: 'blog' },
-  { slug: 'kvizy', group: 'Nástroje', toolKey: 'quizzes' },
-  { slug: 'kariera', group: 'Nástroje', toolKey: 'jobs' },
-  { slug: 'faq', group: 'Nástroje', toolKey: 'faq' },
-  { slug: 'changelog', group: 'Nástroje' },
-  { slug: 'support', group: 'Nástroje' },
-  { slug: 'roadmap', group: 'Nástroje' },
-  { slug: 'prvni-pomoc', group: 'Nástroje' },
-  { slug: 'bezpecnost', group: 'Nástroje' },
-  { slug: 'vybor', group: 'Nástroje' },
-  { slug: 'vyrocni-zpravy', group: 'Nástroje' },
-];
+const DEFAULT_PAGES: { slug: string; group: 'Navbar' | 'Nástroje' | 'Ostatní'; labelKey?: string; toolKey?: string }[] = SITE_PAGES.map((p) => ({
+  slug: p.slug,
+  group: p.group,
+  labelKey: p.labelKey,
+  toolKey: p.toolKey,
+}));
 
 const MEMBER_TABS: string[] = [
   'dashboard',
@@ -66,6 +47,14 @@ const MEMBER_TABS: string[] = [
   'governance',
   'board',
   'settings',
+];
+
+const DIRECTORY_FIELDS: { id: string; labelCs: string; labelEn: string }[] = [
+  { id: 'email', labelCs: 'E-mail', labelEn: 'Email' },
+  { id: 'member_since', labelCs: 'Členem od', labelEn: 'Member since' },
+  { id: 'city', labelCs: 'Město', labelEn: 'City' },
+  { id: 'member_no', labelCs: 'Členské číslo', labelEn: 'Member number' },
+  { id: 'address', labelCs: 'Adresa', labelEn: 'Address' },
 ];
 
 const Editor = dynamic(() => import('../../../components/Editor'), {
@@ -113,6 +102,14 @@ export default function SiteConfigTab({ dict }: { dict: any }) {
     pages: {},
   });
 
+  const [pageEditorSlug, setPageEditorSlug] = useState<string>('o-nas');
+  const [pageEditorLoading, setPageEditorLoading] = useState(false);
+  const [pageEditorSaving, setPageEditorSaving] = useState(false);
+  const [pageCsTitle, setPageCsTitle] = useState('');
+  const [pageCsHtml, setPageCsHtml] = useState('');
+  const [pageEnTitle, setPageEnTitle] = useState('');
+  const [pageEnHtml, setPageEnHtml] = useState('');
+
   const toLocalInput = (iso: string | null | undefined) => {
     if (!iso) return '';
     const d = new Date(iso);
@@ -129,6 +126,10 @@ export default function SiteConfigTab({ dict }: { dict: any }) {
       if (p.labelKey) map.set(p.slug, String(nav?.[p.labelKey] || p.slug));
       else if (p.toolKey) map.set(p.slug, String(tools?.[p.toolKey]?.title || p.slug));
       else map.set(p.slug, p.slug);
+    }
+    for (const p of CMS_PAGES) {
+      const prev = map.get(p.slug);
+      if (!prev || prev === p.slug) map.set(p.slug, p.label);
     }
     return map;
   }, [dict]);
@@ -204,6 +205,70 @@ export default function SiteConfigTab({ dict }: { dict: any }) {
     for (const p of DEFAULT_PAGES) g[p.group].push(p as any);
     return g;
   }, []);
+
+  const contentSlugs = useMemo(() => {
+    const s = new Set<string>();
+    for (const p of DEFAULT_PAGES) s.add(p.slug);
+    for (const p of CMS_PAGES) s.add(p.slug);
+    return Array.from(s).sort((a, b) => a.localeCompare(b));
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      setPageEditorLoading(true);
+      try {
+        const { data } = await supabase.auth.getSession();
+        const token = data.session?.access_token;
+        if (!token) throw new Error('Nepřihlášen');
+        const res = await fetch(`/api/admin/site-pages/${encodeURIComponent(pageEditorSlug)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json?.error || 'Chyba');
+        const items = Array.isArray(json?.items) ? json.items : [];
+        const cs = items.find((x: any) => x?.lang === 'cs') || null;
+        const en = items.find((x: any) => x?.lang === 'en') || null;
+        if (!alive) return;
+        setPageCsTitle(String(cs?.title || ''));
+        setPageCsHtml(String(cs?.content_html || ''));
+        setPageEnTitle(String(en?.title || ''));
+        setPageEnHtml(String(en?.content_html || ''));
+      } catch (e: any) {
+        if (!alive) return;
+        showToast(e?.message || 'Chyba', 'error');
+      } finally {
+        if (alive) setPageEditorLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [pageEditorSlug, showToast]);
+
+  const savePageContent = async () => {
+    setPageEditorSaving(true);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Nepřihlášen');
+      const res = await fetch(`/api/admin/site-pages/${encodeURIComponent(pageEditorSlug)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          cs: { title: pageCsTitle, content_html: pageCsHtml },
+          en: { title: pageEnTitle, content_html: pageEnHtml },
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Uložení selhalo');
+      showToast('Obsah uložen', 'success');
+    } catch (e: any) {
+      showToast(e?.message || 'Chyba', 'error');
+    } finally {
+      setPageEditorSaving(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -367,6 +432,186 @@ export default function SiteConfigTab({ dict }: { dict: any }) {
           </div>
 
           <div className="space-y-5">
+            <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden">
+              <div className="p-5 border-b border-stone-100">
+                <div className="text-sm font-black text-stone-900">Reference (Homepage)</div>
+                <div className="text-xs text-stone-500 font-medium mt-1">Obsah pro slider referencí na úvodní stránce.</div>
+              </div>
+              <div className="p-5 grid md:grid-cols-2 gap-4">
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 mb-2">CZ (HTML)</div>
+                  <Editor
+                    value={String((config.home as any)?.testimonials?.html_cs || '')}
+                    onChange={(v: string) =>
+                      setConfig((p) => ({
+                        ...p,
+                        home: { ...(p.home || {}), testimonials: { ...((p.home as any)?.testimonials || {}), html_cs: v } },
+                      }))
+                    }
+                  />
+                </div>
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 mb-2">EN (HTML)</div>
+                  <Editor
+                    value={String((config.home as any)?.testimonials?.html_en || '')}
+                    onChange={(v: string) =>
+                      setConfig((p) => ({
+                        ...p,
+                        home: { ...(p.home || {}), testimonials: { ...((p.home as any)?.testimonials || {}), html_en: v } },
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden">
+              <div className="p-5 border-b border-stone-100">
+                <div className="text-sm font-black text-stone-900">CTA (Homepage)</div>
+                <div className="text-xs text-stone-500 font-medium mt-1">Texty a odkazy CTA sekce.</div>
+              </div>
+              <div className="p-5 grid md:grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Badge (CZ)</div>
+                  <input
+                    value={String((config.home as any)?.cta?.badge_cs || '')}
+                    onChange={(e) =>
+                      setConfig((p) => ({ ...p, home: { ...(p.home || {}), cta: { ...((p.home as any)?.cta || {}), badge_cs: e.target.value } } }))
+                    }
+                    className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
+                  />
+                  <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Title (CZ)</div>
+                  <input
+                    value={String((config.home as any)?.cta?.title_cs || '')}
+                    onChange={(e) =>
+                      setConfig((p) => ({ ...p, home: { ...(p.home || {}), cta: { ...((p.home as any)?.cta || {}), title_cs: e.target.value } } }))
+                    }
+                    className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
+                  />
+                  <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Sub (CZ)</div>
+                  <input
+                    value={String((config.home as any)?.cta?.sub_cs || '')}
+                    onChange={(e) =>
+                      setConfig((p) => ({ ...p, home: { ...(p.home || {}), cta: { ...((p.home as any)?.cta || {}), sub_cs: e.target.value } } }))
+                    }
+                    className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
+                  />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Primární label (CZ)</div>
+                      <input
+                        value={String((config.home as any)?.cta?.primary_label_cs || '')}
+                        onChange={(e) =>
+                          setConfig((p) => ({
+                            ...p,
+                            home: { ...(p.home || {}), cta: { ...((p.home as any)?.cta || {}), primary_label_cs: e.target.value } },
+                          }))
+                        }
+                        className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
+                      />
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Sekundární label (CZ)</div>
+                      <input
+                        value={String((config.home as any)?.cta?.secondary_label_cs || '')}
+                        onChange={(e) =>
+                          setConfig((p) => ({
+                            ...p,
+                            home: { ...(p.home || {}), cta: { ...((p.home as any)?.cta || {}), secondary_label_cs: e.target.value } },
+                          }))
+                        }
+                        className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Badge (EN)</div>
+                  <input
+                    value={String((config.home as any)?.cta?.badge_en || '')}
+                    onChange={(e) =>
+                      setConfig((p) => ({ ...p, home: { ...(p.home || {}), cta: { ...((p.home as any)?.cta || {}), badge_en: e.target.value } } }))
+                    }
+                    className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
+                  />
+                  <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Title (EN)</div>
+                  <input
+                    value={String((config.home as any)?.cta?.title_en || '')}
+                    onChange={(e) =>
+                      setConfig((p) => ({ ...p, home: { ...(p.home || {}), cta: { ...((p.home as any)?.cta || {}), title_en: e.target.value } } }))
+                    }
+                    className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
+                  />
+                  <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Sub (EN)</div>
+                  <input
+                    value={String((config.home as any)?.cta?.sub_en || '')}
+                    onChange={(e) =>
+                      setConfig((p) => ({ ...p, home: { ...(p.home || {}), cta: { ...((p.home as any)?.cta || {}), sub_en: e.target.value } } }))
+                    }
+                    className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
+                  />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Primary label (EN)</div>
+                      <input
+                        value={String((config.home as any)?.cta?.primary_label_en || '')}
+                        onChange={(e) =>
+                          setConfig((p) => ({
+                            ...p,
+                            home: { ...(p.home || {}), cta: { ...((p.home as any)?.cta || {}), primary_label_en: e.target.value } },
+                          }))
+                        }
+                        className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
+                      />
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Secondary label (EN)</div>
+                      <input
+                        value={String((config.home as any)?.cta?.secondary_label_en || '')}
+                        onChange={(e) =>
+                          setConfig((p) => ({
+                            ...p,
+                            home: { ...(p.home || {}), cta: { ...((p.home as any)?.cta || {}), secondary_label_en: e.target.value } },
+                          }))
+                        }
+                        className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Primary href</div>
+                      <input
+                        value={String((config.home as any)?.cta?.primary_href || '')}
+                        onChange={(e) =>
+                          setConfig((p) => ({
+                            ...p,
+                            home: { ...(p.home || {}), cta: { ...((p.home as any)?.cta || {}), primary_href: e.target.value } },
+                          }))
+                        }
+                        className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
+                        placeholder="/cs/kontakt"
+                      />
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Secondary href</div>
+                      <input
+                        value={String((config.home as any)?.cta?.secondary_href || '')}
+                        onChange={(e) =>
+                          setConfig((p) => ({
+                            ...p,
+                            home: { ...(p.home || {}), cta: { ...((p.home as any)?.cta || {}), secondary_href: e.target.value } },
+                          }))
+                        }
+                        className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
+                        placeholder="/cs/akce"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div>
               <div className="flex items-center justify-between gap-4 mb-3">
                 <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">A/B hero backgrounds</div>
@@ -630,6 +875,77 @@ export default function SiteConfigTab({ dict }: { dict: any }) {
         </div>
 
         <div className="bg-stone-50 border border-stone-100 rounded-[2rem] p-6 space-y-4">
+          <div className="min-w-0">
+            <div className="text-sm font-black text-stone-900">{mpDict.directoryFieldsTitle || 'Adresář členů'}</div>
+            <div className="text-sm text-stone-600 font-medium mt-1">
+              {mpDict.directoryFieldsDesc || 'Nastavte, které údaje se v členském adresáři zobrazují.'}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between bg-white rounded-2xl border border-stone-200 px-5 py-4">
+            <div className="min-w-0">
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">
+                {mpDict.directoryShowMapLabel || 'Zobrazit mapu'}
+              </div>
+              <div className="text-xs font-bold text-stone-600 mt-1 truncate">
+                {mpDict.directoryShowMapDesc || 'Mapa zobrazuje lokace členů po městech.'}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                setConfig((p) => {
+                  const prevDir = ((p as any).member_portal?.directory && typeof (p as any).member_portal.directory === 'object')
+                    ? (p as any).member_portal.directory
+                    : {};
+                  const prev = typeof prevDir.show_map === 'boolean' ? prevDir.show_map : true;
+                  return { ...p, member_portal: { ...(p as any).member_portal, directory: { ...prevDir, show_map: !prev } } } as any;
+                })
+              }
+              className={`shrink-0 rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-widest border transition ${
+                (((config as any).member_portal?.directory?.show_map ?? true) ? true : false)
+                  ? 'bg-green-600 text-white border-green-600'
+                  : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-100'
+              }`}
+            >
+              {((config as any).member_portal?.directory?.show_map ?? true) ? 'Zapnuto' : 'Vypnuto'}
+            </button>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-3">
+            {DIRECTORY_FIELDS.map((f) => {
+              const raw = (config as any).member_portal?.directory?.fields;
+              const enabled = Array.isArray(raw) ? raw.map(String).includes(f.id) : false;
+              const label = f.labelCs;
+              return (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() =>
+                    setConfig((p) => {
+                      const prevDir = ((p as any).member_portal?.directory && typeof (p as any).member_portal.directory === 'object')
+                        ? (p as any).member_portal.directory
+                        : {};
+                      const prevFields = Array.isArray(prevDir.fields) ? prevDir.fields.map(String) : [];
+                      const nextFields = prevFields.includes(f.id) ? prevFields.filter((x: string) => x !== f.id) : [...prevFields, f.id];
+                      return { ...p, member_portal: { ...(p as any).member_portal, directory: { ...prevDir, fields: nextFields } } } as any;
+                    })
+                  }
+                  className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl border transition ${
+                    enabled ? 'bg-white border-stone-200 hover:bg-stone-50' : 'bg-stone-50 border-stone-200 text-stone-400'
+                  }`}
+                >
+                  <span className="font-black text-[11px] uppercase tracking-widest">{label}</span>
+                  <span className={`text-[10px] font-black uppercase tracking-widest ${enabled ? 'text-green-600' : 'text-stone-400'}`}>
+                    {enabled ? (mpDict.enabled || 'Zobrazeno') : (mpDict.disabled || 'Skryto')}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="bg-stone-50 border border-stone-100 rounded-[2rem] p-6 space-y-4">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <div className="text-sm font-black text-stone-900">{mpDict.quickLinksTitle || 'Rychlé odkazy'}</div>
@@ -783,6 +1099,88 @@ export default function SiteConfigTab({ dict }: { dict: any }) {
               </div>
             </div>
           ))
+        )}
+      </div>
+
+      <div className="bg-white p-8 rounded-[2.5rem] border shadow-sm space-y-6">
+        <div className="flex items-center justify-between gap-6">
+          <div>
+            <div className="text-sm font-black text-stone-900">Obsah stránek</div>
+            <div className="text-sm text-stone-600 font-medium mt-1">Bilingvní editor obsahu (CZ/EN). Pokud je obsah prázdný, stránka použije defaultní layout.</div>
+          </div>
+          <button
+            type="button"
+            onClick={savePageContent}
+            disabled={pageEditorSaving || pageEditorLoading}
+            className="inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-[10px] font-black uppercase tracking-widest border border-green-200 bg-green-600 text-white hover:bg-green-700 transition disabled:opacity-50"
+          >
+            {pageEditorSaving ? <InlinePulse className="bg-white/80" size={16} /> : <Save size={16} />}
+            Uložit obsah
+          </button>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-4 items-end">
+          <div className="md:col-span-2">
+            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Stránka</div>
+            <select
+              value={pageEditorSlug}
+              onChange={(e) => setPageEditorSlug(e.target.value)}
+              className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
+            >
+              {contentSlugs.map((s) => (
+                <option key={s} value={s}>
+                  {pageLabel.get(s) || s} /{s}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-end">
+            <button
+              type="button"
+              onClick={() => {
+                setPageCsTitle('');
+                setPageCsHtml('');
+                setPageEnTitle('');
+                setPageEnHtml('');
+              }}
+              className="w-full px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition bg-white text-stone-700 border-stone-200 hover:bg-stone-50"
+            >
+              Vyčistit obsah
+            </button>
+          </div>
+        </div>
+
+        {pageEditorLoading ? (
+          <div className="flex items-center justify-center p-10">
+            <InlinePulse className="bg-stone-200" size={18} />
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Titulek (CZ)</div>
+              <input
+                value={pageCsTitle}
+                onChange={(e) => setPageCsTitle(e.target.value)}
+                className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
+              />
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Obsah (CZ)</div>
+              <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden">
+                <Editor value={pageCsHtml} onChange={(v: string) => setPageCsHtml(v)} />
+              </div>
+            </div>
+            <div className="space-y-3">
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Title (EN)</div>
+              <input
+                value={pageEnTitle}
+                onChange={(e) => setPageEnTitle(e.target.value)}
+                className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
+              />
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Content (EN)</div>
+              <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden">
+                <Editor value={pageEnHtml} onChange={(v: string) => setPageEnHtml(v)} />
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

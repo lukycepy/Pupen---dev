@@ -492,15 +492,15 @@ export default function TrustBoxTab({ dict }: { dict: any }) {
         <Dialog
           open={detailOpen}
           onClose={() => setDetailOpen(false)}
-          overlayClassName="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[10000] flex items-center justify-center p-6 animate-in fade-in duration-300 text-left"
-          panelClassName="bg-white w-full max-w-3xl rounded-[2rem] shadow-2xl animate-in zoom-in-95 duration-300 overflow-hidden"
+          overlayClassName="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[30000] flex items-center justify-center p-6 animate-in fade-in duration-300 text-left"
+          panelClassName="bg-white w-full max-w-3xl max-h-[90vh] rounded-[2rem] shadow-2xl animate-in zoom-in-95 duration-300 overflow-hidden flex flex-col"
         >
           {threadDetail.isLoading ? (
             <div className="p-8 flex justify-center">
               <InlinePulse className="bg-stone-400/70" size={14} />
             </div>
           ) : (
-            <div className="p-8 space-y-6">
+            <div className="p-8 space-y-6 overflow-y-auto custom-scrollbar">
               <div className="space-y-1">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
@@ -613,7 +613,7 @@ export default function TrustBoxTab({ dict }: { dict: any }) {
                     <div className="flex items-center justify-between gap-4">
                       <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">
                         {String(m.author_type || '').toLowerCase() === 'reporter'
-                          ? 'reporter'
+                          ? 'nahlašovatel'
                           : `${String(m.author_type || '')}${m.author_name ? ` (${String(m.author_name)})` : ''}`}
                       </div>
                       <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{fmtDate(m.created_at)}</div>

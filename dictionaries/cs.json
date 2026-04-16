@@ -5,6 +5,7 @@
     "events": "Akce",
     "about": "O nás",
     "contact": "Kontakt",
+    "board": "Tváře spolku",
     "map": "Mapa areálu",
     "subjects": "Předměty",
     "citations": "Citace",
@@ -89,7 +90,7 @@
     "changelog": "Changelog",
     "firstAid": "První pomoc",
     "safety": "Bezpečnost",
-    "board": "Výbor",
+    "board": "Tváře spolku",
     "annualReports": "Výroční zprávy",
     "contactEmail": "info@pupen.org",
     "address": "ČZU v Praze, FAPPZ\nKamýcká 129\n165 00 Praha - Suchdol"
@@ -204,10 +205,10 @@
     "empty": "Zatím žádné zprávy"
   },
   "boardPage": {
-    "badge": "Výbor",
-    "title": "Členové výboru",
-    "subtitle": "Kontakty na vedení spolku.",
-    "empty": "Zatím žádní členové výboru"
+    "badge": "Tváře spolku",
+    "title": "Tváře spolku",
+    "subtitle": "Kontakty na spolek.",
+    "empty": "Zatím žádné tváře spolku"
   },
   "memberDirectory": {
     "mapTitle": "Lokace členů (po městech)",
@@ -1143,7 +1144,7 @@
     "tabMessages": "Zprávy",
     "tabProjects": "Projekty",
     "tabPolls": "Ankety",
-    "tabBoard": "Vedení",
+    "tabBoard": "Tváře spolku",
     "tabSettings": "Můj profil",
     "navOverview": "Přehled",
     "navContentBenefits": "Obsah a výhody",

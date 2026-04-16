@@ -6,9 +6,11 @@ import InlinePulse from '@/app/components/InlinePulse';
 import { useToast } from '@/app/context/ToastContext';
 import { FolderKanban, Plus, Send, X } from 'lucide-react';
 import Dialog from '@/app/components/ui/Dialog';
+import { useSitePageContent } from '@/app/[lang]/components/useSitePageContent';
 
 export default function ProjectsTab({ lang }: { lang: string }) {
   const { showToast } = useToast();
+  const { title: pageTitle, html: pageHtml } = useSitePageContent('projekty', lang);
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [joinOpen, setJoinOpen] = useState<null | { id: string; title: string }>(null);
@@ -141,6 +143,13 @@ export default function ProjectsTab({ lang }: { lang: string }) {
           </div>
         </div>
       </div>
+
+      {pageHtml ? (
+        <div className="bg-stone-50 border border-stone-100 rounded-[2rem] p-8">
+          {pageTitle ? <div className="text-xl font-black text-stone-900 mb-4">{pageTitle}</div> : null}
+          <div className="prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: pageHtml }} />
+        </div>
+      ) : null}
 
       <div className="bg-white p-6 rounded-[3rem] border border-stone-100 shadow-sm">
         {loading ? (

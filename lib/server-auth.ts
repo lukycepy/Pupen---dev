@@ -31,6 +31,12 @@ export async function requireAdmin(req: Request) {
   return { user, profile };
 }
 
+export async function requireSuperadmin(req: Request) {
+  const { user, profile } = await requireAdmin(req);
+  if (!profile?.can_manage_admins) throw new Error('Forbidden');
+  return { user, profile };
+}
+
 export async function requireMember(req: Request) {
   const user = await requireUser(req);
   const supabase = getServerSupabase();

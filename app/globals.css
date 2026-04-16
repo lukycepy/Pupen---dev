@@ -240,6 +240,81 @@ body {
 .rich-text-content li {
   margin-bottom: 0.5rem;
 }
+
+.admin-scope {
+  --admin-surface: #ffffff;
+  --admin-surface-2: #fafaf9;
+  --admin-border: #f5f5f4;
+  --admin-border-strong: #e7e5e4;
+  --admin-text: #1c1917;
+  --admin-text-muted: #78716c;
+  --admin-radius: 16px;
+  --admin-radius-lg: 24px;
+}
+
+.admin-scope :where(input, textarea, select) {
+  font-family: inherit;
+}
+
+.admin-scope :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select) {
+  background: var(--admin-surface-2) !important;
+  border: 1px solid var(--admin-border) !important;
+  border-radius: var(--admin-radius) !important;
+  color: var(--admin-text) !important;
+  font-weight: 700 !important;
+  outline: none;
+}
+
+.admin-scope :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select):disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.admin-scope :where(select) {
+  appearance: none;
+}
+
+.admin-scope :where(textarea) {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.admin-scope :where(table) {
+  width: 100%;
+}
+
+.admin-scope :where(th) {
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--admin-text-muted);
+}
+
+.admin-scope :where(td) {
+  color: var(--admin-text);
+}
+
+.admin-scope :where(code, pre) {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.admin-scope :where([class*="bg-white"][class*="border"][class*="shadow-sm"]) {
+  border-color: var(--admin-border) !important;
+  border-radius: var(--admin-radius-lg) !important;
+}
+
+.admin-scope :where([class*="bg-stone-50"][class*="border"][class*="border-stone-100"]) {
+  border-radius: var(--admin-radius-lg) !important;
+}
+
+.admin-scope :where([class*="text-center"][class*="tracking-widest"][class*="text-stone-400"]) {
+  color: var(--admin-text-muted) !important;
+}
+
+.admin-scope :where(button, a):where([class*="tracking-widest"][class*="uppercase"][class*="border"]) {
+  border-radius: var(--admin-radius) !important;
+}
 .rich-text-content a {
   color: #16a34a;
   text-decoration: underline;

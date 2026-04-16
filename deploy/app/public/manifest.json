@@ -1,0 +1,12 @@
+{
+  "name": "Pupen",
+  "short_name": "Pupen",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#fafaf9",
+  "theme_color": "#16a34a",
+  "icons": [
+    { "src": "/logo.png", "sizes": "564x603", "type": "image/png" }
+  ]
+}

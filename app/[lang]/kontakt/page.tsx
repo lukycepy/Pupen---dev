@@ -8,11 +8,13 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { contactFormSchema, type ContactFormData } from '@/lib/validations/contact';
 import { useToast } from '@/app/context/ToastContext';
+import { useSitePageContent } from '@/app/[lang]/components/useSitePageContent';
 
 export default function KontaktPage() {
   const params = useParams();
   const lang = (params?.lang as string) || 'cs';
   const { showToast } = useToast();
+  const page = useSitePageContent('kontakt', lang);
 
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -95,6 +97,14 @@ export default function KontaktPage() {
 
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900 font-sans">
+      {page.html ? (
+        <div className="max-w-5xl mx-auto px-6 pt-24">
+          <div className="bg-white border border-stone-100 rounded-[3rem] p-10 md:p-14 shadow-sm">
+            {page.title ? <div className="text-3xl md:text-5xl font-black text-stone-900 tracking-tight mb-8">{page.title}</div> : null}
+            <div className="prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: page.html }} />
+          </div>
+        </div>
+      ) : null}
       <div className="max-w-6xl mx-auto px-6 py-8 md:py-12">
         
         {/* Hlavní nadpis */}
