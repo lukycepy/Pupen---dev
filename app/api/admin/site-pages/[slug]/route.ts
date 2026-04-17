@@ -1,17 +1,23 @@
 import { NextResponse } from 'next/server';
-import { requireSuperadmin } from '@/lib/server-auth';
+import { requireAdmin, requireUser } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function GET(req: Request, { params }: { params: Promise<{ slug: string }> }) {
   try {
-    await requireSuperadmin(req);
+    await requireAdmin(req);
     const { slug } = await params;
     const s = String(slug || '').trim();
     if (!s) return NextResponse.json({ error: 'Missing slug' }, { status: 400 });
 
     const supabase = getServerSupabase();
+    const user = await requireUser(req);
+    const profRes = await supabase.from('profiles').select('can_manage_admins, can_edit_site_pages').eq('id', user.id).maybeSingle();
+    if (profRes.error) throw profRes.error;
+    const profile: any = profRes.data || {};
+    if (!profile?.can_manage_admins && !profile?.can_edit_site_pages) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     const res = await supabase
       .from('site_page_contents')
       .select('slug,lang,title,content_html,updated_at')
@@ -28,7 +34,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
 
 export async function PUT(req: Request, { params }: { params: Promise<{ slug: string }> }) {
   try {
-    await requireSuperadmin(req);
+    await requireAdmin(req);
     const { slug } = await params;
     const s = String(slug || '').trim();
     if (!s) return NextResponse.json({ error: 'Missing slug' }, { status: 400 });
@@ -38,6 +44,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ slug: st
     const en = body?.en && typeof body.en === 'object' ? body.en : {};
 
     const supabase = getServerSupabase();
+    const user = await requireUser(req);
+    const profRes = await supabase.from('profiles').select('can_manage_admins, can_edit_site_pages').eq('id', user.id).maybeSingle();
+    if (profRes.error) throw profRes.error;
+    const profile: any = profRes.data || {};
+    if (!profile?.can_manage_admins && !profile?.can_edit_site_pages) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     const now = new Date().toISOString();
 
     const upserts = [
@@ -55,4 +66,3 @@ export async function PUT(req: Request, { params }: { params: Promise<{ slug: st
     return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
   }
 }
-

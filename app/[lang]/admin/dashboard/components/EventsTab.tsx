@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { supabase } from '@/lib/supabase';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { Plus, Trash2, Edit3, Image as ImageIcon, Calendar as CalendarIcon, MapPin, Clock, Download, Loader2, Save, X, Eye, EyeOff, CalendarClock } from 'lucide-react';
+import { Plus, Trash2, Edit3, Image as ImageIcon, Calendar as CalendarIcon, MapPin, Clock, Download, Loader2, Save, X, Eye, EyeOff, CalendarClock, Archive, RotateCcw } from 'lucide-react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { useToast } from '../../../../context/ToastContext';
@@ -69,6 +69,7 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
   const [eventPhotoFiles, setEventPhotoFiles] = useState<File[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [localSearch, setLocalSearch] = useState('');
+  const [listView, setListView] = useState<'active' | 'archive'>('active');
   const [modalOpen, setModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState<{ title: string; message: string; onConfirm: () => void }>({
     title: '',
@@ -78,6 +79,8 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
   const [nowTs, setNowTs] = useState(0);
   useEffect(() => {
     setNowTs(Date.now());
+    const t = setInterval(() => setNowTs(Date.now()), 30_000);
+    return () => clearInterval(t);
   }, []);
 
   const { data: eventPhotos = [] } = useQuery({
@@ -318,32 +321,31 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
     }
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('events').delete().eq('id', id);
-      if (error) throw error;
+  const archiveMutation = useMutation({
+    mutationFn: async ({ ids, mode }: { ids?: string[]; mode: 'archive' | 'restore' | 'archive_past' }) => {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
+      const res = await fetch('/api/admin/events/archive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ mode, ids: ids || [] }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Chyba');
+      return json;
     },
-    onSuccess: () => {
+    onSuccess: (json: any) => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       setModalOpen(false);
-      showToast(dict.admin.confirmDeleteSuccess || 'Smazáno', 'success');
-    },
-    onError: (err: any) => {
-      showToast(err.message, 'error');
-    }
-  });
-
-  const bulkDeleteMutation = useMutation({
-    mutationFn: async (ids: string[]) => {
-      const { error } = await supabase.from('events').delete().in('id', ids);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['events'] });
       setSelectedIds([]);
-      showToast('Vybrané akce smazány', 'success');
+      const a = Number(json?.archived || 0);
+      const r = Number(json?.restored || 0);
+      if (a) showToast(`Přesunuto do archivu aktivit: ${a}`, 'success');
+      else if (r) showToast(`Vráceno z archivu: ${r}`, 'success');
+      else showToast(dict.admin?.saved || 'Uloženo', 'success');
     },
-    onError: (err: any) => showToast(err.message, 'error')
+    onError: (err: any) => showToast(err?.message || 'Chyba', 'error'),
   });
 
   const onSubmit = (data: any) => {
@@ -374,20 +376,29 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
     reset();
   };
 
-  const deleteItem = (id: string) => {
+  const askArchive = (ids: string[]) => {
     setModalConfig({
-      title: dict.admin.confirmDeleteEventTitle || 'Smazat akci?',
-      message: dict.admin.confirmDeleteEvent || 'Opravdu chcete tuto akci trvale smazat? Tato operace je nevratná.',
-      onConfirm: () => deleteMutation.mutate(id)
+      title: 'Přesunout do archivu aktivit?',
+      message: `Akce se nebudou mazat. Přesunou se do archivu aktivit a přestanou se zobrazovat mezi aktivními.`,
+      onConfirm: () => archiveMutation.mutate({ mode: 'archive', ids }),
     });
     setModalOpen(true);
   };
 
-  const handleBulkDelete = () => {
+  const askRestore = (ids: string[]) => {
     setModalConfig({
-      title: dict.admin.bulkDeleteTitle || 'Smazat vybrané?',
-      message: (dict.admin.bulkDeleteConfirm || 'Opravdu chcete smazat {count} vybraných akcí?').replace('{count}', selectedIds.length.toString()),
-      onConfirm: () => bulkDeleteMutation.mutate(selectedIds)
+      title: 'Vrátit z archivu?',
+      message: 'Akce se vrátí mezi aktivní a odebere se z archivu aktivit.',
+      onConfirm: () => archiveMutation.mutate({ mode: 'restore', ids }),
+    });
+    setModalOpen(true);
+  };
+
+  const askArchivePast = () => {
+    setModalConfig({
+      title: 'Přesunout proběhlé akce do archivu aktivit?',
+      message: 'Všechny akce, které už proběhly, se přesunou do archivu aktivit. Nic se nemaže.',
+      onConfirm: () => archiveMutation.mutate({ mode: 'archive_past' }),
     });
     setModalOpen(true);
   };
@@ -419,10 +430,19 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
     document.body.removeChild(link);
   };
 
-  const filteredEvents = events.filter(ev => 
-    ev.title.toLowerCase().includes(localSearch.toLowerCase()) || 
-    ev.location.toLowerCase().includes(localSearch.toLowerCase())
-  );
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [listView]);
+
+  const filteredEvents = events
+    .filter((ev) => {
+      const isArchived = !!ev.archived_at;
+      return listView === 'archive' ? isArchived : !isArchived;
+    })
+    .filter((ev) => {
+      const q = localSearch.toLowerCase();
+      return ev.title.toLowerCase().includes(q) || ev.location.toLowerCase().includes(q);
+    });
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -432,11 +452,29 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
         actions={
           <>
             {selectedIds.length > 0 && (
-              <button 
-                onClick={handleBulkDelete} 
-                className="bg-red-50 text-red-600 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-red-600 hover:text-white transition-all shadow-sm"
+              listView === 'archive' ? (
+                <button
+                  onClick={() => askRestore(selectedIds)}
+                  className="bg-stone-900 text-white px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-stone-800 transition-all shadow-sm"
+                >
+                  <RotateCcw size={16} /> Vrátit ({selectedIds.length})
+                </button>
+              ) : (
+                <button
+                  onClick={() => askArchive(selectedIds)}
+                  className="bg-stone-900 text-white px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-stone-800 transition-all shadow-sm"
+                >
+                  <Archive size={16} /> Archivovat ({selectedIds.length})
+                </button>
+              )
+            )}
+            {!editingEvent && !readOnly && listView === 'active' && (
+              <button
+                onClick={askArchivePast}
+                className="bg-white text-stone-700 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 border border-stone-200 hover:bg-stone-50 transition-all shadow-sm"
+                disabled={archiveMutation.isPending}
               >
-                <Trash2 size={16} /> {dict.admin.btnDelete} ({selectedIds.length})
+                <Archive size={16} /> Přesunout proběhlé
               </button>
             )}
             {!readOnly && !editingEvent && (
@@ -724,7 +762,29 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
         {/* LIST SECTION */}
         <div className={`${editingEvent ? 'lg:col-span-7 xl:col-span-8' : 'lg:col-span-12'} bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-sm overflow-hidden transition-all duration-500`}>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-            <h2 className="text-xl font-black text-stone-900">Seznam akcí</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-black text-stone-900">Seznam akcí</h2>
+              <div className="ml-2 inline-flex rounded-xl border border-stone-200 bg-stone-50 p-1">
+                <button
+                  type="button"
+                  onClick={() => setListView('active')}
+                  className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition ${
+                    listView === 'active' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500 hover:text-stone-900'
+                  }`}
+                >
+                  Aktivní
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setListView('archive')}
+                  className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition ${
+                    listView === 'archive' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500 hover:text-stone-900'
+                  }`}
+                >
+                  Archiv
+                </button>
+              </div>
+            </div>
             <div className="relative">
               <Clock className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" size={16} />
               <input 
@@ -860,12 +920,25 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
                         >
                           <Edit3 size={18} />
                         </button>
-                        <button 
-                          onClick={() => deleteItem(event.id)} 
-                          className="p-2.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
-                        >
-                          <Trash2 size={18} />
-                        </button>
+                        {listView === 'archive' ? (
+                          <button
+                            onClick={() => askRestore([event.id])}
+                            className="p-2.5 text-stone-400 hover:text-stone-900 hover:bg-stone-50 rounded-xl transition-all"
+                            title="Vrátit z archivu"
+                            disabled={archiveMutation.isPending}
+                          >
+                            <RotateCcw size={18} />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => askArchive([event.id])}
+                            className="p-2.5 text-stone-400 hover:text-stone-900 hover:bg-stone-50 rounded-xl transition-all"
+                            title="Archivovat"
+                            disabled={archiveMutation.isPending}
+                          >
+                            <Archive size={18} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

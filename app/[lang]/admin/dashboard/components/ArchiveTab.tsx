@@ -128,9 +128,11 @@ export default function ArchiveTab({ dict }: { dict: any }) {
               <button onClick={() => handleEdit(item)} className="p-2 text-stone-300 hover:text-green-600 transition">
                 <Edit2 size={18} />
               </button>
-              <button onClick={() => deleteMutation.mutate(item.id)} className="p-2 text-stone-300 hover:text-red-500 transition">
-                <Trash2 size={18} />
-              </button>
+              {!item?.source_event_id ? (
+                <button onClick={() => deleteMutation.mutate(item.id)} className="p-2 text-stone-300 hover:text-red-500 transition">
+                  <Trash2 size={18} />
+                </button>
+              ) : null}
             </div>
           </div>
         ))}

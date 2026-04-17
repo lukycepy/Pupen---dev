@@ -169,18 +169,24 @@ export default function AkcePage() {
 
         const nowIso = new Date().toISOString();
         const now = new Date();
-        const run = (withMemberFilter: boolean) => {
+        const run = (withMemberFilter: boolean, withArchiveFilter: boolean) => {
           let q = supabase
             .from('events')
             .select('*, rsvp(id, status, expires_at, attendees)')
-            .lte('published_at', nowIso)
-            .order('date', { ascending: true });
+            .lte('published_at', nowIso);
+          if (withArchiveFilter) q = q.is('archived_at', null);
+          q = q.order('date', { ascending: true });
           if (withMemberFilter) q = q.eq('is_member_only', false);
           return q;
         };
-        let { data, error: supabaseError } = await run(true);
+        let { data, error: supabaseError } = await run(true, true);
+        if (supabaseError && /archived_at/i.test(supabaseError.message) && /schema cache|does not exist|column/i.test(supabaseError.message)) {
+          const retry = await run(true, false);
+          data = retry.data;
+          supabaseError = retry.error;
+        }
         if (supabaseError && /is_member_only/i.test(supabaseError.message) && /schema cache/i.test(supabaseError.message)) {
-          const retry = await run(false);
+          const retry = await run(false, true);
           data = retry.data;
           supabaseError = retry.error;
         }

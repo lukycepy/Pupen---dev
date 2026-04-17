@@ -67,6 +67,7 @@ export default function SiteConfigTab({ dict }: { dict: any }) {
   const mpDict = dict?.memberPortalConfig || {};
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [section, setSection] = useState<'pages' | 'content' | 'home' | 'member' | 'maintenance'>('pages');
   const [config, setConfig] = useState<SiteCfg>({
     maintenance_enabled: false,
     maintenance_start_at: null,
@@ -185,10 +186,26 @@ export default function SiteConfigTab({ dict }: { dict: any }) {
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
       if (!token) throw new Error('Nepřihlášen');
+      const patch =
+        section === 'maintenance'
+          ? {
+              maintenance_enabled: config.maintenance_enabled,
+              maintenance_start_at: config.maintenance_start_at || null,
+              maintenance_end_at: config.maintenance_end_at || null,
+              maintenance_title_cs: config.maintenance_title_cs || null,
+              maintenance_body_cs: config.maintenance_body_cs || null,
+              maintenance_title_en: config.maintenance_title_en || null,
+              maintenance_body_en: config.maintenance_body_en || null,
+            }
+          : section === 'home'
+            ? { home: config.home || {} }
+            : section === 'member'
+              ? { member_portal: (config as any).member_portal || {} }
+              : { pages: config.pages || {} };
       const res = await fetch('/api/admin/site-config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ config }),
+        body: JSON.stringify({ section, config: patch }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error || 'Uložení selhalo');
@@ -205,6 +222,13 @@ export default function SiteConfigTab({ dict }: { dict: any }) {
     for (const p of DEFAULT_PAGES) g[p.group].push(p as any);
     return g;
   }, []);
+
+  const pageMeta = useMemo(() => {
+    const m = new Map<string, { group: string; label: string }>();
+    for (const p of DEFAULT_PAGES) m.set(p.slug, { group: p.group, label: pageLabel.get(p.slug) || p.slug });
+    for (const p of CMS_PAGES) m.set(p.slug, { group: 'CMS', label: pageLabel.get(p.slug) || p.label });
+    return m;
+  }, [pageLabel]);
 
   const contentSlugs = useMemo(() => {
     const s = new Set<string>();
@@ -277,17 +301,53 @@ export default function SiteConfigTab({ dict }: { dict: any }) {
           <Globe className="text-green-600" />
           {dict.admin?.tabSitePages || 'Stránky'}
         </h2>
-        <button
-          type="button"
-          onClick={save}
-          disabled={saving}
-          className="inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-[10px] font-black uppercase tracking-widest border border-green-200 bg-green-600 text-white hover:bg-green-700 transition disabled:opacity-50"
-        >
-          {saving ? <InlinePulse className="bg-white/80" size={16} /> : <Save size={16} />}
-          Uložit
-        </button>
+        {section === 'content' ? (
+          <button
+            type="button"
+            onClick={savePageContent}
+            disabled={pageEditorSaving || pageEditorLoading}
+            className="inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-[10px] font-black uppercase tracking-widest border border-green-200 bg-green-600 text-white hover:bg-green-700 transition disabled:opacity-50"
+          >
+            {pageEditorSaving ? <InlinePulse className="bg-white/80" size={16} /> : <Save size={16} />}
+            Uložit obsah
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={save}
+            disabled={saving}
+            className="inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-[10px] font-black uppercase tracking-widest border border-green-200 bg-green-600 text-white hover:bg-green-700 transition disabled:opacity-50"
+          >
+            {saving ? <InlinePulse className="bg-white/80" size={16} /> : <Save size={16} />}
+            Uložit nastavení
+          </button>
+        )}
       </div>
 
+      <div className="bg-white p-2 rounded-[2rem] border shadow-sm">
+        <div className="flex flex-wrap gap-2">
+          {[
+            ['pages', 'Navigace'],
+            ['content', 'Obsah'],
+            ['home', 'Domů'],
+            ['member', 'Členský portál'],
+            ['maintenance', 'Odstávka'],
+          ].map(([k, label]) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setSection(k as any)}
+              className={`px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition ${
+                section === k ? 'bg-stone-900 text-white border-stone-900' : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-50'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {section === 'maintenance' && (
       <div className="bg-white p-8 rounded-[2.5rem] border shadow-sm space-y-6">
         <div className="flex items-start justify-between gap-6">
           <div>
@@ -381,7 +441,9 @@ export default function SiteConfigTab({ dict }: { dict: any }) {
           </div>
         </div>
       </div>
+      )}
 
+      {section === 'home' && (
       <div className="bg-white p-8 rounded-[2.5rem] border shadow-sm space-y-6">
         <div className="flex items-start justify-between gap-6">
           <div>
@@ -732,7 +794,9 @@ export default function SiteConfigTab({ dict }: { dict: any }) {
           </div>
         </div>
       </div>
+      )}
 
+      {section === 'member' && (
       <div className="bg-white p-8 rounded-[2.5rem] border shadow-sm space-y-6">
         <div className="flex items-start justify-between gap-6">
           <div>
@@ -1032,7 +1096,9 @@ export default function SiteConfigTab({ dict }: { dict: any }) {
           </div>
         </div>
       </div>
+      )}
 
+      {section === 'pages' && (
       <div className="bg-white p-8 rounded-[2.5rem] border shadow-sm space-y-8">
         {loading ? (
           <div className="flex items-center justify-center p-10">
@@ -1101,22 +1167,13 @@ export default function SiteConfigTab({ dict }: { dict: any }) {
           ))
         )}
       </div>
+      )}
 
+      {section === 'content' && (
       <div className="bg-white p-8 rounded-[2.5rem] border shadow-sm space-y-6">
-        <div className="flex items-center justify-between gap-6">
-          <div>
-            <div className="text-sm font-black text-stone-900">Obsah stránek</div>
-            <div className="text-sm text-stone-600 font-medium mt-1">Bilingvní editor obsahu (CZ/EN). Pokud je obsah prázdný, stránka použije defaultní layout.</div>
-          </div>
-          <button
-            type="button"
-            onClick={savePageContent}
-            disabled={pageEditorSaving || pageEditorLoading}
-            className="inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-[10px] font-black uppercase tracking-widest border border-green-200 bg-green-600 text-white hover:bg-green-700 transition disabled:opacity-50"
-          >
-            {pageEditorSaving ? <InlinePulse className="bg-white/80" size={16} /> : <Save size={16} />}
-            Uložit obsah
-          </button>
+        <div>
+          <div className="text-sm font-black text-stone-900">Obsah stránek</div>
+          <div className="text-sm text-stone-600 font-medium mt-1">Bilingvní editor obsahu (CZ/EN). Pokud je obsah prázdný, stránka použije defaultní layout.</div>
         </div>
 
         <div className="grid md:grid-cols-3 gap-4 items-end">
@@ -1127,11 +1184,19 @@ export default function SiteConfigTab({ dict }: { dict: any }) {
               onChange={(e) => setPageEditorSlug(e.target.value)}
               className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
             >
-              {contentSlugs.map((s) => (
-                <option key={s} value={s}>
-                  {pageLabel.get(s) || s} /{s}
-                </option>
-              ))}
+              {(['Navbar', 'Nástroje', 'Ostatní', 'CMS'] as const).map((g) => {
+                const slugs = contentSlugs.filter((s) => pageMeta.get(s)?.group === g);
+                if (!slugs.length) return null;
+                return (
+                  <optgroup key={g} label={g}>
+                    {slugs.map((s) => (
+                      <option key={s} value={s}>
+                        {pageMeta.get(s)?.label || s} /{s}
+                      </option>
+                    ))}
+                  </optgroup>
+                );
+              })}
             </select>
           </div>
           <div className="flex items-end">
@@ -1147,6 +1212,76 @@ export default function SiteConfigTab({ dict }: { dict: any }) {
             >
               Vyčistit obsah
             </button>
+          </div>
+        </div>
+
+        <div className="bg-stone-50 border border-stone-100 rounded-2xl p-4 flex flex-wrap items-center gap-2 justify-between">
+          <div className="min-w-0">
+            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">Viditelnost</div>
+            <div className="text-xs font-bold text-stone-700 truncate">/{pageEditorSlug}</div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <a
+              href={`/cs/${pageEditorSlug}`}
+              target="_blank"
+              rel="noreferrer"
+              className="px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition bg-white text-stone-700 border-stone-200 hover:bg-stone-100"
+            >
+              Otevřít (CZ)
+            </a>
+            <a
+              href={`/en/${pageEditorSlug}`}
+              target="_blank"
+              rel="noreferrer"
+              className="px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition bg-white text-stone-700 border-stone-200 hover:bg-stone-100"
+            >
+              Otevřít (EN)
+            </a>
+            {(() => {
+              const cfg = config.pages?.[pageEditorSlug] || {};
+              const meta = pageMeta.get(pageEditorSlug);
+              return (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => updatePage(pageEditorSlug, { enabled: cfg.enabled === false ? true : false })}
+                    className={`px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition ${
+                      cfg.enabled === false
+                        ? 'bg-white text-stone-700 border-stone-200 hover:bg-stone-100'
+                        : 'bg-green-600 text-white border-green-600 hover:bg-green-700'
+                    }`}
+                  >
+                    {cfg.enabled === false ? 'Skryto' : 'Zobrazeno'}
+                  </button>
+                  {meta?.group === 'Navbar' ? (
+                    <button
+                      type="button"
+                      onClick={() => updatePage(pageEditorSlug, { navbar: cfg.navbar === false ? true : false })}
+                      className={`px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition ${
+                        cfg.navbar === false
+                          ? 'bg-white text-stone-700 border-stone-200 hover:bg-stone-100'
+                          : 'bg-stone-900 text-white border-stone-900 hover:bg-stone-800'
+                      }`}
+                    >
+                      {cfg.navbar === false ? 'Mimo navbar' : 'V navbaru'}
+                    </button>
+                  ) : null}
+                  {meta?.group === 'Nástroje' ? (
+                    <button
+                      type="button"
+                      onClick={() => updatePage(pageEditorSlug, { tools: cfg.tools === false ? true : false })}
+                      className={`px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition ${
+                        cfg.tools === false
+                          ? 'bg-white text-stone-700 border-stone-200 hover:bg-stone-100'
+                          : 'bg-stone-900 text-white border-stone-900 hover:bg-stone-800'
+                      }`}
+                    >
+                      {cfg.tools === false ? 'Mimo nástroje' : 'V nástrojích'}
+                    </button>
+                  ) : null}
+                </>
+              );
+            })()}
           </div>
         </div>
 
@@ -1183,6 +1318,7 @@ export default function SiteConfigTab({ dict }: { dict: any }) {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }

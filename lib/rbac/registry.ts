@@ -37,6 +37,11 @@ export const RBAC_MODULE_IDS = [
   'books',
   'newsletter',
   'email_settings',
+  'site_pages',
+  'site_nav',
+  'site_home',
+  'site_member_portal',
+  'site_maintenance',
 ] as const;
 
 export type RbacModuleId = (typeof RBAC_MODULE_IDS)[number];
