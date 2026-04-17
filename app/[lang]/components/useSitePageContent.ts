@@ -11,9 +11,15 @@ export function useSitePageContent(slug: string, lang: string) {
         const url = new URL('/api/site-page', window.location.origin);
         url.searchParams.set('slug', slug);
         url.searchParams.set('lang', lang === 'en' ? 'en' : 'cs');
-        const res = await fetch(url.toString());
+        const res = await fetch(url.toString(), { cache: 'no-store' });
         const json = await res.json().catch(() => ({}));
-        if (!res.ok) return;
+        if (!res.ok) {
+          if (mounted) {
+            setTitle('');
+            setHtml('');
+          }
+          return;
+        }
         const page = json?.page || null;
         if (mounted) {
           setTitle(String(page?.title || ''));
@@ -33,4 +39,3 @@ export function useSitePageContent(slug: string, lang: string) {
 
   return { title, html };
 }
-

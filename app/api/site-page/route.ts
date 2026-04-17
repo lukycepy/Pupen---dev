@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import { getServerSupabase } from '@/lib/supabase-server';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -9,7 +11,15 @@ export async function GET(req: Request) {
   const lang = (String(url.searchParams.get('lang') || 'cs').trim() === 'en' ? 'en' : 'cs') as 'cs' | 'en';
   if (!slug) return NextResponse.json({ error: 'Missing slug' }, { status: 400 });
 
-  const supabase = getServerSupabase();
+  let supabase: any;
+  try {
+    supabase = getServerSupabase();
+  } catch {
+    const sbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!sbUrl || !anon) return NextResponse.json({ error: 'Missing Supabase env' }, { status: 500 });
+    supabase = createClient(sbUrl, anon);
+  }
   const res = await supabase
     .from('site_page_contents')
     .select('slug,lang,title,content_html,updated_at')
@@ -22,4 +32,3 @@ export async function GET(req: Request) {
   out.headers.set('Cache-Control', 'no-store');
   return out;
 }
-

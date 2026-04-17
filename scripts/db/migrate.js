@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const { withClient } = require('./utils');
+const { withClient, getEnvFromArgs } = require('./utils');
 
 function sha256(text) {
   return crypto.createHash('sha256').update(text, 'utf8').digest('hex');
@@ -39,6 +39,11 @@ async function ensureSupabaseMigrationsTable(client) {
   if (!existsRes.rows[0]?.exists) {
     throw new Error('Missing supabase_migrations.schema_migrations table. Create it via Supabase first.');
   }
+}
+
+async function supabaseMigrationsTableExists(client) {
+  const existsRes = await client.query(`select to_regclass('supabase_migrations.schema_migrations') as exists`);
+  return !!existsRes.rows[0]?.exists;
 }
 
 async function supabaseMigrationIsApplied(client, version) {
@@ -79,6 +84,8 @@ async function markSupabaseMigrationApplied(client, version, name, sql) {
 
 async function main() {
   const repoRoot = process.cwd();
+  const env = getEnvFromArgs();
+  const includeLegacy = String(process.env.MIGRATE_INCLUDE_LEGACY || '').toLowerCase() === 'true' || process.env.MIGRATE_INCLUDE_LEGACY === '1';
   const customFiles = listSqlFiles(path.join(repoRoot, 'migrace'), 'migrace');
   const supabaseFiles = listSqlFiles(path.join(repoRoot, 'supabase', 'migrations'), 'supabase/migrations');
 
@@ -90,36 +97,11 @@ async function main() {
   await withClient(async (client) => {
     await ensureMigrationsTable(client);
 
-    const existingRes = await client.query('select migration_key, checksum from public.schema_migrations');
-    const existing = new Map(existingRes.rows.map((r) => [String(r.migration_key), String(r.checksum)]));
+    const hasSupabaseTable = supabaseFiles.length ? await supabaseMigrationsTableExists(client) : false;
+    const preferSupabase = hasSupabaseTable && (env === 'prod' || env === 'staging');
+    const runLegacy = customFiles.length && (!preferSupabase || includeLegacy);
 
-    for (const f of customFiles) {
-      const sql = fs.readFileSync(f.abs, 'utf8');
-      if (!sql.trim()) {
-        throw new Error(`Empty migration file: ${f.key}`);
-      }
-      const checksum = sha256(sql);
-      const prev = existing.get(f.key);
-      if (prev) {
-        if (prev !== checksum) {
-          throw new Error(`Migration checksum mismatch: ${f.key}`);
-        }
-        continue;
-      }
-
-      await client.query('begin');
-      try {
-        await client.query(sql);
-        await client.query('insert into public.schema_migrations (migration_key, checksum) values ($1, $2)', [f.key, checksum]);
-        await client.query('commit');
-        console.log(`Applied: ${f.key}`);
-      } catch (e) {
-        await client.query('rollback');
-        throw e;
-      }
-    }
-
-    if (supabaseFiles.length) {
+    if (supabaseFiles.length && hasSupabaseTable) {
       await ensureSupabaseMigrationsTable(client);
       for (const f of supabaseFiles) {
         const meta = parseSupabaseMigration(f);
@@ -144,6 +126,41 @@ async function main() {
           throw e;
         }
       }
+    } else if (supabaseFiles.length && !hasSupabaseTable) {
+      console.log('SKIPPED: supabase/migrations (missing supabase_migrations.schema_migrations)');
+    }
+
+    if (runLegacy) {
+      const existingRes = await client.query('select migration_key, checksum from public.schema_migrations');
+      const existing = new Map(existingRes.rows.map((r) => [String(r.migration_key), String(r.checksum)]));
+
+      for (const f of customFiles) {
+        const sql = fs.readFileSync(f.abs, 'utf8');
+        if (!sql.trim()) {
+          throw new Error(`Empty migration file: ${f.key}`);
+        }
+        const checksum = sha256(sql);
+        const prev = existing.get(f.key);
+        if (prev) {
+          if (prev !== checksum) {
+            throw new Error(`Migration checksum mismatch: ${f.key}`);
+          }
+          continue;
+        }
+
+        await client.query('begin');
+        try {
+          await client.query(sql);
+          await client.query('insert into public.schema_migrations (migration_key, checksum) values ($1, $2)', [f.key, checksum]);
+          await client.query('commit');
+          console.log(`Applied: ${f.key}`);
+        } catch (e) {
+          await client.query('rollback');
+          throw e;
+        }
+      }
+    } else if (preferSupabase && customFiles.length) {
+      console.log('SKIPPED: migrace (using supabase/migrations). Set MIGRATE_INCLUDE_LEGACY=true to run legacy SQL.');
     }
 
     console.log('Done.');

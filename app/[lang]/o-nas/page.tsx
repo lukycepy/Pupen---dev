@@ -6,7 +6,6 @@ import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import { Users, Heart, Beer, Target, ArrowRight, Linkedin, Instagram, Mail, Phone, Twitter } from 'lucide-react';
 import { getDictionary } from '@/lib/get-dictionary';
-import { supabase } from '@/lib/supabase';
 import { useSitePageContent } from '@/app/[lang]/components/useSitePageContent';
 
 export default function AboutPage() {
@@ -22,15 +21,12 @@ export default function AboutPage() {
       const d = await getDictionary(lang);
       setDict(d.aboutPage);
 
-      const { data } = await supabase
-        .from('team_members')
-        .select('*')
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true })
-        .order('created_at', { ascending: false });
-      
-      if (data && data.length > 0) {
-        setDynamicTeam(data);
+      try {
+        const res = await fetch('/api/team', { cache: 'no-store' });
+        const json = await res.json().catch(() => ({}));
+        if (res.ok) setDynamicTeam(json?.items || []);
+      } catch {
+        setDynamicTeam([]);
       }
     }
     loadData();
