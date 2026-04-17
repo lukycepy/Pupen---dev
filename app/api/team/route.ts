@@ -1,10 +1,22 @@
 import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import { getServerSupabase } from '@/lib/supabase-server';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function GET() {
-  const supabase = getServerSupabase();
+  let supabase: any;
+  try {
+    supabase = getServerSupabase();
+  } catch {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!url || !anon) {
+      return NextResponse.json({ error: 'Missing Supabase env' }, { status: 500 });
+    }
+    supabase = createClient(url, anon);
+  }
   const res = await supabase
     .from('team_members')
     .select('id,name,role,email,phone,image_url,sort_order')

@@ -27,6 +27,7 @@ export default function BoardPage() {
   const [dict, setDict] = useState<any>(null);
   const [items, setItems] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string>('');
   const [pageHtml, setPageHtml] = useState<string>('');
   const [pageTitle, setPageTitle] = useState<string>('');
 
@@ -65,13 +66,17 @@ export default function BoardPage() {
     let mounted = true;
     (async () => {
       setLoading(true);
+      setLoadError('');
       try {
         const res = await fetch('/api/team', { cache: 'no-store' });
         const json = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(String(json?.error || 'Error'));
         if (mounted) setItems((json?.items || []) as any);
       } catch {
-        if (mounted) setItems([]);
+        if (mounted) {
+          setItems([]);
+          setLoadError(isEn ? 'Failed to load team members.' : 'Nepodařilo se načíst členy týmu.');
+        }
       } finally {
         if (mounted) setLoading(false);
       }
@@ -79,7 +84,7 @@ export default function BoardPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [isEn]);
 
   const common = dict?.common || {};
   const t = dict?.boardPage || {};
@@ -121,7 +126,15 @@ export default function BoardPage() {
                 <InlinePulse className="bg-stone-200" size={18} />
               </div>
             ) : board.length === 0 ? (
-              <EmptyState icon={Users} title={t.empty || (isEn ? 'No entries yet' : 'Zatím žádné tváře spolku')} />
+              <EmptyState
+                icon={Users}
+                title={
+                  loadError
+                    ? (isEn ? 'Unable to display team' : 'Nelze zobrazit tým')
+                    : (t.empty || (isEn ? 'No entries yet' : 'Zatím žádné tváře spolku'))
+                }
+                description={loadError || undefined}
+              />
             ) : (
               <div className="grid md:grid-cols-2 gap-4">
                 {board.map((m) => (
