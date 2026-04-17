@@ -146,8 +146,11 @@ export default function AboutPage() {
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {dynamicTeam.map((member, index) => (
-              <div key={member.id || index} className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition duration-300 flex flex-col">
-                <div className="h-64 overflow-hidden relative bg-stone-100 flex-shrink-0">
+              <div
+                key={member.id || index}
+                className="group bg-white rounded-[2rem] overflow-hidden border border-stone-100 shadow-sm hover:shadow-xl transition duration-300 flex flex-col"
+              >
+                <div className="aspect-square w-full bg-stone-100 relative flex-shrink-0">
                   {member.image || member.image_url ? (
                     <Image 
                       src={member.image || member.image_url} 
@@ -161,25 +164,6 @@ export default function AboutPage() {
                       <Users size={48} />
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition duration-300 flex items-end p-4">
-                    <div className="flex gap-3 text-white">
-                      {member.social_linkedin && (
-                        <a href={member.social_linkedin} target="_blank" rel="noopener noreferrer">
-                          <Linkedin size={20} className="hover:text-blue-400 cursor-pointer transition-colors" />
-                        </a>
-                      )}
-                      {member.social_twitter && (
-                        <a href={member.social_twitter} target="_blank" rel="noopener noreferrer">
-                          <Twitter size={20} className="hover:text-sky-400 cursor-pointer transition-colors" />
-                        </a>
-                      )}
-                      {(member.instagram || member.social_instagram) && (
-                        <a href={member.instagram || member.social_instagram} target="_blank" rel="noopener noreferrer">
-                          <Instagram size={20} className="hover:text-pink-400 cursor-pointer transition-colors" />
-                        </a>
-                      )}
-                    </div>
-                  </div>
                 </div>
                 <div className="p-5 flex-grow flex flex-col">
                   <h3 className="font-bold text-lg text-stone-900 leading-tight mb-1">{member.name}</h3>
@@ -191,17 +175,60 @@ export default function AboutPage() {
                     <p className="text-sm text-stone-600 mb-4 line-clamp-3">{member.bio}</p>
                   )}
 
-                  <div className="mt-auto pt-4 border-t border-stone-100 flex flex-col gap-2">
-                    {member.email && (
-                      <a href={`mailto:${member.email}`} className="text-stone-500 hover:text-green-600 transition-colors text-xs font-bold flex items-center gap-2">
-                        <Mail size={14} /> {member.email}
+                  <div className="mt-auto pt-4 border-t border-stone-100 flex flex-wrap gap-2">
+                    {member.email ? (
+                      <a
+                        href={`mailto:${member.email}`}
+                        className="p-2 bg-stone-50 text-stone-500 hover:text-stone-900 hover:bg-stone-100 rounded-xl transition"
+                        aria-label="E-mail"
+                        title={member.email}
+                      >
+                        <Mail size={16} />
                       </a>
-                    )}
-                    {member.phone && (
-                      <a href={`tel:${member.phone}`} className="text-stone-500 hover:text-green-600 transition-colors text-xs font-bold flex items-center gap-2">
-                        <Phone size={14} /> {member.phone}
+                    ) : null}
+                    {member.phone ? (
+                      <a
+                        href={`tel:${member.phone}`}
+                        className="p-2 bg-green-50 text-green-700 hover:bg-green-100 rounded-xl transition"
+                        aria-label="Telefon"
+                        title={member.phone}
+                      >
+                        <Phone size={16} />
                       </a>
-                    )}
+                    ) : null}
+                    {member.social_linkedin ? (
+                      <a
+                        href={member.social_linkedin}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="p-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-xl transition"
+                        aria-label="LinkedIn"
+                      >
+                        <Linkedin size={16} />
+                      </a>
+                    ) : null}
+                    {member.social_twitter ? (
+                      <a
+                        href={member.social_twitter}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="p-2 bg-sky-50 text-sky-700 hover:bg-sky-100 rounded-xl transition"
+                        aria-label="Twitter"
+                      >
+                        <Twitter size={16} />
+                      </a>
+                    ) : null}
+                    {(member.instagram || member.social_instagram) ? (
+                      <a
+                        href={member.instagram || member.social_instagram}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="p-2 bg-pink-50 text-pink-700 hover:bg-pink-100 rounded-xl transition"
+                        aria-label="Instagram"
+                      >
+                        <Instagram size={16} />
+                      </a>
+                    ) : null}
                   </div>
                 </div>
               </div>
