@@ -24,31 +24,73 @@ ALTER TABLE public.gamification_badges ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_badges ENABLE ROW LEVEL SECURITY;
 
 -- Policies for gamification_badges
-CREATE POLICY "Public read gamification_badges" 
-    ON public.gamification_badges FOR SELECT 
-    USING (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='gamification_badges' AND policyname='Public read gamification_badges'
+  ) THEN
+    EXECUTE 'CREATE POLICY \"Public read gamification_badges\" ON public.gamification_badges FOR SELECT USING (true)';
+  END IF;
+END $$;
 
-CREATE POLICY "Admin all gamification_badges" 
-    ON public.gamification_badges FOR ALL 
-    TO authenticated
-    USING (
-        EXISTS (
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='gamification_badges' AND policyname='Admin all gamification_badges'
+  ) THEN
+    EXECUTE '
+      CREATE POLICY \"Admin all gamification_badges\"
+        ON public.gamification_badges
+        FOR ALL
+        TO authenticated
+        USING (
+          EXISTS (
             SELECT 1 FROM public.profiles
             WHERE profiles.id = auth.uid() AND (profiles.is_admin = true OR profiles.can_manage_admins = true)
+          )
         )
-    );
+        WITH CHECK (
+          EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE profiles.id = auth.uid() AND (profiles.is_admin = true OR profiles.can_manage_admins = true)
+          )
+        )
+    ';
+  END IF;
+END $$;
 
 -- Policies for user_badges
-CREATE POLICY "Public read user_badges" 
-    ON public.user_badges FOR SELECT 
-    USING (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='user_badges' AND policyname='Public read user_badges'
+  ) THEN
+    EXECUTE 'CREATE POLICY \"Public read user_badges\" ON public.user_badges FOR SELECT USING (true)';
+  END IF;
+END $$;
 
-CREATE POLICY "Admin all user_badges" 
-    ON public.user_badges FOR ALL 
-    TO authenticated
-    USING (
-        EXISTS (
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='user_badges' AND policyname='Admin all user_badges'
+  ) THEN
+    EXECUTE '
+      CREATE POLICY \"Admin all user_badges\"
+        ON public.user_badges
+        FOR ALL
+        TO authenticated
+        USING (
+          EXISTS (
             SELECT 1 FROM public.profiles
             WHERE profiles.id = auth.uid() AND (profiles.is_admin = true OR profiles.can_manage_admins = true)
+          )
         )
-    );
+        WITH CHECK (
+          EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE profiles.id = auth.uid() AND (profiles.is_admin = true OR profiles.can_manage_admins = true)
+          )
+        )
+    ';
+  END IF;
+END $$;
