@@ -182,6 +182,24 @@ export default function NewsletterTab() {
         `Newsletter: odesláno ${json?.sent || 0}, ve frontě ${json?.queued || 0}, selhalo ${json?.failed || 0} (celkem ${json?.recipients || 0})`,
         'success'
       );
+
+      const queued = Number(json?.queued || 0);
+      if (queued > 0) {
+        try {
+          const proc = await fetch('/api/admin/queue/process', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ limit: Math.min(50, queued), resetStuck: true }),
+          });
+          const procJson = await proc.json().catch(() => ({}));
+          if (proc.ok) {
+            showToast(
+              `Fronta: zpracováno ${Number(procJson?.processed || 0)} • OK ${Number(procJson?.okCount || 0)} • Retry ${Number(procJson?.retried || 0)} • Dead ${Number(procJson?.dead || 0)}`,
+              'success',
+            );
+          }
+        } catch {}
+      }
       
       const [draftsRes, historyRes] = await Promise.all([
         fetch('/api/admin/newsletter/drafts', { headers: { Authorization: `Bearer ${token}` } }),
@@ -216,13 +234,30 @@ export default function NewsletterTab() {
       const res = await fetch('/api/admin/newsletter/preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ subject: composeSubject, html: composeHtml }),
+        body: JSON.stringify({ subject: composeSubject, html: composeHtml, attachments }),
       });
       
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error || 'Chyba odeslání náhledu');
       
       showToast('Náhled odeslán na váš e-mail', 'success');
+
+      if (json?.queued) {
+        try {
+          const proc = await fetch('/api/admin/queue/process', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ limit: 10, resetStuck: true }),
+          });
+          const procJson = await proc.json().catch(() => ({}));
+          if (proc.ok) {
+            showToast(
+              `Fronta: zpracováno ${Number(procJson?.processed || 0)} • OK ${Number(procJson?.okCount || 0)} • Retry ${Number(procJson?.retried || 0)} • Dead ${Number(procJson?.dead || 0)}`,
+              'success',
+            );
+          }
+        } catch {}
+      }
     } catch (e: any) {
       showToast(e.message, 'error');
     }

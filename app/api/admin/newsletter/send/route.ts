@@ -9,6 +9,8 @@ import { sanitizeEmailHtml } from '@/lib/email/sanitize';
 import crypto from 'crypto';
 import { stripHtmlToText } from '@/lib/richtext-shared';
 
+export const runtime = 'nodejs';
+
 function normalizeCategories(input: any): string[] {
   const arr = Array.isArray(input) ? input : [];
   const cats = Array.from(new Set(arr.map((x) => String(x || '').trim()).filter(Boolean)));

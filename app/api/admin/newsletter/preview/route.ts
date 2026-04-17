@@ -8,6 +8,8 @@ import { addUtmToEmailHtml } from '@/lib/email/utm';
 import { sanitizeEmailHtml } from '@/lib/email/sanitize';
 import { stripHtmlToText } from '@/lib/richtext-shared';
 
+export const runtime = 'nodejs';
+
 export async function POST(req: Request) {
   try {
     const { user, profile } = await requireAdmin(req);

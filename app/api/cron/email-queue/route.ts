@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { getMailerWithSettings } from '@/lib/email/mailer';
 
+export const runtime = 'nodejs';
+
 function backoffSeconds(attempt: number) {
   if (attempt <= 1) return 60;
   if (attempt === 2) return 5 * 60;
