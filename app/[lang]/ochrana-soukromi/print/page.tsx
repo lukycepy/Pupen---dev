@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getDictionary } from '@/lib/get-dictionary';
+import { getSitePageContent } from '@/lib/site/page-content';
 import PrintButton from '@/app/components/PrintButton';
+
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
   const { lang: rawLang } = await params;
@@ -20,6 +23,7 @@ export default async function PrivacyPrintPage({ params }: { params: Promise<{ l
   const { lang: rawLang } = await params;
   const lang = rawLang === 'en' ? 'en' : 'cs';
   const dict = (await getDictionary(lang)).privacyPage;
+  const page = await getSitePageContent('ochrana-soukromi', lang);
 
   return (
     <div className="min-h-screen bg-white text-stone-900 pb-16">
@@ -37,64 +41,68 @@ export default async function PrivacyPrintPage({ params }: { params: Promise<{ l
       </div>
 
       <main className="max-w-4xl mx-auto px-6 pt-10">
-        <h1 className="text-3xl font-black mb-3">{dict.title}</h1>
+        <h1 className="text-3xl font-black mb-3">{page?.title || dict.title}</h1>
         <div className="text-stone-600 font-medium mb-10">{dict.intro}</div>
 
-        <div className="prose prose-stone max-w-none">
-          <h2>{dict.controllerTitle}</h2>
-          <p>{dict.controllerText}</p>
-          <p>
-            {dict.controllerContactPrefix} <a href={`mailto:${dict.controllerEmail}`}>{dict.controllerEmail}</a>
-          </p>
+        {page?.content_html ? (
+          <div className="prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: page.content_html }} />
+        ) : (
+          <>
+            <div className="prose prose-stone max-w-none">
+              <h2>{dict.controllerTitle}</h2>
+              <p>{dict.controllerText}</p>
+              <p>
+                {dict.controllerContactPrefix} <a href={`mailto:${dict.controllerEmail}`}>{dict.controllerEmail}</a>
+              </p>
 
-          <h2>{dict.scopeTitle}</h2>
-          <p>{dict.scopeIntro}</p>
-          {Array.isArray(dict.scopeList) && dict.scopeList.length > 0 && (
-            <ul>
-              {dict.scopeList.map((x: string, i: number) => (
-                <li key={i}>{x}</li>
-              ))}
-            </ul>
-          )}
+              <h2>{dict.scopeTitle}</h2>
+              <p>{dict.scopeIntro}</p>
+              {Array.isArray(dict.scopeList) && dict.scopeList.length > 0 && (
+                <ul>
+                  {dict.scopeList.map((x: string, i: number) => (
+                    <li key={i}>{x}</li>
+                  ))}
+                </ul>
+              )}
 
-          <h2>{dict.purposeTitle}</h2>
-          <p>{dict.purposeText}</p>
-          <p>{dict.retentionText}</p>
+              <h2>{dict.purposeTitle}</h2>
+              <p>{dict.purposeText}</p>
+              <p>{dict.retentionText}</p>
 
-          {dict.oauthTitle && (
-            <>
-              <h2>{dict.oauthTitle}</h2>
-              <p>{dict.oauthText}</p>
-            </>
-          )}
+              {dict.oauthTitle && (
+                <>
+                  <h2>{dict.oauthTitle}</h2>
+                  <p>{dict.oauthText}</p>
+                </>
+              )}
 
-          {dict.rightsTitle && (
-            <>
-              <h2>{dict.rightsTitle}</h2>
-              {dict.rightsIntro && <p>{dict.rightsIntro}</p>}
-              <ul>
-                {(Array.isArray(dict.rightsList) && dict.rightsList.length > 0
-                  ? dict.rightsList
-                  : [
-                      'Právo na přístup ke svým údajům a kopii dat',
-                      'Právo na opravu nepřesných údajů',
-                      'Právo na výmaz (právo být zapomenut), pokud pominul důvod zpracování',
-                      'Právo na omezení zpracování a přenositelnost údajů',
-                      'Právo vznést námitku proti zpracování na základě oprávněného zájmu',
-                      'Právo odvolat udělený souhlas',
-                      'Právo podat stížnost u Úřadu pro ochranu osobních údajů (www.uoou.cz)',
-                    ]
-                ).map((x: string, i: number) => (
-                  <li key={i}>{x}</li>
-                ))}
-              </ul>
-            </>
-          )}
-        </div>
+              {dict.rightsTitle && (
+                <>
+                  <h2>{dict.rightsTitle}</h2>
+                  {dict.rightsIntro && <p>{dict.rightsIntro}</p>}
+                  <ul>
+                    {(Array.isArray(dict.rightsList) && dict.rightsList.length > 0
+                      ? dict.rightsList
+                      : [
+                          'Právo na přístup ke svým údajům a kopii dat',
+                          'Právo na opravu nepřesných údajů',
+                          'Právo na výmaz (právo být zapomenut), pokud pominul důvod zpracování',
+                          'Právo na omezení zpracování a přenositelnost údajů',
+                          'Právo vznést námitku proti zpracování na základě oprávněného zájmu',
+                          'Právo odvolat udělený souhlas',
+                          'Právo podat stížnost u Úřadu pro ochranu osobních údajů (www.uoou.cz)',
+                        ]
+                    ).map((x: string, i: number) => (
+                      <li key={i}>{x}</li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </div>
 
-        <div className="mt-12 text-stone-400 text-xs font-bold">
-          {dict.lastUpdated}
-        </div>
+            <div className="mt-12 text-stone-400 text-xs font-bold">{dict.lastUpdated}</div>
+          </>
+        )}
       </main>
     </div>
   );

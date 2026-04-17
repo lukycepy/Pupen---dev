@@ -143,6 +143,23 @@ function section(label: string, value: any) {
   return `<p style="margin: 8px 0;"><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}</p>`;
 }
 
+function bulletproofButton(href: string, label: string) {
+  const h = String(href || '').trim();
+  const l = String(label || '').trim();
+  if (!h || !l) return '';
+  const width = Math.max(180, Math.min(520, l.length * 9 + 80));
+  const eh = escapeHtml(h);
+  const el = escapeHtml(l);
+  return `<!--[if mso]>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${eh}" style="height:44px;v-text-anchor:middle;width:${width}px;" arcsize="32%" stroke="f" fillcolor="#16a34a">
+<w:anchorlock/>
+<center style="color:#ffffff;font-family:Arial,sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">${el}</center>
+</v:roundrect>
+<![endif]--><!--[if !mso]><!-- -->
+<a href="${eh}" style="display:inline-block;background:#16a34a;color:#ffffff;text-decoration:none;padding:14px 18px;border-radius:14px;font-weight:900;letter-spacing:0.08em;text-transform:uppercase;font-size:12px;font-family:Arial,sans-serif;">${el}</a>
+<!--<![endif]-->`;
+}
+
 function emailDoc(opts: {
   subject: string;
   title: string;
@@ -153,6 +170,7 @@ function emailDoc(opts: {
   cta?: { href: string; label: string };
   secondaryCta?: { href: string; label: string };
   footerText?: string;
+  footerHtml?: string;
   toEmail?: string;
   lang?: 'cs' | 'en';
 }) {
@@ -163,6 +181,7 @@ function emailDoc(opts: {
   const introHtml = String(opts.introHtml || '').trim();
   const contentHtml = String(opts.contentHtml || '').trim();
   const footerText = String(opts.footerText || '').trim();
+  const footerHtml = String(opts.footerHtml || '').trim();
   const toEmail = String(opts.toEmail || '').trim();
   const lang = opts.lang === 'en' ? 'en' : 'cs';
 
@@ -172,87 +191,25 @@ function emailDoc(opts: {
   const secondaryLabel = String(opts.secondaryCta?.label || '').trim();
 
   const ctaBlock = ctaHref && ctaLabel
-    ? `<div style="padding:18px 28px 8px 28px; text-align:center;">
-        <a href="${escapeHtml(ctaHref)}" style="display:inline-block; background:#16a34a; color:#ffffff; text-decoration:none; padding:14px 18px; border-radius:14px; font-weight:900; letter-spacing:0.08em; text-transform:uppercase; font-size:12px;">
-          ${escapeHtml(ctaLabel)}
-        </a>
-        <div style="margin-top:10px; font-size:12px; color:#78716c; word-break:break-all;">${escapeHtml(ctaHref)}</div>
-      </div>`
+    ? `<tr><td align="center" style="padding:18px 28px 8px 28px;">${bulletproofButton(ctaHref, ctaLabel)}</td></tr>
+<tr><td align="center" style="padding:0 28px 18px 28px;font-family:Arial,sans-serif;font-size:12px;line-height:1.4;color:#78716c;word-break:break-all;">${escapeHtml(ctaHref)}</td></tr>`
     : '';
 
   const secondaryBlock = secondaryHref && secondaryLabel
-    ? `<div style="padding:0 28px 22px 28px; text-align:center;">
-        <a href="${escapeHtml(secondaryHref)}" style="color:#16a34a; font-weight:900; text-decoration:underline; font-size:12px;">
-          ${escapeHtml(secondaryLabel)}
-        </a>
-      </div>`
+    ? `<tr><td align="center" style="padding:0 28px 18px 28px;font-family:Arial,sans-serif;font-size:12px;line-height:1.4;">
+<a href="${escapeHtml(secondaryHref)}" style="color:#16a34a;font-weight:900;text-decoration:underline;">${escapeHtml(secondaryLabel)}</a>
+</td></tr>`
     : '';
 
-  return `<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <meta name="x-apple-disable-message-reformatting" />
-    <title>${escapeHtml(subject)}</title>
-  </head>
-  <body style="margin:0; padding:0; background:#f5f5f4;">
-    <div style="display:none; max-height:0; overflow:hidden; opacity:0; color:transparent; mso-hide:all;">
-      ${escapeHtml(preheader)}
-    </div>
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f5f5f4;">
-      <tr>
-        <td align="center" style="padding:24px 12px;">
-          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="640" style="width:640px; max-width:640px;">
-            <tr>
-              <td style="padding:0 0 14px 0;">
-                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-                  <tr>
-                    <td align="left" style="font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;">
-                      <div style="display:inline-block; padding:8px 12px; border-radius:999px; background:#dcfce7; color:#166534; font-weight:900; letter-spacing:0.18em; text-transform:uppercase; font-size:11px;">
-                        Pupen
-                      </div>
-                    </td>
-                    <td align="right" style="font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; font-size:12px; color:#78716c;">
-                      <a href="https://pupen.org" style="color:#16a34a; text-decoration:none; font-weight:800;">pupen.org</a>
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
+  const footerLine = footerHtml
+    ? footerHtml
+    : footerText
+      ? escapeHtml(footerText)
+      : lang === 'en'
+        ? 'Student club Pupen, z.s.'
+        : 'Studentský spolek Pupen, z.s.';
 
-            <tr>
-              <td style="background:#ffffff; border:1px solid #e7e5e4; border-radius:24px; overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,0.06);">
-                <div style="height:8px; background:linear-gradient(90deg, #16a34a, #22c55e);"></div>
-                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-                  <tr>
-                    <td style="padding:26px 28px 8px 28px; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color:#1c1917;">
-                      ${badge ? `<div style="display:inline-block; padding:6px 10px; border-radius:999px; background:#f5f5f4; border:1px solid #e7e5e4; color:#57534e; font-weight:900; letter-spacing:0.18em; text-transform:uppercase; font-size:10px;">${escapeHtml(badge)}</div>` : ''}
-                      <h1 style="margin:${badge ? '10px' : '0'} 0 0 0; font-size:28px; line-height:1.15; font-weight:950; letter-spacing:-0.02em;">
-                        ${escapeHtml(title)}
-                      </h1>
-                    </td>
-                  </tr>
-                  ${introHtml ? `<tr><td style="padding:10px 28px 0 28px; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color:#292524; font-size:16px; line-height:1.6;">${introHtml}</td></tr>` : ''}
-                  ${contentHtml ? `<tr><td style="padding:14px 28px 0 28px; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color:#292524; font-size:15px; line-height:1.6;">${contentHtml}</td></tr>` : ''}
-                </table>
-                ${ctaBlock}
-                ${secondaryBlock}
-              </td>
-            </tr>
-
-            <tr>
-              <td style="padding:16px 6px 0 6px; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color:#78716c; font-size:12px; line-height:1.5; text-align:center;">
-                ${footerText ? `<div style="margin-top:10px;">${escapeHtml(footerText)}</div>` : `<div style="margin-top:10px;">${lang === 'en' ? 'Student club Pupen, z.s.' : 'Studentský spolek Pupen, z.s.'}</div>`}
-                ${toEmail ? `<div style="margin-top:8px;">${lang === 'en' ? 'This email was sent to' : 'Tento e‑mail byl odeslán na'} <span style="font-weight:800; color:#44403c;">${escapeHtml(toEmail)}</span>.</div>` : ''}
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  </body>
-</html>`;
+  return `<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><meta name="x-apple-disable-message-reformatting"/><title>${escapeHtml(subject)}</title></head><body style="margin:0;padding:0;background:#f5f5f4;"><div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;mso-hide:all;">${escapeHtml(preheader)}</div><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f5f5f4;"><tr><td align="center" style="padding:24px 12px;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="640" style="width:640px;max-width:640px;"><tr><td style="padding:0 0 14px 0;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td align="left" style="font-family:Arial,sans-serif;"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#dcfce7" style="padding:8px 12px;border-radius:999px;color:#166534;font-weight:900;letter-spacing:0.18em;text-transform:uppercase;font-size:11px;">Pupen</td></tr></table></td><td align="right" style="font-family:Arial,sans-serif;font-size:12px;color:#78716c;"><a href="https://pupen.org" style="color:#16a34a;text-decoration:none;font-weight:800;">pupen.org</a></td></tr></table></td></tr><tr><td bgcolor="#ffffff" style="border:1px solid #e7e5e4;border-radius:24px;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td bgcolor="#16a34a" style="height:6px;line-height:6px;font-size:6px;">&nbsp;</td></tr><tr><td style="padding:26px 28px 8px 28px;font-family:Arial,sans-serif;color:#1c1917;">${badge ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#f5f5f4" style="padding:6px 10px;border-radius:999px;border:1px solid #e7e5e4;color:#57534e;font-weight:900;letter-spacing:0.18em;text-transform:uppercase;font-size:10px;">${escapeHtml(badge)}</td></tr></table>` : ''}<div style="height:${badge ? '10px' : '0'};line-height:${badge ? '10px' : '0'};font-size:${badge ? '10px' : '0'};">&nbsp;</div><div style="font-size:28px;line-height:1.15;font-weight:900;letter-spacing:-0.02em;">${escapeHtml(title)}</div></td></tr>${introHtml ? `<tr><td style="padding:10px 28px 0 28px;font-family:Arial,sans-serif;color:#292524;font-size:16px;line-height:1.6;">${introHtml}</td></tr>` : ''}${contentHtml ? `<tr><td style="padding:14px 28px 0 28px;font-family:Arial,sans-serif;color:#292524;font-size:15px;line-height:1.6;">${contentHtml}</td></tr>` : ''}${ctaBlock}${secondaryBlock}</table></td></tr><tr><td align="center" style="padding:16px 6px 0 6px;font-family:Arial,sans-serif;color:#78716c;font-size:12px;line-height:1.5;">${footerLine ? `<div style="margin-top:10px;">${footerLine}</div>` : ''}${toEmail ? `<div style="margin-top:8px;">${lang === 'en' ? 'This email was sent to' : 'Tento e‑mail byl odeslán na'} <span style="font-weight:800;color:#44403c;">${escapeHtml(toEmail)}</span>.</div>` : ''}</td></tr></table></td></tr></table></body></html>`;
 }
 
 export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject: string; html: string; text?: string } {
@@ -295,73 +252,26 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
     const unsubLink = String(vars?.unsubLink || '').trim();
     const preferencesLink = String(vars?.preferencesLink || '').trim();
     const subject = subjectLine ? `Pupen — ${subjectLine}` : 'Pupen — Newsletter';
-    const html = `<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <meta name="x-apple-disable-message-reformatting" />
-    <title>${escapeHtml(subject)}</title>
-  </head>
-  <body style="margin:0; padding:0; background:#f5f5f4;">
-    <div style="display:none; max-height:0; overflow:hidden; opacity:0; color:transparent; mso-hide:all;">
-      ${escapeHtml(preheader)}
-    </div>
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f5f5f4;">
-      <tr>
-        <td align="center" style="padding:24px 12px;">
-          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="640" style="width:640px; max-width:640px;">
-            <tr>
-              <td style="padding:0 0 14px 0;">
-                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-                  <tr>
-                    <td align="left" style="font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;">
-                      <div style="display:inline-block; padding:8px 12px; border-radius:999px; background:#dcfce7; color:#166534; font-weight:900; letter-spacing:0.18em; text-transform:uppercase; font-size:11px;">
-                        Pupen
-                      </div>
-                    </td>
-                    <td align="right" style="font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; font-size:12px; color:#78716c;">
-                      <a href="https://pupen.org" style="color:#16a34a; text-decoration:none; font-weight:800;">pupen.org</a>
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-
-            <tr>
-              <td style="background:#ffffff; border:1px solid #e7e5e4; border-radius:24px; overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,0.06);">
-                <div style="height:8px; background:linear-gradient(90deg, #16a34a, #22c55e);"></div>
-                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-                  <tr>
-                    <td style="padding:28px 28px 10px 28px; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color:#1c1917;">
-                      ${subjectLine ? `<h1 style="margin:0; font-size:28px; line-height:1.15; font-weight:900; letter-spacing:-0.02em;">${escapeHtml(subjectLine)}</h1>` : ''}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding:12px 28px 26px 28px; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color:#292524; font-size:16px; line-height:1.6;">
-                      ${content}
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-
-            <tr>
-              <td style="padding:16px 6px 0 6px; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color:#78716c; font-size:12px; line-height:1.5; text-align:center;">
-                <div style="margin-top:10px;">Studentský spolek Pupen, z.s.</div>
-                <div style="margin-top:8px;">
-                  ${preferencesLink ? `<a href="${escapeHtml(preferencesLink)}" style="color:#16a34a; font-weight:800; text-decoration:none;">Upravit odběr</a>` : ''}
-                  ${preferencesLink && unsubLink ? `<span style="display:inline-block; width:12px;"></span>` : ''}
-                  ${unsubLink ? `<a href="${escapeHtml(unsubLink)}" style="color:#78716c; font-weight:800; text-decoration:underline;">Zrušit odběr</a>` : ''}
-                </div>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  </body>
-</html>`;
+    const footerHtml = `<div style="margin-top:10px;">Studentský spolek Pupen, z.s.</div>${
+      preferencesLink || unsubLink
+        ? `<div style="margin-top:8px;">${
+            preferencesLink
+              ? `<a href="${escapeHtml(preferencesLink)}" style="color:#16a34a;font-weight:900;text-decoration:none;">Upravit odběr</a>`
+              : ''
+          }${preferencesLink && unsubLink ? `<span style="display:inline-block;width:12px;">&nbsp;</span>` : ''}${
+            unsubLink ? `<a href="${escapeHtml(unsubLink)}" style="color:#78716c;font-weight:900;text-decoration:underline;">Zrušit odběr</a>` : ''
+          }</div>`
+        : ''
+    }`;
+    const html = emailDoc({
+      subject,
+      title: subjectLine || 'Newsletter',
+      badge: 'Newsletter',
+      preheader,
+      contentHtml: content,
+      footerHtml,
+      lang: 'cs',
+    });
     return { subject, html };
   }
 

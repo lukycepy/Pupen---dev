@@ -5,6 +5,8 @@ import { getDictionary } from '@/lib/get-dictionary';
 import { getSitePageContent } from '@/lib/site/page-content';
 import DbContentPage from '@/app/[lang]/components/DbContentPage';
 
+export const dynamic = 'force-dynamic';
+
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
   const { lang: rawLang } = await params;
   const lang = rawLang === 'en' ? 'en' : 'cs';

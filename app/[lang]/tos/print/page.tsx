@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getDictionary } from '@/lib/get-dictionary';
+import { getSitePageContent } from '@/lib/site/page-content';
 import PrintButton from '@/app/components/PrintButton';
+
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
   const { lang: rawLang } = await params;
@@ -20,6 +23,7 @@ export default async function ToSPrintPage({ params }: { params: Promise<{ lang:
   const { lang: rawLang } = await params;
   const lang = rawLang === 'en' ? 'en' : 'cs';
   const dict = (await getDictionary(lang)).tosPage;
+  const page = await getSitePageContent('tos', lang);
 
   return (
     <div className="min-h-screen bg-white text-stone-900 pb-16">
@@ -37,35 +41,38 @@ export default async function ToSPrintPage({ params }: { params: Promise<{ lang:
       </div>
 
       <main className="max-w-4xl mx-auto px-6 pt-10">
-        <h1 className="text-3xl font-black mb-3">{dict.title}</h1>
+        <h1 className="text-3xl font-black mb-3">{page?.title || dict.title}</h1>
         <div className="text-stone-600 font-medium mb-10">{dict.intro}</div>
 
-        <div className="prose prose-stone max-w-none">
-          <h2>{dict.membershipTitle}</h2>
-          <p>{dict.membershipText}</p>
+        {page?.content_html ? (
+          <div className="prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: page.content_html }} />
+        ) : (
+          <>
+            <div className="prose prose-stone max-w-none">
+              <h2>{dict.membershipTitle}</h2>
+              <p>{dict.membershipText}</p>
 
-          <h2>{dict.registrationTitle}</h2>
-          <p>{dict.registrationText}</p>
+              <h2>{dict.registrationTitle}</h2>
+              <p>{dict.registrationText}</p>
 
-          <h2>{dict.contentTitle}</h2>
-          <p>{dict.contentText}</p>
+              <h2>{dict.contentTitle}</h2>
+              <p>{dict.contentText}</p>
 
-          <h2>{dict.disclaimerTitle}</h2>
-          <p>{dict.disclaimerText}</p>
+              <h2>{dict.disclaimerTitle}</h2>
+              <p>{dict.disclaimerText}</p>
 
-          {dict.oauthTitle && (
-            <>
-              <h2>{dict.oauthTitle}</h2>
-              <p>{dict.oauthText}</p>
-            </>
-          )}
-        </div>
+              {dict.oauthTitle && (
+                <>
+                  <h2>{dict.oauthTitle}</h2>
+                  <p>{dict.oauthText}</p>
+                </>
+              )}
+            </div>
 
-        <div className="mt-12 text-stone-400 text-xs font-bold">
-          {dict.lastUpdated}
-        </div>
+            <div className="mt-12 text-stone-400 text-xs font-bold">{dict.lastUpdated}</div>
+          </>
+        )}
       </main>
     </div>
   );
 }
-
