@@ -6,6 +6,7 @@ import { getPublicBaseUrl } from '@/lib/public-base-url';
 import { getMailerWithSettingsOrQueueTransporter, getSenderFromSettings } from '@/lib/email/mailer';
 import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
 import { sendMailWithQueueFallback } from '@/lib/email/queue';
+import { stripHtmlToText } from '@/lib/richtext-shared';
 
 function sha256Hex(input: string) {
   return createHash('sha256').update(input).digest('hex');
@@ -13,6 +14,23 @@ function sha256Hex(input: string) {
 
 function randomToken() {
   return randomBytes(32).toString('base64url');
+}
+
+function normalizeCode(input: string) {
+  return String(input || '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, 24);
+}
+
+function randomAccessCode() {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes = randomBytes(16);
+  let out = '';
+  for (let i = 0; i < bytes.length && out.length < 10; i++) {
+    out += alphabet[bytes[i] % alphabet.length];
+  }
+  return out;
 }
 
 export async function POST(req: Request) {
@@ -28,7 +46,7 @@ export async function POST(req: Request) {
 
     const lang = body?.lang === 'en' ? 'en' : 'cs';
     const token = String(body?.token || '').trim();
-    const code = String(body?.code || '').trim();
+    const code = normalizeCode(String(body?.code || '').trim());
     if (!token || !code) return NextResponse.json({ error: lang === 'en' ? 'Missing token/code' : 'Chybí token/kód.' }, { status: 400 });
 
     const supabase = getServerSupabase();
@@ -113,6 +131,7 @@ export async function POST(req: Request) {
     }
 
     let followupToken: string | null = null;
+    let followupCode: string | null = null;
     if (allowFollowup) {
       followupToken = randomToken();
       const tHash = sha256Hex(followupToken);
@@ -125,6 +144,19 @@ export async function POST(req: Request) {
         },
       ]);
       if (tokIns.error) throw tokIns.error;
+
+      followupCode = normalizeCode(randomAccessCode());
+      const cHash = sha256Hex(followupCode);
+      const internalHash = sha256Hex(randomToken());
+      const codeIns = await supabase.from('trust_box_access_tokens').insert([
+        {
+          thread_id: threadId,
+          token_hash: internalHash,
+          code_hash: cHash,
+          expires_at: expiresAt,
+        } as any,
+      ]);
+      if (codeIns.error) throw codeIns.error;
     }
 
     const upd = await supabase
@@ -140,6 +172,7 @@ export async function POST(req: Request) {
       toEmail: row.email,
       firstName: row.first_name,
       threadUrl,
+      followupCode,
       lang,
     });
     try {
@@ -147,7 +180,7 @@ export async function POST(req: Request) {
         transporter,
         supabase,
         meta: { kind: 'trust_box_confirm', threadId },
-        message: { from, to: row.email, subject: emailSubject, html },
+        message: { from, to: row.email, subject: emailSubject, html, text: stripHtmlToText(html) },
       });
     } catch {}
 
@@ -156,9 +189,9 @@ export async function POST(req: Request) {
       status: 'created',
       threadId,
       followupToken,
+      followupCode,
     });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
   }
 }
-

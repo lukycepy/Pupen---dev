@@ -37,8 +37,16 @@ export async function GET(req: Request) {
       .from('trust_box_messages')
       .select('id, author_type, author_name, body, created_at')
       .eq('thread_id', row.thread_id)
+      .in('author_type', ['reporter', 'admin'])
       .order('created_at', { ascending: true });
     if (msgsRes.error) throw msgsRes.error;
+
+    const atRes = await supabase
+      .from('trust_box_attachments')
+      .select('id, message_id, original_name, content_type, size_bytes, created_at')
+      .eq('thread_id', row.thread_id)
+      .order('created_at', { ascending: true });
+    if (atRes.error) throw atRes.error;
 
     return NextResponse.json({
       ok: true,
@@ -52,6 +60,7 @@ export async function GET(req: Request) {
         anonymized_at: thread.anonymized_at,
       },
       messages: msgsRes.data || [],
+      attachments: atRes.data || [],
     });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });

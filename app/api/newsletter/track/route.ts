@@ -41,7 +41,7 @@ export async function GET(req: Request) {
 
     if (isValidNewsletterId) {
       const exists = await supabase
-        .from('newsletter_history')
+        .from('newsletter')
         .select('id')
         .eq('id', newsletterId)
         .maybeSingle();

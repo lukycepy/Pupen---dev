@@ -55,12 +55,12 @@ export function listEmailTemplates() {
     {
       key: 'trust_box_confirm' as const,
       label: 'Schránka důvěry – potvrzení',
-      variables: ['toEmail', 'firstName', 'threadUrl', 'lang'],
+      variables: ['toEmail', 'firstName', 'threadUrl', 'followupCode', 'lang'],
     },
     {
       key: 'trust_box_admin_reply' as const,
       label: 'Schránka důvěry – odpověď správce',
-      variables: ['toEmail', 'firstName', 'threadUrl', 'lang'],
+      variables: ['toEmail', 'firstName', 'threadUrl', 'adminName', 'message', 'lang'],
     },
     {
       key: 'member_access' as const,
@@ -292,6 +292,11 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
         <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px;">
           <div style="font-weight:900; font-size:13px; color:#44403c; margin-bottom:10px;">${lang === 'en' ? 'Hello' : 'Dobrý den'}${firstName ? ` ${escapeHtml(firstName)}` : ''}</div>
           ${code ? `<div style="margin:10px 0; font-weight:900;">${escapeHtml(lang === 'en' ? 'Code' : 'Kód')}:</div><div style="display:inline-block; background:#ffffff; border:1px solid #e7e5e4; border-radius:14px; padding:10px 12px; font-weight:950; letter-spacing:0.22em; font-size:18px;">${escapeHtml(code)}</div>` : ''}
+          <div style="margin-top:14px; font-size:12px; line-height:1.5; color:#57534e; font-weight:800;">${
+            lang === 'en'
+              ? 'If you cannot find this email, check your spam/junk folder.'
+              : 'Pokud e‑mail nevidíte, zkontrolujte Nevyžádanou poštu / Spam.'
+          }</div>
         </div>
       `,
       cta: verifyUrl ? { href: verifyUrl, label: lang === 'en' ? 'Verify' : 'Ověřit' } : undefined,
@@ -305,6 +310,7 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
     const toEmail = String(vars?.toEmail || '').trim();
     const firstName = String(vars?.firstName || '').trim();
     const threadUrl = String(vars?.threadUrl || '').trim();
+    const followupCode = String(vars?.followupCode || '').trim();
     const lang = vars?.lang === 'en' ? 'en' : 'cs';
     const subject = lang === 'en' ? 'Pupen — Trust Box received' : 'Pupen — Schránka důvěry: přijato';
     const html = emailDoc({
@@ -313,6 +319,19 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
       badge: lang === 'en' ? 'Trust Box' : 'Schránka důvěry',
       preheader: lang === 'en' ? 'We received your report.' : 'Váš podnět byl přijat.',
       introHtml: `<p style="margin:0;">${lang === 'en' ? 'Hello' : 'Dobrý den'}${firstName ? ` ${escapeHtml(firstName)}` : ''}, ${lang === 'en' ? 'your message was received.' : 'váš podnět byl přijat.'}</p>`,
+      contentHtml: followupCode
+        ? `<div style="background:#f5f5f4;border:1px solid #e7e5e4;border-radius:18px;padding:16px;">
+            <div style="font-weight:900;margin:0 0 10px 0;">${escapeHtml(lang === 'en' ? 'Access code' : 'Přístupový kód')}</div>
+            <div style="display:inline-block;background:#ffffff;border:1px solid #e7e5e4;border-radius:14px;padding:10px 12px;font-weight:950;letter-spacing:0.22em;font-size:18px;">${escapeHtml(
+              followupCode,
+            )}</div>
+            <div style="margin-top:12px;font-size:12px;line-height:1.5;color:#57534e;font-weight:800;">${
+              lang === 'en'
+                ? 'You can use this code to open the thread later.'
+                : 'Tento kód můžete použít pro návrat do ticketu později.'
+            }</div>
+          </div>`
+        : '',
       cta: threadUrl ? { href: threadUrl, label: lang === 'en' ? 'Open thread' : 'Otevřít vlákno' } : undefined,
       toEmail,
       lang,
@@ -858,4 +877,30 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
   });
 
   return { subject, html };
+}
+
+export function getEmailTemplateDefaultSource(key: EmailTemplateKey) {
+  const placeholder: any = {
+    lang: 'cs',
+    toEmail: '{{toEmail}}',
+    email: '{{email}}',
+    firstName: '{{firstName}}',
+    lastName: '{{lastName}}',
+    password: '{{password}}',
+    resetUrl: '{{resetUrl}}',
+    verifyUrl: '{{verifyUrl}}',
+    threadUrl: '{{threadUrl}}',
+    followupCode: '{{followupCode}}',
+    code: '{{code}}',
+    subject: '{{subject}}',
+    html: '{{{html}}}',
+    preheader: '{{preheader}}',
+    unsubLink: '{{unsubLink}}',
+    preferencesLink: '{{preferencesLink}}',
+    actionUrl: '{{actionUrl}}',
+    adminName: '{{adminName}}',
+    message: '{{message}}',
+    reason: '{{reason}}',
+  };
+  return renderEmailTemplate(key, placeholder);
 }

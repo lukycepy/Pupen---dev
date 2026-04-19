@@ -181,7 +181,7 @@ export async function POST(req: Request) {
             headers: {
               'X-Pupen-Category': 'newsletter',
               'X-Pupen-Campaign': campaignId,
-              'List-Unsubscribe': `<${unsubApiUrl}>`,
+              'List-Unsubscribe': `<${unsubApiUrl}>, <mailto:info@pupen.org?subject=unsubscribe>`,
               'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
             }
           },

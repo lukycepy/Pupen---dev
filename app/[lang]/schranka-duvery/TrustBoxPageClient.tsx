@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { Send, ShieldCheck, CheckCircle2, AlertCircle, Upload, X } from 'lucide-react';
 import InlinePulse from '@/app/components/InlinePulse';
@@ -97,7 +97,6 @@ export default function TrustBoxPageClient() {
       upload: 'Přílohy (volitelné)',
       uploadHint: 'Lze přiložit více souborů. Podporované: PDF, DOCX, ZIP, MP3, MP4 aj. Odkaz na OneDrive vložte přímo do textu.',
       uploadStartFirst: 'Nejdřív klikněte na „Odeslat a ověřit“ a poté nahrajte přílohy.',
-      uploadSelected: 'Nahrát vybrané',
       uploaded: 'Nahráno.',
       tooManyFiles: `Maximálně ${MAX_FILES} souborů.`,
       fileTooLarge: 'Soubor je větší než 10 MB.',
@@ -117,7 +116,6 @@ export default function TrustBoxPageClient() {
       upload: 'Attachments (optional)',
       uploadHint: 'You can attach multiple files (PDF, DOCX, ZIP, MP3, MP4, etc.). Or paste a OneDrive link into the message.',
       uploadStartFirst: 'Click “Send and verify” first, then upload attachments.',
-      uploadSelected: 'Upload selected',
       uploaded: 'Uploaded.',
       tooManyFiles: `Up to ${MAX_FILES} files.`,
       fileTooLarge: 'File is larger than 10 MB.',
@@ -167,7 +165,7 @@ export default function TrustBoxPageClient() {
     }
   };
 
-  const onUpload = async (file: File) => {
+  const onUpload = useCallback(async (file: File) => {
     if (!effectiveToken) throw new Error(labels.uploadStartFirst);
     const fd = new FormData();
     fd.set('token', effectiveToken);
@@ -175,20 +173,20 @@ export default function TrustBoxPageClient() {
     const res = await fetch('/api/trustbox/attachments/upload', { method: 'POST', body: fd });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(json?.error || 'Error');
-  };
+  }, [effectiveToken, labels.uploadStartFirst]);
 
-  const validateFile = (file: File) => {
+  const validateFile = useCallback((file: File) => {
     if (file.size > MAX_FILE_BYTES) return labels.fileTooLarge;
     const ext = fileExt(file.name);
     if (!ext || !ALLOWED_EXT.includes(ext)) return labels.unsupportedFile;
     if (ext === 'svg') return labels.unsupportedFile;
     return '';
-  };
+  }, [labels.fileTooLarge, labels.unsupportedFile]);
 
-  const onSelectFiles = (files: FileList | null) => {
-    if (!files?.length) return;
+  const addFiles = (files: File[]) => {
+    if (!files?.length) return [] as { id: string; file: File; status: 'pending' | 'uploading' | 'uploaded' | 'error'; error?: string }[];
     const next: { id: string; file: File; status: 'pending' | 'uploading' | 'uploaded' | 'error'; error?: string }[] = [];
-    for (const f of Array.from(files)) {
+    for (const f of files) {
       const err = validateFile(f);
       next.push({
         id: `${Date.now()}_${Math.random().toString(16).slice(2)}`,
@@ -203,13 +201,41 @@ export default function TrustBoxPageClient() {
       if (prev.length + next.length > MAX_FILES) showToast(labels.tooManyFiles, 'error');
       return merged;
     });
+    return next;
   };
 
-  const uploadPending = async () => {
+  const uploadList = async (list: { id: string; file: File }[]) => {
     if (!effectiveToken) {
       showToast(labels.uploadStartFirst, 'error');
       return;
     }
+    if (!list.length) return;
+    setUploading(true);
+    for (const a of list) {
+      const err = validateFile(a.file);
+      if (err) {
+        setAttachments((prev) => prev.map((p) => (p.id === a.id ? { ...p, status: 'error', error: err } : p)));
+        continue;
+      }
+      setAttachments((prev) => prev.map((p) => (p.id === a.id ? { ...p, status: 'uploading', error: undefined } : p)));
+      try {
+        await onUpload(a.file);
+        setAttachments((prev) => prev.map((p) => (p.id === a.id ? { ...p, status: 'uploaded', error: undefined } : p)));
+        showToast(labels.uploaded, 'success');
+      } catch (e: any) {
+        setAttachments((prev) => prev.map((p) => (p.id === a.id ? { ...p, status: 'error', error: e?.message || 'Error' } : p)));
+        showToast(e?.message || 'Error', 'error');
+      }
+    }
+    setUploading(false);
+  };
+
+  const uploadPending = useCallback(async () => {
+    if (!effectiveToken) {
+      showToast(labels.uploadStartFirst, 'error');
+      return;
+    }
+    if (uploading) return;
     setUploading(true);
     const current = attachments;
     for (const a of current) {
@@ -230,9 +256,14 @@ export default function TrustBoxPageClient() {
       }
     }
     setUploading(false);
-  };
+  }, [attachments, effectiveToken, labels.uploadStartFirst, labels.uploaded, onUpload, showToast, uploading, validateFile]);
 
   const accept = useMemo(() => ALLOWED_EXT.map((e) => `.${e}`).join(','), []);
+
+  useEffect(() => {
+    if (!effectiveToken || uploading) return;
+    if (attachments.some((a) => a.status === 'pending')) uploadPending();
+  }, [effectiveToken, uploading, attachments, uploadPending]);
 
   const onVerify = async () => {
     if (!effectiveToken) return;
@@ -332,20 +363,20 @@ export default function TrustBoxPageClient() {
                         accept={accept}
                         className="hidden"
                         onChange={(e) => {
-                          onSelectFiles(e.target.files);
+                          const list = e.target.files;
+                          if (list?.length) {
+                            const left = Math.max(0, MAX_FILES - attachments.length);
+                            const selected = Array.from(list).slice(0, left);
+                            const added = addFiles(selected);
+                            if (effectiveToken) {
+                              const pending = added.filter((a) => a.status === 'pending').map((a) => ({ id: a.id, file: a.file }));
+                              uploadList(pending);
+                            }
+                          } 
                           e.currentTarget.value = '';
                         }}
                       />
                     </label>
-                    <button
-                      type="button"
-                      onClick={uploadPending}
-                      disabled={!attachments.some((a) => a.status === 'pending' || a.status === 'error') || !effectiveToken || uploading || loading}
-                      className="inline-flex items-center gap-2 bg-white text-stone-700 px-5 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-stone-200 hover:bg-stone-50 transition disabled:opacity-50"
-                    >
-                      {uploading ? <InlinePulse className="bg-stone-500/70" size={14} /> : null}
-                      {labels.uploadSelected}
-                    </button>
                     <div className="text-stone-400 text-sm font-bold">max 10MB</div>
                   </div>
 
@@ -415,7 +446,7 @@ export default function TrustBoxPageClient() {
 
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{labels.code}</label>
-                  <input value={code} onChange={(e) => setCode(e.target.value)} className="w-full bg-stone-50 border-none rounded-2xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition" placeholder="123456" />
+                  <input value={code} onChange={(e) => setCode(e.target.value)} className="w-full bg-stone-50 border-none rounded-2xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition" placeholder="AB12CD34" />
                 </div>
 
                 <div>
@@ -431,20 +462,20 @@ export default function TrustBoxPageClient() {
                         accept={accept}
                         className="hidden"
                         onChange={(e) => {
-                          onSelectFiles(e.target.files);
+                          const list = e.target.files;
+                          if (list?.length) {
+                            const left = Math.max(0, MAX_FILES - attachments.length);
+                            const selected = Array.from(list).slice(0, left);
+                            const added = addFiles(selected);
+                            if (effectiveToken) {
+                              const pending = added.filter((a) => a.status === 'pending').map((a) => ({ id: a.id, file: a.file }));
+                              uploadList(pending);
+                            }
+                          } 
                           e.currentTarget.value = '';
                         }}
                       />
                     </label>
-                    <button
-                      type="button"
-                      onClick={uploadPending}
-                      disabled={!attachments.some((a) => a.status === 'pending' || a.status === 'error') || !effectiveToken || uploading}
-                      className="inline-flex items-center gap-2 bg-white text-stone-700 px-5 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-stone-200 hover:bg-stone-50 transition disabled:opacity-50"
-                    >
-                      {uploading ? <InlinePulse className="bg-stone-500/70" size={14} /> : null}
-                      {labels.uploadSelected}
-                    </button>
                     <div className="text-stone-400 text-sm font-bold">max 10MB</div>
                   </div>
 

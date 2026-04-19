@@ -5,6 +5,18 @@ import { guardPublicGet } from '@/lib/public-post-guard';
 import { PDFDocument, rgb } from 'pdf-lib';
 import { getPdfFonts } from '@/lib/pdf/fonts';
 
+async function loadLogoPngBytes(): Promise<Uint8Array | null> {
+  try {
+    const fs = await import('node:fs/promises');
+    const path = await import('node:path');
+    const p = path.join(process.cwd(), 'public', 'logo.png');
+    const buf = await fs.readFile(p);
+    return new Uint8Array(buf);
+  } catch {
+    return null;
+  }
+}
+
 function cleanText(input: any, fallback = '-') {
   const s = String(input ?? '').replace(/\u0000/g, '').trim();
   if (!s) return fallback;
@@ -76,6 +88,16 @@ export async function GET(req: Request) {
     const green = rgb(0.08, 0.6, 0.26);
     const paper = rgb(0.98, 0.98, 0.97);
 
+    const logoBytes = await loadLogoPngBytes();
+    let logo: any = null;
+    if (logoBytes) {
+      try {
+        logo = await pdfDoc.embedPng(logoBytes);
+      } catch {
+        logo = null;
+      }
+    }
+
     const drawSafe = (text: any, opts: { x: number; y: number; size: number; font: any; color: any }) => {
       const primary = cleanText(text, '');
       if (!primary) return;
@@ -86,20 +108,34 @@ export async function GET(req: Request) {
       }
     };
 
+    const drawHeader = () => {
+      page.drawRectangle({ x: 0, y: 835, width, height: 6, color: green });
+      page.drawRectangle({ x: margin, y: 748, width: width - margin * 2, height: 78, color: paper, borderColor: light, borderWidth: 1 });
+      if (logo) {
+        const targetW = 54;
+        const s = targetW / logo.width;
+        const targetH = logo.height * s;
+        page.drawImage(logo, { x: margin, y: y - 10, width: targetW, height: targetH });
+        drawSafe('GDPR VÝPIS DAT', { x: margin + 70, y, size: 20, font: fontBold, color: black });
+        y -= 24;
+        drawSafe('Studentský spolek Pupen, z.s.', { x: margin + 70, y, size: 10, font: fontBold, color: gray });
+      } else {
+        drawSafe('GDPR VÝPIS DAT', { x: margin, y, size: 20, font: fontBold, color: black });
+        y -= 24;
+        drawSafe('Studentský spolek Pupen, z.s.', { x: margin, y, size: 10, font: fontBold, color: gray });
+      }
+      y -= 14;
+      page.drawLine({ start: { x: margin, y }, end: { x: width - margin, y }, thickness: 1, color: light });
+      y -= 18;
+    };
+
     const newPage = () => {
       page = pdfDoc.addPage([595.28, 841.89]);
       y = 800;
-      page.drawRectangle({ x: 0, y: 835, width, height: 6, color: green });
+      drawHeader();
     };
 
-    page.drawRectangle({ x: 0, y: 835, width, height: 6, color: green });
-    page.drawRectangle({ x: margin, y: 748, width: width - margin * 2, height: 78, color: paper, borderColor: light, borderWidth: 1 });
-    drawSafe('GDPR VÝPIS DAT', { x: margin, y, size: 20, font: fontBold, color: black });
-    y -= 24;
-    drawSafe('Studentský spolek Pupen, z.s.', { x: margin, y, size: 10, font: fontBold, color: gray });
-    y -= 14;
-    page.drawLine({ start: { x: margin, y }, end: { x: width - margin, y }, thickness: 1, color: light });
-    y -= 18;
+    drawHeader();
 
     const section = (title: string) => {
       if (y < 120) newPage();

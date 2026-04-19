@@ -6,6 +6,7 @@ import { getPublicBaseUrl } from '@/lib/public-base-url';
 import { getMailerWithSettingsOrQueueTransporter, getSenderFromSettings } from '@/lib/email/mailer';
 import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
 import { sendMailWithQueueFallback } from '@/lib/email/queue';
+import { stripHtmlToText } from '@/lib/richtext-shared';
 
 function sha256Hex(input: string) {
   return createHash('sha256').update(input).digest('hex');
@@ -15,9 +16,21 @@ function randomToken() {
   return randomBytes(32).toString('base64url');
 }
 
+function normalizeCode(input: string) {
+  return String(input || '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, 24);
+}
+
 function randomCode() {
-  const n = Math.floor(Math.random() * 1_000_000);
-  return String(n).padStart(6, '0');
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes = randomBytes(12);
+  let out = '';
+  for (let i = 0; i < bytes.length && out.length < 8; i++) {
+    out += alphabet[bytes[i] % alphabet.length];
+  }
+  return out;
 }
 
 function normalizeEmail(input: any) {
@@ -79,7 +92,7 @@ export async function POST(req: Request) {
     }
 
     const token = randomToken();
-    const code = randomCode();
+    const code = normalizeCode(randomCode());
     const tokenHash = sha256Hex(token);
     const codeHash = sha256Hex(code);
     const expiresAt = new Date(Date.now() + 60 * 60_000).toISOString();
@@ -124,7 +137,7 @@ export async function POST(req: Request) {
         transporter,
         supabase,
         meta: { kind: 'trust_box_verify', verificationId: ins.data?.id },
-        message: { from, to: email, subject: emailSubject, html },
+        message: { from, to: email, subject: emailSubject, html, text: stripHtmlToText(html) },
       });
     } catch {}
 
@@ -138,4 +151,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
   }
 }
-

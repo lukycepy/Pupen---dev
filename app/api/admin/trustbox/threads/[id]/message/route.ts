@@ -7,6 +7,7 @@ import { getMailerWithSettingsOrQueueTransporter, getSenderFromSettings } from '
 import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
 import { sendMailWithQueueFallback } from '@/lib/email/queue';
 import { logTrustBoxAudit } from '@/lib/trustbox/audit';
+import { stripHtmlToText } from '@/lib/richtext-shared';
 
 function sha256Hex(input: string) {
   return createHash('sha256').update(input).digest('hex');
@@ -88,7 +89,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             transporter,
             supabase,
             meta: { kind: 'trust_box_admin_reply', threadId },
-            message: { from, to: ident.email, subject, html },
+            message: { from, to: ident.email, subject, html, text: stripHtmlToText(html) },
           });
         } catch {}
       }

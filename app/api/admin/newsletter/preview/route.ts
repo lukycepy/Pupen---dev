@@ -50,7 +50,7 @@ export async function POST(req: Request) {
           .map((a: any) => ({ filename: a?.name, path: a?.url }))
           .filter((a: any) => typeof a?.filename === 'string' && a.filename && typeof a?.path === 'string' && a.path),
         headers: {
-          'List-Unsubscribe': `<${unsubApiUrl}>`,
+          'List-Unsubscribe': `<${unsubApiUrl}>, <mailto:info@pupen.org?subject=unsubscribe>`,
           'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
         }
       },

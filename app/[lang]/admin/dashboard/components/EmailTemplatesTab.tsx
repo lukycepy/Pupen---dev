@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Mail, Send, Eye, Save, Trash2, RefreshCw } from 'lucide-react';
+import { Mail, Send, Eye, Save, Trash2, RefreshCw, Download } from 'lucide-react';
 import InlinePulse from '@/app/components/InlinePulse';
 import { useToast } from '@/app/context/ToastContext';
 import { listEmailTemplates, type EmailTemplateKey } from '@/lib/email/templates';
@@ -55,6 +55,7 @@ export default function EmailTemplatesTab() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [preview, setPreview] = useState<{ subject: string; html: string; source?: string } | null>(null);
   const [sendDiag, setSendDiag] = useState<any>(null);
+  const [loadingDefault, setLoadingDefault] = useState(false);
 
   const parsed = useMemo(() => {
     try {
@@ -235,6 +236,28 @@ export default function EmailTemplatesTab() {
     }
   };
 
+  const loadDefaultIntoEditor = async () => {
+    setLoadingDefault(true);
+    try {
+      const token = await getToken();
+      const res = await fetch(`/api/admin/email/templates/default?key=${encodeURIComponent(templateKey)}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${token}`, 'x-supabase-token': token },
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j?.error || 'Load failed');
+      setDraftSubject(String(j?.subject || ''));
+      setDraftHtml(String(j?.html || ''));
+      setDraftEnabled(true);
+      showToast('Načteno výchozí z kódu', 'success');
+      await refreshPreview({ forceDraft: true });
+    } catch (e: any) {
+      showToast(e?.message || 'Chyba', 'error');
+    } finally {
+      setLoadingDefault(false);
+    }
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="bg-white p-8 rounded-[2.5rem] border shadow-sm">
@@ -279,15 +302,26 @@ export default function EmailTemplatesTab() {
             <div className="bg-stone-50 border border-stone-100 rounded-2xl p-4 space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">Override</div>
-                <button
-                  type="button"
-                  onClick={loadOverrides}
-                  disabled={overridesLoading}
-                  className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
-                >
-                  {overridesLoading ? <InlinePulse className="bg-stone-400/70" size={14} /> : <RefreshCw size={14} />}
-                  Reload
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={loadDefaultIntoEditor}
+                    disabled={loadingDefault}
+                    className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
+                  >
+                    {loadingDefault ? <InlinePulse className="bg-stone-400/70" size={14} /> : <Download size={14} />}
+                    Default
+                  </button>
+                  <button
+                    type="button"
+                    onClick={loadOverrides}
+                    disabled={overridesLoading}
+                    className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
+                  >
+                    {overridesLoading ? <InlinePulse className="bg-stone-400/70" size={14} /> : <RefreshCw size={14} />}
+                    Reload
+                  </button>
+                </div>
               </div>
 
               <label className="flex items-center gap-3 text-xs font-bold text-stone-600">

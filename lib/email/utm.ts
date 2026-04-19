@@ -19,7 +19,7 @@ export function addUtmToEmailHtml(
     baseHost = 'pupen.org';
   }
 
-  return html.replace(/href=(["'])([^"']+)\1/gi, (m, q, hrefRaw) => {
+  html = html.replace(/href=(["'])([^"']+)\1/gi, (m, q, hrefRaw) => {
     const href = String(hrefRaw || '');
     const lower = href.toLowerCase();
     if (!href || lower.startsWith('mailto:') || lower.startsWith('tel:') || lower.startsWith('#') || lower.startsWith('javascript:')) return m;

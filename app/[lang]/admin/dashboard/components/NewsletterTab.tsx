@@ -33,6 +33,9 @@ export default function NewsletterTab() {
   const [sending, setSending] = useState(false);
   const [saving, setSaving] = useState(false);
   const [view, setView] = useState<'compose' | 'subscribers' | 'history' | 'digest'>('compose');
+  const [campaignDetailId, setCampaignDetailId] = useState<string | null>(null);
+  const [campaignDetailLoading, setCampaignDetailLoading] = useState(false);
+  const [campaignDetail, setCampaignDetail] = useState<any>(null);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState<{ title: string; message: string; onConfirm: () => void }>({
@@ -107,6 +110,25 @@ export default function NewsletterTab() {
     run();
     return () => { isMounted = false; };
   }, [showToast]);
+
+  const openCampaignDetail = async (id: string) => {
+    setCampaignDetailId(id);
+    setCampaignDetailLoading(true);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
+      const res = await fetch(`/api/admin/newsletter/history/${encodeURIComponent(id)}`, { headers: { Authorization: `Bearer ${token}` } });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Chyba');
+      setCampaignDetail(json);
+    } catch (e: any) {
+      showToast(e?.message || 'Chyba', 'error');
+      setCampaignDetail(null);
+    } finally {
+      setCampaignDetailLoading(false);
+    }
+  };
 
   const handleDelete = async (id: string) => {
     try {
@@ -726,6 +748,87 @@ export default function NewsletterTab() {
               <History className="text-green-600" />
               Odeslané kampaně
             </h3>
+            {campaignDetailId ? (
+              <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+                <div className="p-6 border-b flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">Detail kampaně</div>
+                    <div className="font-black text-stone-900 text-lg truncate">{campaignDetail?.campaign?.subject || campaignDetailId}</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCampaignDetailId(null);
+                      setCampaignDetail(null);
+                    }}
+                    className="p-2 rounded-xl border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 transition"
+                    title="Zavřít detail"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                <div className="p-6">
+                  {campaignDetailLoading ? (
+                    <div className="flex justify-center py-10">
+                      <Loader2 className="animate-spin text-stone-400" size={22} />
+                    </div>
+                  ) : campaignDetail?.campaign ? (
+                    <div className="space-y-6">
+                      <div className="grid md:grid-cols-4 gap-4">
+                        <div className="bg-stone-50 border border-stone-100 rounded-2xl p-4">
+                          <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">Dosah</div>
+                          <div className="text-2xl font-black text-stone-900 mt-1">{campaignDetail.campaign.target_count || 0}</div>
+                        </div>
+                        <div className="bg-stone-50 border border-stone-100 rounded-2xl p-4">
+                          <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">Open (unikátní)</div>
+                          <div className="text-2xl font-black text-stone-900 mt-1">{campaignDetail?.stats?.uniqueOpenCount || 0}</div>
+                        </div>
+                        <div className="bg-stone-50 border border-stone-100 rounded-2xl p-4">
+                          <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">Click (unikátní)</div>
+                          <div className="text-2xl font-black text-stone-900 mt-1">{campaignDetail?.stats?.uniqueClickCount || 0}</div>
+                        </div>
+                        <div className="bg-stone-50 border border-stone-100 rounded-2xl p-4">
+                          <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">Odesláno</div>
+                          <div className="text-sm font-bold text-stone-700 mt-2">
+                            {campaignDetail.campaign.sent_at ? new Date(campaignDetail.campaign.sent_at).toLocaleString() : '-'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {Array.isArray(campaignDetail?.topLinks) && campaignDetail.topLinks.length ? (
+                        <div>
+                          <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-3">Top odkazy</div>
+                          <div className="space-y-2">
+                            {campaignDetail.topLinks.slice(0, 10).map((l: any) => (
+                              <div key={l.url} className="flex items-center justify-between gap-4 bg-stone-50 border border-stone-100 rounded-2xl px-4 py-3">
+                                <a href={String(l.url)} target="_blank" rel="noreferrer" className="text-xs font-bold text-stone-700 truncate hover:text-green-700">
+                                  {String(l.url)}
+                                </a>
+                                <div className="text-xs font-black text-stone-900">{Number(l.count || 0)}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+
+                      <div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-3">Obsah</div>
+                        <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden">
+                          <iframe
+                            title="Newsletter preview"
+                            className="w-full h-[520px] bg-white"
+                            sandbox=""
+                            srcDoc={String(campaignDetail.campaign.html || '')}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-sm font-bold text-stone-500">Detail se nepodařilo načíst.</div>
+                  )}
+                </div>
+              </div>
+            ) : null}
             {sentCampaigns.length === 0 ? (
               <div className="p-8 text-center bg-stone-50 rounded-2xl border border-dashed border-stone-200 text-stone-400 font-bold">
                 Zatím nebyla odeslána žádná kampaň
@@ -747,7 +850,11 @@ export default function NewsletterTab() {
                       const openRate = c.target_count ? Math.round((c.open_count / c.target_count) * 100) : 0;
                       const clickRate = c.target_count ? Math.round((c.click_count / c.target_count) * 100) : 0;
                       return (
-                        <tr key={c.id} className="hover:bg-stone-50/50 transition">
+                        <tr
+                          key={c.id}
+                          className="hover:bg-stone-50/50 transition cursor-pointer"
+                          onClick={() => openCampaignDetail(String(c.id))}
+                        >
                           <td className="px-6 py-4 font-bold text-stone-900">{c.subject || '(bez předmětu)'}</td>
                           <td className="px-6 py-4 text-center text-stone-600 font-bold">{c.target_count || 0}</td>
                           <td className="px-6 py-4 text-center">

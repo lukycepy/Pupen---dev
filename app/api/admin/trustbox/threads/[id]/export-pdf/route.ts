@@ -54,23 +54,26 @@ function fmt(value: any) {
   }
 }
 
-function redactName(first: string, last: string) {
-  const f = String(first || '').trim();
-  const l = String(last || '').trim();
-  const fi = f ? `${f[0]}.` : '';
-  const li = l ? `${l[0]}.` : '';
-  const out = `${fi} ${li}`.trim();
-  return out || '—';
+async function loadLogoPngBytes(): Promise<Uint8Array | null> {
+  try {
+    const fs = await import('node:fs/promises');
+    const path = await import('node:path');
+    const p = path.join(process.cwd(), 'public', 'logo.png');
+    const buf = await fs.readFile(p);
+    return new Uint8Array(buf);
+  } catch {
+    return null;
+  }
 }
 
-function redactEmail(email: string) {
-  const v = String(email || '').trim().toLowerCase();
-  const m = v.match(/^([^@]+)@(.+)$/);
-  if (!m) return '—';
-  const local = m[1] || '';
-  const domain = m[2] || '';
-  const head = local.slice(0, 2);
-  return `${head}***@${domain}`;
+function sanitizeFilePart(value: string) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/(^_|_$)/g, '')
+    .slice(0, 80);
 }
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -97,20 +100,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     if (thrRes.error) throw thrRes.error;
     const thread: any = thrRes.data;
     if (!thread) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-
-    const identRes = await supabase
-      .from('trust_box_identities')
-      .select('first_name,last_name,email')
-      .eq('thread_id', threadId)
-      .maybeSingle();
-    if (identRes.error) throw identRes.error;
-    const ident: any = identRes.data;
-
-    const reporter = ident
-      ? piiAllowed && !thread.anonymized_at
-        ? { name: `${ident.first_name} ${ident.last_name}`.trim(), email: ident.email }
-        : { name: redactName(ident.first_name, ident.last_name), email: redactEmail(ident.email) }
-      : { name: '—', email: '—' };
 
     const msgsRes = await supabase
       .from('trust_box_messages')
@@ -152,13 +141,25 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       }
     };
 
-    const header = () => {
+    const header = async () => {
       page.drawRectangle({ x: 0, y: 835, width, height: 6, color: green });
       page.drawRectangle({ x: margin, y: 748, width: width - margin * 2, height: 78, color: paper, borderColor: light, borderWidth: 1 });
-      drawSafe('SCHRÁNKA DŮVĚRY', { x: margin, y, size: 10, font: fontBold, color: gray });
+      const logoBytes = await loadLogoPngBytes();
+      if (logoBytes) {
+        try {
+          const logo = await pdfDoc.embedPng(logoBytes);
+          const targetW = 54;
+          const s = targetW / logo.width;
+          const targetH = logo.height * s;
+          page.drawImage(logo, { x: margin, y: y - 10, width: targetW, height: targetH });
+        } catch {}
+      }
+      drawSafe('SCHRÁNKA DŮVĚRY', { x: margin + 70, y, size: 10, font: fontBold, color: gray });
       y -= 16;
-      drawSafe('Export vlákna', { x: margin, y, size: 20, font: fontBold, color: black });
+      drawSafe('Export vlákna', { x: margin + 70, y, size: 20, font: fontBold, color: black });
       y -= 18;
+      drawSafe('Studentský spolek Pupen, z.s.', { x: margin + 70, y, size: 10, font: fontBold, color: gray });
+      y -= 14;
       page.drawLine({ start: { x: margin, y }, end: { x: width - margin, y }, thickness: 1, color: light });
       y -= 18;
     };
@@ -166,21 +167,21 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const newPage = () => {
       page = pdfDoc.addPage([width, 841.89]);
       y = 800;
-      header();
+      return header();
     };
 
-    header();
+    await header();
 
-    const section = (title: string) => {
-      if (y < 120) newPage();
+    const section = async (title: string) => {
+      if (y < 120) await newPage();
       drawSafe(title, { x: margin, y, size: 11, font: fontBold, color: green });
       y -= 10;
       page.drawLine({ start: { x: margin, y }, end: { x: width - margin, y }, thickness: 1, color: light });
       y -= 14;
     };
 
-    const row = (label: string, value: any) => {
-      if (y < 120) newPage();
+    const row = async (label: string, value: any) => {
+      if (y < 120) await newPage();
       drawSafe(label, { x: margin, y, size: 9, font: fontBold, color: gray });
       const valueX = margin + 180;
       const valueWidth = width - margin - valueX;
@@ -192,18 +193,19 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       y -= Math.max(16, valueLines.length * 14);
     };
 
-    section('METADATA');
-    row('ID', String(thread.id));
-    row('Předmět', thread.subject || '—');
-    row('Kategorie', thread.category || '—');
-    row('Status', thread.status || '—');
-    row('Priorita', thread.priority || '—');
-    row('Vytvořeno', fmt(thread.created_at));
-    row('Poslední aktivita', fmt(thread.last_activity_at));
-    row('Reporter', `${reporter.name} · ${reporter.email}`);
-    if (thread.anonymized_at) row('Anonymizováno', fmt(thread.anonymized_at));
+    await section('METADATA');
+    await row('ID', String(thread.id));
+    await row('Předmět', thread.subject || '—');
+    await row('Kategorie', thread.category || '—');
+    await row('Status', thread.status || '—');
+    await row('Priorita', thread.priority || '—');
+    await row('Vytvořeno', fmt(thread.created_at));
+    await row('Poslední aktivita', fmt(thread.last_activity_at));
+    await row('Export vytvořil', String(auth.user.email || auth.user.id));
+    await row('Exportováno', fmt(new Date().toISOString()));
+    if (thread.anonymized_at) await row('Anonymizováno', fmt(thread.anonymized_at));
 
-    section('ZPRÁVY');
+    await section('ZPRÁVY');
     for (const m of messages) {
       const body = String(m.body || '').slice(0, 6000);
       const who =
@@ -214,33 +216,43 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             : `admin${m.author_name ? ` (${String(m.author_name)})` : ''}`;
 
       const head = `${who} · ${fmt(m.created_at)}`;
-      if (y < 150) newPage();
+      if (y < 150) await newPage();
       drawSafe(head, { x: margin, y, size: 9, font: fontBold, color: gray });
       y -= 14;
       const lines = wrapLines(font, cleanText(body, '—'), 11, width - margin * 2);
       for (const line of lines) {
-        if (y < 90) newPage();
+        if (y < 90) await newPage();
         drawSafe(line, { x: margin, y, size: 11, font, color: black });
         y -= 14;
       }
       y -= 8;
     }
 
-    section('PŘÍLOHY');
+    await section('PŘÍLOHY');
     if (attachments.length === 0) {
-      row('—', 'Žádné');
+      await row('—', 'Žádné');
     } else {
       for (const a of attachments.slice(0, 60)) {
-        if (y < 120) newPage();
+        if (y < 120) await newPage();
         const name = String(a.original_name || '');
         const ct = String(a.content_type || '');
         const size = Number(a.size_bytes || 0);
-        row('Soubor', `${name} · ${ct} · ${size} B`);
+        await row('Soubor', `${name} · ${ct} · ${size} B`);
       }
     }
 
     const pdfBytes = await pdfDoc.save();
-    const fileName = `trustbox_${threadId}.pdf`;
+    const date = (() => {
+      try {
+        return new Date(String(thread.created_at || new Date().toISOString())).toISOString().slice(0, 10);
+      } catch {
+        return new Date().toISOString().slice(0, 10);
+      }
+    })();
+    const subjectPart = sanitizeFilePart(String(thread.subject || 'Schranka_duvery'));
+    const base = `Schranka_duvery_${subjectPart || 'Podnet'}-Pupen_${date}`;
+    const utf8 = `${base}.pdf`;
+    const ascii = `${base}.pdf`;
     await logTrustBoxAudit({
       req,
       actorUserId: auth.user.id,
@@ -253,7 +265,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     return new NextResponse(Buffer.from(pdfBytes), {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `inline; filename="${fileName}"`,
+        'Content-Disposition': `inline; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(utf8)}`,
         'Cache-Control': 'no-store',
       },
     });
