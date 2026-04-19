@@ -12,6 +12,7 @@ import InlinePulse from '@/app/components/InlinePulse';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/app/context/ToastContext';
 import GlobalAuditDialog from './GlobalAuditDialog';
+import { useParams } from 'next/navigation';
 
 function fmtDate(value: any) {
   try {
@@ -43,6 +44,9 @@ async function authFetch(url: string, init?: RequestInit) {
 }
 
 export default function TrustBoxTab({ dict }: { dict: any }) {
+  const params = useParams();
+  const lang = (params?.lang as string) === 'en' ? 'en' : 'cs';
+  const tb = (dict?.admin?.trustbox || {}) as any;
   const { showToast } = useToast();
   const qc = useQueryClient();
 
@@ -472,9 +476,15 @@ export default function TrustBoxTab({ dict }: { dict: any }) {
                   <div className="min-w-0">
                     <div className="font-black text-stone-900 truncate">{t.subject}</div>
                     <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-widest text-stone-400">
-                      <span className={`px-2 py-1 rounded-lg border ${chipClass(String(t.status))}`}>{String(t.status)}</span>
-                      <span className={`px-2 py-1 rounded-lg border ${chipClass(String(t.priority))}`}>{String(t.priority)}</span>
-                      <span className="px-2 py-1 rounded-lg border border-stone-200 bg-stone-50 text-stone-700">{String(t.category)}</span>
+                      <span className={`px-2 py-1 rounded-lg border ${chipClass(String(t.status))}`}>
+                        {String(tb?.status?.[String(t.status)] || (lang === 'en' ? String(t.status) : String(t.status)))}
+                      </span>
+                      <span className={`px-2 py-1 rounded-lg border ${chipClass(String(t.priority))}`}>
+                        {String(tb?.priority?.[String(t.priority)] || (lang === 'en' ? String(t.priority) : String(t.priority)))}
+                      </span>
+                      <span className="px-2 py-1 rounded-lg border border-stone-200 bg-stone-50 text-stone-700">
+                        {String(tb?.category?.[String(t.category)] || (lang === 'en' ? String(t.category) : String(t.category)))}
+                      </span>
                       <span className="flex items-center gap-1"><Clock size={12} /> {fmtDate(t.last_activity_at || t.created_at)}</span>
                     </div>
                     <div className="mt-2 text-sm font-bold text-stone-600">
@@ -525,10 +535,26 @@ export default function TrustBoxTab({ dict }: { dict: any }) {
                           headers: { Authorization: `Bearer ${token}` },
                         });
                         if (!res.ok) throw new Error('Export failed');
+                        const cd = String(res.headers.get('content-disposition') || '');
+                        let fileName = 'Schranka_duvery.pdf';
+                        const mUtf = cd.match(/filename\*\s*=\s*UTF-8''([^;]+)/i);
+                        if (mUtf?.[1]) {
+                          try {
+                            fileName = decodeURIComponent(mUtf[1]);
+                          } catch {}
+                        } else {
+                          const m = cd.match(/filename\s*=\s*"?([^";]+)"?/i);
+                          if (m?.[1]) fileName = m[1];
+                        }
                         const blob = await res.blob();
                         const url = URL.createObjectURL(blob);
-                        window.open(url, '_blank', 'noopener,noreferrer');
-                        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = fileName;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        setTimeout(() => URL.revokeObjectURL(url), 30_000);
                       } catch (e: any) {
                         showToast(e?.message || 'Error', 'error');
                       }
@@ -568,32 +594,32 @@ export default function TrustBoxTab({ dict }: { dict: any }) {
               <AdminPanel className="p-5">
                 <div className="grid md:grid-cols-3 gap-4">
                   <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Status</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{lang === 'en' ? 'Status' : 'Stav'}</label>
                     <select
                       value={String(threadDetail.data?.thread?.status || 'new')}
                       onChange={(e) => patchMutation.mutate({ status: e.target.value })}
                       className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 outline-none"
                     >
-                      <option value="new">new</option>
-                      <option value="in_review">in_review</option>
-                      <option value="waiting_for_info">waiting_for_info</option>
-                      <option value="resolved">resolved</option>
-                      <option value="archived">archived</option>
+                      <option value="new">{String(tb?.status?.new || (lang === 'en' ? 'New' : 'Nové'))}</option>
+                      <option value="in_review">{String(tb?.status?.in_review || (lang === 'en' ? 'In review' : 'V řešení'))}</option>
+                      <option value="waiting_for_info">{String(tb?.status?.waiting_for_info || (lang === 'en' ? 'Waiting for info' : 'Čeká na doplnění'))}</option>
+                      <option value="resolved">{String(tb?.status?.resolved || (lang === 'en' ? 'Resolved' : 'Vyřešeno'))}</option>
+                      <option value="archived">{String(tb?.status?.archived || (lang === 'en' ? 'Archived' : 'Archivováno'))}</option>
                     </select>
                   </div>
                   <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Priorita</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{lang === 'en' ? 'Priority' : 'Priorita'}</label>
                     <select
                       value={String(threadDetail.data?.thread?.priority || 'normal')}
                       onChange={(e) => patchMutation.mutate({ priority: e.target.value })}
                       className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 outline-none"
                     >
-                      <option value="normal">normal</option>
-                      <option value="urgent">urgent</option>
+                      <option value="normal">{String(tb?.priority?.normal || (lang === 'en' ? 'Normal' : 'Normální'))}</option>
+                      <option value="urgent">{String(tb?.priority?.urgent || (lang === 'en' ? 'Urgent' : 'Urgentní'))}</option>
                     </select>
                   </div>
                   <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Kategorie</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{lang === 'en' ? 'Category' : 'Kategorie'}</label>
                     <input
                       defaultValue={String(threadDetail.data?.thread?.category || '')}
                       onBlur={(e) => {
@@ -613,7 +639,7 @@ export default function TrustBoxTab({ dict }: { dict: any }) {
                     <div className="flex items-center justify-between gap-4">
                       <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">
                         {String(m.author_type || '').toLowerCase() === 'reporter'
-                          ? 'nahlašovatel'
+                          ? (lang === 'en' ? 'reporter' : 'nahlašující')
                           : `${String(m.author_type || '')}${m.author_name ? ` (${String(m.author_name)})` : ''}`}
                       </div>
                       <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{fmtDate(m.created_at)}</div>

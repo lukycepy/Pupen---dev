@@ -284,7 +284,14 @@
     "addToCalendar": "Add to calendar",
     "share": "Share event",
     "noEvents": "No events scheduled yet.",
-    "rsvpSuccess": "Thanks! See you there."
+    "rsvpSuccess": "Thanks! See you there.",
+    "rsvpStatus": {
+      "confirmed": "Confirmed",
+      "reserved": "Reserved",
+      "waitlist": "Waitlist",
+      "cancelled": "Cancelled",
+      "pending": "Pending"
+    }
   },
   "adminLogin": {
     "title": "Admin Pupen",
@@ -641,6 +648,67 @@
     "submit": "Submit feedback"
   },
   "admin": {
+    "queue": {
+      "titleQueue": "Email queue",
+      "titleDead": "Dead letters",
+      "descQueue": "Unsent emails in the queue (queued, retry, processing) with manual management.",
+      "descDead": "Emails that failed after the maximum number of attempts.",
+      "tabQueue": "Queue",
+      "tabDead": "Dead letters",
+      "status": {
+        "queued": "Queued",
+        "retry": "Retry",
+        "processing": "Processing",
+        "dead": "Dead letters"
+      }
+    },
+    "trustbox": {
+      "status": {
+        "new": "New",
+        "in_review": "In review",
+        "waiting_for_info": "Waiting for info",
+        "resolved": "Resolved",
+        "archived": "Archived"
+      },
+      "priority": {
+        "normal": "Normal",
+        "urgent": "Urgent"
+      },
+      "category": {
+        "other": "Other"
+      }
+    },
+    "governance": {
+      "decisionStatus": {
+        "draft": "Draft",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "archived": "Archived"
+      }
+    },
+    "lostFound": {
+      "status": {
+        "open": "Found",
+        "returned": "Returned",
+        "archived": "Archived"
+      }
+    },
+    "blog": {
+      "status": {
+        "draft": "Draft",
+        "pending": "Pending",
+        "published": "Published",
+        "archived": "Archived"
+      }
+    },
+    "reviews": {
+      "status": {
+        "pending": "Pending",
+        "approved": "Approved",
+        "published": "Published",
+        "rejected": "Rejected"
+      }
+    },
     "budget": {
       "subtitle": "Financial overview of the association",
       "totalBalance": "Total balance",

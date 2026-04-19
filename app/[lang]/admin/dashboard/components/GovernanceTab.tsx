@@ -8,6 +8,7 @@ import { useToast } from '@/app/context/ToastContext';
 import InlinePulse from '@/app/components/InlinePulse';
 import { FileText, Plus, Save, Trash2, Edit3, CheckCircle, X, ShieldCheck, ShieldX } from 'lucide-react';
 import { richTextToClientHtml } from '@/lib/richtext-client';
+import { tEnum } from '@/lib/i18n-enum';
 
 const Editor = dynamic(() => import('../../../components/Editor'), {
   ssr: false,
@@ -41,6 +42,7 @@ type Policy = {
 export default function GovernanceTab({ dict }: { dict: any }) {
   const { showToast } = useToast();
   const queryClient = useQueryClient();
+  const decisionStatusLabel = useCallback((v: any) => tEnum(dict, 'admin.governance.decisionStatus', v), [dict]);
 
   const [mode, setMode] = useState<'decisions' | 'policies'>('decisions');
 
@@ -349,10 +351,10 @@ export default function GovernanceTab({ dict }: { dict: any }) {
                     onChange={(e) => setDecisionForm((p) => ({ ...p, status: e.target.value }))}
                     className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
                   >
-                    <option value="draft">draft</option>
-                    <option value="approved">approved</option>
-                    <option value="rejected">rejected</option>
-                    <option value="archived">archived</option>
+                    <option value="draft">{decisionStatusLabel('draft')}</option>
+                    <option value="approved">{decisionStatusLabel('approved')}</option>
+                    <option value="rejected">{decisionStatusLabel('rejected')}</option>
+                    <option value="archived">{decisionStatusLabel('archived')}</option>
                   </select>
                 </div>
                 <div className="md:col-span-2 flex items-center justify-between gap-4">
@@ -410,7 +412,7 @@ export default function GovernanceTab({ dict }: { dict: any }) {
                     <div className="min-w-0 flex-grow">
                       <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">
                         <span className={`px-3 py-1 rounded-full ${d.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-stone-100 text-stone-600'}`}>
-                          {d.status}
+                          {decisionStatusLabel(d.status)}
                         </span>
                         <span className={`px-3 py-1 rounded-full ${d.is_published ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-stone-50 text-stone-500 border border-stone-200'}`}>
                           {d.is_published ? 'členové' : 'interně'}

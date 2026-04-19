@@ -4,6 +4,7 @@ import { getServerSupabase } from '@/lib/supabase-server';
 import { requireTrustBoxAdmin } from '@/lib/server-auth';
 import { getPdfFonts } from '@/lib/pdf/fonts';
 import { logTrustBoxAudit } from '@/lib/trustbox/audit';
+import { getPublicBaseUrl } from '@/lib/public-base-url';
 
 function cleanText(input: any, fallback = '—') {
   const s = String(input ?? '').replace(/\u0000/g, '').trim();
@@ -62,7 +63,14 @@ async function loadLogoPngBytes(): Promise<Uint8Array | null> {
     const buf = await fs.readFile(p);
     return new Uint8Array(buf);
   } catch {
-    return null;
+    try {
+      const res = await fetch(`${getPublicBaseUrl()}/logo.png`);
+      if (!res.ok) return null;
+      const buf = await res.arrayBuffer();
+      return new Uint8Array(buf);
+    } catch {
+      return null;
+    }
   }
 }
 
@@ -74,6 +82,29 @@ function sanitizeFilePart(value: string) {
     .replace(/_+/g, '_')
     .replace(/(^_|_$)/g, '')
     .slice(0, 80);
+}
+
+function mapTrustBoxStatus(status: string) {
+  const s = String(status || '').trim();
+  if (s === 'new') return 'Nové';
+  if (s === 'in_review') return 'V řešení';
+  if (s === 'waiting_for_info') return 'Čeká na doplnění';
+  if (s === 'resolved') return 'Vyřešeno';
+  if (s === 'archived') return 'Archivováno';
+  return s || '—';
+}
+
+function mapTrustBoxPriority(priority: string) {
+  const p = String(priority || '').trim();
+  if (p === 'normal') return 'Normální';
+  if (p === 'urgent') return 'Urgentní';
+  return p || '—';
+}
+
+function mapTrustBoxCategory(category: string) {
+  const c = String(category || '').trim();
+  if (c === 'other') return 'Jiné';
+  return c || '—';
 }
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -118,6 +149,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const attachments: any[] = atRes.data || [];
 
     const pdfDoc = await PDFDocument.create();
+    try {
+      (pdfDoc as any).setTitle?.('Schránka důvěry – export vlákna');
+      (pdfDoc as any).setAuthor?.('Systém Pupen');
+      (pdfDoc as any).setCreator?.('Systém Pupen');
+      (pdfDoc as any).setProducer?.('Systém Pupen');
+      (pdfDoc as any).setSubject?.(String(thread.subject || ''));
+    } catch {}
     const { font, fontBold } = await getPdfFonts(pdfDoc);
 
     const width = 595.28;
@@ -142,24 +180,29 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     };
 
     const header = async () => {
+      y = 800;
       page.drawRectangle({ x: 0, y: 835, width, height: 6, color: green });
       page.drawRectangle({ x: margin, y: 748, width: width - margin * 2, height: 78, color: paper, borderColor: light, borderWidth: 1 });
       const logoBytes = await loadLogoPngBytes();
       if (logoBytes) {
         try {
           const logo = await pdfDoc.embedPng(logoBytes);
-          const targetW = 54;
-          const s = targetW / logo.width;
-          const targetH = logo.height * s;
-          page.drawImage(logo, { x: margin, y: y - 10, width: targetW, height: targetH });
+          const targetH = 44;
+          const maxW = 54;
+          const w = Math.min(maxW, (logo.width / logo.height) * targetH);
+          const headerTop = 748 + 78;
+          const logoY = headerTop - targetH - 12;
+          page.drawImage(logo, { x: margin + 12, y: logoY, width: w, height: targetH });
         } catch {}
       }
-      drawSafe('SCHRÁNKA DŮVĚRY', { x: margin + 70, y, size: 10, font: fontBold, color: gray });
-      y -= 16;
-      drawSafe('Export vlákna', { x: margin + 70, y, size: 20, font: fontBold, color: black });
-      y -= 18;
-      drawSafe('Studentský spolek Pupen, z.s.', { x: margin + 70, y, size: 10, font: fontBold, color: gray });
-      y -= 14;
+      const headerLeft = margin + 78;
+      const labelY = 808;
+      const titleY = 790;
+      const orgY = 772;
+      drawSafe('SCHRÁNKA DŮVĚRY', { x: headerLeft, y: labelY, size: 10, font: fontBold, color: gray });
+      drawSafe('Export vlákna', { x: headerLeft, y: titleY, size: 20, font: fontBold, color: black });
+      drawSafe('Studentský spolek Pupen, z.s.', { x: headerLeft, y: orgY, size: 10, font: fontBold, color: gray });
+      y = 748 + 12;
       page.drawLine({ start: { x: margin, y }, end: { x: width - margin, y }, thickness: 1, color: light });
       y -= 18;
     };
@@ -196,9 +239,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     await section('METADATA');
     await row('ID', String(thread.id));
     await row('Předmět', thread.subject || '—');
-    await row('Kategorie', thread.category || '—');
-    await row('Status', thread.status || '—');
-    await row('Priorita', thread.priority || '—');
+    await row('Kategorie', mapTrustBoxCategory(thread.category));
+    await row('Stav', mapTrustBoxStatus(thread.status));
+    await row('Priorita', mapTrustBoxPriority(thread.priority));
     await row('Vytvořeno', fmt(thread.created_at));
     await row('Poslední aktivita', fmt(thread.last_activity_at));
     await row('Export vytvořil', String(auth.user.email || auth.user.id));
@@ -210,9 +253,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       const body = String(m.body || '').slice(0, 6000);
       const who =
         String(m.author_type || '').toLowerCase() === 'reporter'
-          ? 'reporter'
+          ? 'nahlašující'
           : String(m.author_type || '').toLowerCase() === 'internal'
-            ? `internal${m.author_name ? ` (${String(m.author_name)})` : ''}`
+            ? `interní${m.author_name ? ` (${String(m.author_name)})` : ''}`
             : `admin${m.author_name ? ` (${String(m.author_name)})` : ''}`;
 
       const head = `${who} · ${fmt(m.created_at)}`;

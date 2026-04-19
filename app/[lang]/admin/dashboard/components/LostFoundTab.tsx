@@ -9,6 +9,7 @@ import { KeyRound, Plus, Save, Trash2, Eye, EyeOff, MapPin, Phone, Tag } from 'l
 import AdminModuleHeader from './ui/AdminModuleHeader';
 import AdminEmptyState from './ui/AdminEmptyState';
 import AdminPanel from './ui/AdminPanel';
+import { tEnum } from '@/lib/i18n-enum';
 
 type Item = {
   id: string;
@@ -22,8 +23,9 @@ type Item = {
   is_public: boolean;
 };
 
-export default function LostFoundTab() {
+export default function LostFoundTab({ dict }: { dict: any }) {
   const { showToast } = useToast();
+  const statusLabel = useCallback((v: any) => tEnum(dict, 'admin.lostFound.status', v), [dict]);
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -221,9 +223,9 @@ export default function LostFoundTab() {
                       onChange={(e) => setEditing((p) => (p ? { ...p, status: e.target.value } : p))}
                       className="w-full bg-stone-50 border-none rounded-2xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
                     >
-                      <option value="open">open</option>
-                      <option value="returned">returned</option>
-                      <option value="archived">archived</option>
+                      <option value="open">{statusLabel('open')}</option>
+                      <option value="returned">{statusLabel('returned')}</option>
+                      <option value="archived">{statusLabel('archived')}</option>
                     </select>
                   </div>
                 </div>
@@ -295,7 +297,7 @@ export default function LostFoundTab() {
                       <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mt-1">
                         {new Date(i.created_at).toLocaleDateString('cs-CZ')}
                         {i.category ? ` • ${i.category}` : ''}
-                        {i.status ? ` • ${i.status}` : ''}
+                        {i.status ? ` • ${statusLabel(i.status)}` : ''}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">

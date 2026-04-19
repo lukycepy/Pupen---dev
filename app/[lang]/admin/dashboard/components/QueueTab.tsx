@@ -8,10 +8,14 @@ import AdminModuleHeader from './ui/AdminModuleHeader';
 import AdminEmptyState from './ui/AdminEmptyState';
 import { AlertTriangle, Clock, Inbox, RefreshCw, Save, Search, Trash2, Zap, X } from 'lucide-react';
 import Dialog from '@/app/components/ui/Dialog';
+import { useParams } from 'next/navigation';
 
 type View = 'queue' | 'dead';
 
-export default function QueueTab() {
+export default function QueueTab({ dict }: { dict: any }) {
+  const params = useParams();
+  const lang = (params?.lang as string) === 'en' ? 'en' : 'cs';
+  const t = (dict?.admin?.queue || {}) as any;
   const { showToast } = useToast();
   const qc = useQueryClient();
   const [view, setView] = useState<View>('queue');
@@ -92,7 +96,9 @@ export default function QueueTab() {
   const errorInfo = (detail as any)?.meta?.last_error || (selected as any)?.meta?.last_error || (detail as any)?.meta?.enqueue_error;
   const errorHint =
     String(detail?.last_error || selected?.last_error || '').toLowerCase().includes('timeout')
-      ? 'Tip: Connection timeout obvykle znamená blokovaný outbound SMTP port / firewall nebo špatný host.'
+      ? lang === 'en'
+        ? 'Tip: Connection timeout usually means outbound SMTP port is blocked / firewall, or the host is wrong.'
+        : 'Tip: Connection timeout obvykle znamená blokovaný outbound SMTP port / firewall nebo špatný host.'
       : '';
 
   const updateMutation = useMutation({
@@ -201,17 +207,22 @@ export default function QueueTab() {
     onError: (e: any) => showToast(e?.message || 'Chyba', 'error'),
   });
 
-  const title = view === 'queue' ? 'E-mail fronta' : 'Dead letters';
+  const title = view === 'queue' ? String(t?.titleQueue || (lang === 'en' ? 'Email queue' : 'E-mail fronta')) : String(t?.titleDead || 'Dead letters');
   const desc =
     view === 'queue'
-      ? 'Neodeslané e-maily (čeká / retry / processing) + možnost ruční opravy.'
-      : 'E-maily, které selhaly po maximálním počtu pokusů.';
+      ? String(t?.descQueue || (lang === 'en' ? 'Unsent emails in the queue (queued, retry, processing) with manual management.' : 'Neodeslané e‑maily ve frontě (čeká, opakování, zpracování) a ruční správa.'))
+      : String(t?.descDead || (lang === 'en' ? 'Emails that failed after the maximum number of attempts.' : 'E‑maily, které selhaly po maximálním počtu pokusů.'));
 
   const statusLabel = (s: string) => {
-    if (s === 'queued') return 'čeká';
-    if (s === 'retry') return 'retry';
-    if (s === 'processing') return 'processing';
-    return s || '—';
+    const raw = String(s || '').trim();
+    const mapped = t?.status?.[raw];
+    if (mapped) return String(mapped);
+    if (!raw) return '—';
+    if (raw === 'queued') return lang === 'en' ? 'Queued' : 'Čeká';
+    if (raw === 'retry') return lang === 'en' ? 'Retry' : 'Opakování';
+    if (raw === 'processing') return lang === 'en' ? 'Processing' : 'Zpracování';
+    if (raw === 'dead') return 'Dead letters';
+    return raw;
   };
 
   const kindValue = (it: any) => String(it?.meta?.kind || '').trim();
@@ -231,7 +242,7 @@ export default function QueueTab() {
                   setQ(e.target.value);
                   setPage(0);
                 }}
-                placeholder="Hledat e-mail / subject / chybu"
+                placeholder={lang === 'en' ? 'Search email / subject / error' : 'Hledat e‑mail / předmět / chybu'}
                 className="ml-2 w-64 bg-transparent text-sm font-bold text-stone-700 outline-none"
               />
             </div>
@@ -244,8 +255,8 @@ export default function QueueTab() {
               }}
               className="px-4 py-3 rounded-2xl border border-stone-200 bg-white text-sm font-bold text-stone-700 shadow-sm"
             >
-              <option value="queue">E-mail fronta</option>
-              <option value="dead">Dead letters</option>
+              <option value="queue">{String(t?.tabQueue || (lang === 'en' ? 'Queue' : 'Fronta'))}</option>
+              <option value="dead">{String(t?.tabDead || 'Dead letters')}</option>
             </select>
             {view === 'queue' && (
               <select
@@ -256,10 +267,10 @@ export default function QueueTab() {
                 }}
                 className="px-4 py-3 rounded-2xl border border-stone-200 bg-white text-sm font-bold text-stone-700 shadow-sm"
               >
-                <option value="">Všechny stavy</option>
-                <option value="queued">queued</option>
-                <option value="retry">retry</option>
-                <option value="processing">processing</option>
+                <option value="">{lang === 'en' ? 'All statuses' : 'Všechny stavy'}</option>
+                <option value="queued">{statusLabel('queued')}</option>
+                <option value="retry">{statusLabel('retry')}</option>
+                <option value="processing">{statusLabel('processing')}</option>
               </select>
             )}
             <input
@@ -268,7 +279,7 @@ export default function QueueTab() {
                 setKind(e.target.value);
                 setPage(0);
               }}
-              placeholder="kind (např. newsletter)"
+              placeholder={lang === 'en' ? 'kind (e.g. newsletter)' : 'kind (např. newsletter)'}
               className="px-4 py-3 rounded-2xl border border-stone-200 bg-white text-sm font-bold text-stone-700 shadow-sm w-56"
             />
             {view === 'queue' && (
@@ -282,7 +293,7 @@ export default function QueueTab() {
                   dueOnly ? 'bg-green-600 text-white border-green-600' : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-50'
                 }`}
               >
-                <Clock size={14} /> {dueOnly ? 'Due: zapnuto' : 'Due: vypnuto'}
+                <Clock size={14} /> {dueOnly ? (lang === 'en' ? 'Due: on' : 'Due: zapnuto') : (lang === 'en' ? 'Due: off' : 'Due: vypnuto')}
               </button>
             )}
             {view === 'queue' ? (
@@ -292,7 +303,7 @@ export default function QueueTab() {
                 disabled={processMutation.isPending}
                 className="inline-flex items-center gap-2 px-4 py-3 rounded-2xl border border-green-200 bg-green-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-green-700 transition disabled:opacity-50 shadow-sm"
               >
-                <Zap size={14} /> Zpracovat frontu
+                <Zap size={14} /> {lang === 'en' ? 'Process queue' : 'Zpracovat frontu'}
               </button>
             ) : null}
           </div>
@@ -302,37 +313,41 @@ export default function QueueTab() {
       {view === 'queue' && summary?.queue ? (
         <div className="grid md:grid-cols-5 gap-3">
           <div className="bg-white border border-stone-100 rounded-[2rem] p-5 shadow-sm">
-            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">Čeká</div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{statusLabel('queued')}</div>
             <div className="mt-2 text-2xl font-black text-stone-900">{Number(summary.queue.queued || 0)}</div>
           </div>
           <div className="bg-white border border-stone-100 rounded-[2rem] p-5 shadow-sm">
-            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">Retry</div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{statusLabel('retry')}</div>
             <div className="mt-2 text-2xl font-black text-stone-900">{Number(summary.queue.retry || 0)}</div>
           </div>
           <div className="bg-white border border-stone-100 rounded-[2rem] p-5 shadow-sm">
-            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">Processing</div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{statusLabel('processing')}</div>
             <div className="mt-2 text-2xl font-black text-stone-900">{Number(summary.queue.processing || 0)}</div>
           </div>
           <div className="bg-white border border-stone-100 rounded-[2rem] p-5 shadow-sm">
-            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">Due teď</div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{lang === 'en' ? 'Due now' : 'Due teď'}</div>
             <div className="mt-2 text-2xl font-black text-stone-900">{Number(summary.queue.dueNow || 0)}</div>
           </div>
           <div className="bg-white border border-stone-100 rounded-[2rem] p-5 shadow-sm">
-            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">Zaseknuté</div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{lang === 'en' ? 'Stuck' : 'Zaseknuté'}</div>
             <div className="mt-2 text-2xl font-black text-stone-900">{Number(summary.queue.stuckProcessing || 0)}</div>
           </div>
         </div>
       ) : view === 'dead' && summary?.deadLetters ? (
         <div className="grid md:grid-cols-4 gap-3">
           <div className="bg-white border border-stone-100 rounded-[2rem] p-5 shadow-sm">
-            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">Dead letters</div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{String(t?.tabDead || 'Dead letters')}</div>
             <div className="mt-2 text-2xl font-black text-stone-900">{Number(summary.deadLetters.total || 0)}</div>
           </div>
         </div>
       ) : null}
 
       {!isLoading && items.length === 0 ? (
-        <AdminEmptyState icon={Inbox} title="Žádné položky" description="Fronta je prázdná." />
+        <AdminEmptyState
+          icon={Inbox}
+          title={lang === 'en' ? 'No items' : 'Žádné položky'}
+          description={lang === 'en' ? 'The queue is empty.' : 'Fronta je prázdná.'}
+        />
       ) : (
         <div className="bg-white border border-stone-100 rounded-[2.5rem] shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
@@ -340,11 +355,11 @@ export default function QueueTab() {
               <thead className="bg-stone-50 border-b border-stone-100">
                 <tr>
                   <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">Kind</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">To</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">Subject</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">Status</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">Attempts</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">Next / Failed</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">{lang === 'en' ? 'To' : 'Komu'}</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">{lang === 'en' ? 'Subject' : 'Předmět'}</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">{lang === 'en' ? 'Status' : 'Stav'}</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">{lang === 'en' ? 'Attempts' : 'Pokusy'}</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">{lang === 'en' ? 'Next / Failed' : 'Další / Selhalo'}</th>
                 </tr>
               </thead>
               <tbody>
@@ -374,14 +389,14 @@ export default function QueueTab() {
                     <td className="px-6 py-4 text-sm font-bold text-stone-800 max-w-[460px] truncate">{String(it.subject || '')}</td>
                     <td className="px-6 py-4">
                       <span className="inline-flex items-center rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-widest bg-stone-100 text-stone-700">
-                        {String(view === 'dead' ? 'dead' : statusLabel(String(it.status || '')))}
+                        {String(view === 'dead' ? statusLabel('dead') : statusLabel(String(it.status || '')))}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-xs font-black text-stone-500">{Number(it.attempt_count || 0)}/{Number(it.max_attempts || 0) || '—'}</td>
                     <td className="px-6 py-4 text-xs font-bold text-stone-500">
                       {view === 'dead'
-                        ? (it.failed_at ? new Date(it.failed_at).toLocaleString('cs-CZ') : '—')
-                        : (it.next_attempt_at ? new Date(it.next_attempt_at).toLocaleString('cs-CZ') : '—')}
+                        ? (it.failed_at ? new Date(it.failed_at).toLocaleString(lang === 'en' ? 'en-US' : 'cs-CZ') : '—')
+                        : (it.next_attempt_at ? new Date(it.next_attempt_at).toLocaleString(lang === 'en' ? 'en-US' : 'cs-CZ') : '—')}
                     </td>
                   </tr>
                 ))}
@@ -391,7 +406,7 @@ export default function QueueTab() {
 
           <div className="flex items-center justify-between px-6 py-4 bg-white">
             <div className="text-xs font-bold text-stone-500">
-              Zobrazeno {items.length} z {total}
+              {lang === 'en' ? 'Showing' : 'Zobrazeno'} {items.length} {lang === 'en' ? 'of' : 'z'} {total}
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -400,7 +415,7 @@ export default function QueueTab() {
                 disabled={!canPrev}
                 className="px-4 py-2 rounded-xl border border-stone-200 bg-white text-[10px] font-black uppercase tracking-widest text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
               >
-                Předchozí
+                {lang === 'en' ? 'Previous' : 'Předchozí'}
               </button>
               <button
                 type="button"
@@ -408,7 +423,7 @@ export default function QueueTab() {
                 disabled={!canNext}
                 className="px-4 py-2 rounded-xl border border-stone-200 bg-white text-[10px] font-black uppercase tracking-widest text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
               >
-                Další
+                {lang === 'en' ? 'Next' : 'Další'}
               </button>
             </div>
           </div>
@@ -481,9 +496,9 @@ export default function QueueTab() {
                             onChange={(e) => setEdit((p: any) => ({ ...(p || {}), status: e.target.value }))}
                             className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-white text-sm font-bold text-stone-800"
                           >
-                            <option value="queued">queued</option>
-                            <option value="retry">retry</option>
-                            <option value="processing">processing</option>
+                            <option value="queued">{statusLabel('queued')}</option>
+                            <option value="retry">{statusLabel('retry')}</option>
+                            <option value="processing">{statusLabel('processing')}</option>
                           </select>
                         </div>
                         <div>

@@ -26,6 +26,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           reply_to: d.reply_to || null,
           subject: String(d.subject || ''),
           html: String(d.html || ''),
+          text: d.text ? String(d.text) : null,
+          headers: d.headers && typeof d.headers === 'object' ? d.headers : {},
           meta: d.meta || {},
           attempt_count: 0,
           max_attempts: Number(d.max_attempts || 5),
@@ -44,4 +46,3 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ error: msg }, { status });
   }
 }
-

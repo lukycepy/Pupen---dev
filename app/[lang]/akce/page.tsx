@@ -623,7 +623,7 @@ export default function AkcePage() {
                           {lang === 'en' ? 'Status' : 'Stav'}
                         </div>
                         <div className="font-black text-stone-900">
-                          {rsvpResult.status}
+                          {String((dict?.rsvpStatus && (dict.rsvpStatus as any)[String(rsvpResult.status)]) || rsvpResult.status)}
                         </div>
                       </div>
                       {rsvpResult.expiresAt && (

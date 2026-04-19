@@ -521,7 +521,7 @@ export default function AdminDashboard() {
             )}
 
             {activeTab === 'lost_found' && permissions.can_manage_admins && (
-              <LostFoundTab />
+              <LostFoundTab dict={dict} />
             )}
 
             {activeTab === 'sos' && permissions.can_manage_admins && (
@@ -666,7 +666,7 @@ export default function AdminDashboard() {
             )}
 
             {activeTab === 'queue' && permissions.can_manage_admins && (
-              <QueueTab />
+              <QueueTab dict={dict} />
             )}
 
             {activeTab === 'email_settings' && canView('email_settings') && (

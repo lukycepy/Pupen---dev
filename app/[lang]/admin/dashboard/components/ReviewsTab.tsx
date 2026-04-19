@@ -7,10 +7,16 @@ import { Star, Check, X, Trash2, BookOpen, User, Clock, Search } from 'lucide-re
 import { useToast } from '../../../../context/ToastContext';
 import ConfirmModal from '@/app/components/ConfirmModal';
 import { SkeletonTabContent } from '../../../components/Skeleton';
+import { tEnum } from '@/lib/i18n-enum';
+import { useParams } from 'next/navigation';
 
 export default function ReviewsTab({ dict }: { dict: any }) {
+  const params = useParams();
+  const lang = (params?.lang as string) === 'en' ? 'en' : 'cs';
   const { showToast } = useToast();
   const queryClient = useQueryClient();
+  const statusLabel = (v: any) => tEnum(dict, 'admin.reviews.status', v);
+  const statusPrefix = lang === 'en' ? 'Status' : 'Stav';
   const [searchTerm, setSearchTerm] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState<{ title: string; message: string; onConfirm: () => void }>({
@@ -99,7 +105,7 @@ export default function ReviewsTab({ dict }: { dict: any }) {
                   <div className="flex items-center gap-3 mb-2">
                     {review.status !== 'published' && (
                       <span className="bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full">
-                        Stav: {review.status}
+                        {statusPrefix}: {statusLabel(review.status)}
                       </span>
                     )}
                     <span className="text-[10px] font-black uppercase tracking-widest text-stone-300 flex items-center gap-1">

@@ -60,28 +60,80 @@ export async function GET(req: Request) {
     } catch (e: any) {
       const info = normalizeError(e);
       const errMsg = info.message;
-      const nextAt = new Date(Date.now() + backoffSeconds(1) * 1000).toISOString();
-      await Promise.all(
-        jobs.map((j) => {
-          const id = String(j.id || '');
-          const meta = j?.meta && typeof j.meta === 'object' ? j.meta : {};
-          const meta2 = { ...meta, last_error: info };
-          return supabase
-            .from('email_send_queue')
-            .update({
-              status: 'retry',
-              attempt_count: Number(j.attempt_count || 0) + 1,
-              last_error: errMsg,
-              meta: meta2,
-              next_attempt_at: nextAt,
-              locked_at: null,
-              locked_by: null,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', id);
-        }),
-      );
-      return NextResponse.json({ ok: false, processed: jobs.length, okCount: 0, retried: jobs.length, dead: 0, error: errMsg });
+      let retried = 0;
+      let dead = 0;
+
+      for (const j of jobs) {
+        const id = String(j.id || '');
+        const to = String(j.to_email || '');
+        const from = String(j.from_email || '');
+        const replyTo = j.reply_to ? String(j.reply_to) : '';
+        const subject = String(j.subject || '');
+        const html = String(j.html || '');
+        const text = j.text ? String(j.text) : '';
+        const headers = j?.headers && typeof j.headers === 'object' ? j.headers : undefined;
+        const attemptCount = Number(j.attempt_count || 0);
+        const maxAttempts = Number(j.max_attempts || 5);
+        const nextAttempt = attemptCount + 1;
+        const meta = j?.meta && typeof j.meta === 'object' ? j.meta : {};
+        const meta2 = { ...meta, last_error: info };
+
+        if (isPermanentSmtpError(info) || nextAttempt >= maxAttempts) {
+          try {
+            await supabase.from('email_send_dead_letters').insert([
+              {
+                queue_id: id,
+                to_email: to,
+                from_email: from,
+                reply_to: replyTo || null,
+                subject,
+                html,
+                text: text || null,
+                headers: headers || {},
+                meta: meta2,
+                attempt_count: nextAttempt,
+                max_attempts: maxAttempts,
+                final_error: errMsg,
+                failed_at: new Date().toISOString(),
+              },
+            ]);
+          } catch {}
+          try {
+            await supabase.from('email_audit_logs').insert([
+              {
+                queue_id: id,
+                to_email: to,
+                from_email: from,
+                subject,
+                status: 'failed',
+                meta: meta2,
+                error: info,
+              },
+            ]);
+          } catch {}
+          await supabase.from('email_send_queue').delete().eq('id', id);
+          dead += 1;
+          continue;
+        }
+
+        const nextAt = new Date(Date.now() + backoffSeconds(nextAttempt) * 1000).toISOString();
+        await supabase
+          .from('email_send_queue')
+          .update({
+            status: 'retry',
+            attempt_count: nextAttempt,
+            last_error: errMsg,
+            meta: meta2,
+            next_attempt_at: nextAt,
+            locked_at: null,
+            locked_by: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', id);
+        retried += 1;
+      }
+
+      return NextResponse.json({ ok: false, processed: jobs.length, okCount: 0, retried, dead, error: errMsg });
     }
 
     let ok = 0;

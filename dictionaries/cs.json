@@ -352,6 +352,14 @@
     "share": "Sdílet akci",
     "noEvents": "Zatím tu nejsou žádné akce.",
     "rsvpSuccess": "Díky! Těšíme se."
+    ,
+    "rsvpStatus": {
+      "confirmed": "Potvrzeno",
+      "reserved": "Rezervováno",
+      "waitlist": "Čekací listina",
+      "cancelled": "Zrušeno",
+      "pending": "Čeká"
+    }
   },
   "adminLogin": {
     "title": "Admin Pupen",
@@ -792,6 +800,67 @@
     }
   },
   "admin": {
+    "queue": {
+      "titleQueue": "E-mail fronta",
+      "titleDead": "Dead letters",
+      "descQueue": "Neodeslané e‑maily ve frontě (čeká, opakování, zpracování) a ruční správa.",
+      "descDead": "E‑maily, které selhaly po maximálním počtu pokusů.",
+      "tabQueue": "Fronta",
+      "tabDead": "Dead letters",
+      "status": {
+        "queued": "Čeká",
+        "retry": "Opakování",
+        "processing": "Zpracování",
+        "dead": "Dead letters"
+      }
+    },
+    "trustbox": {
+      "status": {
+        "new": "Nové",
+        "in_review": "V řešení",
+        "waiting_for_info": "Čeká na doplnění",
+        "resolved": "Vyřešeno",
+        "archived": "Archivováno"
+      },
+      "priority": {
+        "normal": "Normální",
+        "urgent": "Urgentní"
+      },
+      "category": {
+        "other": "Jiné"
+      }
+    },
+    "governance": {
+      "decisionStatus": {
+        "draft": "Návrh",
+        "approved": "Schváleno",
+        "rejected": "Zamítnuto",
+        "archived": "Archivováno"
+      }
+    },
+    "lostFound": {
+      "status": {
+        "open": "Nalezeno",
+        "returned": "Vráceno",
+        "archived": "Archivováno"
+      }
+    },
+    "blog": {
+      "status": {
+        "draft": "Koncept",
+        "pending": "Čeká na schválení",
+        "published": "Publikováno",
+        "archived": "Archivováno"
+      }
+    },
+    "reviews": {
+      "status": {
+        "pending": "Čeká na schválení",
+        "approved": "Schváleno",
+        "published": "Publikováno",
+        "rejected": "Zamítnuto"
+      }
+    },
     "budget": {
       "subtitle": "Finanční přehled spolku",
       "totalBalance": "Celkový zůstatek",

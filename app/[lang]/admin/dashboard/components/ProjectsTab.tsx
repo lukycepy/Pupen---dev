@@ -8,6 +8,7 @@ import InlinePulse from '@/app/components/InlinePulse';
 import { useToast } from '@/app/context/ToastContext';
 import { logAdminAction } from '@/lib/admin-logger';
 import Dialog from '@/app/components/ui/Dialog';
+import { useParams } from 'next/navigation';
 
 export default function ProjectsTab({
   currentUser,
@@ -16,8 +17,17 @@ export default function ProjectsTab({
   currentUser: any;
   userProfile: any;
 }) {
+  const params = useParams();
+  const lang = (params?.lang as string) === 'en' ? 'en' : 'cs';
   const qc = useQueryClient();
   const { showToast } = useToast();
+  const statusLabel = (v: any) => {
+    const s = String(v || '').trim();
+    if (s === 'open') return lang === 'en' ? 'Open' : 'Otevřené';
+    if (s === 'closed') return lang === 'en' ? 'Closed' : 'Uzavřené';
+    if (s === 'paused') return lang === 'en' ? 'Paused' : 'Pozastavené';
+    return s || '—';
+  };
   const [q, setQ] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [form, setForm] = useState({ title: '', description: '', tags: '' });
@@ -206,7 +216,7 @@ export default function ProjectsTab({
                       <div className="mt-2 text-stone-600 font-medium leading-relaxed whitespace-pre-line">{d.description || ''}</div>
                       <div className="mt-4 flex flex-wrap items-center gap-2">
                         <span className="px-3 py-1 bg-white border border-stone-200 rounded-full text-[9px] font-black uppercase tracking-widest text-stone-500">
-                          {(d.status || 'open').toUpperCase()}
+                          {statusLabel(d.status || 'open')}
                         </span>
                         <span className="px-3 py-1 bg-white border border-stone-200 rounded-full text-[9px] font-black uppercase tracking-widest text-stone-500">
                           join: {joinCount}

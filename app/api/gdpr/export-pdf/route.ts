@@ -13,7 +13,15 @@ async function loadLogoPngBytes(): Promise<Uint8Array | null> {
     const buf = await fs.readFile(p);
     return new Uint8Array(buf);
   } catch {
-    return null;
+    try {
+      const { getPublicBaseUrl } = await import('@/lib/public-base-url');
+      const res = await fetch(`${getPublicBaseUrl()}/logo.png`);
+      if (!res.ok) return null;
+      const buf = await res.arrayBuffer();
+      return new Uint8Array(buf);
+    } catch {
+      return null;
+    }
   }
 }
 
@@ -75,6 +83,12 @@ export async function GET(req: Request) {
     const profile = profileRes.data || {};
 
     const pdfDoc = await PDFDocument.create();
+    try {
+      (pdfDoc as any).setTitle?.('GDPR výpis dat');
+      (pdfDoc as any).setAuthor?.('Systém Pupen');
+      (pdfDoc as any).setCreator?.('Systém Pupen');
+      (pdfDoc as any).setProducer?.('Systém Pupen');
+    } catch {}
     const { font, fontBold } = await getPdfFonts(pdfDoc);
     let page = pdfDoc.addPage([595.28, 841.89]);
 
@@ -109,22 +123,23 @@ export async function GET(req: Request) {
     };
 
     const drawHeader = () => {
+      y = 800;
       page.drawRectangle({ x: 0, y: 835, width, height: 6, color: green });
       page.drawRectangle({ x: margin, y: 748, width: width - margin * 2, height: 78, color: paper, borderColor: light, borderWidth: 1 });
       if (logo) {
-        const targetW = 54;
-        const s = targetW / logo.width;
-        const targetH = logo.height * s;
-        page.drawImage(logo, { x: margin, y: y - 10, width: targetW, height: targetH });
-        drawSafe('GDPR VÝPIS DAT', { x: margin + 70, y, size: 20, font: fontBold, color: black });
-        y -= 24;
-        drawSafe('Studentský spolek Pupen, z.s.', { x: margin + 70, y, size: 10, font: fontBold, color: gray });
+        const targetH = 44;
+        const maxW = 54;
+        const w = Math.min(maxW, (logo.width / logo.height) * targetH);
+        const headerTop = 748 + 78;
+        const logoY = headerTop - targetH - 12;
+        page.drawImage(logo, { x: margin + 12, y: logoY, width: w, height: targetH });
+        drawSafe('GDPR VÝPIS DAT', { x: margin + 78, y: 792, size: 20, font: fontBold, color: black });
+        drawSafe('Studentský spolek Pupen, z.s.', { x: margin + 78, y: 774, size: 10, font: fontBold, color: gray });
       } else {
-        drawSafe('GDPR VÝPIS DAT', { x: margin, y, size: 20, font: fontBold, color: black });
-        y -= 24;
-        drawSafe('Studentský spolek Pupen, z.s.', { x: margin, y, size: 10, font: fontBold, color: gray });
+        drawSafe('GDPR VÝPIS DAT', { x: margin, y: 792, size: 20, font: fontBold, color: black });
+        drawSafe('Studentský spolek Pupen, z.s.', { x: margin, y: 774, size: 10, font: fontBold, color: gray });
       }
-      y -= 14;
+      y = 748 + 12;
       page.drawLine({ start: { x: margin, y }, end: { x: width - margin, y }, thickness: 1, color: light });
       y -= 18;
     };

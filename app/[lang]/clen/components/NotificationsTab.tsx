@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Bell, Calendar, Clock, FileCheck, Settings } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
@@ -60,6 +60,13 @@ export default function NotificationsTab({
   lang: string;
   userEmail: string;
 }) {
+  const applicationStatusLabel = useCallback((v: any) => {
+    const s = String(v || '').trim();
+    if (s === 'pending') return lang === 'en' ? 'Pending' : 'Čeká na vyřízení';
+    if (s === 'approved') return lang === 'en' ? 'Approved' : 'Schváleno';
+    if (s === 'rejected') return lang === 'en' ? 'Rejected' : 'Zamítnuto';
+    return s || '—';
+  }, [lang]);
   const [prefs, setPrefs] = useState<Prefs>({
     categories: { events: true, payments: true, admin: true, community: true },
     quietHours: { enabled: false, from: '22:00', to: '08:00' },
@@ -172,13 +179,13 @@ export default function NotificationsTab({
         createdAt: app.created_at || new Date().toISOString(),
         category: 'admin',
         title: lang === 'en' ? 'Application status' : 'Stav přihlášky',
-        body: `${app.status}`,
+        body: `${applicationStatusLabel(app.status)}`,
         icon: FileCheck,
       });
     }
 
     return items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [data?.application, data?.rsvps, lang]);
+  }, [data?.application, data?.rsvps, lang, applicationStatusLabel]);
 
   const filtered = useMemo(() => notifications.filter((n) => prefs.categories[n.category] !== false), [notifications, prefs]);
 

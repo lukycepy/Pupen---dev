@@ -21,6 +21,13 @@ type Item = {
 export default function LostFoundPage() {
   const params = useParams();
   const lang = (params?.lang as string) || 'cs';
+  const statusLabel = (v: any) => {
+    const s = String(v || '').trim();
+    if (s === 'open') return lang === 'en' ? 'Open' : 'Aktivní';
+    if (s === 'returned') return lang === 'en' ? 'Returned' : 'Vráceno';
+    if (s === 'archived') return lang === 'en' ? 'Archived' : 'Archivováno';
+    return s || '—';
+  };
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState('');
@@ -156,7 +163,7 @@ export default function LostFoundPage() {
                     <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mt-1">
                       {new Date(i.created_at).toLocaleDateString(lang === 'en' ? 'en-US' : 'cs-CZ')}
                       {i.category ? ` • ${i.category}` : ''}
-                      {i.status ? ` • ${i.status}` : ''}
+                      {i.status ? ` • ${statusLabel(i.status)}` : ''}
                     </div>
                   </div>
                 </div>
