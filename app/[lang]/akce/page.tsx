@@ -145,9 +145,12 @@ export default function AkcePage() {
             return next;
           });
         }
-        const { data: prof } = await supabase.from('profiles').select('first_name, last_name').eq('id', session.user.id).maybeSingle();
-        const name = [prof?.first_name, prof?.last_name].filter(Boolean).join(' ').trim();
-        if (name) {
+        const meta: any = session.user.user_metadata || {};
+        const metaName = String(meta.full_name || meta.name || '').trim();
+        const metaFirst = String(meta.first_name || meta.given_name || '').trim();
+        const metaLast = String(meta.last_name || meta.family_name || '').trim();
+        const name = metaName || [metaFirst, metaLast].filter(Boolean).join(' ').trim();
+        if (name && name.length <= 120) {
           setRsvpForm((prev) => {
             if (prev.name) return prev;
             const next = { ...prev, name };
