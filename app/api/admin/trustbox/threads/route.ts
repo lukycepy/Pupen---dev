@@ -30,7 +30,7 @@ export async function GET(req: Request) {
 
     const threadsRes = await supabase
       .from('trust_box_threads')
-      .select('id,status,priority,category,subject,created_at,last_activity_at,anonymized_at')
+      .select('id,status,priority,category,subject,created_at,last_activity_at,anonymized_at,owner_user_id')
       .order('last_activity_at', { ascending: false })
       .limit(200);
     if (threadsRes.error) throw threadsRes.error;
@@ -55,7 +55,27 @@ export async function GET(req: Request) {
       return { ...t, reporter };
     });
 
-    return NextResponse.json({ ok: true, items: out, canViewPii, isSuperadmin });
+    const ownerIds = Array.from(new Set(out.map((t) => String((t as any).owner_user_id || '').trim()).filter(Boolean)));
+    const ownersById = new Map<string, any>();
+    if (ownerIds.length) {
+      const oRes = await supabase.from('profiles').select('id,email,first_name,last_name').in('id', ownerIds);
+      if (!oRes.error) {
+        for (const p of oRes.data || []) {
+          ownersById.set(String((p as any).id), {
+            id: (p as any).id,
+            email: (p as any).email || null,
+            name: `${(p as any).first_name || ''} ${(p as any).last_name || ''}`.trim() || (p as any).email || null,
+          });
+        }
+      }
+    }
+
+    return NextResponse.json({
+      ok: true,
+      items: out.map((t: any) => ({ ...t, owner: t.owner_user_id ? ownersById.get(String(t.owner_user_id)) || null : null })),
+      canViewPii,
+      isSuperadmin,
+    });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
   }

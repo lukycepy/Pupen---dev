@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { KeyRound, MapPin, Phone, ShieldCheck, Search, HandHeart, Map as MapIcon } from 'lucide-react';
 import InlinePulse from '@/app/components/InlinePulse';
 import Dialog from '@/app/components/ui/Dialog';
+import { getDictionary } from '@/lib/get-dictionary';
 
 type Item = {
   id: string;
@@ -23,15 +24,13 @@ type Item = {
 export default function LostFoundPage() {
   const params = useParams();
   const lang = (params?.lang as string) || 'cs';
-  const statusLabel = (v: any) => {
-    const s = String(v || '').trim();
-    if (s === 'open') return lang === 'en' ? 'Open' : 'Aktivní';
-    if (s === 'claimed') return lang === 'en' ? 'Claimed' : 'Nárokováno';
-    if (s === 'in_progress') return lang === 'en' ? 'In progress' : 'V řešení';
-    if (s === 'returned') return lang === 'en' ? 'Returned' : 'Vráceno';
-    if (s === 'archived') return lang === 'en' ? 'Archived' : 'Archivováno';
-    return s || '—';
-  };
+  const [dict, setDict] = useState<any>(null);
+  useEffect(() => {
+    getDictionary(lang).then(setDict);
+  }, [lang]);
+  const t = dict?.lostFoundPage || {};
+  const statusDict = dict?.lostFound?.status || {};
+  const statusLabel = (v: any) => statusDict?.[String(v || '').trim()] || String(v || '').trim() || '—';
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState('');
@@ -61,7 +60,7 @@ export default function LostFoundPage() {
           isAnonymous: claimAnonymous,
         })
       });
-      if (!res.ok) throw new Error('Chyba odeslání');
+      if (!res.ok) throw new Error(t.sendError || 'Chyba při odesílání žádosti');
       setClaimSent(true);
       setTimeout(() => {
         setClaimingItem(null);
@@ -72,7 +71,7 @@ export default function LostFoundPage() {
         setClaimAnonymous(false);
       }, 3000);
     } catch {
-      alert(lang === 'en' ? 'Error sending request' : 'Chyba při odesílání žádosti');
+      alert(t.sendError || (lang === 'en' ? 'Error sending request' : 'Chyba při odesílání žádosti'));
     } finally {
       setClaimSending(false);
     }
@@ -114,12 +113,10 @@ export default function LostFoundPage() {
           <div>
             <h1 className="text-3xl sm:text-4xl font-black text-stone-900 tracking-tight flex items-center gap-3">
               <KeyRound className="text-green-600" />
-              {lang === 'en' ? 'Lost & Found' : 'Ztráty a nálezy'}
+              {t.title || (lang === 'en' ? 'Lost & Found' : 'Ztráty a nálezy')}
             </h1>
             <p className="text-stone-500 font-medium mt-2">
-              {lang === 'en'
-                ? 'A quick feed for lost ISIC, keys, and other items.'
-                : 'Rychlý feed pro ztracený ISIC, klíče a další věci.'}
+              {t.subtitle || (lang === 'en' ? 'A quick feed for lost ISIC, keys, and other items.' : 'Rychlý feed pro ztracený ISIC, klíče a další věci.')}
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
@@ -128,7 +125,7 @@ export default function LostFoundPage() {
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder={lang === 'en' ? 'Search...' : 'Hledat...'}
+                placeholder={t.search || (lang === 'en' ? 'Search...' : 'Hledat...')}
                 className="w-full bg-stone-50 border-none rounded-2xl pl-12 pr-4 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
               />
             </div>
@@ -137,11 +134,11 @@ export default function LostFoundPage() {
               onChange={(e) => setStatus(e.target.value as any)}
               className="bg-stone-50 border-none rounded-2xl px-4 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
             >
-              <option value="open">{lang === 'en' ? 'Open' : 'Aktivní'}</option>
-              <option value="claimed">{lang === 'en' ? 'Claimed' : 'Nárokováno'}</option>
-              <option value="in_progress">{lang === 'en' ? 'In progress' : 'V řešení'}</option>
-              <option value="returned">{lang === 'en' ? 'Returned' : 'Vráceno'}</option>
-              <option value="all">{lang === 'en' ? 'All' : 'Vše'}</option>
+              <option value="open">{t.filterOpen || statusLabel('open')}</option>
+              <option value="claimed">{t.filterClaimed || statusLabel('claimed')}</option>
+              <option value="in_progress">{t.filterInProgress || statusLabel('in_progress')}</option>
+              <option value="returned">{t.filterReturned || statusLabel('returned')}</option>
+              <option value="all">{t.filterAll || (lang === 'en' ? 'All' : 'Vše')}</option>
             </select>
           </div>
         </div>
@@ -156,11 +153,9 @@ export default function LostFoundPage() {
           <div className="mx-auto w-14 h-14 rounded-2xl bg-stone-50 border border-stone-100 flex items-center justify-center mb-4">
             <ShieldCheck className="text-stone-400" size={26} />
           </div>
-          <div className="font-black text-stone-900">{lang === 'en' ? 'No items yet' : 'Zatím nic'}</div>
+          <div className="font-black text-stone-900">{t.emptyTitle || (lang === 'en' ? 'No items yet' : 'Zatím nic')}</div>
           <div className="text-stone-400 font-medium mt-2">
-            {lang === 'en'
-              ? 'Admins can add items in Pupen Control.'
-              : 'Admini mohou přidávat položky v Pupen Control.'}
+            {t.emptySubtitle || (lang === 'en' ? 'Admins can add items in Pupen Control.' : 'Admini mohou přidávat položky v Pupen Control.')}
           </div>
         </div>
       ) : (
@@ -199,7 +194,7 @@ export default function LostFoundPage() {
                         rel="noreferrer"
                         className="underline decoration-dotted"
                       >
-                        {lang === 'en' ? 'Map pin' : 'Pin na mapě'}
+                        {dict?.lostFound?.mapPin || (lang === 'en' ? 'Map pin' : 'Pin na mapě')}
                       </a>
                     </div>
                   ) : null}
@@ -212,7 +207,7 @@ export default function LostFoundPage() {
                     className="w-full flex items-center justify-center gap-2 bg-stone-900 text-white px-6 py-3 rounded-xl font-bold hover:bg-stone-800 transition"
                   >
                     <HandHeart size={18} />
-                    {lang === 'en' ? 'This is mine!' : 'To je moje!'}
+                    {t.ctaClaim || (lang === 'en' ? 'This is mine!' : 'To je moje!')}
                   </button>
                 </div>
               )}
@@ -230,38 +225,38 @@ export default function LostFoundPage() {
           panelClassName="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl relative"
         >
               <button onClick={() => setClaimingItem(null)} className="absolute top-6 right-6 text-stone-400 hover:text-stone-900">✕</button>
-              <h3 className="text-2xl font-black text-stone-900 mb-2">{lang === 'en' ? 'Claim item' : 'Žádost o navrácení'}</h3>
+              <h3 className="text-2xl font-black text-stone-900 mb-2">{t.claimTitle || (lang === 'en' ? 'Claim item' : 'Žádost o navrácení')}</h3>
               <p className="text-stone-500 mb-6 font-medium">
-                {lang === 'en' ? `You are claiming: ` : `Žádáte o navrácení věci: `} 
+                {(t.claimSubtitlePrefix || (lang === 'en' ? 'You are claiming:' : 'Žádáte o navrácení věci:'))}{' '}
                 <strong className="text-stone-900">{claimingItem.title}</strong>
               </p>
 
             {claimSent ? (
               <div className="bg-green-50 text-green-700 p-6 rounded-2xl text-center font-bold">
-                {lang === 'en' ? 'Request sent! We will contact you soon.' : 'Žádost odeslána! Brzy se vám ozveme.'}
+                {t.sent || (lang === 'en' ? 'Request sent! We will contact you soon.' : 'Žádost odeslána! Brzy se vám ozveme.')}
               </div>
             ) : (
               <form onSubmit={handleClaimSubmit} className="space-y-4">
                 <div>
                   <label className="block text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">
-                    {lang === 'en' ? 'Name (optional)' : 'Jméno (volitelné)'}
+                    {t.nameOptional || (lang === 'en' ? 'Name (optional)' : 'Jméno (volitelné)')}
                   </label>
                   <input
                     value={claimName}
                     onChange={(e) => setClaimName(e.target.value)}
                     className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
-                    placeholder={lang === 'en' ? 'Your name' : 'Vaše jméno'}
+                    placeholder={t.namePlaceholder || (lang === 'en' ? 'Your name' : 'Vaše jméno')}
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">E-mail</label>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">{t.email || 'E-mail'}</label>
                   <input
                     type="email"
                     required={!claimAnonymous}
                     value={claimEmail}
                     onChange={(e) => setClaimEmail(e.target.value)}
                     className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
-                    placeholder="vas@email.cz"
+                    placeholder={dict?.lostFoundDetailPage?.emailPlaceholder || 'vas@email.cz'}
                     disabled={claimAnonymous}
                   />
                 </div>
@@ -272,17 +267,17 @@ export default function LostFoundPage() {
                     onChange={(e) => setClaimAnonymous(e.target.checked)}
                     className="w-4 h-4"
                   />
-                  {lang === 'en' ? 'Submit anonymously' : 'Odeslat anonymně'}
+                  {t.anonymous || (lang === 'en' ? 'Submit anonymously' : 'Odeslat anonymně')}
                 </label>
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">{lang === 'en' ? 'Message (how do you prove it is yours?)' : 'Zpráva (jak prokážete, že je věc vaše?)'}</label>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">{t.messageLabel || (lang === 'en' ? 'Message (how do you prove it is yours?)' : 'Zpráva (jak prokážete, že je věc vaše?)')}</label>
                   <textarea
                     required
                     value={claimMessage}
                     onChange={(e) => setClaimMessage(e.target.value)}
                     rows={4}
                     className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-medium text-stone-700 focus:ring-2 focus:ring-green-500 transition resize-none"
-                    placeholder={lang === 'en' ? 'Describe specific details...' : 'Popište specifické detaily věci...'}
+                    placeholder={t.messagePlaceholder || (lang === 'en' ? 'Describe specific details...' : 'Popište specifické detaily věci...')}
                   />
                 </div>
                 <button 
@@ -291,7 +286,7 @@ export default function LostFoundPage() {
                   className="w-full bg-green-600 text-white font-bold py-4 rounded-xl hover:bg-green-700 transition flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {claimSending ? <InlinePulse className="bg-white" size={16} /> : <HandHeart size={18} />}
-                  {lang === 'en' ? 'Send request' : 'Odeslat žádost'}
+                  {t.send || (lang === 'en' ? 'Send request' : 'Odeslat žádost')}
                 </button>
               </form>
             )}

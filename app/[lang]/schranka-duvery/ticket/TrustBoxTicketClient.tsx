@@ -31,6 +31,54 @@ export default function TrustBoxTicketClient() {
       : { title: 'Vlákno schránky důvěry', send: 'Odeslat', placeholder: 'Napište zprávu…', code: 'Přístupový kód', open: 'Otevřít vlákno' };
   }, [lang]);
 
+  const triageLabels = useMemo(() => {
+    const status = (v: any) => {
+      const s = String(v || '').trim();
+      if (lang === 'en') {
+        if (s === 'new') return 'New';
+        if (s === 'in_review') return 'In review';
+        if (s === 'waiting_for_info') return 'Waiting for info';
+        if (s === 'resolved') return 'Resolved';
+        if (s === 'archived') return 'Archived';
+        return s || '—';
+      }
+      if (s === 'new') return 'Nové';
+      if (s === 'in_review') return 'V řešení';
+      if (s === 'waiting_for_info') return 'Čeká na doplnění';
+      if (s === 'resolved') return 'Vyřešeno';
+      if (s === 'archived') return 'Archivováno';
+      return s || '—';
+    };
+    const priority = (v: any) => {
+      const s = String(v || '').trim();
+      if (lang === 'en') {
+        if (s === 'normal') return 'Normal';
+        if (s === 'urgent') return 'Urgent';
+        return s || '—';
+      }
+      if (s === 'normal') return 'Normální';
+      if (s === 'urgent') return 'Urgentní';
+      return s || '—';
+    };
+    const category = (v: any) => {
+      const s = String(v || '').trim();
+      if (!s) return '—';
+      if (lang === 'en') {
+        if (s === 'safety') return 'Safety';
+        if (s === 'harassment') return 'Harassment';
+        if (s === 'ethics') return 'Ethics';
+        if (s === 'other') return 'Other';
+        return s;
+      }
+      if (s === 'safety') return 'Bezpečnost';
+      if (s === 'harassment') return 'Obtěžování';
+      if (s === 'ethics') return 'Etika';
+      if (s === 'other') return 'Jiné';
+      return s;
+    };
+    return { status, priority, category };
+  }, [lang]);
+
   useEffect(() => {
     setToken(tokenFromQuery);
   }, [tokenFromQuery]);
@@ -151,6 +199,25 @@ export default function TrustBoxTicketClient() {
           </div>
           <h1 className="text-3xl md:text-5xl font-black text-stone-900 tracking-tighter mb-2">{labels.title}</h1>
           {thread?.subject ? <div className="text-stone-500 font-bold">{thread.subject}</div> : null}
+          {thread?.status || thread?.category || thread?.priority ? (
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              {thread?.status ? (
+                <span className="px-3 py-1.5 rounded-full bg-stone-100 text-stone-800 text-[10px] font-black uppercase tracking-widest border border-stone-200">
+                  {lang === 'en' ? 'Status' : 'Stav'}: {triageLabels.status(thread.status)}
+                </span>
+              ) : null}
+              {thread?.category ? (
+                <span className="px-3 py-1.5 rounded-full bg-stone-100 text-stone-800 text-[10px] font-black uppercase tracking-widest border border-stone-200">
+                  {lang === 'en' ? 'Category' : 'Kategorie'}: {triageLabels.category(thread.category)}
+                </span>
+              ) : null}
+              {thread?.priority ? (
+                <span className="px-3 py-1.5 rounded-full bg-stone-100 text-stone-800 text-[10px] font-black uppercase tracking-widest border border-stone-200">
+                  {lang === 'en' ? 'Priority' : 'Priorita'}: {triageLabels.priority(thread.priority)}
+                </span>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         <div className="bg-white p-8 md:p-12 rounded-[3rem] shadow-2xl border border-stone-100">

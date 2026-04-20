@@ -234,6 +234,40 @@
     "mapTitle": "Lokace členů (po městech)",
     "membersLabel": "členů"
   },
+  "lostFound": {
+    "status": {
+      "open": "Aktivní",
+      "claimed": "Nárokováno",
+      "in_progress": "V řešení",
+      "returned": "Vráceno",
+      "archived": "Archivováno"
+    },
+    "mapPin": "Pin na mapě"
+  },
+  "lostFoundPage": {
+    "title": "Ztráty a nálezy",
+    "subtitle": "Rychlý feed pro ztracený ISIC, klíče a další věci.",
+    "search": "Hledat...",
+    "filterOpen": "Aktivní",
+    "filterClaimed": "Nárokováno",
+    "filterInProgress": "V řešení",
+    "filterReturned": "Vráceno",
+    "filterAll": "Vše",
+    "emptyTitle": "Zatím nic",
+    "emptySubtitle": "Admini mohou přidávat položky v Pupen Control.",
+    "ctaClaim": "To je moje!",
+    "claimTitle": "Žádost o navrácení",
+    "claimSubtitlePrefix": "Žádáte o navrácení věci:",
+    "nameOptional": "Jméno (volitelné)",
+    "namePlaceholder": "Vaše jméno",
+    "email": "E-mail",
+    "anonymous": "Odeslat anonymně",
+    "messageLabel": "Zpráva (jak prokážete, že je věc vaše?)",
+    "messagePlaceholder": "Popište specifické detaily věci...",
+    "send": "Odeslat žádost",
+    "sent": "Žádost odeslána! Brzy se vám ozveme.",
+    "sendError": "Chyba při odesílání žádosti"
+  },
   "lostFoundDetailPage": {
     "notFound": "Položka nenalezena",
     "returned": "Tato věc je označena jako vrácená.",
@@ -247,6 +281,10 @@
     "emailBodyTemplate": "Dobrý den,\n\ntímto žádám o navrácení položky nalezené na webu:\n- ID: {id}\n- Název: {title}\n\nMůj vzkaz:\n{message}\n\nS pozdravem,\n{email}",
     "messageLabel": "Zpráva (jak prokážete, že je věc vaše?)",
     "messagePlaceholder": "Popište specifické detaily věci...",
+    "nameOptional": "Jméno (volitelné)",
+    "namePlaceholder": "Vaše jméno",
+    "anonymous": "Odeslat anonymně",
+    "mapPin": "Pin na mapě",
     "sendRequest": "Odeslat žádost",
     "sent": "Žádost odeslána! Brzy se vám ozveme.",
     "sendError": "Chyba při odesílání žádosti"
@@ -1022,6 +1060,8 @@
       "reload": "Obnovit",
       "save": "Uložit",
       "advanceNow": "Posunout čekací listinu",
+      "promoted": "Posunuto z čekací listiny: {count}",
+      "noChange": "Čekací listina je bez změn",
       "enabled": "Zapnuto",
       "enabledHint": "Pokud je vypnuto, systém waitlist neposouvá automaticky.",
       "reservationExpiresHours": "Platnost rezervace (hodiny)",

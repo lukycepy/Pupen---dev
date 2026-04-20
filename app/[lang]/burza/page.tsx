@@ -20,6 +20,7 @@ export default function BurzaPage() {
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState({ title: '', author: '', price: '', contact: '', hp: '' });
   const { showToast } = useToast();
+  const isDisabled = true;
 
   useEffect(() => {
     let isMounted = true;
@@ -45,6 +46,10 @@ export default function BurzaPage() {
   });
 
   const saveMutation = async () => {
+    if (isDisabled) {
+      showToast(lang === 'cs' ? 'Burza učebnic je ukončena.' : 'Book exchange is discontinued.', 'error');
+      return;
+    }
     // Basic validation
     if (!formData.title || !formData.author || !formData.contact || !formData.price) {
       showToast(lang === 'cs' ? 'Vyplňte všechna pole' : 'Please fill all fields', 'error');
@@ -90,17 +95,23 @@ export default function BurzaPage() {
               </div>
               <h1 className="text-4xl md:text-6xl font-black text-stone-900 tracking-tighter mb-4">{dict.title}</h1>
               <p className="text-stone-500 text-lg font-medium">{dict.subtitle}</p>
+              <div className="mt-4 inline-flex items-center gap-2 bg-stone-100 text-stone-700 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-stone-200">
+                <Star size={14} />
+                {lang === 'cs' ? 'Burza je ukončena (read-only)' : 'Discontinued (read-only)'}
+              </div>
             </div>
-            <button 
-              onClick={() => setIsAdding(!isAdding)}
-              className="bg-stone-900 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-600 transition shadow-xl shadow-stone-200 flex items-center gap-2"
-            >
-              <Plus size={16} /> {dict.sellBtn}
-            </button>
+            {!isDisabled ? (
+              <button 
+                onClick={() => setIsAdding(!isAdding)}
+                className="bg-stone-900 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-600 transition shadow-xl shadow-stone-200 flex items-center gap-2"
+              >
+                <Plus size={16} /> {dict.sellBtn}
+              </button>
+            ) : null}
           </div>
         </header>
 
-        {isAdding && (
+        {isAdding && !isDisabled && (
           <div className="bg-white p-8 md:p-12 rounded-[3rem] shadow-2xl mb-16 border border-green-100 animate-in fade-in slide-in-from-top-8 duration-500">
             <h2 className="text-2xl font-black mb-8 text-stone-900">{dict.newAd}</h2>
             {/* Honeypot field */}

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { logTrustBoxAudit } from '@/lib/trustbox/audit';
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ userId: string }> }) {
   try {
@@ -29,6 +30,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ userId
         },
       ])
       .throwOnError();
+
+    await logTrustBoxAudit({
+      req,
+      actorUserId: user.id,
+      actorEmail: user.email || null,
+      action: 'ADMIN_UPDATE_ADMIN_PERMS',
+      piiAccessed: false,
+      reason: `${targetId} can_view_pii=${canViewPii ? 'true' : 'false'}`,
+    }).catch(() => {});
 
     return NextResponse.json({ ok: true });
   } catch (e: any) {
@@ -62,10 +72,18 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ userI
       ])
       .throwOnError();
 
+    await logTrustBoxAudit({
+      req,
+      actorUserId: user.id,
+      actorEmail: user.email || null,
+      action: 'ADMIN_REMOVE_ADMIN',
+      piiAccessed: false,
+      reason: targetId,
+    }).catch(() => {});
+
     return NextResponse.json({ ok: true });
   } catch (e: any) {
     const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
     return NextResponse.json({ error: e?.message || 'Error' }, { status });
   }
 }
-

@@ -3,6 +3,7 @@ import { getServerSupabase } from '@/lib/supabase-server';
 import { guardPublicJsonPost } from '@/lib/public-post-guard';
 
 export async function POST(req: Request) {
+  return NextResponse.json({ error: 'Burza učebnic je ukončena.' }, { status: 410 });
   try {
     const g = await guardPublicJsonPost(req, {
       keyPrefix: 'book_exchange',

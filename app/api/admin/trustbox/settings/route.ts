@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { logTrustBoxAudit } from '@/lib/trustbox/audit';
 
 function normalizeSubdomains(input: any): string[] {
   const arr = Array.isArray(input) ? input : String(input || '').split(/[,;\s]+/g);
@@ -63,10 +64,18 @@ export async function PATCH(req: Request) {
       ])
       .throwOnError();
 
+    await logTrustBoxAudit({
+      req,
+      actorUserId: user.id,
+      actorEmail: user.email || null,
+      action: 'ADMIN_UPDATE_SETTINGS',
+      piiAccessed: false,
+      reason: `keys=${Object.keys(patch).filter((k) => k !== 'updated_at').join(',')}`,
+    }).catch(() => {});
+
     return NextResponse.json({ ok: true });
   } catch (e: any) {
     const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
     return NextResponse.json({ error: e?.message || 'Error' }, { status });
   }
 }
-

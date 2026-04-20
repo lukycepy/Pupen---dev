@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { requireAdmin } from '@/lib/server-auth';
+import { requireAdmin, requireTrustBoxAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { logTrustBoxAudit } from '@/lib/trustbox/audit';
 
 export async function GET(req: Request) {
   try {
-    const { profile } = await requireAdmin(req);
-    if (!profile?.can_manage_admins) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    const auth = await requireTrustBoxAdmin(req);
     const supabase = getServerSupabase();
     const res = await supabase
       .from('trust_box_admins')
@@ -13,7 +13,7 @@ export async function GET(req: Request) {
       .order('created_at', { ascending: false })
       .limit(200);
     if (res.error) throw res.error;
-    return NextResponse.json({ ok: true, items: res.data || [] });
+    return NextResponse.json({ ok: true, items: res.data || [], isSuperadmin: auth.isSuperadmin });
   } catch (e: any) {
     const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
     return NextResponse.json({ error: e?.message || 'Error' }, { status });
@@ -48,10 +48,18 @@ export async function POST(req: Request) {
       ])
       .throwOnError();
 
+    await logTrustBoxAudit({
+      req,
+      actorUserId: user.id,
+      actorEmail: user.email || null,
+      action: 'ADMIN_ADD_ADMIN',
+      piiAccessed: false,
+      reason: `${userId} can_view_pii=${canViewPii ? 'true' : 'false'}`,
+    }).catch(() => {});
+
     return NextResponse.json({ ok: true });
   } catch (e: any) {
     const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
     return NextResponse.json({ error: e?.message || 'Error' }, { status });
   }
 }
-

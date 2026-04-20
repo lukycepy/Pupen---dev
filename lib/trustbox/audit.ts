@@ -5,7 +5,13 @@ export type TrustBoxAuditAction =
   | 'ADMIN_VIEW_PII'
   | 'ADMIN_EXPORT_PDF'
   | 'ADMIN_DOWNLOAD_ATTACHMENT'
-  | 'ADMIN_MESSAGE_SENT';
+  | 'ADMIN_MESSAGE_SENT'
+  | 'ADMIN_THREAD_UPDATE'
+  | 'ADMIN_ASSIGN_OWNER'
+  | 'ADMIN_UPDATE_SETTINGS'
+  | 'ADMIN_ADD_ADMIN'
+  | 'ADMIN_REMOVE_ADMIN'
+  | 'ADMIN_UPDATE_ADMIN_PERMS';
 
 export async function logTrustBoxAudit(input: {
   req: Request;
@@ -35,4 +41,3 @@ export async function logTrustBoxAudit(input: {
     },
   ]);
 }
-

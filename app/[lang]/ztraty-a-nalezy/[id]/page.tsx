@@ -177,7 +177,7 @@ export default function LostFoundDetailPage() {
                     className="inline-flex items-center gap-2 underline decoration-dotted"
                   >
                     <MapIcon size={16} className="text-green-600" />
-                    {lang === 'en' ? 'Map pin' : 'Pin na mapě'}
+                    {t.mapPin || (lang === 'en' ? 'Map pin' : 'Pin na mapě')}
                   </a>
                 ) : null}
               </div>
@@ -218,13 +218,13 @@ export default function LostFoundDetailPage() {
               <form onSubmit={submitClaim} className="space-y-4">
                 <div>
                   <label className="block text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">
-                    {lang === 'en' ? 'Name (optional)' : 'Jméno (volitelné)'}
+                    {t.nameOptional || (lang === 'en' ? 'Name (optional)' : 'Jméno (volitelné)')}
                   </label>
                   <input
                     value={claimName}
                     onChange={(e) => setClaimName(e.target.value)}
                     className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
-                    placeholder={lang === 'en' ? 'Your name' : 'Vaše jméno'}
+                    placeholder={t.namePlaceholder || (lang === 'en' ? 'Your name' : 'Vaše jméno')}
                   />
                 </div>
                 <div>
@@ -246,7 +246,7 @@ export default function LostFoundDetailPage() {
                     onChange={(e) => setClaimAnonymous(e.target.checked)}
                     className="w-4 h-4"
                   />
-                  {lang === 'en' ? 'Submit anonymously' : 'Odeslat anonymně'}
+                  {t.anonymous || (lang === 'en' ? 'Submit anonymously' : 'Odeslat anonymně')}
                 </label>
                 <div>
                   <label className="block text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">

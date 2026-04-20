@@ -156,6 +156,40 @@
     "mapTitle": "Member locations (by city)",
     "membersLabel": "members"
   },
+  "lostFound": {
+    "status": {
+      "open": "Open",
+      "claimed": "Claimed",
+      "in_progress": "In progress",
+      "returned": "Returned",
+      "archived": "Archived"
+    },
+    "mapPin": "Map pin"
+  },
+  "lostFoundPage": {
+    "title": "Lost & Found",
+    "subtitle": "A quick feed for lost ISIC, keys, and other items.",
+    "search": "Search...",
+    "filterOpen": "Open",
+    "filterClaimed": "Claimed",
+    "filterInProgress": "In progress",
+    "filterReturned": "Returned",
+    "filterAll": "All",
+    "emptyTitle": "No items yet",
+    "emptySubtitle": "Admins can add items in Pupen Control.",
+    "ctaClaim": "This is mine!",
+    "claimTitle": "Claim item",
+    "claimSubtitlePrefix": "You are claiming:",
+    "nameOptional": "Name (optional)",
+    "namePlaceholder": "Your name",
+    "email": "E-mail",
+    "anonymous": "Submit anonymously",
+    "messageLabel": "Message (how do you prove it is yours?)",
+    "messagePlaceholder": "Describe specific details...",
+    "send": "Send request",
+    "sent": "Request sent! We will contact you soon.",
+    "sendError": "Error sending request"
+  },
   "lostFoundDetailPage": {
     "notFound": "Item not found",
     "returned": "This item is marked as returned.",
@@ -169,6 +203,10 @@
     "emailBodyTemplate": "Hello,\n\nI would like to claim an item listed on the website:\n- ID: {id}\n- Title: {title}\n\nMy message:\n{message}\n\nBest regards,\n{email}",
     "messageLabel": "Message (how do you prove it is yours?)",
     "messagePlaceholder": "Describe specific details...",
+    "nameOptional": "Name (optional)",
+    "namePlaceholder": "Your name",
+    "anonymous": "Submit anonymously",
+    "mapPin": "Map pin",
     "sendRequest": "Send request",
     "sent": "Request sent! We will contact you soon.",
     "sendError": "Error sending request"
@@ -862,6 +900,8 @@
       "reload": "Reload",
       "save": "Save",
       "advanceNow": "Advance waitlist",
+      "promoted": "Promoted from waitlist: {count}",
+      "noChange": "Waitlist has no changes",
       "enabled": "Enabled",
       "enabledHint": "If disabled, the system will not advance the waitlist automatically.",
       "reservationExpiresHours": "Reservation expiry (hours)",

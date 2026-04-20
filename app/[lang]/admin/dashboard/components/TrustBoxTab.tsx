@@ -57,6 +57,50 @@ export default function TrustBoxTab({ dict }: { dict: any }) {
   const [replyInternal, setReplyInternal] = React.useState(false);
   const [replyNotify, setReplyNotify] = React.useState(true);
   const [piiReason, setPiiReason] = React.useState('');
+  const [replyTemplateId, setReplyTemplateId] = React.useState('');
+
+  const replyTemplates = React.useMemo(() => {
+    if (lang === 'en') {
+      return [
+        { id: 'ack', label: 'Acknowledgement', body: 'Thank you for your message. We are reviewing it and will get back to you.' },
+        { id: 'need_info', label: 'Request for more info', body: 'To help us resolve this, please add more details (when/where, people involved, evidence if any).' },
+        { id: 'resolved', label: 'Resolution', body: 'We have addressed your report. If anything changes, feel free to reply to this thread.' },
+      ];
+    }
+    return [
+      { id: 'ack', label: 'Potvrzení přijetí', body: 'Děkujeme za zprávu. Podání prověřujeme a ozveme se vám.' },
+      { id: 'need_info', label: 'Žádost o doplnění', body: 'Abychom to mohli vyřešit, doplňte prosím více detailů (kdy/kde, kdo byl zapojen, případné důkazy).' },
+      { id: 'resolved', label: 'Vyřešení', body: 'Podání jsme vyřešili. Pokud se cokoliv změní, můžete na toto vlákno odpovědět.' },
+    ];
+  }, [lang]);
+
+  const auditLabel = React.useCallback((a: any) => {
+    const v = String(a || '').trim();
+    if (lang === 'en') {
+      if (v === 'ADMIN_VIEW_PII') return 'View PII';
+      if (v === 'ADMIN_EXPORT_PDF') return 'Export PDF';
+      if (v === 'ADMIN_DOWNLOAD_ATTACHMENT') return 'Download attachment';
+      if (v === 'ADMIN_MESSAGE_SENT') return 'Message sent';
+      if (v === 'ADMIN_THREAD_UPDATE') return 'Thread update';
+      if (v === 'ADMIN_ASSIGN_OWNER') return 'Assign owner';
+      if (v === 'ADMIN_UPDATE_SETTINGS') return 'Update settings';
+      if (v === 'ADMIN_ADD_ADMIN') return 'Add admin';
+      if (v === 'ADMIN_REMOVE_ADMIN') return 'Remove admin';
+      if (v === 'ADMIN_UPDATE_ADMIN_PERMS') return 'Update permissions';
+      return v || '—';
+    }
+    if (v === 'ADMIN_VIEW_PII') return 'Zobrazení PII';
+    if (v === 'ADMIN_EXPORT_PDF') return 'Export PDF';
+    if (v === 'ADMIN_DOWNLOAD_ATTACHMENT') return 'Stažení přílohy';
+    if (v === 'ADMIN_MESSAGE_SENT') return 'Odeslání zprávy';
+    if (v === 'ADMIN_THREAD_UPDATE') return 'Změna vlákna';
+    if (v === 'ADMIN_ASSIGN_OWNER') return 'Přiřazení ownera';
+    if (v === 'ADMIN_UPDATE_SETTINGS') return 'Změna nastavení';
+    if (v === 'ADMIN_ADD_ADMIN') return 'Přidání admina';
+    if (v === 'ADMIN_REMOVE_ADMIN') return 'Odebrání admina';
+    if (v === 'ADMIN_UPDATE_ADMIN_PERMS') return 'Úprava oprávnění';
+    return v || '—';
+  }, [lang]);
   const [pii, setPii] = React.useState<any>(null);
 
   const [globalAuditOpen, setGlobalAuditOpen] = React.useState(false);
@@ -82,7 +126,7 @@ export default function TrustBoxTab({ dict }: { dict: any }) {
 
   const adminsQuery = useQuery({
     queryKey: ['trustbox_admins'],
-    enabled: isSuperadmin,
+    enabled: true,
     queryFn: async () => authFetch('/api/admin/trustbox/admins'),
   });
 
@@ -490,6 +534,11 @@ export default function TrustBoxTab({ dict }: { dict: any }) {
                     <div className="mt-2 text-sm font-bold text-stone-600">
                       {t?.reporter?.name} · {t?.reporter?.email}
                     </div>
+                    {t?.owner ? (
+                      <div className="mt-1 text-[10px] font-black uppercase tracking-widest text-stone-400">
+                        {lang === 'en' ? 'Owner' : 'Owner'}: {String(t.owner?.name || t.owner?.email || '—')}
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </AdminPanel>
@@ -629,6 +678,21 @@ export default function TrustBoxTab({ dict }: { dict: any }) {
                       className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 outline-none"
                     />
                   </div>
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{lang === 'en' ? 'Owner' : 'Owner'}</label>
+                    <select
+                      value={String(threadDetail.data?.thread?.owner_user_id || '')}
+                      onChange={(e) => patchMutation.mutate({ owner_user_id: e.target.value || null })}
+                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 outline-none"
+                    >
+                      <option value="">{lang === 'en' ? 'Unassigned' : 'Nepřiřazeno'}</option>
+                      {(adminsQuery.data?.items || []).map((a: any) => (
+                        <option key={String(a.user_id)} value={String(a.user_id)}>
+                          {String(a?.profiles?.email || a?.profiles?.first_name || a.user_id)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </AdminPanel>
 
@@ -651,6 +715,32 @@ export default function TrustBoxTab({ dict }: { dict: any }) {
 
               <AdminPanel className="p-5">
                 <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 mb-3">Odpověď</div>
+                <div className="mb-3 flex flex-col md:flex-row md:items-center gap-3">
+                  <select
+                    value={replyTemplateId}
+                    onChange={(e) => setReplyTemplateId(e.target.value)}
+                    className="w-full md:w-auto bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 outline-none"
+                  >
+                    <option value="">{lang === 'en' ? 'Template…' : 'Šablona…'}</option>
+                    {replyTemplates.map((t: any) => (
+                      <option key={t.id} value={t.id}>
+                        {t.label}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const tpl = replyTemplates.find((t: any) => t.id === replyTemplateId);
+                      if (!tpl?.body) return;
+                      setReplyText((p) => (p && p.trim().length ? `${p}\n\n${tpl.body}` : tpl.body));
+                    }}
+                    disabled={!replyTemplateId}
+                    className="px-4 py-3 rounded-xl bg-stone-100 text-stone-800 text-[10px] font-black uppercase tracking-widest hover:bg-stone-200 transition disabled:opacity-50"
+                  >
+                    {lang === 'en' ? 'Insert' : 'Vložit'}
+                  </button>
+                </div>
                 <textarea
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
@@ -746,7 +836,7 @@ export default function TrustBoxTab({ dict }: { dict: any }) {
                         <AdminPanel key={l.id} className="p-4">
                           <div className="flex items-start justify-between gap-4">
                             <div className="min-w-0">
-                              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{String(l.action)}</div>
+                              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{auditLabel(l.action)}</div>
                               <div className="text-sm font-bold text-stone-700 truncate">{String(l.actor_email || l.actor_user_id || '—')}</div>
                               {l.reason ? <div className="text-sm font-bold text-stone-500 whitespace-pre-wrap">{String(l.reason)}</div> : null}
                             </div>

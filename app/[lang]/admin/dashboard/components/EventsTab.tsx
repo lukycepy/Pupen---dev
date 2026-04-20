@@ -89,6 +89,8 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
   const [waitlistConfigLoading, setWaitlistConfigLoading] = useState(false);
   const [waitlistConfigSaving, setWaitlistConfigSaving] = useState(false);
   const [advancingEventId, setAdvancingEventId] = useState<string | null>(null);
+  const waitlistPromotedTpl = String(dict.admin?.waitlist?.promoted || 'Posunuto z čekací listiny: {count}');
+  const waitlistNoChangeMsg = String(dict.admin?.waitlist?.noChange || 'Čekací listina je bez změn');
 
   const loadWaitlistConfig = useCallback(async () => {
     setWaitlistConfigLoading(true);
@@ -151,15 +153,19 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
       if (!res.ok) throw new Error(json?.error || 'Request failed');
       const promoted = Number(json?.result?.promoted || json?.result?.result?.promoted || 0);
       if (!silent) {
-        if (promoted > 0) showToast(`Posunuto z čekací listiny: ${promoted}`, 'success');
-        else showToast('Čekací listina je bez změn', 'info');
+        if (promoted > 0) {
+          const msg = waitlistPromotedTpl.replace('{count}', String(promoted));
+          showToast(msg, 'success');
+        } else {
+          showToast(waitlistNoChangeMsg, 'info');
+        }
       }
     } catch (e: any) {
       if (!silent) showToast(e?.message || 'Chyba', 'error');
     } finally {
       setAdvancingEventId(null);
     }
-  }, [showToast]);
+  }, [showToast, waitlistNoChangeMsg, waitlistPromotedTpl]);
 
   const { data: eventPhotos = [] } = useQuery({
     queryKey: ['event_photos', editingEvent?.id],
