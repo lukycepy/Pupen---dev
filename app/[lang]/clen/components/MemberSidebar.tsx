@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { 
   LayoutDashboard, FileText, Calendar, Users, BookOpen, 
-  Settings, LogOut, ShieldCheck, ChevronRight, Menu, X, 
+  Settings, LogOut, ShieldCheck, ChevronRight, X, 
   Mail, Bell, QrCode, Ticket, FolderKanban, BarChart3, ScrollText, ChevronDown, Award
 } from 'lucide-react';
 import Drawer from '@/app/components/ui/Drawer';
@@ -20,6 +20,9 @@ interface MemberSidebarProps {
   userProfile: any;
   onLogout: () => void;
   hiddenTabs?: string[];
+  pinnedTabs?: string[];
+  mobileOpen?: boolean;
+  onMobileOpenChange?: (val: boolean) => void;
 }
 
 interface SidebarContentProps {
@@ -31,12 +34,14 @@ interface SidebarContentProps {
   onLogout: () => void;
   setIsMobileOpen: (val: boolean) => void;
   hiddenTabs?: string[];
+  pinnedTabs?: string[];
 }
 
 const SidebarContent = ({ 
-  lang, dict, activeTab, onTabChange, userProfile, onLogout, setIsMobileOpen, hiddenTabs
+  lang, dict, activeTab, onTabChange, userProfile, onLogout, setIsMobileOpen, hiddenTabs, pinnedTabs
 }: SidebarContentProps) => {
   const hidden = new Set((hiddenTabs || []).map(String));
+  const pinned = new Set((pinnedTabs || []).map(String));
   const unreadDmQuery = useQuery({
     queryKey: ['dm_unread_count'],
     queryFn: async () => {
@@ -88,7 +93,17 @@ const SidebarContent = ({
     },
   ];
   const filteredGroups = menuGroups
-    .map((g) => ({ ...g, items: g.items.filter((it) => !hidden.has(it.id)) }))
+    .map((g) => ({
+      ...g,
+      items: g.items
+        .filter((it) => !hidden.has(it.id))
+        .slice()
+        .sort((a, b) => {
+          const ap = pinned.has(a.id) ? 1 : 0;
+          const bp = pinned.has(b.id) ? 1 : 0;
+          return bp - ap;
+        }),
+    }))
     .filter((g) => g.items.length > 0);
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
@@ -113,7 +128,7 @@ const SidebarContent = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-white border-r border-stone-200">
+    <div className="flex flex-col h-full bg-white/80 backdrop-blur border-r border-stone-200">
       {/* BRAND */}
       <div className="p-6 border-b border-stone-100 flex items-center justify-between">
         <Link href={`/${lang}`} className="flex items-center gap-3">
@@ -148,7 +163,47 @@ const SidebarContent = ({
       </div>
 
       {/* NAVIGATION */}
-      <nav className="flex-grow overflow-y-auto custom-scrollbar p-4 space-y-1">
+      <nav className="flex-grow overflow-y-auto custom-scrollbar p-4 space-y-4">
+        {pinned.size > 0 ? (
+          (() => {
+            const pinnedItems = filteredGroups
+              .flatMap((g) => g.items)
+              .filter((it) => pinned.has(it.id));
+            if (!pinnedItems.length) return null;
+            return (
+              <div className="space-y-1">
+                <div className="px-4 py-2">
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-stone-400">
+                    {dict?.common?.pinned || (lang === 'en' ? 'Pinned' : 'Připnuté')}
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  {pinnedItems.map((item) => (
+                    <button
+                      key={`pinned-${item.id}`}
+                      onClick={() => {
+                        onTabChange(item.id);
+                        setIsMobileOpen(false);
+                      }}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 group ${
+                        activeTab === item.id
+                          ? 'bg-green-600 text-white shadow-lg shadow-green-600/20'
+                          : 'text-stone-500 hover:bg-stone-50 hover:text-stone-900'
+                      }`}
+                    >
+                      <item.icon
+                        size={18}
+                        className={activeTab === item.id ? 'text-white' : 'text-stone-400 group-hover:text-green-600'}
+                      />
+                      <span className="flex-grow text-left">{item.label}</span>
+                      {activeTab === item.id && <ChevronRight size={14} className="opacity-50" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })()
+        ) : null}
         {filteredGroups.map((group) => {
           const isOpen = openGroups[group.title] !== false;
           return (
@@ -224,26 +279,27 @@ const SidebarContent = ({
 };
 
 export default function MemberSidebar({ 
-  lang, dict, activeTab, onTabChange, userProfile, onLogout, hiddenTabs
+  lang,
+  dict,
+  activeTab,
+  onTabChange,
+  userProfile,
+  onLogout,
+  hiddenTabs,
+  pinnedTabs,
+  mobileOpen,
+  onMobileOpenChange,
 }: MemberSidebarProps) {
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [internalMobileOpen, setInternalMobileOpen] = useState(false);
+  const isMobileOpen = typeof mobileOpen === 'boolean' ? mobileOpen : internalMobileOpen;
+  const setIsMobileOpen = onMobileOpenChange || setInternalMobileOpen;
 
   const commonProps = {
-    lang, dict, activeTab, onTabChange, userProfile, onLogout, setIsMobileOpen, hiddenTabs
+    lang, dict, activeTab, onTabChange, userProfile, onLogout, setIsMobileOpen, hiddenTabs, pinnedTabs
   };
 
   return (
     <>
-      {/* MOBILE HAMBURGER */}
-      <div className="lg:hidden fixed top-4 left-4 z-[60]">
-        <button 
-          onClick={() => setIsMobileOpen(true)}
-          className="p-3 bg-white text-stone-900 rounded-xl shadow-xl border border-stone-100"
-        >
-          <Menu size={24} />
-        </button>
-      </div>
-
       {/* SIDEBAR DESKTOP */}
       <aside className="hidden lg:block w-72 fixed left-0 top-0 bottom-0 shrink-0 shadow-sm z-[10000]">
         <SidebarContent {...commonProps} />

@@ -13,14 +13,17 @@ type Role = { id: string; name: string; permissions: any; color_hex?: string };
 type Assignment = { user_id: string; role_id: string; assigned_at: string; assigned_by_email?: string | null; profiles?: any };
 
 export default function RolesTab({ dict }: { dict: any }) {
-  const t = dict?.adminRoles || {};
-  const errorMsg = String(t?.error || 'Chyba');
+  const t = useMemo(() => (dict?.adminRoles && typeof dict.adminRoles === 'object' ? dict.adminRoles : {}), [dict]);
+  const errorMsg = useMemo(() => String((t as any)?.error || 'Chyba'), [t]);
   const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [roles, setRoles] = useState<Role[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [permissionKeys, setPermissionKeys] = useState<string[]>([]);
+  const [lastEffectiveByUser, setLastEffectiveByUser] = useState<Record<string, string[]>>({});
+  const [trustboxPiiByUser, setTrustboxPiiByUser] = useState<Record<string, boolean>>({});
+  const [trustboxSavingByUser, setTrustboxSavingByUser] = useState<Record<string, boolean>>({});
 
   const [editing, setEditing] = useState<Role | null>(null);
   const [roleName, setRoleName] = useState('');
@@ -70,6 +73,20 @@ export default function RolesTab({ dict }: { dict: any }) {
       setRoles(Array.isArray(json?.roles) ? json.roles : []);
       setAssignments(Array.isArray(json?.assignments) ? json.assignments : []);
       setPermissionKeys(Array.isArray(json?.permissionKeys) ? json.permissionKeys : []);
+
+      try {
+        const tbRes = await fetch('/api/admin/trustbox/admins', { headers: { Authorization: `Bearer ${token}` } });
+        const tbJson = await tbRes.json().catch(() => ({}));
+        if (tbRes.ok && Array.isArray(tbJson?.items)) {
+          const next: Record<string, boolean> = {};
+          for (const it of tbJson.items) {
+            const userId = String(it?.user_id || '').trim();
+            if (!userId) continue;
+            next[userId] = it?.can_view_pii === true;
+          }
+          setTrustboxPiiByUser(next);
+        }
+      } catch {}
     } catch (e: any) {
       showToast(e?.message || errorMsg, 'error');
     } finally {
@@ -86,11 +103,43 @@ export default function RolesTab({ dict }: { dict: any }) {
     for (const k of permissionKeys) {
       const baseKey = String(t.groupBase || 'Základ');
       const modulesKey = String(t.groupModules || 'Moduly');
-      if (k === 'is_admin' || k === 'is_member' || k === 'can_manage_admins') groups[baseKey].push(k);
+      if (k === 'is_admin' || k === 'is_member' || k === 'can_manage_admins' || k === 'trustbox_admin') groups[baseKey].push(k);
       else groups[modulesKey].push(k);
     }
     return groups;
   }, [permissionKeys, t.groupBase, t.groupModules]);
+
+  const rolesById = useMemo(() => new Map(roles.map((r) => [String(r.id), r])), [roles]);
+
+  const computeEffectiveKeys = useCallback(
+    (roleIds: string[]) => {
+      const enabled = new Set<string>();
+      for (const rid of roleIds) {
+        const r = rolesById.get(String(rid));
+        const perms = r?.permissions && typeof r.permissions === 'object' ? r.permissions : {};
+        for (const [k, v] of Object.entries(perms)) {
+          if (!permissionKeys.includes(k)) continue;
+          if (v) enabled.add(k);
+        }
+      }
+      return Array.from(enabled);
+    },
+    [permissionKeys, rolesById],
+  );
+
+  const prettyPerm = useCallback(
+    (k: string) => {
+      const s = String(k || '').trim();
+      if (s === 'can_manage_admins') return t?.permSuperadmin || 'SuperAdmin';
+      if (s === 'is_admin') return t?.permAdmin || 'Admin';
+      if (s === 'is_member') return t?.permMember || (dict?.member?.sidebarSubtitle || 'Člen');
+      if (s === 'trustbox_admin') return dict?.admin?.tabTrustbox || 'TrustBox';
+      if (s.startsWith('can_edit_')) return `${t?.permEdit || 'EDIT'} ${s.replace('can_edit_', '')}`;
+      if (s.startsWith('can_view_')) return `${t?.permView || 'VIEW'} ${s.replace('can_view_', '')}`;
+      return s.replaceAll('_', ' ');
+    },
+    [dict?.admin?.tabTrustbox, dict?.member?.sidebarSubtitle, t],
+  );
 
   const startCreate = () => {
     setEditing(null);
@@ -183,6 +232,10 @@ export default function RolesTab({ dict }: { dict: any }) {
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error || 'Error');
       showToast(String(t.saved || 'Uloženo'), 'success');
+
+      if (userId && Array.isArray(json?.enabledKeys)) {
+        setLastEffectiveByUser((prev) => ({ ...prev, [String(userId)]: json.enabledKeys.map((x: any) => String(x)) }));
+      }
       if ((action || '').toLowerCase() !== 'unassign') {
         setAssignQuery('');
         setAssignSelectedUser(null);
@@ -195,6 +248,30 @@ export default function RolesTab({ dict }: { dict: any }) {
       showToast(e?.message || (t?.error || 'Chyba'), 'error');
     } finally {
       setAssigning(false);
+    }
+  };
+
+  const setTrustboxPii = async (userId: string, canViewPii: boolean) => {
+    const uid = String(userId || '').trim();
+    if (!uid) return;
+    setTrustboxSavingByUser((prev) => ({ ...prev, [uid]: true }));
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
+      const res = await fetch('/api/admin/trustbox/admins', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ userId: uid, canViewPii }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Error');
+      setTrustboxPiiByUser((prev) => ({ ...prev, [uid]: canViewPii }));
+      showToast(String(t.saved || 'Uloženo'), 'success');
+    } catch (e: any) {
+      showToast(e?.message || (t?.error || 'Chyba'), 'error');
+    } finally {
+      setTrustboxSavingByUser((prev) => ({ ...prev, [uid]: false }));
     }
   };
 
@@ -499,7 +576,7 @@ export default function RolesTab({ dict }: { dict: any }) {
                     </div>
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       {g.items.map((a) => {
-                        const role = roles.find((r) => r.id === a.role_id);
+                        const role = rolesById.get(String(a.role_id));
                         const colorHex = String(role?.color_hex || '#64748b');
                         const label = String(role?.name || a.role_id || '').trim();
                         return (
@@ -531,6 +608,55 @@ export default function RolesTab({ dict }: { dict: any }) {
                         </span>
                       ) : null}
                     </div>
+
+                    {(() => {
+                      const roleIds = g.items.map((x) => String(x.role_id));
+                      const computedKeys = lastEffectiveByUser[String(g.userId)] || computeEffectiveKeys(roleIds);
+                      const isTrustbox = computedKeys.includes('trustbox_admin');
+                      const canViewPii = trustboxPiiByUser[String(g.userId)] === true;
+                      const busy = trustboxSavingByUser[String(g.userId)] === true;
+                      return (
+                        <div className="mt-4 flex flex-wrap items-center gap-2">
+                          {computedKeys.length ? (
+                            computedKeys
+                              .slice()
+                              .sort()
+                              .slice(0, 10)
+                              .map((k) => (
+                                <span
+                                  key={`${g.userId}-perm-${k}`}
+                                  className="px-2.5 py-1 rounded-full bg-white border border-stone-200 text-[9px] font-black uppercase tracking-widest text-stone-600"
+                                  title={String(k)}
+                                >
+                                  {prettyPerm(k)}
+                                </span>
+                              ))
+                          ) : (
+                            <span className="text-[11px] font-bold text-stone-400">{t.noEffective || (dict?.common?.none || '—')}</span>
+                          )}
+                          {computedKeys.length > 10 ? (
+                            <span className="text-[11px] font-bold text-stone-400">+{computedKeys.length - 10}</span>
+                          ) : null}
+                          {isTrustbox ? (
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => setTrustboxPii(String(g.userId), !canViewPii)}
+                              className={[
+                                'ml-auto shrink-0 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition disabled:opacity-50',
+                                canViewPii ? 'bg-stone-900 text-white border-stone-900 hover:bg-stone-800' : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-50',
+                              ].join(' ')}
+                            >
+                              {busy
+                                ? t.saving || 'Ukládám…'
+                                : canViewPii
+                                  ? t.trustboxPiiOn || 'PII: zapnuto'
+                                  : t.trustboxPiiOff || 'PII: vypnuto'}
+                            </button>
+                          ) : null}
+                        </div>
+                      );
+                    })()}
                   </div>
                   {g.profile?.email ? (
                     <button

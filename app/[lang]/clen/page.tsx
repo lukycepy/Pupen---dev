@@ -14,7 +14,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useToast } from '../../context/ToastContext';
 import { getDictionary } from '@/lib/get-dictionary';
 import dynamic from 'next/dynamic';
-import MemberSidebar from './components/MemberSidebar';
+import MemberShell from './components/MemberShell';
 import Skeleton, { SkeletonTabContent } from '../components/Skeleton';
 import InlinePulse from '@/app/components/InlinePulse';
 import OnboardingCard from './components/OnboardingCard';
@@ -25,6 +25,7 @@ import ConfirmModal from '@/app/components/ConfirmModal';
 import Dialog from '@/app/components/ui/Dialog';
 import { evaluatePassword, passwordScoreLabel } from '@/lib/auth/password-policy';
 import { useSitePageContent } from '@/app/[lang]/components/useSitePageContent';
+import TabPersonalizationDialog from '@/app/[lang]/components/appshell/TabPersonalizationDialog';
 
 const passthroughLoader = ({ src }: { src: string }) => src;
 
@@ -66,6 +67,7 @@ export default function ClenskaSekcePage() {
   });
   const [memberDefaultTab, setMemberDefaultTab] = useState('dashboard');
   const [uiPrefsSaving, setUiPrefsSaving] = useState(false);
+  const [tabsDialogOpen, setTabsDialogOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState<null | { type: 'user' | 'content'; id: string; label: string }>(null);
   const [blocked, setBlocked] = useState<Record<string, boolean>>({});
   const [showBlocked, setShowBlocked] = useState(false);
@@ -213,6 +215,14 @@ export default function ClenskaSekcePage() {
         setActiveTab(prefTab);
         didInitTabRef.current = true;
       }
+
+      try {
+        const hash = window.location.hash.replace('#', '').trim();
+        if (hash) {
+          setActiveTab(hash);
+          didInitTabRef.current = true;
+        }
+      } catch {}
       setEditProfile({ 
         first_name: userProf?.first_name || '', 
         last_name: userProf?.last_name || '',
@@ -223,6 +233,13 @@ export default function ClenskaSekcePage() {
     }
     init();
   }, [lang, router]);
+
+  useEffect(() => {
+    try {
+      if (!activeTab) return;
+      window.history.replaceState(null, '', `#${activeTab}`);
+    } catch {}
+  }, [activeTab]);
 
   useEffect(() => {
     if (activeTab !== 'settings' || !user) return;
@@ -824,6 +841,44 @@ export default function ClenskaSekcePage() {
   const hasAccessToMemberPortal =
     !!(profile?.is_member || profile?.is_admin || profile?.can_manage_admins || profile?.can_view_member_portal || profile?.can_edit_member_portal);
 
+  const memberUiPrefs = (profile?.ui_prefs && typeof profile.ui_prefs === 'object' ? (profile.ui_prefs as any).member : null) || {};
+  const userHiddenTabs = Array.isArray(memberUiPrefs.hiddenTabs) ? memberUiPrefs.hiddenTabs.map((x: any) => String(x)) : [];
+  const userPinnedTabs = Array.isArray(memberUiPrefs.pinnedTabs) ? memberUiPrefs.pinnedTabs.map((x: any) => String(x)) : [];
+  const effectiveHiddenTabs = Array.from(new Set([...(memberPortalCfg.hiddenTabs || []).map(String), ...userHiddenTabs]));
+  const effectivePinnedTabs = Array.from(new Set(userPinnedTabs.map(String)));
+
+  const memberTabs = (() => {
+    const t = dict?.member || {};
+    const navOverview = t?.navOverview || (lang === 'en' ? 'Overview' : 'Přehled');
+    const navContent = t?.navContentBenefits || (lang === 'en' ? 'Content & benefits' : 'Obsah a výhody');
+    const navCommunity = t?.navCommunity || (lang === 'en' ? 'Community' : 'Komunita');
+    const navProfile = t?.navProfile || (lang === 'en' ? 'Profile' : 'Profil');
+    return [
+      { id: 'dashboard', group: navOverview, label: t?.tabDashboard || (lang === 'en' ? 'Dashboard' : 'Nástěnka') },
+      { id: 'notifications', group: navOverview, label: t?.tabNotifications || (lang === 'en' ? 'Notifications' : 'Notifikace') },
+      { id: 'events', group: navContent, label: t?.tabEvents || (lang === 'en' ? 'Member events' : 'Akce pro členy') },
+      { id: 'my_events', group: navContent, label: t?.tabMyEvents || (lang === 'en' ? 'My events' : 'Moje akce') },
+      { id: 'documents', group: navContent, label: t?.tabDocuments || (lang === 'en' ? 'Documents' : 'Dokumenty') },
+      { id: 'card', group: navContent, label: t?.tabCard || (lang === 'en' ? 'Member card' : 'Členská karta') },
+      { id: 'guidelines', group: navContent, label: t?.tabGuidelines || (lang === 'en' ? 'Guidelines' : 'Pravidla') },
+      { id: 'articles', group: navContent, label: t?.tabArticles || (lang === 'en' ? 'My articles' : 'Moje články') },
+      { id: 'release_notes', group: navContent, label: (t as any)?.tabReleaseNotes || (lang === 'en' ? 'Release notes' : 'Release notes') },
+      { id: 'messages', group: navCommunity, label: t?.tabMessages || (lang === 'en' ? 'Messages' : 'Zprávy') },
+      { id: 'directory', group: navCommunity, label: t?.tabDirectory || (lang === 'en' ? 'Member directory' : 'Adresář členů') },
+      { id: 'projects', group: navCommunity, label: t?.tabProjects || (lang === 'en' ? 'Projects' : 'Projekty') },
+      { id: 'polls', group: navCommunity, label: t?.tabPolls || (lang === 'en' ? 'Polls' : 'Ankety') },
+      { id: 'badges', group: navCommunity, label: (t as any)?.tabBadges || (lang === 'en' ? 'Badges' : 'Odznaky') },
+      { id: 'governance', group: navCommunity, label: t?.tabGovernance || 'Governance' },
+      { id: 'board', group: navCommunity, label: t?.tabBoard || (lang === 'en' ? 'Board' : 'Vedení') },
+      { id: 'settings', group: navProfile, label: t?.tabSettings || (lang === 'en' ? 'Settings' : 'Můj profil') },
+    ].filter((x) => !effectiveHiddenTabs.includes(String(x.id)));
+  })();
+
+  const memberActiveTitle = (() => {
+    const m = new Map(memberTabs.map((t) => [t.id, t.label]));
+    return m.get(activeTab) || (lang === 'en' ? 'Member portal' : 'Členský portál');
+  })();
+
   if (!hasAccessToMemberPortal) {
     return (
       <div className="min-h-screen bg-stone-50 flex items-center justify-center p-6">
@@ -847,7 +902,7 @@ export default function ClenskaSekcePage() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 lg:pl-72">
+    <>
       <ConfirmModal
         isOpen={gdprDeleteOpen}
         onClose={() => setGdprDeleteOpen(false)}
@@ -871,20 +926,56 @@ export default function ClenskaSekcePage() {
         targetLabel={reportOpen?.label || ''}
         sourceUrl={typeof window !== 'undefined' ? window.location.href : null}
       />
-      <MemberSidebar 
-        lang={lang}
-        dict={dict}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        userProfile={profile}
-        onLogout={handleLogout}
-        hiddenTabs={memberPortalCfg.hiddenTabs}
+      <TabPersonalizationDialog
+        open={tabsDialogOpen}
+        onClose={() => setTabsDialogOpen(false)}
+        title={lang === 'en' ? 'Customize tabs' : 'Upravit záložky'}
+        tabs={memberTabs}
+        initial={{ defaultTab: memberUiPrefs?.defaultTab || memberDefaultTab, hiddenTabs: userHiddenTabs, pinnedTabs: userPinnedTabs }}
+        onSave={async (prefs) => {
+          setUiPrefsSaving(true);
+          try {
+            const id = String(profile?.id || '').trim();
+            if (!id) return;
+            const ui = profile?.ui_prefs && typeof profile.ui_prefs === 'object' ? profile.ui_prefs : {};
+            const nextUi = {
+              ...ui,
+              member: {
+                ...(ui as any)?.member,
+                defaultTab: prefs.defaultTab || undefined,
+                hiddenTabs: Array.isArray(prefs.hiddenTabs) ? prefs.hiddenTabs : [],
+                pinnedTabs: Array.isArray(prefs.pinnedTabs) ? prefs.pinnedTabs : [],
+              },
+            };
+            const { error } = await supabase.from('profiles').update({ ui_prefs: nextUi }).eq('id', id);
+            if (!error) {
+              setProfile((p: any) => (p ? { ...p, ui_prefs: nextUi } : p));
+              if (prefs.defaultTab) {
+                setMemberDefaultTab(String(prefs.defaultTab));
+                setActiveTab(String(prefs.defaultTab));
+              }
+            }
+          } finally {
+            setUiPrefsSaving(false);
+          }
+        }}
       />
 
-      <main className="p-4 lg:p-8 mt-16 lg:mt-0">
+      <MemberShell
+        lang={lang}
+        dict={dict}
+        title={memberActiveTitle}
+        subtitle={dict?.member?.sidebarSubtitle || (lang === 'en' ? 'Member area' : 'Členská sekce')}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        profile={profile}
+        onLogout={handleLogout}
+        sidebarHiddenTabs={effectiveHiddenTabs}
+        sidebarPinnedTabs={effectivePinnedTabs}
+        onOpenTabPersonalization={() => setTabsDialogOpen(true)}
+      >
         <div className="max-w-6xl mx-auto">
-          {/* HEADER */}
-          <header className="mb-12">
+          <header className="mb-10">
             <h1 className="text-3xl lg:text-5xl font-black text-stone-900 tracking-tight">
               {dict.member.welcome}, <span className="text-green-600">{profile?.first_name || user?.email?.split('@')[0]}</span>!
             </h1>
@@ -903,7 +994,7 @@ export default function ClenskaSekcePage() {
             <div className="grid lg:grid-cols-12 gap-8">
               <div className="lg:col-span-8 space-y-8">
                 {/* MOJE PŘIHLÁŠKA */}
-                <div className="bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-sm">
+                <MemberPanel className="p-8">
                   <h2 className="text-xl font-black mb-6 flex items-center gap-3"><FileText className="text-green-600" /> {dict.member.myApplication}</h2>
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 bg-stone-50 rounded-[2rem]">
                     <div className="flex items-center gap-4">
@@ -946,10 +1037,10 @@ export default function ClenskaSekcePage() {
                       </Link>
                     </div>
                   </div>
-                </div>
+                </MemberPanel>
 
                 {/* ČLENSKÉ AKCE PREVIEW */}
-                <div className="bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-sm">
+                <MemberPanel className="p-8">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xl font-black flex items-center gap-3"><Calendar className="text-amber-600" /> {dict.member.memberEvents}</h2>
                     <button onClick={() => setActiveTab('events')} className="text-xs font-bold text-stone-400 hover:text-amber-600 transition">{ms.showAll || (lang === 'en' ? 'Show all' : 'Zobrazit vše')}</button>
@@ -971,12 +1062,12 @@ export default function ClenskaSekcePage() {
                   ) : (
                     <p className="text-center py-8 text-stone-400 font-medium italic">{dict.member.noEvents || (lang === 'en' ? 'No events found.' : 'Žádné akce nenalezeny.')}</p>
                   )}
-                </div>
+                </MemberPanel>
               </div>
 
               <div className="lg:col-span-4 space-y-8">
                 {/* DOKUMENTY PREVIEW */}
-                <div className="bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-sm">
+                <MemberPanel className="p-8">
                   <h3 className="text-xl font-black mb-6 flex items-center gap-3"><FileText className="text-stone-900" /> {dict.member.internalDocs}</h3>
                   <div className="space-y-3">
                     {internalDocs.length > 0 ? internalDocs.slice(0, 5).map((doc: any) => (
@@ -996,12 +1087,12 @@ export default function ClenskaSekcePage() {
                   {internalDocs.length > 5 && (
                     <button onClick={() => setActiveTab('documents')} className="w-full mt-4 text-center text-xs font-bold text-stone-400 hover:text-green-600 transition">{ms.allDocuments || (lang === 'en' ? 'All documents' : 'Všechny dokumenty')}</button>
                   )}
-                </div>
+                </MemberPanel>
 
                 {memberPortalCfg.showOnboarding && <OnboardingCard lang={lang} userId={user.id} profile={profile} onNavigate={setActiveTab} />}
 
                 {Array.isArray(memberPortalCfg.quickLinks) && memberPortalCfg.quickLinks.length > 0 && (
-                  <div className="bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-sm">
+                  <MemberPanel className="p-8">
                     <h3 className="text-xl font-black mb-6">{dict.memberPortalConfig?.quickLinksTitle || (lang === 'en' ? 'Quick links' : 'Rychlé odkazy')}</h3>
                     <div className="space-y-3">
                       {memberPortalCfg.quickLinks
@@ -1023,7 +1114,7 @@ export default function ClenskaSekcePage() {
                           </a>
                         ))}
                     </div>
-                  </div>
+                  </MemberPanel>
                 )}
 
                 {/* HELP CARD */}
@@ -2059,7 +2150,7 @@ export default function ClenskaSekcePage() {
             </div>
           )}
         </div>
-      </main>
-    </div>
+      </MemberShell>
+    </>
   );
 }

@@ -74,7 +74,7 @@ export async function POST(req: Request) {
           },
         ])
         .throwOnError();
-      return NextResponse.json({ ok: true });
+      return NextResponse.json({ ok: true, computed, enabledKeys: Object.keys(computed).filter((k) => computed[k]) });
     }
 
     if (!roleId) {
@@ -92,7 +92,7 @@ export async function POST(req: Request) {
           },
         ])
         .throwOnError();
-      return NextResponse.json({ ok: true });
+      return NextResponse.json({ ok: true, computed, enabledKeys: Object.keys(computed).filter((k) => computed[k]) });
     }
 
     const roleRes = await supabase.from('app_roles').select('id,name,permissions').eq('id', roleId).single();
@@ -122,7 +122,7 @@ export async function POST(req: Request) {
       ])
       .throwOnError();
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, computed, enabledKeys: Object.keys(computed).filter((k) => computed[k]) });
   } catch (e: any) {
     if (isSchemaCacheMissingTable(e)) {
       return NextResponse.json(

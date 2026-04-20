@@ -76,6 +76,7 @@ import AdminCommandPalette from './components/AdminCommandPalette';
 import { buildAdminMenuGroups } from './components/adminMenu';
 import Dialog from '@/app/components/ui/Dialog';
 import AdminShell from './components/AdminShell';
+import TabPersonalizationDialog from '@/app/[lang]/components/appshell/TabPersonalizationDialog';
 
 export default function AdminDashboard() {
   const params = useParams();
@@ -86,6 +87,7 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<string>('');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
+  const [tabsDialogOpen, setTabsDialogOpen] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [editProfile, setEditProfile] = useState({ first_name: '', last_name: '' });
 
@@ -111,6 +113,28 @@ export default function AdminDashboard() {
     return map;
   }, [dict, permissions]);
 
+  const adminUiPrefs = useMemo(() => {
+    const ui = userProfile?.ui_prefs;
+    if (!ui || typeof ui !== 'object') return {};
+    const a = (ui as any).admin;
+    return a && typeof a === 'object' ? a : {};
+  }, [userProfile]);
+
+  const adminHiddenTabs = useMemo(() => {
+    const x = (adminUiPrefs as any).hiddenTabs;
+    return Array.isArray(x) ? x.map((v: any) => String(v)) : [];
+  }, [adminUiPrefs]);
+
+  const adminPinnedTabs = useMemo(() => {
+    const x = (adminUiPrefs as any).pinnedTabs;
+    return Array.isArray(x) ? x.map((v: any) => String(v)) : [];
+  }, [adminUiPrefs]);
+
+  const adminDefaultTabPref = useMemo(() => {
+    const x = (adminUiPrefs as any).defaultTab;
+    return typeof x === 'string' ? x : '';
+  }, [adminUiPrefs]);
+
   const activeTitle = tabLabels.get(String(activeTab)) || (activeTab ? String(activeTab).replaceAll('_', ' ') : 'Pupen Control');
 
   // Handle URL hash for tab persistence
@@ -127,9 +151,12 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (!dict) return;
     const groups = buildAdminMenuGroups(dict, permissions);
-    const visible = groups.flatMap((g) => g.items).filter((it) => it.visible);
+    const hidden = new Set(adminHiddenTabs.map(String));
+    const visible = groups.flatMap((g) => g.items).filter((it) => it.visible && !hidden.has(it.id));
     const visibleIds = new Set(visible.map((it) => it.id));
-    const preferred = visibleIds.has('content') ? 'content' : visible[0]?.id;
+    const preferred =
+      (adminDefaultTabPref && visibleIds.has(adminDefaultTabPref) ? adminDefaultTabPref : null) ||
+      (visibleIds.has('content') ? 'content' : visible[0]?.id);
 
     const hash = window.location.hash.replace('#', '');
     if (hash && visibleIds.has(hash)) {
@@ -145,7 +172,7 @@ export default function AdminDashboard() {
     if (!visibleIds.has(activeTab) && preferred) {
       setActiveTab(preferred);
     }
-  }, [activeTab, dict, permissions]);
+  }, [activeTab, adminDefaultTabPref, adminHiddenTabs, dict, permissions]);
 
   useEffect(() => {
     if (userProfile) {
@@ -396,17 +423,51 @@ export default function AdminDashboard() {
         permissions={permissions}
       />
 
+      <TabPersonalizationDialog
+        open={tabsDialogOpen}
+        onClose={() => setTabsDialogOpen(false)}
+        title={lang === 'en' ? 'Customize tabs' : 'Upravit záložky'}
+        tabs={
+          dict
+            ? buildAdminMenuGroups(dict, permissions)
+                .flatMap((g) => g.items.filter((it) => it.visible).map((it) => ({ id: it.id, label: it.label, group: g.title })))
+                .filter((x) => !!x.id)
+            : []
+        }
+        initial={{ defaultTab: adminDefaultTabPref || undefined, hiddenTabs: adminHiddenTabs, pinnedTabs: adminPinnedTabs }}
+        onSave={async (prefs) => {
+          const id = String(userProfile?.id || '').trim();
+          if (!id) return;
+          const ui = userProfile?.ui_prefs && typeof userProfile.ui_prefs === 'object' ? userProfile.ui_prefs : {};
+          const nextUi = {
+            ...ui,
+            admin: {
+              ...(ui as any)?.admin,
+              defaultTab: prefs.defaultTab || undefined,
+              hiddenTabs: Array.isArray(prefs.hiddenTabs) ? prefs.hiddenTabs : [],
+              pinnedTabs: Array.isArray(prefs.pinnedTabs) ? prefs.pinnedTabs : [],
+            },
+          };
+          await supabase.from('profiles').update({ ui_prefs: nextUi }).eq('id', id);
+          setUserProfile((p: any) => (p ? { ...p, ui_prefs: nextUi } : p));
+          if (prefs.defaultTab) handleTabChange(String(prefs.defaultTab));
+        }}
+      />
+
       <AdminShell
         lang={lang}
         title={activeTitle}
-        subtitle="Administrace"
+        subtitle={dict?.admin?.title || (lang === 'en' ? 'Admin' : 'Administrace')}
         userProfile={userProfile}
         dict={dict}
         permissions={permissions}
         activeTab={activeTab}
+        hiddenTabs={adminHiddenTabs}
+        pinnedTabs={adminPinnedTabs}
         onTabChange={handleTabChange}
         onOpenCommandPalette={() => setIsPaletteOpen(true)}
         onOpenProfile={() => setIsProfileOpen(true)}
+        onOpenTabPersonalization={() => setTabsDialogOpen(true)}
         onLogout={handleLogout}
       >
         {isProfileOpen && (

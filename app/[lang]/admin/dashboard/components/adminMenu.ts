@@ -56,7 +56,7 @@ export function buildAdminMenuGroups(dict: any, permissions: any): AdminMenuGrou
 
   return [
     {
-      title: 'Obsah',
+      title: dict.admin?.navContent || 'Content',
       items: [
         { id: 'events', label: dict.admin.tabEvents, icon: Calendar, visible: canView('events') },
         { id: 'blog', label: dict.admin.tabNews, icon: FileText, visible: canView('news') },
@@ -70,7 +70,7 @@ export function buildAdminMenuGroups(dict: any, permissions: any): AdminMenuGrou
       ],
     },
     {
-      title: 'Studenti',
+      title: dict.admin?.navStudents || 'Students',
       items: [
         { id: 'books', label: dict.admin.tabBooks || 'Burza', icon: BookOpen, visible: canView('books') },
         { id: 'map', label: dict.admin.tabMap || 'Mapa', icon: MapIcon, visible: canView('map') },
@@ -85,11 +85,11 @@ export function buildAdminMenuGroups(dict: any, permissions: any): AdminMenuGrou
       ],
     },
     {
-      title: 'Komunita',
+      title: dict.admin?.navCommunity || 'Community',
       items: [
-        { id: 'badges', label: 'Odznaky (Gamifikace)', icon: Award, visible: permissions.can_manage_admins },
+        { id: 'badges', label: dict.admin?.tabBadges || 'Badges', icon: Award, visible: permissions.can_manage_admins },
         { id: 'messages', label: dict.admin.tabMessages, icon: MessageSquare, visible: canView('messages') },
-        { id: 'trustbox', label: 'Schránka důvěry', icon: Inbox, visible: permissions.can_manage_admins || permissions.trustbox_admin },
+        { id: 'trustbox', label: dict.admin?.tabTrustbox || 'TrustBox', icon: Inbox, visible: permissions.can_manage_admins || permissions.trustbox_admin },
         { id: 'polls', label: dict.admin.tabPolls || 'Ankety', icon: BarChart3, visible: canView('polls') },
         { id: 'feedback', label: dict.admin.tabFeedback || 'Feedback', icon: MessageSquare, visible: canView('feedback') },
         { id: 'projects', label: dict.admin?.tabProjects || 'Projekty', icon: FolderKanban, visible: canView('projects') },
@@ -97,13 +97,13 @@ export function buildAdminMenuGroups(dict: any, permissions: any): AdminMenuGrou
       ],
     },
     {
-      title: 'Provoz',
+      title: dict.admin?.navOperations || 'Operations',
       items: [
         { id: 'content', label: dict.admin?.tabContent || 'Knihovna obsahu', icon: FileText, visible: canViewContent },
         { id: 'apps', label: dict.admin.tabApplications || 'Přihlášky', icon: UserPlus, visible: canView('apps') },
         { id: 'documents', label: dict.admin.tabDocuments || 'Dokumenty', icon: FileText, visible: canView('documents') },
-        { id: 'lost_found', label: 'Ztráty a nálezy', icon: KeyRound, visible: permissions.can_manage_admins },
-        { id: 'sos', label: 'SOS kontakty', icon: Siren, visible: permissions.can_manage_admins },
+        { id: 'lost_found', label: dict.admin?.tabLostFound || 'Lost & Found', icon: KeyRound, visible: permissions.can_manage_admins },
+        { id: 'sos', label: dict.admin?.tabSos || 'SOS', icon: Siren, visible: permissions.can_manage_admins },
         { id: 'meetings', label: dict.admin.tabMeetings || 'Schůze', icon: Users, visible: canView('meetings') },
         { id: 'governance', label: dict.admin?.tabGovernance || 'Governance', icon: ShieldCheck, visible: canView('governance') },
         { id: 'assets', label: dict.admin.tabAssets || 'Majetek', icon: ShieldCheck, visible: canView('assets') },
@@ -111,7 +111,7 @@ export function buildAdminMenuGroups(dict: any, permissions: any): AdminMenuGrou
       ],
     },
     {
-      title: 'Finance',
+      title: dict.admin?.navFinance || 'Finance',
       items: [
         { id: 'budget', label: dict.admin.tabBudget || 'Účetnictví', icon: Wallet, visible: canView('budget') },
         { id: 'invoices', label: dict.admin?.tabInvoices || 'Faktury', icon: FileText, visible: canViewFinance },
@@ -122,22 +122,22 @@ export function buildAdminMenuGroups(dict: any, permissions: any): AdminMenuGrou
       ],
     },
     {
-      title: 'Systém',
+      title: dict.admin?.navSystem || 'System',
       items: [
-        { id: 'db_health', label: 'DB Health', icon: Server, visible: permissions.can_manage_admins },
+        { id: 'db_health', label: dict.admin?.tabDbHealth || 'DB Health', icon: Server, visible: permissions.can_manage_admins },
         { id: 'site_pages', label: dict.admin?.tabSitePages || 'Stránky', icon: Globe, visible: permissions.can_manage_admins },
-        { id: 'broken_links', label: 'Broken links', icon: Link2, visible: permissions.can_manage_admins },
-        { id: 'webhooks', label: 'Webhooky', icon: Webhook, visible: permissions.can_manage_admins },
-        { id: 'error_logs', label: 'Chyby (Logs)', icon: AlertTriangle, visible: permissions.can_manage_admins },
-        { id: 'god_mode', label: 'Údržba', icon: Wrench, visible: permissions.can_manage_admins },
+        { id: 'broken_links', label: dict.admin?.tabBrokenLinks || 'Broken links', icon: Link2, visible: permissions.can_manage_admins },
+        { id: 'webhooks', label: dict.admin?.tabWebhooks || 'Webhooks', icon: Webhook, visible: permissions.can_manage_admins },
+        { id: 'error_logs', label: dict.admin?.tabErrorLogs || 'Errors', icon: AlertTriangle, visible: permissions.can_manage_admins },
+        { id: 'god_mode', label: dict.admin?.tabMaintenance || 'Maintenance', icon: Wrench, visible: permissions.can_manage_admins },
         { id: 'analytics', label: dict.admin.tabAnalytics || 'Analytika', icon: BarChart3, visible: canView('analytics') },
         { id: 'logs', label: dict.admin.tabLogs || 'Logy', icon: FileSearch, visible: canView('logs') },
-        { id: 'newsletter', label: 'Newsletter', icon: Mail, visible: canView('newsletter') },
-        { id: 'queue', label: 'E-mail fronta', icon: Inbox, visible: permissions.can_manage_admins },
-        { id: 'email_settings', label: 'E-mail Nastavení', icon: Server, visible: canView('email_settings') },
+        { id: 'newsletter', label: dict.admin?.tabNewsletter || 'Newsletter', icon: Mail, visible: canView('newsletter') },
+        { id: 'queue', label: dict.admin?.tabEmailQueue || 'E-mail queue', icon: Inbox, visible: permissions.can_manage_admins },
+        { id: 'email_settings', label: dict.admin?.tabEmailSettings || 'Email settings', icon: Server, visible: canView('email_settings') },
         { id: 'email_templates', label: dict.admin?.tabEmailTemplates || 'E-mail šablony', icon: Mail, visible: canView('email_settings') },
         { id: 'automation', label: dict.admin?.tabAutomation || 'Automatizace', icon: Bot, visible: canView('email_settings') },
-        { id: 'payment_settings', label: 'Platební nastavení', icon: Wallet, visible: permissions.can_manage_admins },
+        { id: 'payment_settings', label: dict.admin?.tabPaymentSettings || 'Payment settings', icon: Wallet, visible: permissions.can_manage_admins },
         { id: 'users', label: dict.admin.tabUsers || 'Uživatelé', icon: Users, visible: permissions.can_manage_admins },
         { id: 'roles', label: dict.admin?.tabRoles || 'Role', icon: ShieldCheck, visible: permissions.can_manage_admins },
       ],
