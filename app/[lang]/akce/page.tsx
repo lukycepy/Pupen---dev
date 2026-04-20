@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { getDictionary } from '@/lib/get-dictionary';
-import { Clock, ArrowRight, Calendar, CheckCircle, LayoutGrid, CalendarDays, Users, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Clock, ArrowRight, Calendar, CheckCircle, LayoutGrid, CalendarDays, Users, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import Dialog from '@/app/components/ui/Dialog';
 import MonthlyCalendar from '../components/MonthlyCalendar';
@@ -14,7 +14,6 @@ import InlinePulse from '@/app/components/InlinePulse';
 import SocialShareMenu from '@/app/components/SocialShareMenu';
 import CopyButton from '@/app/components/CopyButton';
 
-const DEFAULT_CATEGORY_KEYS = ['Vše', 'Párty', 'Vzdělávání', 'Výlet', 'Zábava'];
 const RSVP_DRAFT_KEY = 'pupen_rsvp_draft_v1';
 const passthroughLoader = ({ src }: { src: string }) => src;
 
@@ -49,11 +48,14 @@ export default function AkcePage() {
   const [dict, setDict] = useState<any>(null);
   const [globalDict, setGlobalDict] = useState<any>(null);
   const [activeCategory, setActiveCategory] = useState("Vše");
-  const [viewMode, setActiveViewMode] = useState<'list' | 'calendar'>('list');
+  const [viewMode, setActiveViewMode] = useState<'list' | 'calendar'>('calendar');
   const [calendarDate, setCalendarDate] = useState(() => new Date());
+  const [searchQuery, setSearchQuery] = useState('');
+  const [audienceFilter, setAudienceFilter] = useState<'all' | 'public' | 'members'>('all');
 
   // RSVP state
   const [rsvpLoading, setRsvpLoading] = useState<string | null>(null);
+  const [rsvpCancelLoading, setRsvpCancelLoading] = useState(false);
   const [rsvpOpen, setRsvpOpen] = useState<string | null>(null);
   const [rsvpView, setRsvpView] = useState<'form' | 'success'>('form');
   const [rsvpResult, setRsvpResult] = useState<null | {
@@ -61,13 +63,16 @@ export default function AkcePage() {
     status: string;
     qrToken: string;
     expiresAt: string | null;
+    attendeesCount: number;
   }>(null);
   const [rsvpForm, setRsvpForm] = useState({ 
     name: '', 
     email: '',
     promo_code: '',
+    subscribe_newsletter: false,
     payment_method: 'hotove',
-    attendees: [{ name: '' }] // Support for up to 3 people
+    attendeesCount: 1,
+    attendees: [{ name: '' }],
   });
 
   const readDrafts = useCallback(() => {
@@ -100,23 +105,16 @@ export default function AkcePage() {
     if (eventId) writeDraft(eventId, next);
   };
 
-  const addAttendee = () => {
-    if (rsvpForm.attendees.length < 3) {
-      const next = { ...rsvpForm, attendees: [...rsvpForm.attendees, { name: '' }] };
-      setRsvpFormWithDraft(next, rsvpOpen);
-    }
-  };
-
-  const removeAttendee = (index: number) => {
-    if (rsvpForm.attendees.length > 1) {
-      const newAttendees = rsvpForm.attendees.filter((_, i) => i !== index);
-      const next = { ...rsvpForm, attendees: newAttendees };
-      setRsvpFormWithDraft(next, rsvpOpen);
-    }
+  const setAttendeesCount = (count: number) => {
+    const c = Math.max(1, Math.min(3, Math.floor(Number(count) || 1)));
+    const nextAttendees = Array.from({ length: c }).map((_, i) => ({ name: rsvpForm.attendees?.[i]?.name || '' }));
+    const next = { ...rsvpForm, attendeesCount: c, attendees: nextAttendees };
+    setRsvpFormWithDraft(next, rsvpOpen);
   };
 
   const updateAttendee = (index: number, name: string) => {
-    const newAttendees = [...rsvpForm.attendees];
+    const newAttendees = [...(rsvpForm.attendees || [])];
+    if (!newAttendees[index]) newAttendees[index] = { name: '' };
     newAttendees[index].name = name;
     const next = { ...rsvpForm, attendees: newAttendees };
     setRsvpFormWithDraft(next, rsvpOpen);
@@ -241,10 +239,12 @@ export default function AkcePage() {
     const name = rsvpForm.name.trim();
     const email = rsvpForm.email.trim();
     const promoCode = (rsvpForm as any).promo_code ? String((rsvpForm as any).promo_code).trim() : '';
-    const attendeeNames = rsvpForm.attendees.map((a) => ({ name: (a.name || '').trim() }));
-    const requestedCount = attendeeNames.length;
+    const attendeeNames = (rsvpForm.attendees || []).slice(0, Math.max(1, Math.min(3, Number(rsvpForm.attendeesCount || 1)))).map((a) => ({
+      name: String((a as any)?.name || '').trim(),
+    }));
+    const requestedCount = Math.max(1, Math.min(3, Number(rsvpForm.attendeesCount || attendeeNames.length || 1)));
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    if (!name || !emailOk || attendeeNames.some((a) => !a.name)) {
+    if (!name || !emailOk) {
       showToast(lang === 'en' ? 'Please fill in all required fields.' : 'Vyplňte prosím všechna povinná pole.', 'error');
       return;
     }
@@ -264,8 +264,11 @@ export default function AkcePage() {
           name,
           email,
           attendees: attendeeNames,
+          attendeesCount: requestedCount,
           payment_method: rsvpForm.payment_method,
           promoCode,
+          subscribeNewsletter: !!(rsvpForm as any).subscribe_newsletter,
+          lang,
         }),
       });
       const json = await res.json().catch(() => ({}));
@@ -372,12 +375,45 @@ export default function AkcePage() {
       );
 
       clearDraft(eventId);
-      setRsvpResult({ eventId, status, qrToken: qr_token, expiresAt });
+      setRsvpResult({ eventId, status, qrToken: qr_token, expiresAt, attendeesCount: requestedCount });
       setRsvpView('success');
     } catch (err: any) {
       showToast(err.message, 'error');
     } finally {
       setRsvpLoading(null);
+    }
+  };
+
+  const cancelRsvp = async () => {
+    if (!rsvpResult?.eventId || !rsvpResult?.qrToken) return;
+    const email = String(rsvpForm.email || '').trim();
+    if (!email) {
+      showToast(lang === 'en' ? 'Missing email.' : 'Chybí e-mail.', 'error');
+      return;
+    }
+    setRsvpCancelLoading(true);
+    try {
+      const res = await fetch('/api/rsvp/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId: rsvpResult.eventId, email, token: rsvpResult.qrToken }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Error');
+      showToast(lang === 'en' ? 'Registration cancelled.' : 'Registrace zrušena.', 'success');
+      setEvents((prev) =>
+        prev.map((ev: any) => {
+          if (String(ev.id) !== String(rsvpResult.eventId)) return ev;
+          const sub = rsvpResult.status === 'confirmed' || rsvpResult.status === 'reserved' ? Number(rsvpResult.attendeesCount || 1) : 0;
+          const nextCount = Math.max(0, (ev.confirmed_count || 0) - sub);
+          return { ...ev, confirmed_count: nextCount, is_full: ev.capacity ? nextCount >= ev.capacity : false };
+        }),
+      );
+      setRsvpOpen(null);
+    } catch (e: any) {
+      showToast(e?.message || 'Error', 'error');
+    } finally {
+      setRsvpCancelLoading(false);
     }
   };
 
@@ -407,9 +443,20 @@ export default function AkcePage() {
     return `${y}-${m}-${day}`;
   };
 
-  const filteredEvents = activeCategory === "Vše" 
-    ? events 
-    : events.filter(e => e.category === activeCategory);
+  const filteredEvents = useMemo(() => {
+    const q = String(searchQuery || '').trim().toLowerCase();
+    return (events || []).filter((e: any) => {
+      const catOk = activeCategory === 'Vše' ? true : String(e.category || '') === String(activeCategory);
+      const audOk =
+        audienceFilter === 'all' ? true : audienceFilter === 'public' ? !e.is_member_only : !!e.is_member_only;
+      const qOk = !q
+        ? true
+        : `${String(e.title || '')} ${String(e.excerpt || '')} ${String(e.description || '')}`
+            .toLowerCase()
+            .includes(q);
+      return catOk && audOk && qOk;
+    });
+  }, [events, activeCategory, audienceFilter, searchQuery]);
 
   const calendarYear = calendarDate.getFullYear();
   const calendarMonth = calendarDate.getMonth();
@@ -419,8 +466,17 @@ export default function AkcePage() {
   const todayKey = toYmd(new Date());
   const futureEvents = filteredEvents.filter((e) => toYmd(e.date) >= todayKey);
 
+  const categoryKeys = useMemo(() => {
+    const set = new Set<string>();
+    for (const e of events || []) {
+      const c = String(e?.category || '').trim();
+      if (c) set.add(c);
+    }
+    const dynamic = Array.from(set).sort((a, b) => a.localeCompare(b, lang === 'en' ? 'en' : 'cs'));
+    return ['Vše', ...dynamic];
+  }, [events, lang]);
+
   if (!dict) return null;
-  const categoryKeys = Object.keys(dict.categories || {}).length > 0 ? Object.keys(dict.categories) : DEFAULT_CATEGORY_KEYS;
 
   return (    <div className="min-h-screen bg-stone-50 pt-24 pb-32">
       <div className="max-w-7xl mx-auto px-6">
@@ -478,6 +534,47 @@ export default function AkcePage() {
                   <Calendar size={20} />
                 </button>
               </div>
+            </div>
+          </div>
+
+          <div className="mt-10 flex flex-col md:flex-row gap-3">
+            <div className="flex items-center gap-2 bg-white border border-stone-200 rounded-2xl px-4 py-3 shadow-sm w-full md:w-[420px]">
+              <Search size={16} className="text-stone-400" />
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={lang === 'en' ? 'Search events…' : 'Hledat akce…'}
+                className="w-full bg-transparent outline-none text-sm font-bold text-stone-700 placeholder:text-stone-400"
+              />
+            </div>
+            <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-stone-100 w-full md:w-auto">
+              <button
+                type="button"
+                onClick={() => setAudienceFilter('all')}
+                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition ${
+                  audienceFilter === 'all' ? 'bg-green-600 text-white' : 'text-stone-500 hover:bg-stone-50'
+                }`}
+              >
+                {lang === 'en' ? 'All' : 'Vše'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setAudienceFilter('public')}
+                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition ${
+                  audienceFilter === 'public' ? 'bg-green-600 text-white' : 'text-stone-500 hover:bg-stone-50'
+                }`}
+              >
+                {lang === 'en' ? 'Public' : 'Veřejné'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setAudienceFilter('members')}
+                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition ${
+                  audienceFilter === 'members' ? 'bg-green-600 text-white' : 'text-stone-500 hover:bg-stone-50'
+                }`}
+              >
+                {lang === 'en' ? 'Members' : 'Členské'}
+              </button>
             </div>
           </div>
 
@@ -540,6 +637,11 @@ export default function AkcePage() {
                     <div className="absolute top-4 left-4 sm:top-6 sm:left-6 px-3 py-1.5 sm:px-4 sm:py-2 bg-white/90 backdrop-blur rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-green-600">
                       {dict.categories[event.category] || event.category}
                     </div>
+                    {event.is_member_only ? (
+                      <div className="absolute top-4 right-4 sm:top-6 sm:right-6 px-3 py-1.5 sm:px-4 sm:py-2 bg-stone-900/80 backdrop-blur rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-white">
+                        {lang === 'en' ? 'Members' : 'Členské'}
+                      </div>
+                    ) : null}
                     <Link href={`/${lang}/akce/${event.id}`} className="absolute inset-0" aria-label="Detail" />
                   </div>
                   <div className="p-6 sm:p-8 md:p-10 flex flex-col flex-grow">
@@ -652,14 +754,23 @@ export default function AkcePage() {
                     </div>
                   </div>
 
-                  <div className="flex gap-3 pt-6">
+                  <div className="flex flex-col sm:flex-row gap-3 pt-6">
+                    <button
+                      type="button"
+                      onClick={cancelRsvp}
+                      disabled={rsvpCancelLoading || rsvpLoading === rsvpOpen}
+                      className="w-full bg-white border border-stone-200 text-stone-700 py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-stone-50 transition disabled:opacity-50"
+                    >
+                      {rsvpCancelLoading ? <InlinePulse className="bg-stone-400/70" size={14} /> : null}
+                      {lang === 'en' ? 'Cancel registration' : 'Zrušit registraci'}
+                    </button>
                     <button
                       type="button"
                       onClick={() => {
                         setRsvpOpen(null);
                         setRsvpView('form');
                         setRsvpResult(null);
-                        setRsvpForm({ name: '', email: '', promo_code: '', payment_method: 'hotove', attendees: [{ name: '' }] });
+                        setRsvpForm({ name: '', email: '', promo_code: '', subscribe_newsletter: false, payment_method: 'hotove', attendeesCount: 1, attendees: [{ name: '' }] });
                       }}
                       className="w-full bg-green-600 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-green-100 outline-none focus:ring-2 focus:ring-green-500"
                     >
@@ -701,63 +812,62 @@ export default function AkcePage() {
                     </div>
 
                     <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Účastníci (max 3)</label>
-                        {rsvpForm.attendees.length < 3 && (
-                          <button
-                            type="button"
-                            onClick={addAttendee}
-                            className="text-xs font-bold text-green-600 hover:text-green-700 outline-none focus:ring-2 focus:ring-green-500 rounded-lg px-2 py-1 -mr-2"
+                      <div className="grid grid-cols-1 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">
+                            {lang === 'en' ? 'Tickets (max 3)' : 'Počet vstupenek (max 3)'}
+                          </label>
+                          <select
+                            value={Number(rsvpForm.attendeesCount || 1)}
+                            onChange={(e) => setAttendeesCount(Number(e.target.value))}
+                            className="w-full bg-stone-50 border-none rounded-xl px-6 py-4 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500"
                           >
-                            + Přidat osobu
-                          </button>
-                        )}
-                      </div>
-                      {rsvpForm.attendees.map((attendee, index) => (
-                        <div key={index} className="flex gap-2">
-                          <input 
-                            type="text"
-                            required
-                            aria-invalid={(attendee.name || '').trim() ? 'false' : 'true'}
-                            placeholder={`Jméno účastníka ${index + 1}`}
-                            value={attendee.name}
-                            onChange={e => updateAttendee(index, e.target.value)}
-                            className="flex-grow bg-stone-50 border-none rounded-xl px-6 py-3 font-bold text-sm text-stone-700 outline-none focus:ring-2 focus:ring-green-500"
-                          />
-                          {rsvpForm.attendees.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => removeAttendee(index)}
-                              className="p-3 text-red-400 hover:text-red-600 transition outline-none focus:ring-2 focus:ring-green-500 rounded-xl"
-                            >
-                              <Trash2 size={18} />
-                            </button>
-                          )}
+                            <option value={1}>1</option>
+                            <option value={2}>2</option>
+                            <option value={3}>3</option>
+                          </select>
                         </div>
-                      ))}
+                      </div>
+                      {Number(rsvpForm.attendeesCount || 1) > 1 ? (
+                        <div className="space-y-2">
+                          <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">
+                            {lang === 'en' ? 'Additional attendees (optional)' : 'Další účastníci (volitelné)'}
+                          </div>
+                          {Array.from({ length: Math.max(0, Number(rsvpForm.attendeesCount || 1) - 1) }).map((_, i) => (
+                            <input
+                              key={i}
+                              type="text"
+                              placeholder={lang === 'en' ? `Attendee ${i + 2}` : `Účastník ${i + 2}`}
+                              value={String((rsvpForm.attendees?.[i + 1] as any)?.name || '')}
+                              onChange={(e) => updateAttendee(i + 1, e.target.value)}
+                              className="w-full bg-stone-50 border-none rounded-xl px-6 py-3 font-bold text-sm text-stone-700 outline-none focus:ring-2 focus:ring-green-500"
+                            />
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Způsob platby</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{lang === 'en' ? 'Payment method' : 'Způsob platby'}</label>
                       <div className="grid grid-cols-2 gap-3">
                         <button 
                           type="button"
                           onClick={() => setRsvpFormWithDraft({ ...rsvpForm, payment_method: 'hotove' }, rsvpOpen)}
                           className={`py-3 px-4 rounded-xl font-bold text-sm border-2 transition outline-none focus:ring-2 focus:ring-green-500 ${rsvpForm.payment_method === 'hotove' ? 'bg-green-50 border-green-600 text-green-700' : 'bg-white border-stone-100 text-stone-400'}`}
                         >
-                          Hotově na místě
+                          {lang === 'en' ? 'Cash on site' : 'Hotově na místě'}
                         </button>
                         <button 
                           type="button"
                           onClick={() => setRsvpFormWithDraft({ ...rsvpForm, payment_method: 'prevod' }, rsvpOpen)}
                           className={`py-3 px-4 rounded-xl font-bold text-sm border-2 transition outline-none focus:ring-2 focus:ring-green-500 ${rsvpForm.payment_method === 'prevod' ? 'bg-green-50 border-green-600 text-green-700' : 'bg-white border-stone-100 text-stone-400'}`}
                         >
-                          Převodem (QR kód)
+                          {lang === 'en' ? 'Bank transfer (QR)' : 'Převodem (QR kód)'}
                         </button>
                       </div>
                       {rsvpForm.payment_method === 'prevod' && (
                         <p className="text-[10px] text-amber-600 font-bold italic px-1">
-                          * Rezervace při platbě převodem platí 24 hodin od vytvoření.
+                          * {lang === 'en' ? 'For bank transfer, the reservation is valid for 24 hours.' : 'Rezervace při platbě převodem platí 24 hodin od vytvoření.'}
                         </p>
                       )}
                     </div>
@@ -775,6 +885,19 @@ export default function AkcePage() {
                       />
                     </div>
 
+                    <label className="flex items-start gap-3 bg-stone-50 border border-stone-100 rounded-2xl px-5 py-4">
+                      <input
+                        type="checkbox"
+                        checked={!!(rsvpForm as any).subscribe_newsletter}
+                        onChange={(e) => setRsvpFormWithDraft({ ...(rsvpForm as any), subscribe_newsletter: e.target.checked }, rsvpOpen)}
+                        className="mt-1"
+                      />
+                      <div className="min-w-0">
+                        <div className="font-black text-stone-900 text-sm">{lang === 'en' ? 'Subscribe to newsletter' : 'Chci odebírat newsletter'}</div>
+                        <div className="text-xs font-bold text-stone-500">{lang === 'en' ? 'You can unsubscribe anytime.' : 'Z odběru se můžete kdykoliv odhlásit.'}</div>
+                      </div>
+                    </label>
+
                     <div className="flex gap-3 pt-4">
                       <button
                         type="button"
@@ -789,8 +912,7 @@ export default function AkcePage() {
                         disabled={
                           rsvpLoading === rsvpOpen ||
                           !rsvpForm.name.trim() ||
-                          !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rsvpForm.email.trim()) ||
-                          rsvpForm.attendees.some(a => !(a.name || '').trim())
+                          !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rsvpForm.email.trim())
                         }
                         className="flex-grow bg-green-600 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-green-100 disabled:opacity-50 outline-none focus:ring-2 focus:ring-green-500"
                       >

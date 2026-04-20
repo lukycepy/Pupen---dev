@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Mail, Users, Send, Trash2, Download, Search, FileText, Save, History, Plus, Edit2, Loader2, Copy, Paperclip, X } from 'lucide-react';
 import { useToast } from '@/app/context/ToastContext';
@@ -8,8 +8,9 @@ import ConfirmModal from '@/app/components/ConfirmModal';
 import { richTextToClientHtml } from '@/lib/richtext-client';
 import { SkeletonTabContent } from '@/app/[lang]/components/Skeleton';
 import TiptapEditor from '@/app/[lang]/components/Editor';
+import { DEFAULT_NEWSLETTER_DOI_CONFIG, normalizeNewsletterDoiConfig } from '@/lib/newsletter/doiConfig';
 
-export default function NewsletterTab() {
+export default function NewsletterTab({ dict }: { dict: any }) {
   const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [subscribers, setSubscribers] = useState<any[]>([]);
@@ -36,6 +37,11 @@ export default function NewsletterTab() {
   const [campaignDetailId, setCampaignDetailId] = useState<string | null>(null);
   const [campaignDetailLoading, setCampaignDetailLoading] = useState(false);
   const [campaignDetail, setCampaignDetail] = useState<any>(null);
+
+  const [doiConfigDraft, setDoiConfigDraft] = useState<any>(DEFAULT_NEWSLETTER_DOI_CONFIG);
+  const [doiConfigUpdatedAt, setDoiConfigUpdatedAt] = useState<string | null>(null);
+  const [doiSaving, setDoiSaving] = useState(false);
+  const [metrics, setMetrics] = useState<{ active: number; pending: number; unsubscribed: number; bounced: number } | null>(null);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState<{ title: string; message: string; onConfirm: () => void }>({
@@ -70,46 +76,73 @@ export default function NewsletterTab() {
     showToast('Digest načten do editoru', 'success');
   };
 
-  useEffect(() => {
-    let isMounted = true;
-    const run = async () => {
-      setLoading(true);
-      try {
-        const { data } = await supabase.auth.getSession();
-        const token = data.session?.access_token;
-        if (!token) throw new Error('Unauthorized');
-        
-        const [subsRes, draftsRes, tplRes, rolesRes, historyRes] = await Promise.all([
-          fetch('/api/admin/newsletter/subscribers', { headers: { Authorization: `Bearer ${token}` } }),
-          fetch('/api/admin/newsletter/drafts', { headers: { Authorization: `Bearer ${token}` } }),
-          fetch('/api/admin/newsletter/templates', { headers: { Authorization: `Bearer ${token}` } }),
-          fetch('/api/admin/newsletter/roles', { headers: { Authorization: `Bearer ${token}` } }),
-          fetch('/api/admin/newsletter/history', { headers: { Authorization: `Bearer ${token}` } })
-        ]);
+  const loadCore = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
 
-        const [subsJson, draftsJson, tplJson] = await Promise.all([
-          subsRes.json().catch(() => ({})),
-          draftsRes.json().catch(() => ({})),
-          tplRes.json().catch(() => ({})),
-        ]);
-        const rolesJson: any = rolesRes.ok ? await rolesRes.json().catch(() => ({})) : {};
-        const historyJson: any = historyRes.ok ? await historyRes.json().catch(() => ({})) : {};
+      const [subsRes, draftsRes, tplRes, rolesRes, historyRes, doiRes, metricsRes] = await Promise.all([
+        fetch('/api/admin/newsletter/subscribers', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/admin/newsletter/drafts', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/admin/newsletter/templates', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/admin/newsletter/roles', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/admin/newsletter/history', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/admin/newsletter/doi-config', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/admin/newsletter/metrics', { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
 
-        if (!isMounted) return;
-        setSubscribers(Array.isArray(subsJson?.subscribers) ? subsJson.subscribers : []);
-        setDrafts(Array.isArray(draftsJson?.drafts) ? draftsJson.drafts : []);
-        setTemplates(Array.isArray(tplJson?.templates) ? tplJson.templates : []);
-        setRoles(Array.isArray(rolesJson?.roles) ? rolesJson.roles : []);
-        setSentCampaigns(Array.isArray(historyJson?.campaigns) ? historyJson.campaigns : []);
-      } catch (err: any) {
-        showToast(err.message, 'error');
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-    run();
-    return () => { isMounted = false; };
+      const [subsJson, draftsJson, tplJson, doiJson, metricsJson] = await Promise.all([
+        subsRes.json().catch(() => ({})),
+        draftsRes.json().catch(() => ({})),
+        tplRes.json().catch(() => ({})),
+        doiRes.ok ? doiRes.json().catch(() => ({})) : Promise.resolve({}),
+        metricsRes.ok ? metricsRes.json().catch(() => ({})) : Promise.resolve({}),
+      ]);
+      const rolesJson: any = rolesRes.ok ? await rolesRes.json().catch(() => ({})) : {};
+      const historyJson: any = historyRes.ok ? await historyRes.json().catch(() => ({})) : {};
+
+      setSubscribers(Array.isArray(subsJson?.subscribers) ? subsJson.subscribers : []);
+      setDrafts(Array.isArray(draftsJson?.drafts) ? draftsJson.drafts : []);
+      setTemplates(Array.isArray(tplJson?.templates) ? tplJson.templates : []);
+      setRoles(Array.isArray(rolesJson?.roles) ? rolesJson.roles : []);
+      setSentCampaigns(Array.isArray(historyJson?.campaigns) ? historyJson.campaigns : []);
+      setDoiConfigDraft(doiJson?.config ? normalizeNewsletterDoiConfig(doiJson.config) : DEFAULT_NEWSLETTER_DOI_CONFIG);
+      setDoiConfigUpdatedAt(doiJson?.updatedAt || null);
+      setMetrics(metricsJson?.metrics || null);
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    } finally {
+      setLoading(false);
+    }
   }, [showToast]);
+
+  useEffect(() => {
+    loadCore();
+  }, [loadCore]);
+
+  const saveDoiConfig = useCallback(async () => {
+    setDoiSaving(true);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
+      const res = await fetch('/api/admin/newsletter/doi-config/set', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ config: normalizeNewsletterDoiConfig(doiConfigDraft) }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Chyba');
+      showToast(dict?.admin?.saved || 'Uloženo', 'success');
+      await loadCore();
+    } catch (e: any) {
+      showToast(e?.message || 'Chyba', 'error');
+    } finally {
+      setDoiSaving(false);
+    }
+  }, [dict?.admin?.saved, doiConfigDraft, loadCore, showToast]);
 
   const openCampaignDetail = async (id: string) => {
     setCampaignDetailId(id);
@@ -440,7 +473,7 @@ export default function NewsletterTab() {
       <div className="bg-white p-6 rounded-[2rem] border shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h2 className="text-xl font-bold flex items-center gap-3">
           <Mail className="text-green-600" />
-          Správa Newsletteru
+          {dict?.admin?.tabNewsletterTitle || 'Správa newsletteru'}
         </h2>
         <div className="flex bg-stone-100 p-1 rounded-xl">
           <button 
@@ -648,6 +681,74 @@ export default function NewsletterTab() {
                 <div className="flex items-end gap-2">
                   <span className="text-3xl font-black text-stone-900">{subscribers.length}</span>
                   <Users size={20} className="text-green-600 mb-1" />
+                </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-2xl border shadow-sm space-y-3">
+                <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">
+                  {dict?.admin?.newsletterMetricsTitle || 'Metriky'}
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm font-bold text-stone-700">
+                    <span>{dict?.admin?.newsletterMetricsActive || 'Aktivní'}</span>
+                    <span className="font-black text-stone-900">{metrics?.active ?? '-'}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm font-bold text-stone-700">
+                    <span>{dict?.admin?.newsletterMetricsPending || 'Čeká na potvrzení'}</span>
+                    <span className="font-black text-stone-900">{metrics?.pending ?? '-'}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm font-bold text-stone-700">
+                    <span>{dict?.admin?.newsletterMetricsUnsubscribed || 'Odhlášení'}</span>
+                    <span className="font-black text-stone-900">{metrics?.unsubscribed ?? '-'}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm font-bold text-stone-700">
+                    <span>{dict?.admin?.newsletterMetricsBounced || 'Bouncy'}</span>
+                    <span className="font-black text-stone-900">{metrics?.bounced ?? '-'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-2xl border shadow-sm space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">
+                      {dict?.admin?.newsletterDoiTitle || 'Double opt‑in (DOI)'}
+                    </div>
+                    <div className="text-xs text-stone-500 font-semibold">
+                      {doiConfigUpdatedAt ? new Date(doiConfigUpdatedAt).toLocaleString() : ''}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={saveDoiConfig}
+                    disabled={doiSaving}
+                    className="px-3 py-2 rounded-xl bg-green-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {doiSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                    {dict?.admin?.newsletterDoiSave || 'Uložit'}
+                  </button>
+                </div>
+
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={doiConfigDraft?.enabled === true}
+                    onChange={(e) => setDoiConfigDraft((p: any) => ({ ...(p || {}), enabled: e.target.checked }))}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm font-bold text-stone-700">{dict?.admin?.newsletterDoiEnabled || 'Vyžadovat potvrzení e‑mailem'}</span>
+                </label>
+
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">{dict?.admin?.newsletterDoiExpiresHours || 'Platnost odkazu (hodiny)'}</div>
+                  <input
+                    type="number"
+                    min={1}
+                    max={336}
+                    value={doiConfigDraft?.expiresHours ?? DEFAULT_NEWSLETTER_DOI_CONFIG.expiresHours}
+                    onChange={(e) => setDoiConfigDraft((p: any) => ({ ...(p || {}), expiresHours: Number(e.target.value) }))}
+                    className="w-full px-4 py-3 bg-stone-50 rounded-xl border border-stone-100 focus:ring-2 focus:ring-green-500 transition font-medium"
+                  />
                 </div>
               </div>
               

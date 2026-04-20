@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { KeyRound, MapPin, Phone, ShieldCheck, Search, HandHeart } from 'lucide-react';
+import { KeyRound, MapPin, Phone, ShieldCheck, Search, HandHeart, Map as MapIcon } from 'lucide-react';
 import InlinePulse from '@/app/components/InlinePulse';
 import Dialog from '@/app/components/ui/Dialog';
 
@@ -16,6 +16,8 @@ type Item = {
   location: string | null;
   contact: string | null;
   status: string;
+  location_lat?: number | null;
+  location_lng?: number | null;
 };
 
 export default function LostFoundPage() {
@@ -24,6 +26,8 @@ export default function LostFoundPage() {
   const statusLabel = (v: any) => {
     const s = String(v || '').trim();
     if (s === 'open') return lang === 'en' ? 'Open' : 'Aktivní';
+    if (s === 'claimed') return lang === 'en' ? 'Claimed' : 'Nárokováno';
+    if (s === 'in_progress') return lang === 'en' ? 'In progress' : 'V řešení';
     if (s === 'returned') return lang === 'en' ? 'Returned' : 'Vráceno';
     if (s === 'archived') return lang === 'en' ? 'Archived' : 'Archivováno';
     return s || '—';
@@ -31,27 +35,30 @@ export default function LostFoundPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState('');
-  const [status, setStatus] = useState<'all' | 'open' | 'returned'>('open');
+  const [status, setStatus] = useState<'all' | 'open' | 'claimed' | 'in_progress' | 'returned'>('open');
   const [claimingItem, setClaimingItem] = useState<Item | null>(null);
   const [claimEmail, setClaimEmail] = useState('');
+  const [claimName, setClaimName] = useState('');
   const [claimMessage, setClaimMessage] = useState('');
+  const [claimAnonymous, setClaimAnonymous] = useState(false);
   const [claimSending, setClaimSending] = useState(false);
   const [claimSent, setClaimSent] = useState(false);
 
   const handleClaimSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!claimingItem || !claimEmail) return;
+    if (!claimingItem) return;
+    if (!claimAnonymous && !claimEmail) return;
     setClaimSending(true);
     try {
-      const res = await fetch('/api/contact', {
+      const res = await fetch('/api/lost-found/claim', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: 'Žádost z webu (Lost & Found)',
+          itemId: claimingItem.id,
+          name: claimName,
           email: claimEmail,
-          subject: `Nárok na nalezenou věc: ${claimingItem.title}`,
-          message: `Dobrý den,\n\ntímto žádám o navrácení položky nalezené na webu:\n- ID: ${claimingItem.id}\n- Název: ${claimingItem.title}\n\nMůj vzkaz:\n${claimMessage}\n\nS pozdravem,\n${claimEmail}`,
-          hp: ''
+          message: claimMessage,
+          isAnonymous: claimAnonymous,
         })
       });
       if (!res.ok) throw new Error('Chyba odeslání');
@@ -60,7 +67,9 @@ export default function LostFoundPage() {
         setClaimingItem(null);
         setClaimSent(false);
         setClaimEmail('');
+        setClaimName('');
         setClaimMessage('');
+        setClaimAnonymous(false);
       }, 3000);
     } catch {
       alert(lang === 'en' ? 'Error sending request' : 'Chyba při odesílání žádosti');
@@ -129,6 +138,8 @@ export default function LostFoundPage() {
               className="bg-stone-50 border-none rounded-2xl px-4 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
             >
               <option value="open">{lang === 'en' ? 'Open' : 'Aktivní'}</option>
+              <option value="claimed">{lang === 'en' ? 'Claimed' : 'Nárokováno'}</option>
+              <option value="in_progress">{lang === 'en' ? 'In progress' : 'V řešení'}</option>
               <option value="returned">{lang === 'en' ? 'Returned' : 'Vráceno'}</option>
               <option value="all">{lang === 'en' ? 'All' : 'Vše'}</option>
             </select>
@@ -179,6 +190,19 @@ export default function LostFoundPage() {
                       <Phone size={16} className="text-green-600" /> {i.contact}
                     </div>
                   ) : null}
+                  {Number.isFinite(Number(i.location_lat)) && Number.isFinite(Number(i.location_lng)) ? (
+                    <div className="flex items-center gap-2 text-stone-500 font-bold">
+                      <MapIcon size={16} className="text-green-600" />
+                      <a
+                        href={`https://maps.google.com/?q=${i.location_lat},${i.location_lng}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline decoration-dotted"
+                      >
+                        {lang === 'en' ? 'Map pin' : 'Pin na mapě'}
+                      </a>
+                    </div>
+                  ) : null}
                 </div>
               </Link>
               {i.status === 'open' && (
@@ -219,16 +243,37 @@ export default function LostFoundPage() {
             ) : (
               <form onSubmit={handleClaimSubmit} className="space-y-4">
                 <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">
+                    {lang === 'en' ? 'Name (optional)' : 'Jméno (volitelné)'}
+                  </label>
+                  <input
+                    value={claimName}
+                    onChange={(e) => setClaimName(e.target.value)}
+                    className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
+                    placeholder={lang === 'en' ? 'Your name' : 'Vaše jméno'}
+                  />
+                </div>
+                <div>
                   <label className="block text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">E-mail</label>
                   <input
                     type="email"
-                    required
+                    required={!claimAnonymous}
                     value={claimEmail}
                     onChange={(e) => setClaimEmail(e.target.value)}
                     className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
                     placeholder="vas@email.cz"
+                    disabled={claimAnonymous}
                   />
                 </div>
+                <label className="flex items-center gap-2 text-sm font-bold text-stone-700">
+                  <input
+                    type="checkbox"
+                    checked={claimAnonymous}
+                    onChange={(e) => setClaimAnonymous(e.target.checked)}
+                    className="w-4 h-4"
+                  />
+                  {lang === 'en' ? 'Submit anonymously' : 'Odeslat anonymně'}
+                </label>
                 <div>
                   <label className="block text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">{lang === 'en' ? 'Message (how do you prove it is yours?)' : 'Zpráva (jak prokážete, že je věc vaše?)'}</label>
                   <textarea

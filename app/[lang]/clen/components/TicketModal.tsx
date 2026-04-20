@@ -23,7 +23,23 @@ export default function TicketModal({
   status: string | null;
   expiresAt: string | null;
 }) {
-  const payload = useMemo(() => qrToken, [qrToken]);
+  const statusLabel = useMemo(() => {
+    const s = String(status || '').trim();
+    if (lang === 'en') {
+      if (s === 'confirmed') return 'Confirmed';
+      if (s === 'reserved') return 'Reserved';
+      if (s === 'waitlist') return 'Waitlist';
+      if (s === 'cancelled') return 'Cancelled';
+      return s || '—';
+    }
+    if (s === 'confirmed') return 'Potvrzeno';
+    if (s === 'reserved') return 'Rezervováno';
+    if (s === 'waitlist') return 'Čekací listina';
+    if (s === 'cancelled') return 'Zrušeno';
+    return s || '—';
+  }, [lang, status]);
+
+  const payload = useMemo(() => `PUPEN-TICKET:${qrToken}`, [qrToken]);
   const [qrUrl, setQrUrl] = useState('');
 
   useEffect(() => {
@@ -49,7 +65,7 @@ export default function TicketModal({
     if (!qrUrl) return;
     const a = document.createElement('a');
     a.href = qrUrl;
-    a.download = `pupen-ticket-${qrToken}.png`;
+    a.download = `pupen-ticket-${String(qrToken || '').slice(0, 32)}.png`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -111,7 +127,7 @@ export default function TicketModal({
               </div>
               <div className="mt-3 flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-stone-400">
                 <span>
-                  {lang === 'en' ? 'Status' : 'Stav'}: {status || '—'}
+                  {lang === 'en' ? 'Status' : 'Stav'}: {statusLabel}
                 </span>
                 {expiresAt ? (
                   <span>

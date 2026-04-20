@@ -764,6 +764,23 @@ export default function ClenskaSekcePage() {
     },
   });
 
+  const { data: badgeCatalog } = useQuery({
+    queryKey: ['member_badges_catalog', user?.id],
+    enabled: !!user && activeTab === 'badges',
+    queryFn: async () => {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) return { badges: [], earned: [] };
+      const res = await fetch('/api/member/badges/catalog', { headers: { Authorization: `Bearer ${token}` } });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Request failed');
+      return {
+        badges: Array.isArray(json?.badges) ? json.badges : [],
+        earned: Array.isArray(json?.earned) ? json.earned : [],
+      };
+    },
+  });
+
   if (loading || !dict) return (
     <div className="min-h-screen bg-gradient-to-b from-stone-50 to-stone-100/40 lg:pl-72">
       {/* Sidebar Skeleton */}
@@ -1088,6 +1105,12 @@ export default function ClenskaSekcePage() {
                 <h2 className="text-2xl font-black mb-8 flex items-center gap-3">
                   <span className="text-amber-500">★</span> {lang === 'en' ? 'My Badges' : 'Moje odznaky'}
                 </h2>
+
+                <div className="mb-8 bg-stone-50 border border-stone-100 rounded-[2rem] p-6 text-sm text-stone-600 font-medium">
+                  {lang === 'en'
+                    ? 'Badges are defined in the database and can be awarded by admins. Some milestones are computed automatically (e.g., check-ins).'
+                    : 'Odznaky jsou definované v databázi a mohou je udělovat administrátoři. Některé milníky se počítají automaticky (např. check-in na akcích).'}
+                </div>
                 
                 {memberBadges.length > 0 ? (
                   <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1128,6 +1151,73 @@ export default function ClenskaSekcePage() {
                   </div>
                 )}
               </div>
+
+              {badgeCatalog?.badges?.length ? (
+                <div className="bg-white p-8 rounded-[3rem] border border-stone-100 shadow-sm">
+                  <h2 className="text-2xl font-black mb-8 flex items-center gap-3">
+                    <span className="text-stone-400">🏷️</span> {lang === 'en' ? 'Badge catalog' : 'Katalog odznaků'}
+                  </h2>
+
+                  {(() => {
+                    const earned = new Map<string, string>();
+                    for (const e of badgeCatalog.earned || []) {
+                      earned.set(String(e.badgeId), String(e.awardedAt));
+                    }
+
+                    return (
+                      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {(badgeCatalog.badges || []).map((b: any) => {
+                          const isEarned = earned.has(String(b.id));
+                          const awardedAt = earned.get(String(b.id)) || null;
+                          return (
+                            <div
+                              key={b.id}
+                              className={`p-6 rounded-[2rem] border relative overflow-hidden ${
+                                isEarned ? 'bg-green-50 border-green-100' : 'bg-stone-50 border-stone-100'
+                              }`}
+                            >
+                              {isEarned && awardedAt ? (
+                                <div className="absolute top-0 right-0 bg-green-100 text-green-700 px-3 py-1.5 rounded-bl-[1.5rem] font-black text-[10px] uppercase tracking-widest">
+                                  {new Date(awardedAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'cs-CZ')}
+                                </div>
+                              ) : null}
+                              <div className="w-16 h-16 rounded-2xl bg-white flex items-center justify-center shadow-sm mb-4 border border-stone-100 overflow-hidden relative">
+                                {b?.icon ? (
+                                  <Image
+                                    loader={passthroughLoader}
+                                    unoptimized
+                                    src={b.icon}
+                                    alt={String(b?.name || '')}
+                                    width={64}
+                                    height={64}
+                                    className={`w-full h-full object-cover ${isEarned ? '' : 'opacity-70 grayscale'}`}
+                                  />
+                                ) : (
+                                  <span className={`text-2xl ${isEarned ? 'text-green-600' : 'text-stone-300'}`}>★</span>
+                                )}
+                              </div>
+                              <h3 className="font-black text-stone-900 text-lg leading-tight mb-2">{b?.name}</h3>
+                              <p className="text-xs font-bold text-stone-500 mb-4">{b?.description}</p>
+                              <div className="flex items-center gap-2">
+                                <div className="inline-flex items-center gap-1 px-2 py-1 bg-white border border-stone-200 text-stone-600 rounded text-[10px] font-black uppercase tracking-widest">
+                                  +{b?.points || 0} {lang === 'en' ? 'pts' : 'bodů'}
+                                </div>
+                                <div
+                                  className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest ${
+                                    isEarned ? 'bg-green-600 text-white' : 'bg-white border border-stone-200 text-stone-400'
+                                  }`}
+                                >
+                                  {isEarned ? (lang === 'en' ? 'Unlocked' : 'Odemčeno') : (lang === 'en' ? 'Locked' : 'Zamčeno')}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+                </div>
+              ) : null}
 
               <div className="bg-white p-8 rounded-[3rem] border border-stone-100 shadow-sm">
                 <h2 className="text-2xl font-black mb-8 flex items-center gap-3">

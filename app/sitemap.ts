@@ -70,8 +70,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     '/en/novinky',
     '/cs/archiv',
     '/en/archiv',
-    '/cs/burza',
-    '/en/burza',
     '/cs/faq',
     '/en/faq',
     '/cs/galerie',

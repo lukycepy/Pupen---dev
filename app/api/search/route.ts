@@ -70,7 +70,7 @@ export async function GET(req: Request) {
           .limit(limit),
       );
 
-    const [eventsRes, postsRes, faqsRes, booksRes, discountsRes, guideRes, archiveResPrimary] = await Promise.all([
+    const [eventsRes, postsRes, faqsRes, discountsRes, guideRes, archiveResPrimary] = await Promise.all([
       (async () => {
         const run = (withMemberFilter: boolean) => {
           let q1 = supabase
@@ -105,16 +105,6 @@ export async function GET(req: Request) {
         .or(`question.ilike.%${q}%,question_en.ilike.%${q}%,answer.ilike.%${q}%,answer_en.ilike.%${q}%`)
         .order('sort_order', { ascending: true })
         .limit(limit),
-      safe(
-        supabase
-          .from('book_exchange')
-          .select('id,title,author,price,created_at,status,is_sold')
-          .eq('status', 'active')
-          .eq('is_sold', false)
-          .or(`title.ilike.%${q}%,author.ilike.%${q}%`)
-          .order('created_at', { ascending: false })
-          .limit(limit),
-      ),
       safe(
         supabase
           .from('isic_discounts')
@@ -159,7 +149,7 @@ export async function GET(req: Request) {
         events: (eventsOk.data || []).map(normalize),
         posts: (postsOk.data || []).map(normalize),
         faqs: (faqsOk.data || []).map(normalize),
-        books: (booksRes.data || []).map(normalize),
+        books: [],
         discounts: (discountsRes.data || []).map(normalize),
         guide: (guideRes.data || []).map(normalize),
         archive: (archiveRes.data || []).map(normalize),

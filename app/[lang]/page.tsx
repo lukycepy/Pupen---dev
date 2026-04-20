@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { 
   Leaf, Calendar, Users, ArrowRight,
   HelpCircle, ChevronDown, ChevronUp, ExternalLink, 
-  Archive, Map as MapIcon, BookOpen, UserPlus as UserPlusIcon, Image as ImageIcon
+  Archive, Map as MapIcon, UserPlus as UserPlusIcon, Image as ImageIcon
 } from 'lucide-react';
 import { getDictionary } from '@/lib/get-dictionary';
 import { supabase } from '@/lib/supabase';
@@ -425,10 +425,6 @@ export default function PupenWeb() {
             <Link href={`/${lang}/mapa`} className="bg-white p-8 rounded-[2rem] flex flex-col items-center text-center group hover:bg-green-600 transition-colors duration-500 shadow-sm hover:shadow-xl hover:shadow-green-100">
                <div className="p-4 bg-stone-50 text-green-600 rounded-2xl mb-4 group-hover:bg-white/20 group-hover:text-white transition-colors"><MapIcon size={32} /></div>
                <span className="font-black text-stone-900 group-hover:text-white transition-colors uppercase tracking-widest text-xs">{dict.mapaAreálu}</span>
-            </Link>
-            <Link href={`/${lang}/burza`} className="bg-white p-8 rounded-[2rem] flex flex-col items-center text-center group hover:bg-green-600 transition-colors duration-500 shadow-sm hover:shadow-xl hover:shadow-green-100">
-               <div className="p-4 bg-stone-50 text-green-600 rounded-2xl mb-4 group-hover:bg-white/20 group-hover:text-white transition-colors"><BookOpen size={32} /></div>
-               <span className="font-black text-stone-900 group-hover:text-white transition-colors uppercase tracking-widest text-xs">{dict.burzaUčebnic}</span>
             </Link>
             <Link href={`/${lang}/galerie`} className="bg-white p-8 rounded-[2rem] flex flex-col items-center text-center group hover:bg-green-600 transition-colors duration-500 shadow-sm hover:shadow-xl hover:shadow-green-100">
                <div className="p-4 bg-stone-50 text-green-600 rounded-2xl mb-4 group-hover:bg-white/20 group-hover:text-white transition-colors"><ImageIcon size={32} /></div>

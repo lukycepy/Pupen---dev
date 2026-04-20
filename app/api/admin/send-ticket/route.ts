@@ -4,6 +4,7 @@ import { getMailerWithSettingsOrQueueTransporter, getSenderFromSettings } from '
 import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
 import { requireAdmin } from '@/lib/server-auth';
 import { sendMailWithQueueFallback } from '@/lib/email/queue';
+import { stripHtmlToText } from '@/lib/richtext-shared';
 
 export async function POST(req: Request) {
   try {
@@ -16,6 +17,7 @@ export async function POST(req: Request) {
     const paymentMethod = String(body?.paymentMethod || '').trim().slice(0, 80);
     const qrToken = String(body?.qrToken || '').trim().slice(0, 500);
     const status = String(body?.status || '').trim().slice(0, 80);
+    const lang = body?.lang === 'en' ? 'en' : 'cs';
 
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return NextResponse.json({ error: 'Neplatný e-mail.' }, { status: 400 });
@@ -40,13 +42,14 @@ export async function POST(req: Request) {
       qrToken,
       status,
       bankAccount,
+      lang,
     });
 
     await sendMailWithQueueFallback({
       transporter,
       supabase: getServerSupabase(),
       meta: { kind: 'ticket' },
-      message: { from, to: email, subject, html },
+      message: { from, to: email, subject, html, text: stripHtmlToText(html) },
     });
 
     return NextResponse.json({ success: true });

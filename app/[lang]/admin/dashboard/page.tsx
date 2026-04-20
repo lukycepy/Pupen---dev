@@ -662,7 +662,7 @@ export default function AdminDashboard() {
             )}
 
             {activeTab === 'newsletter' && canView('newsletter') && (
-              <NewsletterTab />
+              <NewsletterTab dict={dict} />
             )}
 
             {activeTab === 'queue' && permissions.can_manage_admins && (

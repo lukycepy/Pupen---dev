@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
 import { getDictionary } from '@/lib/get-dictionary';
 import { supabase } from '@/lib/supabase';
-import { Archive, Search } from 'lucide-react';
+import { Archive, Search, ArrowLeft, Image as ImageIcon } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { SkeletonList } from '../components/Skeleton';
 
@@ -84,6 +85,22 @@ export default function ArchivPage() {
     <div className="min-h-screen bg-stone-50 pt-24 pb-32">
       <div className="max-w-5xl mx-auto px-6">
         <header className="text-center mb-16">
+          <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
+            <Link
+              href={`/${lang}`}
+              className="inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
+            >
+              <ArrowLeft size={16} />
+              {lang === 'en' ? 'Back home' : 'Zpět domů'}
+            </Link>
+            <Link
+              href={`/${lang}/galerie`}
+              className="inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
+            >
+              <ImageIcon size={16} />
+              {lang === 'en' ? 'Gallery' : 'Fotogalerie'}
+            </Link>
+          </div>
           <div className="inline-flex p-3 bg-green-100 text-green-600 rounded-2xl mb-6 shadow-sm">
             <Archive size={32} />
           </div>

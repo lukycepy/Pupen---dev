@@ -19,6 +19,8 @@ type RSVP = {
   expires_at?: string | null;
   attendees?: any[] | null;
   payment_method?: string | null;
+  checked_in?: boolean | null;
+  checked_in_at?: string | null;
 };
 
 function formatIcsDate(dt: Date) {
@@ -76,7 +78,7 @@ export default function MyEventsTab({ lang, userEmail }: { lang: string; userEma
     queryFn: async () => {
       const rsvpRes = await supabase
         .from('rsvp')
-        .select('id, event_id, status, created_at, qr_code, expires_at, attendees, payment_method, name')
+        .select('id, event_id, status, created_at, qr_code, expires_at, attendees, payment_method, name, checked_in, checked_in_at')
         .eq('email', userEmail)
         .order('created_at', { ascending: false });
 
@@ -106,6 +108,20 @@ export default function MyEventsTab({ lang, userEmail }: { lang: string; userEma
   });
 
   const rows = useMemo(() => data || [], [data]);
+
+  const counts = useMemo(() => {
+    const now = new Date();
+    let attended = 0;
+    let upcoming = 0;
+    let total = 0;
+    for (const r of rows as any[]) {
+      total += 1;
+      if (r?.checked_in === true) attended += 1;
+      const d = r?.event?.date ? new Date(String(r.event.date)) : null;
+      if (d && !Number.isNaN(d.getTime()) && d >= now && r?.status !== 'cancelled') upcoming += 1;
+    }
+    return { total, attended, upcoming };
+  }, [rows]);
 
   const resendTicket = async (row: any) => {
     setResendId(row.id);
@@ -145,7 +161,7 @@ export default function MyEventsTab({ lang, userEmail }: { lang: string; userEma
   const upcomingForIcs = useMemo(() => {
     const now = new Date();
     return rows
-      .filter((r: any) => r.event?.date && (!r.status || r.status === 'confirmed' || r.status === 'pending'))
+      .filter((r: any) => r.event?.date && (r.status === 'confirmed' || r.status === 'reserved'))
       .map((r: any) => {
         const dateStr = r.event.date as string;
         const timeStr = (r.event.time as string) || '00:00';
@@ -237,6 +253,27 @@ export default function MyEventsTab({ lang, userEmail }: { lang: string; userEma
             {lang === 'en' ? 'Download .ics' : 'Stáhnout .ics'}
           </button>
         </div>
+
+        <div className="mt-6 grid sm:grid-cols-3 gap-3">
+          <div className="bg-stone-50 border border-stone-100 rounded-2xl p-4">
+            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">
+              {lang === 'en' ? 'Total' : 'Celkem'}
+            </div>
+            <div className="mt-1 text-2xl font-black text-stone-900">{counts.total}</div>
+          </div>
+          <div className="bg-stone-50 border border-stone-100 rounded-2xl p-4">
+            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">
+              {lang === 'en' ? 'Attended (check-in)' : 'Účast (check-in)'}
+            </div>
+            <div className="mt-1 text-2xl font-black text-stone-900">{counts.attended}</div>
+          </div>
+          <div className="bg-stone-50 border border-stone-100 rounded-2xl p-4">
+            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">
+              {lang === 'en' ? 'Upcoming' : 'Nadcházející'}
+            </div>
+            <div className="mt-1 text-2xl font-black text-stone-900">{counts.upcoming}</div>
+          </div>
+        </div>
       </div>
 
       <div className="bg-white p-6 rounded-[3rem] border border-stone-100 shadow-sm">
@@ -307,6 +344,12 @@ export default function MyEventsTab({ lang, userEmail }: { lang: string; userEma
                               ? 'Confirmed'
                               : 'Potvrzeno'}
                     </span>
+
+                    {r.checked_in === true && (
+                      <span className="inline-flex items-center rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-widest bg-violet-100 text-violet-700">
+                        {lang === 'en' ? 'Checked in' : 'Odbaveno'}
+                      </span>
+                    )}
 
                     {r.status !== 'cancelled' && (
                       <div className="flex items-center gap-2">

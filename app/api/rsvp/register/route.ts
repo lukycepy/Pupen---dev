@@ -5,6 +5,11 @@ import { isEmailBlacklisted } from '@/lib/tickets/blacklist';
 import { normalizePromoCode } from '@/lib/promo/rules';
 import { DEFAULT_TICKET_SECURITY_CONFIG, normalizeTicketSecurityConfig } from '@/lib/tickets/securityConfig';
 import { guardPublicJsonPost } from '@/lib/public-post-guard';
+import { getMailerWithSettingsOrQueueTransporter, getSenderFromSettings } from '@/lib/email/mailer';
+import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
+import { sendMailWithQueueFallback } from '@/lib/email/queue';
+import { stripHtmlToText } from '@/lib/richtext-shared';
+import { DEFAULT_WAITLIST_CONFIG, getWaitlistConfigFromAdminLogs } from '@/lib/rsvp/waitlistConfig';
 
 function err(code: string, status: number, payload?: Record<string, any>) {
   return NextResponse.json({ ok: false, error: code, error_code: code, ...(payload || {}) }, { status });
@@ -36,12 +41,13 @@ export async function POST(req: Request) {
     if (!g.ok) return g.response;
     const body = g.body;
     const ip = g.ip === 'unknown' ? null : g.ip;
-    const { eventId, name, email, attendees, payment_method, promoCode } = body || {};
+    const { eventId, name, email, attendees, attendeesCount, payment_method, promoCode, subscribeNewsletter, lang } = body || {};
 
     const cleanName = String(name || '').trim();
     const cleanEmail = String(email || '').trim().toLowerCase();
     const method = String(payment_method || 'hotove');
     const promo = promoCode ? normalizePromoCode(String(promoCode)) : '';
+    const userLang = lang === 'en' ? 'en' : 'cs';
 
     if (cleanName.length > 100 || cleanEmail.length > 150) {
       return err('RSVP_PAYLOAD_TOO_LARGE', 400);
@@ -51,10 +57,12 @@ export async function POST(req: Request) {
     if (!eventId || !cleanName || !emailOk) return err('RSVP_BAD_INPUT', 400);
     if (promo && promo.length > 60) return err('PROMO_TOO_LONG', 400);
 
-    const attendeeNames = Array.isArray(attendees)
-      ? attendees.map((a: any) => ({ name: String(a?.name || '').trim() })).filter((a: any) => a.name)
-      : [];
-    if (attendeeNames.length === 0 || attendeeNames.length > 3) return err('RSVP_INVALID_ATTENDEES', 400);
+    const provided = Array.isArray(attendees) ? attendees.map((a: any) => String(a?.name || '').trim()).filter(Boolean) : [];
+    const desiredCountRaw = attendeesCount != null ? Number(attendeesCount) : provided.length || 1;
+    const desiredCount = Number.isFinite(desiredCountRaw) ? Math.max(1, Math.min(3, Math.floor(desiredCountRaw))) : 1;
+    const attendeeNames = Array.from({ length: desiredCount }).map((_, idx) => ({
+      name: (provided[idx] || (idx === 0 ? cleanName : '')).slice(0, 120),
+    }));
 
     const user = await getOptionalUser(req);
 
@@ -395,7 +403,13 @@ export async function POST(req: Request) {
     }
 
     const qrToken = Math.random().toString(36).substring(2, 15).toUpperCase();
-    const expiresAt = status === 'reserved' ? new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString() : null;
+    let reservationExpiresHours = 24;
+    try {
+      const { config } = await getWaitlistConfigFromAdminLogs(supabase);
+      reservationExpiresHours = Number(config?.reservationExpiresHours || DEFAULT_WAITLIST_CONFIG.reservationExpiresHours);
+    } catch {}
+    const expiresAt =
+      status === 'reserved' ? new Date(now.getTime() + reservationExpiresHours * 60 * 60 * 1000).toISOString() : null;
 
     const baseRow: any = {
       event_id: eventId,
@@ -464,22 +478,44 @@ export async function POST(req: Request) {
     }
 
     try {
-      await fetch(new URL('/api/admin/send-ticket', req.url), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: cleanEmail,
-          name: cleanName,
-          eventTitle: event.title,
-          attendees: attendeeNames,
-          paymentMethod: method,
-          qrToken,
-          status,
-        }),
+      let bankAccount = process.env.BANK_ACCOUNT || 'CZ1234567890';
+      try {
+        const { data } = await supabase.from('payment_settings').select('bank_account').single();
+        if (data?.bank_account) bankAccount = String(data.bank_account);
+      } catch {}
+
+      const transporter = await getMailerWithSettingsOrQueueTransporter();
+      const from = await getSenderFromSettings();
+      const { subject, html } = await renderEmailTemplateWithDbOverride('ticket', {
+        email: cleanEmail,
+        name: cleanName,
+        eventTitle: event.title,
+        attendees: attendeeNames,
+        paymentMethod: method,
+        qrToken,
+        status,
+        bankAccount,
+        lang: userLang,
+      });
+      await sendMailWithQueueFallback({
+        transporter,
+        supabase,
+        meta: { kind: 'ticket', eventId: String(eventId), rsvpId, status, email: cleanEmail },
+        message: { from, to: cleanEmail, subject, html, text: stripHtmlToText(html) },
       });
     } catch {}
 
-    return NextResponse.json({ ok: true, status, qrToken, expiresAt });
+    if (subscribeNewsletter) {
+      try {
+        await fetch(new URL('/api/newsletter/subscribe', req.url), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: cleanEmail, categories: ['all'], source: 'rsvp' }),
+        });
+      } catch {}
+    }
+
+    return NextResponse.json({ ok: true, status, qrToken, expiresAt, eventId: String(eventId) });
   } catch (e: any) {
     return err('RSVP_ERROR', 500, { message: e?.message || 'Error' });
   }

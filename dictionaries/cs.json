@@ -43,6 +43,22 @@
         "title": "Parťáci",
         "sub": "Kdo nás podporuje"
       },
+      "archive": {
+        "title": "Archiv aktivit",
+        "sub": "Co už proběhlo"
+      },
+      "gallery": {
+        "title": "Fotogalerie",
+        "sub": "Fotky z akcí"
+      },
+      "donate": {
+        "title": "Daruj",
+        "sub": "Podpoř spolek"
+      },
+      "partnership": {
+        "title": "Partnerství",
+        "sub": "Spolupráce a sponzoři"
+      },
       "discounts": {
         "title": "Slevy",
         "sub": "Výhody pro členy"
@@ -841,6 +857,8 @@
     "lostFound": {
       "status": {
         "open": "Nalezeno",
+        "claimed": "Nárokováno",
+        "in_progress": "V řešení",
         "returned": "Vráceno",
         "archived": "Archivováno"
       }
@@ -987,6 +1005,40 @@
     "internalAdmin": "Interní správa spolku",
     "tabTickets": "Vstupenky & Check-in",
     "tabAnalytics": "Analytika",
+    "tabNewsletterTitle": "Správa newsletteru",
+    "newsletterMetricsTitle": "Metriky",
+    "newsletterMetricsActive": "Aktivní",
+    "newsletterMetricsPending": "Čeká na potvrzení",
+    "newsletterMetricsUnsubscribed": "Odhlášení",
+    "newsletterMetricsBounced": "Bouncy",
+    "newsletterDoiTitle": "Double opt‑in (DOI)",
+    "newsletterDoiSave": "Uložit",
+    "newsletterDoiEnabled": "Vyžadovat potvrzení e‑mailem",
+    "newsletterDoiExpiresHours": "Platnost odkazu (hodiny)",
+    "waitlist": {
+      "title": "Čekací listina (Waitlist)",
+      "subtitle": "Pravidla posunu registrací při uvolnění kapacity.",
+      "loading": "Načítám…",
+      "reload": "Obnovit",
+      "save": "Uložit",
+      "advanceNow": "Posunout čekací listinu",
+      "enabled": "Zapnuto",
+      "enabledHint": "Pokud je vypnuto, systém waitlist neposouvá automaticky.",
+      "reservationExpiresHours": "Platnost rezervace (hodiny)",
+      "reservationExpiresHint": "Platí pro bankovní převod (status reserved). Po expiraci se uvolní místo.",
+      "groupHandling": "Skupiny a kapacita",
+      "groupHandlingSkip": "Přeskočit, pokud se nevejde",
+      "groupHandlingBlock": "Zastavit na první, co se nevejde",
+      "groupHandlingHint": "Deterministické pořadí (FIFO). Skupiny se nedělí.",
+      "notifyOnPromotion": "Posílat e-mail při posunu",
+      "notifyOnPromotionHint": "Při posunu z waitlistu odešle vstupenku/platební instrukce.",
+      "maxPromotionsPerRun": "Limit posunů v 1 běhu",
+      "maxPromotionsPerRunHint": "Chrání před masivním posunem při velké změně kapacity.",
+      "autoAdvance": "Automatický posun",
+      "autoAdvanceOnCancel": "Po zrušení registrace (cancel)",
+      "autoAdvanceOnCapacityIncrease": "Po navýšení kapacity",
+      "autoAdvanceOnReservationExpiry": "Po expiraci rezervace (cron)"
+    },
     "paymentSettings": {
       "title": "Platební nastavení",
       "subtitle": "Správa bankovního účtu a automatizace plateb",

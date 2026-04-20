@@ -83,141 +83,142 @@ Níže je sada otázek (100+) k aktuálnímu webu Pupen, které pomůžou rozhod
 6. Jaký je nejčastější obsah newsletteru (akce, články, nabídky)? Akce, nabídky, školní informace
 7. Potřebujete A/B subject testy vždy, nebo jen někdy? lze měnit přes admin
 8. Chcete mít uložené šablony newsletterů s bloky (drag\&drop), nebo jen HTML? obojí, lze mezi tím přepínat v adminu
-9. Chcete přidat náhled „jak to vypadá v Outlooku/Gmailu“ v adminu?
-10. Chcete detail kampaně rozšířit o seznam příjemců a jejich stav (otevřel/kliknul)?
-11. Mají být open/click rate unikátní nebo celkové (definice)?
-12. Chcete trackovat i „unsub rate“ a „bounce rate“?
-13. Mají být newslettery veřejně dostupné (web archive) nebo jen interně?
-14. Má existovat „newsletter web archive“ stránka pro návštěvníky?
+9. Chcete přidat náhled „jak to vypadá v Outlooku/Gmailu“ v adminu? Ano
+10. Chcete detail kampaně rozšířit o seznam příjemců a jejich stav (otevřel/kliknul)? Ano
+11. Mají být open/click rate unikátní nebo celkové (definice)? Unikátní
+12. Chcete trackovat i „unsub rate“ a „bounce rate“? Ano
+13. Mají být newslettery veřejně dostupné (web archive) nebo jen interně? interně
+14. Má existovat „newsletter web archive“ stránka pro návštěvníky? ne
 
 ## Schránka důvěry (TrustBox)
 
-1. Je současný flow pro nahlašovatele dostatečně anonymní a srozumitelný?
-2. Má být možné hlášení bez e-mailu (čistě anonymně)?
-3. Jak dlouho mají data v trustboxu žít (retence)?
-4. Chcete možnost nahrávání příloh i po odeslání (follow-up)?
-5. Má být přílohy možné mazat nebo anonymizovat zvlášť?
-6. Má být v ticketu „timeline“ (stav, admin odpověď, interní poznámky)?
-7. Chcete „triage“ (kategorie, priorita) i pro nahlašovatele viditelné?
-8. Má být nahlašovateli vidět, že se tím někdo zabývá (např. „v řešení“)?
-9. Chcete automatické potvrzení + další instrukce v e-mailu?
-10. Má být možné exportovat vlákno i do HTML/text?
-11. Má export PDF obsahovat interní zprávy (pravděpodobně ne) – definice?
-12. Má existovat „assign admin“ / „owner“ pro thread?
-13. Má existovat šablona odpovědi admina?
-14. Chcete audit log zobrazovat přehledněji?
+1. Je současný flow pro nahlašovatele dostatečně anonymní a srozumitelný? Ne
+2. Má být možné hlášení bez e-mailu (čistě anonymně)? Ne
+3. Jak dlouho mají data v trustboxu žít (retence)? rok
+4. Chcete možnost nahrávání příloh i po odeslání (follow-up)? Ano
+5. Má být přílohy možné mazat nebo anonymizovat zvlášť? ano, přímo v adminu
+6. Má být v ticketu „timeline“ (stav, admin odpověď, interní poznámky)? ano
+7. Chcete „triage“ (kategorie, priorita) i pro nahlašovatele viditelné? ano
+8. Má být nahlašovateli vidět, že se tím někdo zabývá (např. „v řešení“)? ano
+9. Chcete automatické potvrzení + další instrukce v e-mailu? ano
+10. Má být možné exportovat vlákno i do HTML/text? ano
+11. Má export PDF obsahovat interní zprávy (pravděpodobně ne) – definice? Ne
+12. Má existovat „assign admin“ / „owner“ pro thread? ano
+13. Má existovat šablona odpovědi admina? ano
+14. Chcete audit log zobrazovat přehledněji? Ano s vysvětlivkami a překladem co se měnilo, ne stringy
 
 ## Ztráty a nálezy
 
-1. Je „open/returned“ dost, nebo chcete i „claimed“/„in progress“?
-2. Má být u položek fotka?
-3. Má být možné přidat lokaci jako pin na mapě?
-4. Má být kontakt vždy anonymizovaný (např. formulář místo tel.)?
-5. Chcete tlačítko „To je moje“ posílat e-mail nebo vytvářet ticket?
-6. Má být seznam veřejných položek filtrován podle typu (ISIC/klíče/jiné)?
+1. Je „open/returned“ dost, nebo chcete i „claimed“/„in progress“? rozšiř
+2. Má být u položek fotka? Lze přiložit
+3. Má být možné přidat lokaci jako pin na mapě? ano
+4. Má být kontakt vždy anonymizovaný (např. formulář místo tel.)? Lze zvolit anonym
+5. Chcete tlačítko „To je moje“ posílat e-mail nebo vytvářet ticket? ano
+6. Má být seznam veřejných položek filtrován podle typu (ISIC/klíče/jiné)? ano
 
 ## Předměty / Recenze
 
-1. Má být recenze dostupná pro veřejnost, nebo jen pro členy?
-2. Chcete systém „ověřený recenzent“?
-3. Chcete možnost upravit recenzi po odeslání?
-4. Je slovník předmětů (subjects\_data.json) správný a udržovaný?
-5. Chcete u recenzí „tagy“ (těžké/lehké, zkouška, zápočet)?
-6. Chcete zobrazovat průměrnou náročnost/hodnocení per předmět?
-7. Chcete možnost nahlásit recenzi (report)?
-8. Chcete moderaci přísnější / volnější?
-9. Má být vyhledávání předmětů tolerantní na překlepy?
+1. Má být recenze dostupná pro veřejnost, nebo jen pro členy? veřejnost
+2. Chcete systém „ověřený recenzent“? ano
+3. Chcete možnost upravit recenzi po odeslání? ano
+4. Je slovník předmětů (subjects\_data.json) správný a udržovaný? ano
+5. Chcete u recenzí „tagy“ (těžké/lehké, zkouška, zápočet)? ano
+6. Chcete zobrazovat průměrnou náročnost/hodnocení per předmět? ano
+7. Chcete možnost nahlásit recenzi (report)? ano
+8. Chcete moderaci přísnější / volnější? přísnější
+9. Má být vyhledávání předmětů tolerantní na překlepy? ano
 
 ## SOS / Průvodce / Mapa
 
-1. Které části SOS jsou nejpoužívanější a které by šly pryč?
-2. Má být Průvodce spíš „one-pager“ nebo rozdělený na kapitoly?
-3. Má být obsah Průvodce editovatelný v adminu (asi ano)?
-4. Je mapa areálu dostatečně přesná / potřebuje vrstvy?
-5. Má mapa umět vyhledat budovy a místnosti?
-6. Má být v mapě „otevírací doby“ propojené?
-7. Chcete offline režim pro SOS / mapu?
+1. Které části SOS jsou nejpoužívanější a které by šly pryč? lze měnit přes admin
+2. Má být Průvodce spíš „one-pager“ nebo rozdělený na kapitoly? kapitoly
+3. Má být obsah Průvodce editovatelný v adminu (asi ano)? lze měnit přes admin
+4. Je mapa areálu dostatečně přesná / potřebuje vrstvy? vrstvy
+5. Má mapa umět vyhledat budovy a místnosti? ano
+6. Má být v mapě „otevírací doby“ propojené? ano
+7. Chcete offline režim pro SOS / mapu? ne
 
 ## Blog / Novinky
 
-1. Kdo bude reálně přidávat články (kolik lidí)?
-2. Chcete plánování publikace článků?
-3. Chcete „draft review workflow“ nebo stačí publish/unpublish?
-4. Chcete u článků kategorie/štítky?
-5. Chcete komentáře (pravděpodobně ne) nebo reakce?
-6. Chcete napojení na IG/FB embed?
-7. Má být blog public nebo částečně member-only?
+1. Kdo bude reálně přidávat články (kolik lidí)? několik
+2. Chcete plánování publikace článků? ano, lze měnit přes admin
+3. Chcete „draft review workflow“ nebo stačí publish/unpublish? draft review workflow
+4. Chcete u článků kategorie/štítky? ano, lze měnit přes admin
+5. Chcete komentáře (pravděpodobně ne) nebo reakce? reakce
+6. Chcete napojení na IG/FB embed? ano
+7. Má být blog public nebo částečně member-only? public
 
 ## Admin a role
 
-1. Je admin rozdělení oprávnění dostatečné?
-2. Chcete role „editor obsahu“, „moderátor“, „pokladník“, „trustbox admin“ jasněji?
-3. Kde admin tráví nejvíc času (taby) – co zrychlit?
-4. Má admin mít globální vyhledávání (uživatelé, akce, příspěvky)?
-5. Chcete dashboard „to-do“ (čeká na schválení, pending apps, dead letters)?
-6. Má být logování akcí admina detailnější nebo méně?
-7. Chcete exporty (CSV/PDF) sjednotit a mít jednu stránku „export centrum“?
+1. Je admin rozdělení oprávnění dostatečné? ne
+2. Chcete role „editor obsahu“, „moderátor“, „pokladník“, „trustbox admin“ jasněji? ano
+3. Kde admin tráví nejvíc času (taby) – co zrychlit? vše
+4. Má admin mít globální vyhledávání (uživatelé, akce, příspěvky)? ano
+5. Chcete dashboard „to-do“ (čeká na schválení, pending apps, dead letters)? ano
+6. Má být logování akcí admina detailnější nebo méně? ano
+7. Chcete exporty (CSV/PDF) sjednotit a mít jednu stránku „export centrum“? ano
 
 ## PDF a reporty
 
-1. Jaké typy PDF máte (přihláška, GDPR, trustbox export…) a které přidat?
-2. Má být PDF šablona editovatelná v adminu (hlavička/patička/texty)?
-3. Má být v PDF vždy logo + plný název + identifikace systému (ano)?
-4. Mají být PDF vícejazyčná (cs/en) podle uživatele?
-5. Má být PDF generováno jako „archivovatelný dokument“ (metadata, verze)?
-6. Chcete watermark nebo číslo verze šablony?
-7. Má se ukládat historie vygenerovaných PDF?
+1. Jaké typy PDF máte (přihláška, GDPR, trustbox export…) a které přidat? co tě napadne přidej
+2. Má být PDF šablona editovatelná v adminu (hlavička/patička/texty)? ano
+3. Má být v PDF vždy logo + plný název + identifikace systému (ano)? ano
+4. Mají být PDF vícejazyčná (cs/en) podle uživatele? ano, ale generuj cs i en v případě en uživatele
+5. Má být PDF generováno jako „archivovatelný dokument“ (metadata, verze)? ne
+6. Chcete watermark nebo číslo verze šablony? ne
+7. Má se ukládat historie vygenerovaných PDF? ne
 
 ## E-mail šablony a doručitelnost
 
-1. Které e-maily jsou nejdůležitější (ověření, reset, trustbox, newsletter)?
-2. Mají být e-maily vždy dvojjazyčné, nebo podle zvoleného jazyka?
-3. Chcete možnost editovat i default šablony (už je) + návrat na default jedním klikem?
-4. Chcete jednotnou komponentu pro „tlačítko / sekce / box“ v e‑mailech?
-5. Chcete přidat „preheader“ a text-only fallback všude?
-6. Má být v adminu „deliverability checklist“ (SPF/DKIM/DMARC) s instrukcemi?
+1. Které e-maily jsou nejdůležitější (ověření, reset, trustbox, newsletter)? všechny
+2. Mají být e-maily vždy dvojjazyčné, nebo podle zvoleného jazyka? podle zvoleného jazyka
+3. Chcete možnost editovat i default šablony (už je) + návrat na default jedním klikem? ano
+4. Chcete jednotnou komponentu pro „tlačítko / sekce / box“ v e‑mailech? ano
+5. Chcete přidat „preheader“ a text-only fallback všude? ano
+6. Má být v adminu „deliverability checklist“ (SPF/DKIM/DMARC) s instrukcemi? ano
 
 ## Analytics
 
-1. Jaké metriky jsou pro vás top (registrace na akce, newsletter, návštěvy)?
-2. Chcete rozlišit „unikátní“ vs „celkové“ zobrazení?
-3. Chcete export analytics do CSV?
-4. Chcete přidat funnel: homepage → akce → RSVP?
-5. Chcete sledovat vyhledávání (co lidi hledají)?
-6. Chcete trackovat kliky na „Přidej se“, „Newsletter“, „Kontakt“?
-7. Chcete admin „health“ widgety (queue backlog, error logs, schema cache)?
+1. Jaké metriky jsou pro vás top (registrace na akce, newsletter, návštěvy)? všechny možné
+2. Chcete rozlišit „unikátní“ vs „celkové“ zobrazení? ano
+3. Chcete export analytics do CSV? ano
+4. Chcete přidat funnel: homepage → akce → RSVP? ano, lze měnit přes admin
+5. Chcete sledovat vyhledávání (co lidi hledají)? ano
+6. Chcete trackovat kliky na „Přidej se“, „Newsletter“, „Kontakt“? ano
+7. Chcete admin „health“ widgety (queue backlog, error logs, schema cache)? ano
 
 ## Bezpečnost, GDPR, soukromí
 
-1. Jaké osobní údaje chcete minimalizovat (e-mail, jméno, tel.)?
-2. Chcete automatickou anonymizaci starých dat (trustbox, RSVP)?
-3. Má uživatel mít „data export“ i pro jiné části než GDPR?
-4. Jak dlouho držet e-mail logy?
-5. Má být v adminu jasná audit stopa pro citlivé operace?
+1. Jaké osobní údaje chcete minimalizovat (e-mail, jméno, tel.)? rozhodni
+2. Chcete automatickou anonymizaci starých dat (trustbox, RSVP)? ano
+3. Má uživatel mít „data export“ i pro jiné části než GDPR? ano
+4. Jak dlouho držet e-mail logy? rozhodni
+5. Má být v adminu jasná audit stopa pro citlivé operace? ano
 
 ## Výkon a UX
 
-1. Je web rychlý na mobilu? Kde je největší problém?
-2. Má být více skeletonů/loading stavů?
-3. Je potřeba accessibility (kontrast, focus, screen reader) vylepšit?
-4. Jsou formuláře přívětivé (validace, chyby, autofill)?
-5. Chcete sjednotit modaly/dialogy (stejný styl, chování Esc)?
+1. Je web rychlý na mobilu? Kde je největší problém? není, envím, zjisti
+2. Má být více skeletonů/loading stavů? ano
+3. Je potřeba accessibility (kontrast, focus, screen reader) vylepšit? ne
+4. Jsou formuláře přívětivé (validace, chyby, autofill)? udělej je přívětivější
+5. Chcete sjednotit modaly/dialogy (stejný styl, chování Esc)? ano
+6. Kompletně změnit vzhled členské sekce a adminu a udělat znova a jinak než je aktuálně
 
 ## Obsah k odebrání
 
-1. Která stránka je nejméně používaná a dá se odstranit?
-2. Který admin tab je nejméně používaný?
-3. Jsou některé sekce duplicita (Novinky vs Blog, Archiv vs Galerie)?
-4. Je QR generátor nutný?
-5. Jsou Kvízy/Bojovky stále aktivní?
-6. Je Burza učebnic používaná (kolik inzerátů měsíčně)?
+1. Která stránka je nejméně používaná a dá se odstranit? nevím
+2. Který admin tab je nejméně používaný? nevím
+3. Jsou některé sekce duplicita (Novinky vs Blog, Archiv vs Galerie)? nevím
+4. Je QR generátor nutný? ano, u vstupenek pošli do mailu i QR kod s tokenem pro kontrolu
+5. Jsou Kvízy/Bojovky stále aktivní? Ano
+6. Je Burza učebnic používaná (kolik inzerátů měsíčně)? ne
 
 ## Nové funkce / nápady
 
-1. Chcete „profil člena“ s odznaky a historií akcí?
-2. Chcete systém „dobrovolníci/úkoly“ pro organizaci akcí?
-3. Chcete „ticketing“ pro event vstup (QR + check-in) sjednotit?
-4. Chcete „ztráty a nálezy“ jako ticket workflow (claim → potvrzení → předání)?
-5. Chcete „partnerství“ stránku s logy a benefity?
-6. Chcete „donate“ / podpora spolku?
+1. Chcete „profil člena“ s odznaky a historií akcí? ano
+2. Chcete systém „dobrovolníci/úkoly“ pro organizaci akcí? ne
+3. Chcete „ticketing“ pro event vstup (QR + check-in) sjednotit? ano
+4. Chcete „ztráty a nálezy“ jako ticket workflow (claim → potvrzení → předání)? ano
+5. Chcete „partnerství“ stránku s logy a benefity? ano
+6. Chcete „donate“ / podpora spolku? ano, přes QR kód na spolkový účet, lze měnit přes admin
 

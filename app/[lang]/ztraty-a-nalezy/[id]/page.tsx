@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, HandHeart, MapPin, Calendar } from 'lucide-react';
+import { ArrowLeft, HandHeart, MapPin, Calendar, Map as MapIcon } from 'lucide-react';
 import InlinePulse from '@/app/components/InlinePulse';
 import { getDictionary } from '@/lib/get-dictionary';
 import Modal from '@/app/components/ui/Modal';
@@ -15,9 +15,11 @@ type Item = {
   id: string;
   title: string;
   description?: string | null;
-  image_url?: string | null;
-  found_location?: string | null;
-  found_date?: string | null;
+  photo_url?: string | null;
+  location?: string | null;
+  created_at?: string | null;
+  location_lat?: number | null;
+  location_lng?: number | null;
   status?: 'open' | 'returned' | string;
 };
 
@@ -31,7 +33,9 @@ export default function LostFoundDetailPage() {
   const [loading, setLoading] = useState(true);
   const [claimOpen, setClaimOpen] = useState(false);
   const [claimEmail, setClaimEmail] = useState('');
+  const [claimName, setClaimName] = useState('');
   const [claimMessage, setClaimMessage] = useState('');
+  const [claimAnonymous, setClaimAnonymous] = useState(false);
   const [claimSending, setClaimSending] = useState(false);
   const [claimSent, setClaimSent] = useState(false);
 
@@ -41,12 +45,6 @@ export default function LostFoundDetailPage() {
 
   const common = dict?.common || {};
   const t = dict?.lostFoundDetailPage || {};
-
-  const buildClaimEmailSubject = (it: Item) => {
-    const prefix = t.emailSubjectPrefix || '';
-    if (!prefix) return it.title;
-    return `${prefix}: ${it.title}`;
-  };
 
   const buildClaimEmailMessage = (it: Item) => {
     const template: string = t.emailBodyTemplate || '';
@@ -80,18 +78,19 @@ export default function LostFoundDetailPage() {
 
   const submitClaim = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!item || !claimEmail) return;
+    if (!item) return;
+    if (!claimAnonymous && !claimEmail) return;
     setClaimSending(true);
     try {
-      const res = await fetch('/api/contact', {
+      const res = await fetch('/api/lost-found/claim', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: t.emailName || '',
+          itemId: item.id,
+          name: claimName,
           email: claimEmail,
-          subject: buildClaimEmailSubject(item),
           message: buildClaimEmailMessage(item),
-          hp: '',
+          isAnonymous: claimAnonymous,
         }),
       });
       if (!res.ok) throw new Error(t.sendError || 'Error');
@@ -100,7 +99,9 @@ export default function LostFoundDetailPage() {
         setClaimOpen(false);
         setClaimSent(false);
         setClaimEmail('');
+        setClaimName('');
         setClaimMessage('');
+        setClaimAnonymous(false);
       }, 2500);
     } catch {
       alert(t.sendError || '');
@@ -133,12 +134,12 @@ export default function LostFoundDetailPage() {
             </div>
           ) : (
             <div className="space-y-8">
-              {item.image_url ? (
+              {item.photo_url ? (
                 <div className="aspect-[16/9] rounded-[2rem] overflow-hidden bg-stone-100 relative">
                   <Image
                     loader={passthroughLoader}
                     unoptimized
-                    src={item.image_url}
+                    src={item.photo_url}
                     alt=""
                     fill
                     className="object-cover"
@@ -156,17 +157,28 @@ export default function LostFoundDetailPage() {
               </div>
 
               <div className="flex flex-wrap items-center gap-4 text-sm font-bold text-stone-600">
-                {item.found_location ? (
+                {item.location ? (
                   <div className="inline-flex items-center gap-2">
                     <MapPin size={16} className="text-green-600" />
-                    {item.found_location}
+                    {item.location}
                   </div>
                 ) : null}
-                {item.found_date ? (
+                {item.created_at ? (
                   <div className="inline-flex items-center gap-2">
                     <Calendar size={16} className="text-green-600" />
-                    {new Date(item.found_date).toLocaleDateString(lang === 'en' ? 'en-US' : 'cs-CZ')}
+                    {new Date(item.created_at).toLocaleDateString(lang === 'en' ? 'en-US' : 'cs-CZ')}
                   </div>
+                ) : null}
+                {Number.isFinite(Number(item.location_lat)) && Number.isFinite(Number(item.location_lng)) ? (
+                  <a
+                    href={`https://maps.google.com/?q=${item.location_lat},${item.location_lng}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 underline decoration-dotted"
+                  >
+                    <MapIcon size={16} className="text-green-600" />
+                    {lang === 'en' ? 'Map pin' : 'Pin na mapě'}
+                  </a>
                 ) : null}
               </div>
 
@@ -205,16 +217,37 @@ export default function LostFoundDetailPage() {
             ) : (
               <form onSubmit={submitClaim} className="space-y-4">
                 <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">
+                    {lang === 'en' ? 'Name (optional)' : 'Jméno (volitelné)'}
+                  </label>
+                  <input
+                    value={claimName}
+                    onChange={(e) => setClaimName(e.target.value)}
+                    className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
+                    placeholder={lang === 'en' ? 'Your name' : 'Vaše jméno'}
+                  />
+                </div>
+                <div>
                   <label className="block text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">{t.email || common.email || 'E-mail'}</label>
                   <input
                     type="email"
-                    required
+                    required={!claimAnonymous}
                     value={claimEmail}
                     onChange={(e) => setClaimEmail(e.target.value)}
                     className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
                     placeholder={t.emailPlaceholder || ''}
+                    disabled={claimAnonymous}
                   />
                 </div>
+                <label className="flex items-center gap-2 text-sm font-bold text-stone-700">
+                  <input
+                    type="checkbox"
+                    checked={claimAnonymous}
+                    onChange={(e) => setClaimAnonymous(e.target.checked)}
+                    className="w-4 h-4"
+                  />
+                  {lang === 'en' ? 'Submit anonymously' : 'Odeslat anonymně'}
+                </label>
                 <div>
                   <label className="block text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">
                     {t.messageLabel || ''}

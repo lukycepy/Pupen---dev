@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { supabase } from '@/lib/supabase';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { Plus, Trash2, Edit3, Image as ImageIcon, Calendar as CalendarIcon, MapPin, Clock, Download, Loader2, Save, X, Eye, EyeOff, CalendarClock, Archive, RotateCcw } from 'lucide-react';
+import { Plus, Trash2, Edit3, Image as ImageIcon, Calendar as CalendarIcon, MapPin, Clock, Download, Loader2, Save, X, Eye, EyeOff, CalendarClock, Archive, RotateCcw, ChevronsUp } from 'lucide-react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { useToast } from '../../../../context/ToastContext';
@@ -14,6 +14,7 @@ import { logAdminAction } from '@/lib/admin-logger';
 import ConfirmModal from '@/app/components/ConfirmModal';
 import { draftEventDescriptionHtmlCz, draftEventDescriptionHtmlEn, seoSuggestions, suggestEnglishText } from '@/lib/ai/pilot';
 import AdminModuleHeader from './ui/AdminModuleHeader';
+import { DEFAULT_WAITLIST_CONFIG, normalizeWaitlistConfig } from '@/lib/rsvp/waitlistConfig';
 
 const Editor = dynamic(() => import('../../../components/Editor'), { 
   ssr: false,
@@ -82,6 +83,83 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
     const t = setInterval(() => setNowTs(Date.now()), 30_000);
     return () => clearInterval(t);
   }, []);
+
+  const [waitlistConfigDraft, setWaitlistConfigDraft] = useState<any>(DEFAULT_WAITLIST_CONFIG);
+  const [waitlistConfigUpdatedAt, setWaitlistConfigUpdatedAt] = useState<string | null>(null);
+  const [waitlistConfigLoading, setWaitlistConfigLoading] = useState(false);
+  const [waitlistConfigSaving, setWaitlistConfigSaving] = useState(false);
+  const [advancingEventId, setAdvancingEventId] = useState<string | null>(null);
+
+  const loadWaitlistConfig = useCallback(async () => {
+    setWaitlistConfigLoading(true);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
+      const res = await fetch('/api/admin/waitlist/config', { headers: { Authorization: `Bearer ${token}` } });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Request failed');
+      setWaitlistConfigDraft(json?.config ? normalizeWaitlistConfig(json.config) : DEFAULT_WAITLIST_CONFIG);
+      setWaitlistConfigUpdatedAt(json?.updatedAt || null);
+    } catch (e: any) {
+      showToast(e?.message || 'Chyba', 'error');
+    } finally {
+      setWaitlistConfigLoading(false);
+    }
+  }, [showToast]);
+
+  useEffect(() => {
+    loadWaitlistConfig();
+  }, [loadWaitlistConfig]);
+
+  const saveWaitlistConfig = useCallback(async () => {
+    setWaitlistConfigSaving(true);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
+      const res = await fetch('/api/admin/waitlist/config/set', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ config: normalizeWaitlistConfig(waitlistConfigDraft) }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Request failed');
+      showToast(dict.admin?.saved || 'Uloženo', 'success');
+      await loadWaitlistConfig();
+    } catch (e: any) {
+      showToast(e?.message || 'Chyba', 'error');
+    } finally {
+      setWaitlistConfigSaving(false);
+    }
+  }, [dict.admin?.saved, loadWaitlistConfig, showToast, waitlistConfigDraft]);
+
+  const advanceWaitlist = useCallback(async (eventId: string, reason: string, silent = false) => {
+    const id = String(eventId || '').trim();
+    if (!id) return;
+    setAdvancingEventId(id);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
+      const res = await fetch('/api/admin/waitlist/advance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ eventId: id, reason }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Request failed');
+      const promoted = Number(json?.result?.promoted || json?.result?.result?.promoted || 0);
+      if (!silent) {
+        if (promoted > 0) showToast(`Posunuto z čekací listiny: ${promoted}`, 'success');
+        else showToast('Čekací listina je bez změn', 'info');
+      }
+    } catch (e: any) {
+      if (!silent) showToast(e?.message || 'Chyba', 'error');
+    } finally {
+      setAdvancingEventId(null);
+    }
+  }, [showToast]);
 
   const { data: eventPhotos = [] } = useQuery({
     queryKey: ['event_photos', editingEvent?.id],
@@ -260,6 +338,8 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
       };
 
       if (editingEvent?.id) {
+        const prevCapacity = editingEvent?.capacity == null ? null : Number(editingEvent.capacity);
+        const nextCapacity = payload.capacity == null ? null : Number(payload.capacity);
         // Save current version for Audit Log 2.0
         try {
           const { data: currentEv } = await supabase.from('events').select('*').eq('id', editingEvent.id).single();
@@ -285,6 +365,13 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
           error = retry.error;
         }
         if (error) throw error;
+
+        try {
+          const cfg = normalizeWaitlistConfig(waitlistConfigDraft);
+          if (cfg.autoAdvanceOnCapacityIncrease && typeof prevCapacity === 'number' && typeof nextCapacity === 'number' && nextCapacity > prevCapacity) {
+            await advanceWaitlist(editingEvent.id, 'capacity_increase', true);
+          }
+        } catch {}
         
         try {
           await logAdminAction(currentUser?.email, `Upravil akci: ${data.title}`, editingEvent.id, payload, userProfile ? `${userProfile.first_name} ${userProfile.last_name}` : undefined);
@@ -488,6 +575,137 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
           </>
         }
       />
+
+      {!readOnly && (
+        <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-stone-100">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="min-w-0">
+              <div className="text-sm font-black text-stone-900">{dict.admin?.waitlist?.title || 'Čekací listina (Waitlist)'}</div>
+              <div className="text-xs text-stone-500 font-semibold">
+                {dict.admin?.waitlist?.subtitle || 'Pravidla posunu registrací při uvolnění kapacity (cancel/expirace/navýšení kapacity).'}
+                {waitlistConfigUpdatedAt ? ` • ${new Date(waitlistConfigUpdatedAt).toLocaleString()}` : ''}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={loadWaitlistConfig}
+                disabled={waitlistConfigLoading || waitlistConfigSaving}
+                className="px-4 py-2 rounded-xl border border-stone-200 bg-white text-stone-700 text-xs font-black uppercase tracking-widest hover:bg-stone-50 disabled:opacity-50"
+              >
+                {waitlistConfigLoading ? (dict.admin?.waitlist?.loading || 'Načítám…') : (dict.admin?.waitlist?.reload || 'Obnovit')}
+              </button>
+              <button
+                type="button"
+                onClick={saveWaitlistConfig}
+                disabled={waitlistConfigLoading || waitlistConfigSaving}
+                className="px-4 py-2 rounded-xl bg-green-600 text-white text-xs font-black uppercase tracking-widest hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
+              >
+                {waitlistConfigSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                {dict.admin?.waitlist?.save || 'Uložit'}
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-5 grid md:grid-cols-3 gap-4">
+            <label className="flex items-center gap-3 p-4 rounded-2xl bg-stone-50 border border-stone-100">
+              <input
+                type="checkbox"
+                checked={!!waitlistConfigDraft?.enabled}
+                onChange={(e) => setWaitlistConfigDraft((p: any) => ({ ...(p || {}), enabled: e.target.checked }))}
+                className="w-5 h-5 accent-green-600 rounded border-stone-300"
+              />
+              <div className="min-w-0">
+                <div className="text-xs font-black text-stone-900">{dict.admin?.waitlist?.enabled || 'Zapnuto'}</div>
+                <div className="text-[11px] text-stone-500 font-semibold">{dict.admin?.waitlist?.enabledHint || 'Pokud je vypnuto, systém waitlist neposouvá automaticky.'}</div>
+              </div>
+            </label>
+
+            <div className="p-4 rounded-2xl bg-stone-50 border border-stone-100">
+              <div className="text-xs font-black text-stone-900 mb-2">{dict.admin?.waitlist?.reservationExpiresHours || 'Platnost rezervace (hodiny)'}</div>
+              <input
+                type="number"
+                min={1}
+                max={336}
+                value={waitlistConfigDraft?.reservationExpiresHours ?? 24}
+                onChange={(e) => setWaitlistConfigDraft((p: any) => ({ ...(p || {}), reservationExpiresHours: Number(e.target.value) }))}
+                className="w-full border-none p-3 rounded-xl outline-none ring-1 ring-stone-100 focus:ring-2 focus:ring-green-500 bg-white font-bold text-stone-700 transition"
+              />
+              <div className="text-[11px] text-stone-500 font-semibold mt-2">{dict.admin?.waitlist?.reservationExpiresHint || 'Platí pro bankovní převod (status reserved). Po expiraci se uvolní místo.'}</div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-stone-50 border border-stone-100">
+              <div className="text-xs font-black text-stone-900 mb-2">{dict.admin?.waitlist?.groupHandling || 'Skupiny a kapacita'}</div>
+              <select
+                value={waitlistConfigDraft?.groupHandling === 'block_on_non_fit' ? 'block_on_non_fit' : 'skip_non_fit'}
+                onChange={(e) => setWaitlistConfigDraft((p: any) => ({ ...(p || {}), groupHandling: e.target.value }))}
+                className="w-full border-none p-3 rounded-xl outline-none ring-1 ring-stone-100 focus:ring-2 focus:ring-green-500 bg-white font-bold text-stone-700 transition"
+              >
+                <option value="skip_non_fit">{dict.admin?.waitlist?.groupHandlingSkip || 'Přeskočit, pokud se nevejde'}</option>
+                <option value="block_on_non_fit">{dict.admin?.waitlist?.groupHandlingBlock || 'Zastavit na první, co se nevejde'}</option>
+              </select>
+              <div className="text-[11px] text-stone-500 font-semibold mt-2">{dict.admin?.waitlist?.groupHandlingHint || 'Deterministické pořadí (FIFO). Skupiny se nedělí.'}</div>
+            </div>
+
+            <label className="flex items-center gap-3 p-4 rounded-2xl bg-stone-50 border border-stone-100">
+              <input
+                type="checkbox"
+                checked={waitlistConfigDraft?.notifyOnPromotion !== false}
+                onChange={(e) => setWaitlistConfigDraft((p: any) => ({ ...(p || {}), notifyOnPromotion: e.target.checked }))}
+                className="w-5 h-5 accent-green-600 rounded border-stone-300"
+              />
+              <div className="min-w-0">
+                <div className="text-xs font-black text-stone-900">{dict.admin?.waitlist?.notifyOnPromotion || 'Posílat e-mail při posunu'}</div>
+                <div className="text-[11px] text-stone-500 font-semibold">{dict.admin?.waitlist?.notifyOnPromotionHint || 'Při posunu z waitlistu odešle vstupenku/platební instrukce.'}</div>
+              </div>
+            </label>
+
+            <div className="p-4 rounded-2xl bg-stone-50 border border-stone-100">
+              <div className="text-xs font-black text-stone-900 mb-2">{dict.admin?.waitlist?.maxPromotionsPerRun || 'Limit posunů v 1 běhu'}</div>
+              <input
+                type="number"
+                min={1}
+                max={200}
+                value={waitlistConfigDraft?.maxPromotionsPerRun ?? 25}
+                onChange={(e) => setWaitlistConfigDraft((p: any) => ({ ...(p || {}), maxPromotionsPerRun: Number(e.target.value) }))}
+                className="w-full border-none p-3 rounded-xl outline-none ring-1 ring-stone-100 focus:ring-2 focus:ring-green-500 bg-white font-bold text-stone-700 transition"
+              />
+              <div className="text-[11px] text-stone-500 font-semibold mt-2">{dict.admin?.waitlist?.maxPromotionsPerRunHint || 'Chrání před masivním posunem při velké změně kapacity.'}</div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-stone-50 border border-stone-100 space-y-3">
+              <div className="text-xs font-black text-stone-900">{dict.admin?.waitlist?.autoAdvance || 'Automatický posun'}</div>
+              <label className="flex items-center gap-2 text-[11px] font-bold text-stone-700">
+                <input
+                  type="checkbox"
+                  checked={waitlistConfigDraft?.autoAdvanceOnCancel !== false}
+                  onChange={(e) => setWaitlistConfigDraft((p: any) => ({ ...(p || {}), autoAdvanceOnCancel: e.target.checked }))}
+                  className="w-4 h-4 accent-green-600 rounded border-stone-300"
+                />
+                {dict.admin?.waitlist?.autoAdvanceOnCancel || 'Po zrušení registrace (cancel)'}
+              </label>
+              <label className="flex items-center gap-2 text-[11px] font-bold text-stone-700">
+                <input
+                  type="checkbox"
+                  checked={waitlistConfigDraft?.autoAdvanceOnCapacityIncrease !== false}
+                  onChange={(e) => setWaitlistConfigDraft((p: any) => ({ ...(p || {}), autoAdvanceOnCapacityIncrease: e.target.checked }))}
+                  className="w-4 h-4 accent-green-600 rounded border-stone-300"
+                />
+                {dict.admin?.waitlist?.autoAdvanceOnCapacityIncrease || 'Po navýšení kapacity'}
+              </label>
+              <label className="flex items-center gap-2 text-[11px] font-bold text-stone-700">
+                <input
+                  type="checkbox"
+                  checked={waitlistConfigDraft?.autoAdvanceOnReservationExpiry !== false}
+                  onChange={(e) => setWaitlistConfigDraft((p: any) => ({ ...(p || {}), autoAdvanceOnReservationExpiry: e.target.checked }))}
+                  className="w-4 h-4 accent-green-600 rounded border-stone-300"
+                />
+                {dict.admin?.waitlist?.autoAdvanceOnReservationExpiry || 'Po expiraci rezervace (cron)'}
+              </label>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid lg:grid-cols-12 gap-8 items-start">
         {/* FORM SECTION - ONLY SHOW WHEN ADDING/EDITING */}
@@ -906,6 +1124,16 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
                               {getPublishState(event) === 'published' ? <EyeOff size={18} /> : <Eye size={18} />}
                             </button>
                           </>
+                        )}
+                        {!readOnly && (
+                          <button
+                            onClick={() => advanceWaitlist(event.id, 'manual_admin')}
+                            className="p-2.5 text-stone-400 hover:text-violet-700 hover:bg-violet-50 rounded-xl transition-all"
+                            title={dict.admin?.waitlist?.advanceNow || 'Posunout čekací listinu'}
+                            disabled={advancingEventId === event.id}
+                          >
+                            {advancingEventId === event.id ? <Loader2 size={18} className="animate-spin" /> : <ChevronsUp size={18} />}
+                          </button>
                         )}
                         <button 
                           onClick={() => exportRSVP(event.id, event.title)} 

@@ -21,6 +21,8 @@ type Item = {
   contact: string | null;
   status: string;
   is_public: boolean;
+  location_lat?: number | null;
+  location_lng?: number | null;
 };
 
 export default function LostFoundTab({ dict }: { dict: any }) {
@@ -224,6 +226,8 @@ export default function LostFoundTab({ dict }: { dict: any }) {
                       className="w-full bg-stone-50 border-none rounded-2xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
                     >
                       <option value="open">{statusLabel('open')}</option>
+                      <option value="claimed">{statusLabel('claimed')}</option>
+                      <option value="in_progress">{statusLabel('in_progress')}</option>
                       <option value="returned">{statusLabel('returned')}</option>
                       <option value="archived">{statusLabel('archived')}</option>
                     </select>
@@ -244,6 +248,28 @@ export default function LostFoundTab({ dict }: { dict: any }) {
                     onChange={(e) => setEditing((p) => (p ? { ...p, contact: e.target.value } : p))}
                     className="w-full bg-stone-50 border-none rounded-2xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
                   />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Latitude (volitelné)</div>
+                    <input
+                      type="number"
+                      step="any"
+                      value={editing.location_lat ?? ''}
+                      onChange={(e) => setEditing((p) => (p ? { ...p, location_lat: e.target.value === '' ? null : Number(e.target.value) } : p))}
+                      className="w-full bg-stone-50 border-none rounded-2xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
+                    />
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Longitude (volitelné)</div>
+                    <input
+                      type="number"
+                      step="any"
+                      value={editing.location_lng ?? ''}
+                      onChange={(e) => setEditing((p) => (p ? { ...p, location_lng: e.target.value === '' ? null : Number(e.target.value) } : p))}
+                      className="w-full bg-stone-50 border-none rounded-2xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
+                    />
+                  </div>
                 </div>
 
                 <button

@@ -254,33 +254,6 @@ export default function SearchClient({ lang, initialQ }: { lang: string; initial
                 </div>
               ) : null}
 
-              {results.books.length > 0 ? (
-                <div className="bg-white rounded-[2.5rem] border border-stone-100 shadow-sm p-6">
-                  <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-4 px-2">
-                    {lang === 'en' ? 'Book exchange' : 'Burza'}
-                  </div>
-                  <div className="space-y-1">
-                    {results.books.map((b) => (
-                      <Link
-                        key={b.id}
-                        href={`/${lang}/burza?q=${encodeURIComponent(q.trim())}`}
-                        className="flex items-center gap-4 p-3 hover:bg-stone-50 rounded-2xl transition group/item"
-                      >
-                        <div className="w-10 h-10 bg-stone-50 rounded-xl flex items-center justify-center text-stone-400 group-hover/item:bg-green-600 group-hover/item:text-white transition shadow-sm border border-stone-100">
-                          <BookOpen size={16} />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="text-sm font-bold text-stone-700 truncate">{b.title}</div>
-                          {b.author ? (
-                            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mt-1">{b.author}</div>
-                          ) : null}
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
               {results.archive.length > 0 ? (
                 <div className="bg-white rounded-[2.5rem] border border-stone-100 shadow-sm p-6">
                   <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-4 px-2">

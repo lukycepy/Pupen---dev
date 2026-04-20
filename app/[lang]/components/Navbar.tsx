@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
   Menu, X, Search, Calendar, FileText, 
-  ChevronDown, BookOpen, ShieldCheck, Users, Tag, Clock, PenTool, BrainCircuit, Briefcase, HelpCircle, Lock as LockIcon, LogOut, KeyRound, Siren, Archive, LifeBuoy
+  ChevronDown, BookOpen, ShieldCheck, Users, Tag, Clock, PenTool, BrainCircuit, Briefcase, HelpCircle, Lock as LockIcon, LogOut, KeyRound, Siren, Archive, LifeBuoy, Image as ImageIcon, HeartHandshake, Handshake
 } from 'lucide-react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
@@ -150,6 +150,10 @@ export default function Navbar({ lang, dict }: NavbarProps) {
     { href: '/harmonogram', slug: 'harmonogram', icon: <Calendar size={18} />, key: 'schedule' },
     { href: '/pruvodce', slug: 'pruvodce', icon: <ShieldCheck size={18} />, key: 'guide' },
     { href: '/partaci', slug: 'partaci', icon: <Users size={18} />, key: 'partners' },
+    { href: '/archiv', slug: 'archiv', icon: <Archive size={18} />, key: 'archive' },
+    { href: '/galerie', slug: 'galerie', icon: <ImageIcon size={18} />, key: 'gallery' },
+    { href: '/daruj', slug: 'daruj', icon: <HeartHandshake size={18} />, key: 'donate' },
+    { href: '/partnerstvi', slug: 'partnerstvi', icon: <Handshake size={18} />, key: 'partnership' },
     { href: '/slevy', slug: 'slevy', icon: <Tag size={18} />, key: 'discounts' },
     { href: '/oteviraci-doba', slug: 'oteviraci-doba', icon: <Clock size={18} />, key: 'hours' },
     { href: '/blog', slug: 'blog', icon: <PenTool size={18} />, key: 'blog' },
@@ -452,26 +456,6 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                                   <Tag size={16} />
                                 </div>
                                 <span className="text-sm font-bold text-stone-700 truncate">{d.title}</span>
-                              </Link>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {searchResults.books.length > 0 && (
-                        <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-3 px-2">{lang === 'en' ? 'Book exchange' : 'Burza'}</p>
-                          <div className="space-y-1">
-                            {searchResults.books.map(b => (
-                              <Link 
-                                key={b.id}
-                                href={`/${lang}/burza?q=${encodeURIComponent(searchQuery)}`}
-                                onClick={() => setIsSearchOpen(false)}
-                                className="flex items-center gap-4 p-3 hover:bg-stone-50 rounded-2xl transition group/item"
-                              >
-                                <div className="w-10 h-10 bg-stone-50 rounded-xl flex items-center justify-center text-stone-400 group-hover/item:bg-green-600 group-hover/item:text-white transition shadow-sm border border-stone-100">
-                                  <BookOpen size={16} />
-                                </div>
-                                <span className="text-sm font-bold text-stone-700 truncate">{b.title}</span>
                               </Link>
                             ))}
                           </div>

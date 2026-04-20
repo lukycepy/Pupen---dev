@@ -7,6 +7,7 @@ export type EmailTemplateKey =
   | 'trust_box_verify'
   | 'trust_box_confirm'
   | 'trust_box_admin_reply'
+  | 'newsletter_doi_confirm'
   | 'member_access'
   | 'member_welcome'
   | 'membership_expiry'
@@ -126,6 +127,11 @@ export function listEmailTemplates() {
       key: 'newsletter' as const,
       label: 'Newsletter',
       variables: ['subject', 'preheader', 'html', 'unsubLink', 'preferencesLink', 'variant'],
+    },
+    {
+      key: 'newsletter_doi_confirm' as const,
+      label: 'Newsletter – potvrzení odběru (DOI)',
+      variables: ['toEmail', 'firstName', 'confirmUrl', 'lang'],
     },
   ];
 }
@@ -271,6 +277,33 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
       contentHtml: content,
       footerHtml,
       lang: 'cs',
+    });
+    return { subject, html };
+  }
+
+  if (key === 'newsletter_doi_confirm') {
+    const toEmail = String(vars?.toEmail || '').trim();
+    const firstName = String(vars?.firstName || '').trim();
+    const confirmUrl = String(vars?.confirmUrl || '').trim();
+    const lang = vars?.lang === 'en' ? 'en' : 'cs';
+    const subject = lang === 'en' ? 'Pupen — Confirm subscription' : 'Pupen — Potvrďte odběr newsletteru';
+    const html = emailDoc({
+      subject,
+      title: lang === 'en' ? 'Confirm subscription' : 'Potvrďte odběr',
+      badge: 'Newsletter',
+      preheader: lang === 'en' ? 'One more step to confirm your subscription.' : 'Ještě jeden krok pro potvrzení odběru.',
+      introHtml: `<p style="margin:0;">${
+        lang === 'en'
+          ? `Hello${firstName ? ` ${escapeHtml(firstName)}` : ''}, please confirm your newsletter subscription.`
+          : `Dobrý den${firstName ? ` ${escapeHtml(firstName)}` : ''}, potvrďte prosím odběr newsletteru.`
+      }</p>`,
+      cta: confirmUrl ? { href: confirmUrl, label: lang === 'en' ? 'Confirm' : 'Potvrdit' } : undefined,
+      footerText:
+        lang === 'en'
+          ? 'If you did not request this, you can ignore this email.'
+          : 'Pokud jste o odběr nežádali, můžete tento e‑mail ignorovat.',
+      toEmail,
+      lang,
     });
     return { subject, html };
   }
@@ -826,6 +859,7 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
     return { subject, html };
   }
 
+  const lang = vars?.lang === 'en' ? 'en' : 'cs';
   const email = String(vars?.email || '');
   const name = String(vars?.name || email);
   const eventTitle = String(vars?.eventTitle || '');
@@ -837,34 +871,86 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
   const isWaitlist = status === 'waitlist';
   const isPrevod = paymentMethod === 'prevod';
 
-  const subject = isWaitlist ? `Pupen — Čekací listina: ${eventTitle}` : `Pupen — Vstupenka: ${eventTitle}`;
+  const statusLabel =
+    lang === 'en'
+      ? status === 'confirmed'
+        ? 'Confirmed'
+        : status === 'reserved'
+          ? 'Reserved'
+          : status === 'waitlist'
+            ? 'Waitlist'
+            : status === 'cancelled'
+              ? 'Cancelled'
+              : status
+      : status === 'confirmed'
+        ? 'Potvrzeno'
+        : status === 'reserved'
+          ? 'Rezervováno'
+          : status === 'waitlist'
+            ? 'Čekací listina'
+            : status === 'cancelled'
+              ? 'Zrušeno'
+              : status;
+
+  const subject =
+    lang === 'en'
+      ? isWaitlist
+        ? `Pupen — Waitlist: ${eventTitle}`
+        : `Pupen — Ticket: ${eventTitle}`
+      : isWaitlist
+        ? `Pupen — Čekací listina: ${eventTitle}`
+        : `Pupen — Vstupenka: ${eventTitle}`;
   const attendees = Array.isArray(vars?.attendees) ? vars.attendees : [];
 
   const attendeeList = attendees
     .map((a: any) => `<li style="margin: 4px 0;">${escapeHtml(a?.name || '')}</li>`)
     .join('');
 
+  const qrPayload = `PUPEN-TICKET:${qrToken}`;
+  const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrPayload)}`;
+
   const html = emailDoc({
     subject,
     title: eventTitle || 'Vstupenka',
-    badge: isWaitlist ? 'Waitlist' : 'Vstupenka',
-    preheader: isWaitlist ? `Čekací listina: ${eventTitle}` : `Vstupenka: ${eventTitle}`,
+    badge: isWaitlist ? (lang === 'en' ? 'Waitlist' : 'Čekací listina') : lang === 'en' ? 'Ticket' : 'Vstupenka',
+    preheader: isWaitlist
+      ? lang === 'en'
+        ? `Waitlist: ${eventTitle}`
+        : `Čekací listina: ${eventTitle}`
+      : lang === 'en'
+        ? `Ticket: ${eventTitle}`
+        : `Vstupenka: ${eventTitle}`,
     introHtml: `<p style="margin:0;">${escapeHtml(name)}</p>`,
     contentHtml: `
       <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px;">
-        <div style="font-weight:900;">Status: ${escapeHtml(status)}</div>
-        ${attendeeList ? `<div style="margin-top:12px; font-weight:900;">Účastníci:</div><ul style="padding-left:18px; margin:8px 0 0 0;">${attendeeList}</ul>` : ''}
+        <div style="font-weight:900;">${escapeHtml(lang === 'en' ? 'Status' : 'Stav')}: ${escapeHtml(statusLabel)}</div>
+        ${
+          attendeeList
+            ? `<div style="margin-top:12px; font-weight:900;">${escapeHtml(lang === 'en' ? 'Attendees' : 'Účastníci')}:</div><ul style="padding-left:18px; margin:8px 0 0 0;">${attendeeList}</ul>`
+            : ''
+        }
         <hr style="border:none; border-top:1px solid #e7e5e4; margin:14px 0;" />
-        <div style="font-weight:900; margin-bottom:8px;">QR Token</div>
-        <div style="display:inline-block; background:#ffffff; border:1px solid #e7e5e4; border-radius:14px; padding:10px 12px; font-weight:950; letter-spacing:0.22em; font-size:18px;">${escapeHtml(qrToken)}</div>
-        <div style="margin-top:10px; font-size:12px; color:#78716c; font-weight:800;">Při vstupu ukažte QR token (nebo QR kód v portálu).</div>
+        <div style="font-weight:900; margin-bottom:8px;">${escapeHtml(lang === 'en' ? 'QR code / token' : 'QR kód / token')}</div>
+        <div style="display:inline-block; background:#ffffff; border:1px solid #e7e5e4; border-radius:14px; padding:10px 12px; font-weight:950; letter-spacing:0.22em; font-size:18px;">${escapeHtml(
+          qrToken,
+        )}</div>
+        <div style="margin-top:12px;">
+          <img src="${qrImgUrl}" alt="Ticket QR" width="220" height="220" style="margin:0; border-radius:14px; border:1px solid #e7e5e4; background:#ffffff; padding:10px;" />
+        </div>
+        <div style="margin-top:10px; font-size:12px; color:#78716c; font-weight:800;">${escapeHtml(
+          lang === 'en' ? 'Show the QR code (or token) at the entrance.' : 'Při vstupu ukažte QR kód (nebo token).',
+        )}</div>
       </div>
       ${
         isPrevod && !isWaitlist
           ? `<div style="margin-top:14px; border:2px dashed #16a34a; border-radius:18px; padding:16px; text-align:center;">
-              <div style="font-weight:950; font-size:16px;">Platební údaje</div>
-              <div style="margin-top:8px; font-weight:800;">Prosíme o úhradu do 24 hodin, jinak bude rezervace zrušena.</div>
-              <div style="margin-top:10px; font-size:12px; color:#78716c; font-weight:900;">Účet: ${escapeHtml(bankAccount || '—')}</div>
+              <div style="font-weight:950; font-size:16px;">${escapeHtml(lang === 'en' ? 'Payment details' : 'Platební údaje')}</div>
+              <div style="margin-top:8px; font-weight:800;">${escapeHtml(
+                lang === 'en' ? 'Please pay within 24 hours, otherwise the reservation will be cancelled.' : 'Prosíme o úhradu do 24 hodin, jinak bude rezervace zrušena.',
+              )}</div>
+              <div style="margin-top:10px; font-size:12px; color:#78716c; font-weight:900;">${escapeHtml(
+                lang === 'en' ? 'Account' : 'Účet',
+              )}: ${escapeHtml(bankAccount || '—')}</div>
               <div style="margin-top:10px;">
                 <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`SPD:1.0*ACC:${bankAccount}*AM:100.00*CC:CZK*MSG:Pupen ${qrToken}`)}" alt="QR Platba" style="margin:0; border-radius:14px;" />
               </div>
@@ -873,7 +959,7 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
       }
     `,
     footerText: 'Tento e‑mail byl odeslán automaticky systémem Pupen.',
-    lang: 'cs',
+    lang,
   });
 
   return { subject, html };

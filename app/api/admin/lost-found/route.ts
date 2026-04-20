@@ -2,6 +2,12 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { requireAdmin } from '@/lib/server-auth';
 
+const ITEM_STATUS = new Set(['open', 'claimed', 'in_progress', 'returned', 'archived']);
+function normalizeStatus(input: any) {
+  const s = String(input || '').trim();
+  return ITEM_STATUS.has(s) ? s : 'open';
+}
+
 export async function GET(req: Request) {
   try {
     await requireAdmin(req);
@@ -32,9 +38,11 @@ export async function POST(req: Request) {
       category: item.category ? String(item.category).slice(0, 80) : null,
       location: item.location ? String(item.location).slice(0, 120) : null,
       contact: item.contact ? String(item.contact).slice(0, 200) : null,
-      status: item.status ? String(item.status).slice(0, 40) : 'open',
+      status: normalizeStatus(item.status),
       is_public: item.is_public !== false,
       photo_url: item.photo_url ? String(item.photo_url).slice(0, 500) : null,
+      location_lat: Number.isFinite(Number(item.location_lat)) ? Number(item.location_lat) : null,
+      location_lng: Number.isFinite(Number(item.location_lng)) ? Number(item.location_lng) : null,
     };
 
     const supabase = getServerSupabase();
@@ -60,4 +68,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: e?.message || 'Error' }, { status });
   }
 }
-

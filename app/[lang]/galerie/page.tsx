@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { getDictionary } from '@/lib/get-dictionary';
 import { supabase } from '@/lib/supabase';
-import { Image as ImageIcon, Calendar, ArrowLeft, Maximize2, X } from 'lucide-react';
+import { Image as ImageIcon, Calendar, ArrowLeft, Maximize2, X, Archive } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import Dialog from '@/app/components/ui/Dialog';
@@ -156,9 +156,22 @@ export default function GaleriePage() {
     <div className="min-h-screen bg-stone-50 pt-24 pb-32">
       <div className="max-w-7xl mx-auto px-6">
         <header className="mb-16">
-          <Link href={`/${lang}`} className="inline-flex items-center gap-2 text-stone-400 font-bold hover:text-green-600 transition mb-6 group">
-            <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> {lang === 'cs' ? 'Zpět domů' : 'Back home'}
-          </Link>
+          <div className="flex flex-wrap items-center gap-3 mb-6">
+            <Link
+              href={`/${lang}`}
+              className="inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
+            >
+              <ArrowLeft size={16} />
+              {lang === 'cs' ? 'Zpět domů' : 'Back home'}
+            </Link>
+            <Link
+              href={`/${lang}/archiv`}
+              className="inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
+            >
+              <Archive size={16} />
+              {lang === 'en' ? 'Archive' : 'Archiv aktivit'}
+            </Link>
+          </div>
           <div className="flex items-center gap-4 mb-4">
             <div className="p-3 bg-green-100 text-green-600 rounded-2xl shadow-sm">
               <ImageIcon size={32} />
