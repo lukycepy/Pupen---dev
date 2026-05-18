@@ -844,8 +844,8 @@ export default function ClenskaSekcePage() {
   const memberUiPrefs = (profile?.ui_prefs && typeof profile.ui_prefs === 'object' ? (profile.ui_prefs as any).member : null) || {};
   const userHiddenTabs = Array.isArray(memberUiPrefs.hiddenTabs) ? memberUiPrefs.hiddenTabs.map((x: any) => String(x)) : [];
   const userPinnedTabs = Array.isArray(memberUiPrefs.pinnedTabs) ? memberUiPrefs.pinnedTabs.map((x: any) => String(x)) : [];
-  const effectiveHiddenTabs = Array.from(new Set([...(memberPortalCfg.hiddenTabs || []).map(String), ...userHiddenTabs]));
-  const effectivePinnedTabs = Array.from(new Set(userPinnedTabs.map(String)));
+  const effectiveHiddenTabs: string[] = Array.from(new Set([...(memberPortalCfg.hiddenTabs || []).map(String), ...userHiddenTabs]));
+  const effectivePinnedTabs: string[] = Array.from(new Set(userPinnedTabs.map(String)));
 
   const memberTabs = (() => {
     const t = dict?.member || {};

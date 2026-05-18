@@ -120,12 +120,12 @@ export default function AdminDashboard() {
     return a && typeof a === 'object' ? a : {};
   }, [userProfile]);
 
-  const adminHiddenTabs = useMemo(() => {
+  const adminHiddenTabs = useMemo<string[]>(() => {
     const x = (adminUiPrefs as any).hiddenTabs;
     return Array.isArray(x) ? x.map((v: any) => String(v)) : [];
   }, [adminUiPrefs]);
 
-  const adminPinnedTabs = useMemo(() => {
+  const adminPinnedTabs = useMemo<string[]>(() => {
     const x = (adminUiPrefs as any).pinnedTabs;
     return Array.isArray(x) ? x.map((v: any) => String(v)) : [];
   }, [adminUiPrefs]);
