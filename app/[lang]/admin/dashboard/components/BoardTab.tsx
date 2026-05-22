@@ -26,7 +26,7 @@ export default function BoardTab({ uploadImage }: { uploadImage: (file: File, bu
   const [isEditing, setIsEditing] = useState<any>(null);
   const [formData, setFormData] = useState({ 
     name: '', role: '', bio: '', image_url: '', 
-    email: '', phone: '', social_linkedin: '', social_twitter: '', social_instagram: '',
+    email: '', phone: '', social_linkedin: '', social_twitter: '', social_instagram: '', social_facebook: '',
     sort_order: 0, is_active: true 
   });
   const [isUploading, setIsUploading] = useState(false);
@@ -137,10 +137,10 @@ export default function BoardTab({ uploadImage }: { uploadImage: (file: File, bu
             </label>
             <button
               onClick={() => {
-                setFormData({ 
-                  name: '', role: '', bio: '', image_url: '', 
-                  email: '', phone: '', social_linkedin: '', social_twitter: '', social_instagram: '',
-                  sort_order: 0, is_active: true 
+                setFormData({
+                  name: '', role: '', bio: '', image_url: '',
+                  email: '', phone: '', social_linkedin: '', social_twitter: '', social_instagram: '', social_facebook: '',
+                  sort_order: 0, is_active: true
                 });
                 setIsEditing('new');
               }}
@@ -227,6 +227,13 @@ export default function BoardTab({ uploadImage }: { uploadImage: (file: File, bu
                 <div className="relative">
                   <Instagram className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400" size={16} />
                   <input type="url" value={formData.social_instagram} onChange={e => setFormData({ ...formData, social_instagram: e.target.value })} className="w-full bg-stone-50 border border-stone-200 rounded-xl pl-12 pr-4 py-3 font-bold text-stone-700 text-sm" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Facebook URL</label>
+                <div className="relative">
+                  <Linkedin className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400" size={16} />
+                  <input type="url" value={formData.social_facebook} onChange={e => setFormData({ ...formData, social_facebook: e.target.value })} className="w-full bg-stone-50 border border-stone-200 rounded-xl pl-12 pr-4 py-3 font-bold text-stone-700 text-sm" />
                 </div>
               </div>
             </div>

@@ -108,10 +108,10 @@ export default async function PrivacyPage({ params }: { params: Promise<{ lang: 
             <div className="space-y-6">
               <p className="font-bold text-stone-800">{dict.scopeIntro}</p>
               <div className="grid sm:grid-cols-2 gap-3">
-                {dict.scopeList?.map((item: string, idx: number) => (
-                  <div key={idx} className="flex items-center gap-3 p-4 bg-stone-50/50 rounded-xl border border-stone-50 group hover:bg-white hover:border-green-100 transition duration-300">
-                    <CheckCircle size={18} className="text-green-500 shrink-0" />
-                    <span className="font-bold text-stone-700 text-sm">{item}</span>
+                {(dict.scopeList || []).map((item: string, idx: number) => (
+                  <div key={idx} className="flex items-start gap-3 p-5 bg-blue-50/50 border border-blue-100 rounded-2xl group hover:bg-blue-50 transition">
+                    <CheckCircle size={20} className="text-green-500 shrink-0 mt-0.5" />
+                    <span className="font-bold text-stone-700 leading-relaxed">{item}</span>
                   </div>
                 ))}
               </div>

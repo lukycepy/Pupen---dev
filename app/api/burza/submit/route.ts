@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getServerSupabase } from '@/lib/supabase-server';
-import { guardPublicJsonPost } from '@/lib/public-post-guard';
 
-export async function POST(req: Request) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function POST(_req: Request) {
   return NextResponse.json({ error: 'Burza učebnic je ukončena.' }, { status: 410 });
 }

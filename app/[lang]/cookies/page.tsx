@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Cookie, ArrowLeft, Info, Settings, ShieldCheck, BarChart3 } from 'lucide-react';
+import { Cookie, ArrowLeft, ShieldCheck, Settings, BarChart3, Eye, Trash2 } from 'lucide-react';
 import { getDictionary } from '@/lib/get-dictionary';
 import { getSitePageContent } from '@/lib/site/page-content';
 import DbContentPage from '@/app/[lang]/components/DbContentPage';
@@ -43,103 +43,143 @@ export default async function CookiesPage({ params }: { params: Promise<{ lang: 
   }
   const dict = (await getDictionary(lang)).cookiesPage;
 
+  const cookieTypes = [
+    {
+      icon: ShieldCheck,
+      iconBg: 'bg-green-50',
+      iconColor: 'text-green-600',
+      borderColor: 'border-green-100',
+      title: dict.necessaryTitle,
+      desc: dict.necessaryDesc,
+      badge: { text: lang === 'en' ? 'Always active' : 'Vždy aktivní', bg: 'bg-green-100', textColor: 'text-green-700' },
+    },
+    {
+      icon: Settings,
+      iconBg: 'bg-blue-50',
+      iconColor: 'text-blue-600',
+      borderColor: 'border-blue-100',
+      title: dict.prefTitle,
+      desc: dict.prefDesc,
+      badge: { text: lang === 'en' ? 'Optional' : 'Volitelné', bg: 'bg-blue-100', textColor: 'text-blue-700' },
+    },
+    {
+      icon: BarChart3,
+      iconBg: 'bg-purple-50',
+      iconColor: 'text-purple-600',
+      borderColor: 'border-purple-100',
+      title: dict.statsTitle,
+      desc: dict.statsDesc,
+      badge: { text: lang === 'en' ? 'Optional' : 'Volitelné', bg: 'bg-purple-100', textColor: 'text-purple-700' },
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-900 font-sans pb-32">
-      
-      {/* Hero Header */}
-      <header className="relative pt-32 pb-24 px-6 overflow-hidden bg-stone-900 text-white">
+    <div className="min-h-screen bg-stone-50 text-stone-900 font-sans">
+
+      {/* Hero */}
+      <header className="relative overflow-hidden bg-stone-900 text-white pt-24 pb-40 px-6">
         <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-stone-900 z-10" />
-          <div className="absolute top-[-10%] -left-20 w-[40rem] h-[40rem] bg-amber-600/10 rounded-full blur-[120px]" />
-          <div className="absolute bottom-[-10%] -right-20 w-[40rem] h-[40rem] bg-amber-600/10 rounded-full blur-[120px]" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-900/60 via-stone-900 to-stone-950" />
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/3" />
+          <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-amber-500/5 rounded-full blur-[100px]" />
         </div>
-        
-        <div className="max-w-4xl mx-auto relative z-20 text-center">
-          <Link href={`/${lang}`} className="inline-flex items-center gap-2 text-white/60 hover:text-white mb-10 transition font-black uppercase tracking-[0.2em] text-[10px]">
+
+        <div className="max-w-4xl mx-auto relative z-10 text-center">
+          <Link href={`/${lang}`} className="inline-flex items-center gap-2 text-stone-400 hover:text-white mb-10 transition font-bold uppercase tracking-widest text-[10px]">
             <ArrowLeft size={16} />
             {dict.backToHome}
           </Link>
-          
+
           <div className="flex flex-col items-center">
             <div className="bg-amber-500/20 p-5 rounded-[2rem] text-amber-400 mb-8 backdrop-blur-xl border border-amber-500/30">
-              <Cookie size={48} />
+              <Cookie size={52} />
             </div>
-            <h1 className="text-4xl md:text-7xl font-black tracking-tighter mb-8 drop-shadow-2xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/20 text-amber-400 rounded-full text-[10px] font-black uppercase tracking-widest border border-amber-500/30 mb-6">
+              <Eye size={12} /> {lang === 'en' ? 'Your privacy' : 'Vaše soukromí'}
+            </div>
+            <h1 className="text-4xl md:text-7xl font-black tracking-tighter mb-6 drop-shadow-2xl">
               {dict.title}
             </h1>
-            <p className="text-xl md:text-2xl text-stone-300 font-medium max-w-2xl mx-auto leading-relaxed">
+            <p className="text-xl md:text-2xl text-stone-400 font-medium max-w-2xl mx-auto leading-relaxed">
               {dict.intro}
             </p>
           </div>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-6 -mt-12 relative z-30">
-        <div className="space-y-12">
-          {/* CO JSOU COOKIES */}
-          <section className="bg-white p-10 md:p-16 rounded-[3rem] shadow-2xl shadow-stone-200/50 border border-stone-100">
-            <h2 className="text-3xl font-black mb-8 flex items-center gap-4 tracking-tight">
-              <span className="bg-amber-100 p-2.5 rounded-2xl text-amber-600"><Info size={28} /></span>
-              {dict.whatAreCookiesTitle}
-            </h2>
-            <div className="text-stone-600 leading-[1.8] text-lg font-medium">
-              {dict.whatAreCookiesText}
-            </div>
-          </section>
+      <main className="max-w-4xl mx-auto px-6 -mt-24 relative z-20 space-y-8">
 
-          {/* TYPY COOKIES */}
-          <section>
-            <h2 className="text-3xl font-black mb-8 flex items-center gap-4 tracking-tight px-4">
-              <span className="bg-amber-100 p-2.5 rounded-2xl text-amber-600"><Settings size={28} /></span>
-              {dict.typesTitle}
-            </h2>
-            <div className="grid md:grid-cols-3 gap-6">
-              <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-stone-50 group hover:border-amber-100 transition duration-500">
-                <div className="w-12 h-12 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition duration-500">
-                  <ShieldCheck size={24} />
+        {/* Co jsou cookies */}
+        <section className="bg-white rounded-[2.5rem] p-10 md:p-14 shadow-2xl border border-stone-100">
+          <div className="flex items-start gap-5 mb-6">
+            <div className="bg-amber-50 p-3 rounded-2xl border border-amber-100 shrink-0">
+              <Cookie size={28} className="text-amber-600" />
+            </div>
+            <div>
+              <h2 className="text-3xl font-black text-stone-900 mb-2">{dict.whatAreCookiesTitle}</h2>
+              <p className="text-stone-400 font-medium text-sm">{lang === 'en' ? 'Basic information' : 'Základní informace'}</p>
+            </div>
+          </div>
+          <div className="p-8 bg-gradient-to-br from-amber-50 to-stone-50 rounded-[2rem] border border-amber-100">
+            <p className="text-stone-700 leading-[1.9] text-lg font-medium">{dict.whatAreCookiesText}</p>
+          </div>
+        </section>
+
+        {/* Typy */}
+        <section>
+          <div className="mb-6 flex items-center gap-3">
+            <div className="bg-stone-200 p-2 rounded-xl">
+              <Settings size={18} className="text-stone-600" />
+            </div>
+            <h2 className="text-2xl font-black text-stone-900">{dict.typesTitle}</h2>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {cookieTypes.map((ct, i) => (
+              <div key={i} className={`bg-white p-8 rounded-[2rem] shadow-lg border ${ct.borderColor} group hover:shadow-xl transition duration-500`}>
+                <div className="flex items-start justify-between mb-6">
+                  <div className={`${ct.iconBg} p-3 rounded-2xl`}>
+                    <ct.icon size={26} className={ct.iconColor} />
+                  </div>
+                  <span className={`${ct.badge.bg} ${ct.badge.textColor} px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest`}>
+                    {ct.badge.text}
+                  </span>
                 </div>
-                <h3 className="text-xl font-black text-stone-900 mb-3">{dict.necessaryTitle}</h3>
-                <p className="text-stone-500 font-medium leading-relaxed">{dict.necessaryDesc}</p>
+                <h3 className="text-xl font-black text-stone-900 mb-3">{ct.title}</h3>
+                <p className="text-stone-500 font-medium leading-relaxed">{ct.desc}</p>
               </div>
-              
-              <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-stone-50 group hover:border-amber-100 transition duration-500">
-                <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition duration-500">
-                  <Settings size={24} />
-                </div>
-                <h3 className="text-xl font-black text-stone-900 mb-3">{dict.prefTitle}</h3>
-                <p className="text-stone-500 font-medium leading-relaxed">{dict.prefDesc}</p>
-              </div>
+            ))}
+          </div>
+        </section>
 
-              <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-stone-50 group hover:border-amber-100 transition duration-500">
-                <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition duration-500">
-                  <BarChart3 size={24} />
-                </div>
-                <h3 className="text-xl font-black text-stone-900 mb-3">{dict.statsTitle}</h3>
-                <p className="text-stone-500 font-medium leading-relaxed">{dict.statsDesc}</p>
+        {/* Jak spravovat */}
+        <section className="bg-stone-900 text-white p-10 md:p-16 rounded-[3rem] shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-16 opacity-[0.04]">
+            <ShieldCheck size={280} />
+          </div>
+          <div className="relative z-10 max-w-2xl">
+            <div className="flex items-start gap-5 mb-8">
+              <div className="bg-amber-500/20 p-3 rounded-2xl border border-amber-500/30 shrink-0">
+                <Trash2 size={28} className="text-amber-400" />
+              </div>
+              <div>
+                <h2 className="text-3xl font-black mb-2">{dict.manageTitle}</h2>
+                <p className="text-stone-400 font-medium text-sm">{lang === 'en' ? 'Take control of your data' : 'Mějte kontrolu nad svými daty'}</p>
               </div>
             </div>
-          </section>
-
-          {/* JAK ZMĚNIT NASTAVENÍ */}
-          <section className="bg-stone-900 text-white p-10 md:p-16 rounded-[4rem] shadow-2xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-12 opacity-5 group-hover:opacity-10 transition duration-1000">
-              <ShieldCheck size={240} />
+            <div className="p-8 bg-white/5 backdrop-blur-sm rounded-[2rem] border border-white/10">
+              <p className="text-stone-300 leading-[1.9] text-lg font-medium">{dict.manageText}</p>
             </div>
-            <div className="relative z-10 max-w-2xl">
-              <h2 className="text-3xl font-black mb-8 flex items-center gap-4 tracking-tight">
-                <span className="bg-amber-500/20 p-2.5 rounded-2xl text-amber-400"><ShieldCheck size={28} /></span>
-                {dict.manageTitle}
-              </h2>
-              <p className="text-stone-300 leading-relaxed text-lg font-medium">{dict.manageText}</p>
-            </div>
-          </section>
-        </div>
+          </div>
+        </section>
 
-        {/* Patička */}
-        <div className="text-center text-stone-400 text-[11px] font-black uppercase tracking-[0.3em] mt-24 pt-12 border-t border-stone-200">
+      </main>
+
+      {/* Footer */}
+      <div className="max-w-4xl mx-auto px-6 pb-24">
+        <div className="text-center text-stone-400 text-[11px] font-black uppercase tracking-[0.3em] pt-16 border-t border-stone-200">
           <p>{dict.lastUpdated}</p>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

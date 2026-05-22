@@ -9,8 +9,8 @@ export default function Dialog({
   onClose,
   children,
   closeOnBackdrop = true,
-  overlayClassName = 'fixed inset-0 z-[30000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm',
-  panelClassName = 'w-full max-w-xl bg-white rounded-[2.5rem] border border-stone-100 shadow-2xl overflow-hidden',
+  overlayClassName = 'fixed inset-0 z-[30000] flex items-end sm:items-center justify-center p-0 sm:p-4 sm:pb-4 bg-black/60 backdrop-blur-sm',
+  panelClassName = 'w-full sm:max-w-xl md:max-w-2xl bg-white rounded-t-3xl sm:rounded-[2.5rem] border border-stone-100 shadow-2xl overflow-y-auto max-h-[92dvh] sm:max-h-[90vh]',
 }: {
   open: boolean;
   onClose: () => void;

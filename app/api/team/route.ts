@@ -19,7 +19,7 @@ export async function GET() {
   }
   const res = await supabase
     .from('team_members')
-    .select('id,name,role,email,phone,image_url,sort_order')
+    .select('id,name,role,email,phone,image_url,sort_order,social_instagram,social_linkedin,social_twitter,social_facebook')
     .eq('is_active', true)
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: false })

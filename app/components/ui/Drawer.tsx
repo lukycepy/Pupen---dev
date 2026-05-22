@@ -13,7 +13,7 @@ export default function Drawer({
   lockScroll = true,
   overlayClassName = 'fixed inset-0 z-[10000] flex',
   backdropClassName = 'absolute inset-0 bg-black/60 backdrop-blur-sm',
-  panelClassName = 'relative h-full w-72 bg-white',
+  panelClassName = 'relative h-full w-72 max-w-[90vw]',
 }: {
   open: boolean;
   onClose: () => void;
