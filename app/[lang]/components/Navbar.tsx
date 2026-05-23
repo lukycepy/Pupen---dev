@@ -226,7 +226,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                 className={`relative text-xs font-black uppercase tracking-[0.2em] transition-all duration-300 py-2 group whitespace-nowrap ${
                   item.active 
                     ? 'text-green-600' 
-                    : 'text-stone-500 hover:text-stone-900'
+                    : 'text-stone-500 hover:text-stone-900 dark:text-stone-200/80 dark:hover:text-stone-50'
                 }`}
               >
                 {item.label}
@@ -257,7 +257,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                 aria-haspopup="menu"
                 aria-expanded={isToolsOpen}
                 className={`relative group flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.2em] transition-all duration-300 py-2 whitespace-nowrap ${
-                  isToolsOpen ? 'text-green-600' : 'text-stone-500 hover:text-stone-900'
+                  isToolsOpen ? 'text-green-600' : 'text-stone-500 hover:text-stone-900 dark:text-stone-200/80 dark:hover:text-stone-50'
                 }`}
               >
                 {toolsTitle}
@@ -317,7 +317,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                 className={`relative text-xs font-black uppercase tracking-[0.2em] transition-all duration-300 py-2 group whitespace-nowrap ${
                   item.active 
                     ? 'text-green-600' 
-                    : 'text-stone-500 hover:text-stone-900'
+                    : 'text-stone-500 hover:text-stone-900 dark:text-stone-200/80 dark:hover:text-stone-50'
                 }`}
               >
                 {item.label}
@@ -334,7 +334,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
             <div className="relative" ref={searchRef}>
               <button 
                 onClick={() => setIsSearchOpen(!isSearchOpen)}
-                className={`p-2 transition-all duration-300 ${isSearchOpen ? 'text-stone-900' : 'text-stone-400 hover:text-green-600'}`}
+                className={`p-2 transition-all duration-300 ${isSearchOpen ? 'text-stone-900 dark:text-stone-50' : 'text-stone-400 hover:text-green-600 dark:text-stone-200/80 dark:hover:text-green-400'}`}
               >
                 {isSearchOpen ? <X size={20} /> : <Search size={20} />}
               </button>
@@ -501,8 +501,6 @@ export default function Navbar({ lang, dict }: NavbarProps) {
               )}
             </div>
 
-            <ThemeToggleButton />
-
             {/* PŘEPÍNAČ JAZYKA */}
             <div className="flex items-center gap-1 bg-stone-50 p-1 rounded-xl border border-stone-100">
               <Link 
@@ -612,6 +610,8 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                 </Popover>
               )}
             </div>
+
+            <ThemeToggleButton />
 
             {isPageEnabled('prihlaska') && (
               <Link 
