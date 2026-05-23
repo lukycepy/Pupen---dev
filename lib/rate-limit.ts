@@ -49,6 +49,12 @@ async function rateLimitSharedDb({ bucket, key, windowMs, max }: Options): Promi
 
 export function getClientIp(req: Request) {
   const h = req.headers;
+  const cfi = h.get('cf-connecting-ip');
+  if (cfi) return cfi.trim() || null;
+  const tci = h.get('true-client-ip');
+  if (tci) return tci.trim() || null;
+  const xvff = h.get('x-vercel-forwarded-for');
+  if (xvff) return xvff.split(',')[0]?.trim() || null;
   const xff = h.get('x-forwarded-for');
   if (xff) return xff.split(',')[0]?.trim() || null;
   const xri = h.get('x-real-ip');

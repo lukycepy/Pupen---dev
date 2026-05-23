@@ -330,6 +330,11 @@ export default function LoginPage() {
           setLoading(false);
           return;
         }
+        if (guard.status !== 429) {
+          setError(String(j?.error || (lang === 'cs' ? 'Chyba ověření přihlášení.' : 'Login guard error.')));
+          setLoading(false);
+          return;
+        }
         const retryAfterSecRaw = Number(guard.headers.get('Retry-After') || 0);
         const retryAfterMs = Number(j?.retryAfterMs || 0);
         const sec = retryAfterSecRaw || (retryAfterMs ? Math.ceil(retryAfterMs / 1000) : 60);
@@ -421,6 +426,11 @@ export default function LoginPage() {
           const j = await guard.json().catch(() => ({}));
           if (guard.status === 403) {
             setError(String(j?.error || (lang === 'cs' ? 'Zakázaný požadavek.' : 'Forbidden request.')));
+            setLoading(false);
+            return;
+          }
+          if (guard.status !== 429) {
+            setError(String(j?.error || (lang === 'cs' ? 'Chyba ověření přihlášení.' : 'Login guard error.')));
             setLoading(false);
             return;
           }

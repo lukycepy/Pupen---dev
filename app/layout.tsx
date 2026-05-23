@@ -34,7 +34,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="cs" className={`scroll-smooth ${inter.variable} ${montserrat.variable}`} suppressHydrationWarning>
-      <body className={`${inter.className} bg-stone-50 text-stone-900 antialiased font-sans`} suppressHydrationWarning>
+      <body className={`${inter.className} text-stone-900 antialiased font-sans`} suppressHydrationWarning>
         <script
           dangerouslySetInnerHTML={{
             __html:

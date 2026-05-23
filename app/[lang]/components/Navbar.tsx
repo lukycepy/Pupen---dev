@@ -33,7 +33,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<{events: any[], posts: any[], faqs: any[], books: any[], discounts: any[], guide: any[], archive: any[]}>({events: [], posts: [], faqs: [], books: [], discounts: [], guide: [], archive: []});
+  const [searchResults, setSearchResults] = useState<{pages: any[], events: any[], posts: any[], faqs: any[], books: any[], discounts: any[], guide: any[], archive: any[]}>({pages: [], events: [], posts: [], faqs: [], books: [], discounts: [], guide: [], archive: []});
   const [isSearching, setIsSearching] = useState(false);
   const [isToolsOpen, setIsToolsOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -117,7 +117,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
   // Search logic
   useEffect(() => {
     if (searchQuery.length < 2) {
-      setSearchResults({events: [], posts: [], faqs: [], books: [], discounts: [], guide: [], archive: []});
+      setSearchResults({pages: [], events: [], posts: [], faqs: [], books: [], discounts: [], guide: [], archive: []});
       return;
     }
 
@@ -131,10 +131,10 @@ export default function Navbar({ lang, dict }: NavbarProps) {
         const res = await fetch(url.toString());
         const json = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(json?.error || 'Chyba');
-        setSearchResults(json?.results || { events: [], posts: [], faqs: [], books: [], discounts: [], guide: [], archive: [] });
+        setSearchResults(json?.results || { pages: [], events: [], posts: [], faqs: [], books: [], discounts: [], guide: [], archive: [] });
       } catch (err) {
         console.error(err);
-        setSearchResults({ events: [], posts: [], faqs: [], books: [], discounts: [], guide: [], archive: [] });
+        setSearchResults({ pages: [], events: [], posts: [], faqs: [], books: [], discounts: [], guide: [], archive: [] });
       } finally {
         setIsSearching(false);
       }
@@ -192,7 +192,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
   if (isAppSection) return null;
 
   return (
-    <nav className="sticky top-0 z-[10001] w-full bg-white/90 dark:bg-stone-950/70 backdrop-blur-xl border-b border-stone-100 dark:border-stone-800 shadow-sm">
+    <nav className="sticky top-0 z-[10001] w-full bg-white dark:bg-stone-950 border-b border-stone-100 dark:border-stone-800 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex justify-between items-center h-16">
           
@@ -360,8 +360,28 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                     {isSearching && <InlinePulse className="absolute right-5 top-5 bg-stone-200" size={14} />}
                   </div>
 
-                  {(searchResults.events.length > 0 || searchResults.posts.length > 0 || searchResults.faqs.length > 0 || searchResults.guide.length > 0 || searchResults.discounts.length > 0 || searchResults.books.length > 0 || searchResults.archive.length > 0) ? (
+                  {(searchResults.pages.length > 0 || searchResults.events.length > 0 || searchResults.posts.length > 0 || searchResults.faqs.length > 0 || searchResults.guide.length > 0 || searchResults.discounts.length > 0 || searchResults.books.length > 0 || searchResults.archive.length > 0) ? (
                     <div className="space-y-6">
+                      {searchResults.pages.length > 0 && (
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-3 px-2">{lang === 'en' ? 'Pages' : 'Stránky'}</p>
+                          <div className="space-y-1">
+                            {searchResults.pages.map((p: any) => (
+                              <Link
+                                key={p.id || p.href}
+                                href={String(p.href || `/${lang}`)}
+                                onClick={() => setIsSearchOpen(false)}
+                                className="flex items-center gap-4 p-3 hover:bg-stone-50 rounded-2xl transition group/item"
+                              >
+                                <div className="w-10 h-10 bg-stone-50 rounded-xl flex items-center justify-center text-stone-400 group-hover/item:bg-green-600 group-hover/item:text-white transition shadow-sm border border-stone-100">
+                                  <FileText size={16} />
+                                </div>
+                                <span className="text-sm font-bold text-stone-700 truncate">{p.title || p.href}</span>
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       {searchResults.events.length > 0 && (
                         <div>
                           <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-3 px-2">Akce</p>
@@ -679,7 +699,8 @@ export default function Navbar({ lang, dict }: NavbarProps) {
 
             {searchQuery.trim().length >= 2 && !isSearching && (
               <div className="bg-stone-50 border border-stone-100 rounded-2xl p-4">
-                {(searchResults.events.length > 0 ||
+                {(searchResults.pages.length > 0 ||
+                  searchResults.events.length > 0 ||
                   searchResults.posts.length > 0 ||
                   searchResults.faqs.length > 0 ||
                   searchResults.guide.length > 0 ||
@@ -687,6 +708,28 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                   searchResults.books.length > 0 ||
                   searchResults.archive.length > 0) ? (
                   <div className="space-y-4">
+                    {searchResults.pages.length > 0 && (
+                      <div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">{lang === 'en' ? 'Pages' : 'Stránky'}</div>
+                        <div className="space-y-1">
+                          {searchResults.pages.slice(0, 3).map((p: any) => (
+                            <Link
+                              key={p.id || p.href}
+                              href={String(p.href || `/${lang}`)}
+                              onClick={() => setIsMenuOpen(false)}
+                              className="flex items-center gap-3 p-3 bg-stone-50 rounded-2xl hover:bg-green-50 transition"
+                            >
+                              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-stone-100">
+                                <FileText size={16} className="text-stone-400" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="text-sm font-bold text-stone-800 truncate">{p.title || p.href}</div>
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     {searchResults.events.length > 0 && (
                       <div>
                         <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">Akce</div>

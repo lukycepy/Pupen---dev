@@ -20,10 +20,45 @@ export async function GET(req: Request) {
     const lang = (url.searchParams.get('lang') || 'cs') === 'en' ? 'en' : 'cs';
     const limit = Math.max(1, Math.min(10, Number(url.searchParams.get('limit') || 5)));
 
+    const norm = (s: any) =>
+      String(s || '')
+        .toLowerCase()
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '');
+
+    const pagesAll = [
+      { id: 'prihlaska', href: '/prihlaska', titleCs: 'Přihláška', titleEn: 'Application' },
+      { id: 'login', href: '/login', titleCs: 'Přihlášení členů', titleEn: 'Member login' },
+      { id: 'akce', href: '/akce', titleCs: 'Akce', titleEn: 'Events' },
+      { id: 'novinky', href: '/novinky', titleCs: 'Novinky', titleEn: 'News' },
+      { id: 'kontakt', href: '/kontakt', titleCs: 'Kontakt', titleEn: 'Contact' },
+      { id: 'o-nas', href: '/o-nas', titleCs: 'O nás', titleEn: 'About' },
+      { id: 'sos', href: '/sos', titleCs: 'SOS pro prváky', titleEn: 'Freshman SOS' },
+      { id: 'schranka-duvery', href: '/schranka-duvery', titleCs: 'Schránka důvěry', titleEn: 'Trust box' },
+      { id: 'pruvodce', href: '/pruvodce', titleCs: 'Průvodce', titleEn: 'Guide' },
+      { id: 'slevy', href: '/slevy', titleCs: 'Slevy', titleEn: 'Discounts' },
+      { id: 'archiv', href: '/archiv', titleCs: 'Archiv aktivit', titleEn: 'Archive' },
+      { id: 'galerie', href: '/galerie', titleCs: 'Fotogalerie', titleEn: 'Gallery' },
+      { id: 'daruj', href: '/daruj', titleCs: 'Daruj', titleEn: 'Donate' },
+      { id: 'podpora', href: '/support', titleCs: 'Podpora', titleEn: 'Support' },
+    ];
+
+    const pages = pagesAll
+      .map((p) => ({
+        id: p.id,
+        href: `/${lang}${p.href}`,
+        title: lang === 'en' ? p.titleEn : p.titleCs,
+      }))
+      .filter((p) => {
+        const nq = norm(q);
+        return nq.length >= 2 && (norm(p.title).includes(nq) || norm(p.href).includes(nq));
+      })
+      .slice(0, limit);
+
     if (q.length < 2) {
       return NextResponse.json({
         ok: true,
-        results: { events: [], posts: [], faqs: [], books: [], discounts: [], guide: [], archive: [] },
+        results: { pages: [], events: [], posts: [], faqs: [], books: [], discounts: [], guide: [], archive: [] },
       });
     }
 
@@ -146,6 +181,7 @@ export async function GET(req: Request) {
     return NextResponse.json({
       ok: true,
       results: {
+        pages,
         events: (eventsOk.data || []).map(normalize),
         posts: (postsOk.data || []).map(normalize),
         faqs: (faqsOk.data || []).map(normalize),
