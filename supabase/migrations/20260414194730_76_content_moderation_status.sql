@@ -2,15 +2,66 @@
 
 -- 1) student_blog: change is_approved to status
 ALTER TABLE public.student_blog ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'pending';
-UPDATE public.student_blog SET status = 'published' WHERE is_approved = true;
-UPDATE public.student_blog SET status = 'pending' WHERE is_approved = false;
-ALTER TABLE public.student_blog DROP COLUMN IF EXISTS is_approved;
+DO $$
+DECLARE
+  pol record;
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'student_blog' AND column_name = 'is_approved'
+  ) THEN
+    EXECUTE 'UPDATE public.student_blog SET status = ''published'' WHERE is_approved = true';
+    EXECUTE 'UPDATE public.student_blog SET status = ''pending'' WHERE is_approved = false';
+
+    FOR pol IN
+      SELECT policyname
+      FROM pg_policies
+      WHERE schemaname = 'public'
+        AND tablename = 'student_blog'
+        AND (qual ILIKE '%is_approved%' OR with_check ILIKE '%is_approved%')
+    LOOP
+      EXECUTE format('DROP POLICY IF EXISTS %I ON public.student_blog', pol.policyname);
+    END LOOP;
+
+    EXECUTE 'ALTER TABLE public.student_blog DROP COLUMN IF EXISTS is_approved';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'student_blog' AND policyname = 'student_blog_public_select'
+  ) THEN
+    EXECUTE 'CREATE POLICY student_blog_public_select ON public.student_blog FOR SELECT TO anon, authenticated USING (status = ''published'')';
+  END IF;
+END $$;
 
 -- 2) subject_reviews: change is_approved to status
 ALTER TABLE public.subject_reviews ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'pending';
-UPDATE public.subject_reviews SET status = 'published' WHERE is_approved = true;
-UPDATE public.subject_reviews SET status = 'pending' WHERE is_approved = false;
-ALTER TABLE public.subject_reviews DROP COLUMN IF EXISTS is_approved;
+DO $$
+DECLARE
+  pol record;
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'subject_reviews' AND column_name = 'is_approved'
+  ) THEN
+    EXECUTE 'UPDATE public.subject_reviews SET status = ''published'' WHERE is_approved = true';
+    EXECUTE 'UPDATE public.subject_reviews SET status = ''pending'' WHERE is_approved = false';
+
+    FOR pol IN
+      SELECT policyname
+      FROM pg_policies
+      WHERE schemaname = 'public'
+        AND tablename = 'subject_reviews'
+        AND (qual ILIKE '%is_approved%' OR with_check ILIKE '%is_approved%')
+    LOOP
+      EXECUTE format('DROP POLICY IF EXISTS %I ON public.subject_reviews', pol.policyname);
+    END LOOP;
+
+    EXECUTE 'ALTER TABLE public.subject_reviews DROP COLUMN IF EXISTS is_approved';
+  END IF;
+END $$;
 
 -- 3) posts: add status
 ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'draft';
@@ -34,11 +85,23 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='moderation_logs' AND policyname='moderation_logs_admin_select') THEN
     CREATE POLICY moderation_logs_admin_select ON public.moderation_logs
       FOR SELECT TO authenticated
-      USING (is_admin());
+      USING (
+        EXISTS (
+          SELECT 1
+          FROM public.profiles p
+          WHERE p.id = auth.uid() AND (p.is_admin = true OR p.can_manage_admins = true)
+        )
+      );
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='moderation_logs' AND policyname='moderation_logs_admin_insert') THEN
     CREATE POLICY moderation_logs_admin_insert ON public.moderation_logs
       FOR INSERT TO authenticated
-      WITH CHECK (is_admin());
+      WITH CHECK (
+        EXISTS (
+          SELECT 1
+          FROM public.profiles p
+          WHERE p.id = auth.uid() AND (p.is_admin = true OR p.can_manage_admins = true)
+        )
+      );
   END IF;
 END $$;

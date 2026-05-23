@@ -28,7 +28,13 @@ BEGIN
       ON public.rate_limit_counters
       FOR SELECT
       TO authenticated
-      USING (is_admin());
+      USING (
+        EXISTS (
+          SELECT 1
+          FROM public.profiles p
+          WHERE p.id = auth.uid() AND (p.is_admin = true OR p.can_manage_admins = true)
+        )
+      );
   END IF;
 END $$;
 

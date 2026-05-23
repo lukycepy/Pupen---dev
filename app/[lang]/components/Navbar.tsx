@@ -624,7 +624,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
           </div>
 
           {/* MOBILNÍ HAMBURGER */}
-          <div className="lg:hidden flex items-center gap-3">
+          <div className="md:hidden flex items-center gap-3">
             <ThemeToggleButton />
             <div className="flex items-center gap-1 bg-stone-100 p-1 rounded-xl border border-stone-200">
               <Link href={getTransliteratedPath('cs')} className={`px-2 py-1 rounded-lg text-[9px] font-black transition focus:ring-2 focus:ring-green-500 focus:outline-none ${lang === 'cs' ? 'bg-white text-green-600 shadow-sm' : 'text-stone-400'}`}>CZ</Link>
@@ -650,7 +650,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
           onClose={() => setIsMenuOpen(false)}
           side="top"
           lockScroll={false}
-          overlayClassName="lg:hidden fixed inset-0 z-[9998] flex"
+          overlayClassName="md:hidden fixed inset-0 z-[9998] flex"
           backdropClassName="absolute inset-0 bg-black/40 backdrop-blur-sm"
           panelClassName="relative w-full mt-16 h-[calc(100dvh-4rem)] bg-white animate-in slide-in-from-top-10 duration-500 overflow-y-auto overscroll-contain touch-pan-y"
         >

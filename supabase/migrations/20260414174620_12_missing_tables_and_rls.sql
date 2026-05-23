@@ -418,7 +418,7 @@ CREATE TABLE IF NOT EXISTS public.student_blog (
   author_name text,
   author_email text,
   views int NOT NULL DEFAULT 0,
-  is_approved boolean NOT NULL DEFAULT false
+  status text NOT NULL DEFAULT 'pending'
 );
 
 ALTER TABLE public.student_blog ENABLE ROW LEVEL SECURITY;
@@ -427,7 +427,7 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='student_blog' AND policyname='student_blog_public_select') THEN
     CREATE POLICY student_blog_public_select ON public.student_blog
       FOR SELECT TO anon, authenticated
-      USING (is_approved = true);
+      USING (status = 'published');
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='student_blog' AND policyname='student_blog_public_insert') THEN
     CREATE POLICY student_blog_public_insert ON public.student_blog

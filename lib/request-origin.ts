@@ -20,6 +20,9 @@ export function isSameSiteRequest(req: Request) {
   if (!origin) return process.env.NODE_ENV !== 'production';
 
   try {
+    const reqOrigin = new URL(req.url).origin;
+    if (origin === reqOrigin) return true;
+
     const allowed = new URL(getPublicBaseUrl()).origin;
     if (origin === allowed) return true;
 

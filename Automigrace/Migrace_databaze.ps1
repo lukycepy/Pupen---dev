@@ -220,6 +220,24 @@ function Get-EncodedRemoteDbUrl {
   return "postgresql://postgres:$pwdEscapedForUri@$($dbHost):5432/postgres?sslmode=require"
 }
 
+function Cleanup-OldLogs {
+  param(
+    [Parameter(Mandatory)] [string] $LogDir,
+    [Parameter(Mandatory)] [int] $KeepLast
+  )
+
+  try {
+    $files = Get-ChildItem -LiteralPath $LogDir -File -Filter 'Migrace_databaze_*.log' -ErrorAction SilentlyContinue |
+      Sort-Object -Property LastWriteTime -Descending
+    if (-not $files) { return }
+
+    $toDelete = $files | Select-Object -Skip $KeepLast
+    foreach ($f in $toDelete) {
+      try { Remove-Item -LiteralPath $f.FullName -Force -ErrorAction SilentlyContinue } catch { }
+    }
+  } catch { }
+}
+
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
 $supabaseDir = Join-Path $repoRoot 'supabase'
 if (-not (Test-Path $supabaseDir)) {
@@ -320,4 +338,5 @@ try {
   if (Test-Path $logFile) {
     Copy-Item -Path $logFile -Destination $latestLog -Force
   }
+  Cleanup-OldLogs -LogDir $logDir -KeepLast 3
 }
