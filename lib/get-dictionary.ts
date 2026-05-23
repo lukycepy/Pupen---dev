@@ -1,8 +1,8 @@
 import type { Dictionary, Locale } from './dictionary-types';
 
 const dictionaries: Record<Locale, () => Promise<Dictionary>> = {
-  cs: () => import('../dictionaries/cs.merged').then((module) => module.default as Dictionary),
-  en: () => import('../dictionaries/en.merged').then((module) => module.default as Dictionary),
+  cs: () => import('../dictionaries/cs.merged').then((module) => module.default as unknown as Dictionary),
+  en: () => import('../dictionaries/en.merged').then((module) => module.default as unknown as Dictionary),
 };
 
 type DictionaryCacheEntry = { value: Dictionary; atMs: number };

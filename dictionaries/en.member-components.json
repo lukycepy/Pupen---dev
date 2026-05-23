@@ -109,6 +109,7 @@
       "toastSuccess": "Success",
       "toastMessageReported": "Message reported",
       "toastMissingRecipient": "Missing recipient",
+      "unauthorized": "You are not signed in",
       "reportTitle": "Report message?",
       "reportMessage": "This will send a report to moderators.",
       "reportConfirm": "Report",

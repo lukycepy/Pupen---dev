@@ -310,7 +310,7 @@ export default function TrustBoxTab({ dict }: { dict: Dictionary }) {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <AdminModuleHeader
-        title={dict?.admin?.tabTrustBox || 'Schránka důvěry'}
+        title={dict?.admin?.tabTrustbox || 'Schránka důvěry'}
         description={canViewPii ? 'Plný přístup (PII povoleno)' : 'Redacted režim (PII skryto)'}
         actions={
           <div className="flex items-center gap-2">

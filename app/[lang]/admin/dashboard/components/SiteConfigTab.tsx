@@ -181,11 +181,17 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
   const pageLabel = useMemo(() => {
     const nav = dict?.nav || {};
     const tools = nav?.tools || {};
+    const navLabels = nav as unknown as Record<string, unknown>;
+    const toolsMap = tools as unknown as Record<string, { title?: unknown }>;
     const map = new Map<string, string>();
     for (const p of DEFAULT_PAGES) {
-      if (p.labelKey) map.set(p.slug, String(nav?.[p.labelKey] || p.slug));
-      else if (p.toolKey) map.set(p.slug, String(tools?.[p.toolKey]?.title || p.slug));
-      else map.set(p.slug, p.slug);
+      if (p.labelKey) {
+        const v = navLabels[p.labelKey];
+        map.set(p.slug, typeof v === 'string' ? v : p.slug);
+      } else if (p.toolKey) {
+        const v = toolsMap[p.toolKey]?.title;
+        map.set(p.slug, typeof v === 'string' ? v : p.slug);
+      } else map.set(p.slug, p.slug);
     }
     for (const p of CMS_PAGES) {
       const prev = map.get(p.slug);

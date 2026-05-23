@@ -450,7 +450,7 @@ export default function MemberMessagesTab({ lang }: { lang: string }) {
                           return;
                         }
                         const label = `${m.first_name || ''} ${m.last_name || ''}`.trim() || m.email;
-                        const t: Thread = {
+                        const nextThread: Thread = {
                           threadId: threadIdFor(String(me.id), String(m.id)),
                           peerEmail: String(m.email),
                           peerId: String(m.id),
@@ -459,7 +459,7 @@ export default function MemberMessagesTab({ lang }: { lang: string }) {
                           lastMessage: '',
                         };
                         setNewOpen(false);
-                        loadThread(t);
+                        loadThread(nextThread);
                       }}
                       className="w-full text-left p-4 rounded-[2rem] border border-stone-100 bg-stone-50 hover:bg-stone-100 transition"
                     >

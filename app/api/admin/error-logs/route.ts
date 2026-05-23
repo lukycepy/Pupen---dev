@@ -16,10 +16,9 @@ export async function GET(req: Request) {
     const canView = !!(profile?.can_manage_admins || profile?.can_view_logs || profile?.can_edit_logs);
     if (!canView) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     const { data, error } = await supabase
+      .from('error_logs')
       .select('*, profiles(email)')
       .order('created_at', { ascending: false })
-      .limit(100);
-
       .limit(100);
 
     if (error) throw error;
@@ -43,12 +42,11 @@ export async function DELETE(req: Request) {
     const profile = profRes.data as any;
     const canEdit = !!(profile?.can_manage_admins || profile?.can_edit_logs);
     if (!canEdit) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    
-    // Purge older logs or all? Let's purge all for now
+
     const { error } = await supabase
       .from('error_logs')
       .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000'); // Purge all
+      .neq('id', '00000000-0000-0000-0000-000000000000');
 
     if (error) throw error;
     return NextResponse.json({ success: true });

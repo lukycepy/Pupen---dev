@@ -3,6 +3,7 @@ import { Inter, Montserrat } from 'next/font/google'
 import type { Viewport } from 'next'
 import Providers from './providers'
 import ServiceWorker from './components/ServiceWorker'
+import AccessibilityControls from './components/AccessibilityControls'
 import { ErrorReporter } from '@/components/ErrorReporter';
 import { WebVitalsReporter } from '@/components/WebVitalsReporter';
 import SelfHostedAnalytics from './components/SelfHostedAnalytics';
@@ -35,11 +36,18 @@ export default function RootLayout({
   return (
     <html lang="cs" className={`scroll-smooth ${inter.variable} ${montserrat.variable}`} suppressHydrationWarning>
       <body className={`${inter.className} bg-stone-50 text-stone-900 antialiased font-sans`} suppressHydrationWarning>
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{var k='pupen_theme';var v=localStorage.getItem(k);var p=(v==='dark'||v==='light'||v==='system')?v:'system';var r=p==='system'&&window.matchMedia? (window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light') : (p==='dark'?'dark':'light');document.documentElement.classList.toggle('dark',r==='dark');document.documentElement.dataset.theme=r;document.documentElement.dataset.themePreference=p;document.documentElement.style.colorScheme=r;}catch(e){}})();",
+          }}
+        />
         <Providers>
           <ErrorReporter />
           <WebVitalsReporter />
           <SelfHostedAnalytics />
           {children}
+          <AccessibilityControls />
           <ServiceWorker />
         </Providers>
       </body>

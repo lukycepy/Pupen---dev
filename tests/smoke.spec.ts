@@ -59,10 +59,13 @@ test.describe('Theme Smoke Tests', () => {
       .toBe('dark');
 
     await toggle.click();
-    await expect(page.locator('html')).not.toHaveClass(/dark/);
+    await expect(page.locator('html')).toHaveClass(/dark/);
     await expect
       .poll(async () => page.evaluate(() => window.localStorage.getItem('pupen_theme')))
       .toBe('system');
+
+    await page.emulateMedia({ colorScheme: 'light' });
+    await expect(page.locator('html')).not.toHaveClass(/dark/);
   });
 });
 

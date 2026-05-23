@@ -109,6 +109,7 @@
       "toastSuccess": "Úspěšně změněno",
       "toastMessageReported": "Zpráva byla nahlášena",
       "toastMissingRecipient": "Chybí příjemce",
+      "unauthorized": "Nejste přihlášen/a",
       "reportTitle": "Nahlásit zprávu?",
       "reportMessage": "Tímto odešlete hlášení moderátorům.",
       "reportConfirm": "Nahlásit",

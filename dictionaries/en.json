@@ -740,6 +740,30 @@
         "retry": "Retry",
         "processing": "Processing",
         "dead": "Dead letters"
+      },
+      "hintTimeout": "This looks like a timeout. Check SMTP/external service availability and try again.",
+      "searchPlaceholder": "Search queue…",
+      "allStatuses": "All statuses",
+      "kindPlaceholder": "Type…",
+      "dueOn": "Due only",
+      "dueOff": "All",
+      "processQueue": "Process queue",
+      "summaryDueNow": "Due now",
+      "summaryStuck": "Stuck",
+      "emptyTitle": "No items",
+      "emptyDescription": "Try adjusting filters or come back later.",
+      "table": {
+        "to": "To",
+        "subject": "Subject",
+        "status": "Status",
+        "attempts": "Attempts",
+        "nextFailed": "Next attempt / error"
+      },
+      "pagination": {
+        "showing": "Showing",
+        "of": "of",
+        "previous": "Previous",
+        "next": "Next"
       }
     },
     "trustbox": {
@@ -756,6 +780,34 @@
       },
       "category": {
         "other": "Other"
+      },
+      "labels": {
+        "owner": "Owner",
+        "status": "Status",
+        "priority": "Priority",
+        "category": "Category"
+      },
+      "ownerUnassigned": "Unassigned",
+      "reporter": "Reporter",
+      "templatePlaceholder": "Select template…",
+      "insert": "Insert",
+      "audit": {
+        "title": "Audit",
+        "subtitle": "History of sensitive TrustBox admin actions",
+        "allActions": "All actions",
+        "empty": "No records",
+        "actions": {
+          "ADMIN_VIEW_PII": "View PII",
+          "ADMIN_EXPORT_PDF": "Export PDF",
+          "ADMIN_DOWNLOAD_ATTACHMENT": "Download attachment",
+          "ADMIN_MESSAGE_SENT": "Message sent",
+          "ADMIN_THREAD_UPDATE": "Thread update",
+          "ADMIN_ASSIGN_OWNER": "Assign owner",
+          "ADMIN_UPDATE_SETTINGS": "Update settings",
+          "ADMIN_ADD_ADMIN": "Add admin",
+          "ADMIN_REMOVE_ADMIN": "Remove admin",
+          "ADMIN_UPDATE_ADMIN_PERMS": "Update permissions"
+        }
       }
     },
     "governance": {
@@ -780,6 +832,13 @@
         "draft": "Draft",
         "pending": "Pending",
         "published": "Published",
+        "archived": "Archived"
+      }
+    },
+    "projects": {
+      "status": {
+        "open": "Open",
+        "closed": "Closed",
         "archived": "Archived"
       }
     },
@@ -816,6 +875,7 @@
     "tabBudget": "Accounting",
     "tabMeetings": "Meetings",
     "tabGovernance": "Governance",
+    "tabBoard": "Board",
     "tabDocuments": "Documents",
     "tabQuizzes": "Quizzes",
     "tabJobs": "Jobs",
@@ -832,15 +892,41 @@
     "tabArchive": "Activity Archive",
     "tabGallery": "Gallery",
     "tabBooks": "Book Exchange",
+    "btnLoading": "Loading…",
+    "btnMore": "Load more",
     "btnApprove": "Approve",
     "btnReject": "Reject",
+    "searchPlaceholder": "Search…",
+    "emptyApplications": "No applications",
+    "emptyDocuments": "No documents",
+    "missingSignature": "Missing signature",
     "chairwomanSignature": "President signature",
     "tabFaq": "FAQ",
     "tabPartners": "Partners",
     "btnExportRsvp": "Export RSVP",
     "btnExportNewsletter": "Export emails",
+    "labelActions": "Actions",
     "labelPublishedAt": "Scheduled publication",
     "labelViews": "View count",
+    "labelDate": "Date",
+    "labelDraft": "Draft",
+    "labelName": "Name",
+    "labelPassword": "Password",
+    "labelAnswerEn": "Answer (EN)",
+    "labelQuestionEn": "Question (EN)",
+    "labelTicketSaleEnd": "Ticket sales end",
+    "time": "Time",
+    "listBanners": "Banners",
+    "map": {
+      "manageCategories": "Manage categories",
+      "manageCategoriesTitle": "Categories",
+      "iconLabel": "Icon",
+      "addCategoryFirst": "Add a category first"
+    },
+    "users": {
+      "passwordStrength": "Password strength",
+      "passwordMinChars": "At least 8 characters"
+    },
     "title": "Admin Pupen",
     "backWeb": "Back to website",
     "logout": "Log out",
@@ -851,6 +937,9 @@
       "errors": {
         "generic": "Error"
       }
+    },
+    "common": {
+      "status": "Status"
     },
     "navContent": "Content",
     "navStudents": "Students",
@@ -1492,6 +1581,7 @@
     "navCommunity": "Community",
     "navProfile": "Profile",
     "sidebarSubtitle": "Member area",
+    "portalTitle": "Member area",
     "adminPanelLink": "Pupen Control",
     "logoutShort": "Log out",
     "welcome": "Hello",

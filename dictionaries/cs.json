@@ -904,6 +904,30 @@
         "retry": "Opakování",
         "processing": "Zpracování",
         "dead": "Dead letters"
+      },
+      "hintTimeout": "Vypadá to na timeout. Zkontroluj dostupnost SMTP/externí služby a zkus to znovu.",
+      "searchPlaceholder": "Hledat ve frontě…",
+      "allStatuses": "Všechny stavy",
+      "kindPlaceholder": "Typ…",
+      "dueOn": "Jen splatné",
+      "dueOff": "Vše",
+      "processQueue": "Zpracovat frontu",
+      "summaryDueNow": "Splatné nyní",
+      "summaryStuck": "Zaseknuté",
+      "emptyTitle": "Žádné položky",
+      "emptyDescription": "Zkus upravit filtry nebo se vrať později.",
+      "table": {
+        "to": "Komu",
+        "subject": "Předmět",
+        "status": "Stav",
+        "attempts": "Pokusy",
+        "nextFailed": "Další pokus / chyba"
+      },
+      "pagination": {
+        "showing": "Zobrazuji",
+        "of": "z",
+        "previous": "Předchozí",
+        "next": "Další"
       }
     },
     "trustbox": {
@@ -920,6 +944,34 @@
       },
       "category": {
         "other": "Jiné"
+      },
+      "labels": {
+        "owner": "Owner",
+        "status": "Stav",
+        "priority": "Priorita",
+        "category": "Kategorie"
+      },
+      "ownerUnassigned": "Nepřiřazeno",
+      "reporter": "Oznamovatel",
+      "templatePlaceholder": "Vybrat šablonu…",
+      "insert": "Vložit",
+      "audit": {
+        "title": "Audit akcí",
+        "subtitle": "Historie citlivých admin akcí v TrustBoxu",
+        "allActions": "Všechny akce",
+        "empty": "Žádné záznamy",
+        "actions": {
+          "ADMIN_VIEW_PII": "Zobrazení PII",
+          "ADMIN_EXPORT_PDF": "Export PDF",
+          "ADMIN_DOWNLOAD_ATTACHMENT": "Stažení přílohy",
+          "ADMIN_MESSAGE_SENT": "Odeslání zprávy",
+          "ADMIN_THREAD_UPDATE": "Změna vlákna",
+          "ADMIN_ASSIGN_OWNER": "Přiřazení ownera",
+          "ADMIN_UPDATE_SETTINGS": "Změna nastavení",
+          "ADMIN_ADD_ADMIN": "Přidání admina",
+          "ADMIN_REMOVE_ADMIN": "Odebrání admina",
+          "ADMIN_UPDATE_ADMIN_PERMS": "Úprava oprávnění"
+        }
       }
     },
     "governance": {
@@ -944,6 +996,13 @@
         "draft": "Koncept",
         "pending": "Čeká na schválení",
         "published": "Publikováno",
+        "archived": "Archivováno"
+      }
+    },
+    "projects": {
+      "status": {
+        "open": "Otevřené",
+        "closed": "Uzavřené",
         "archived": "Archivováno"
       }
     },
@@ -980,6 +1039,7 @@
     "tabBudget": "Účetnictví",
     "tabMeetings": "Schůze",
     "tabGovernance": "Governance",
+    "tabBoard": "Výbor",
     "tabDocuments": "Dokumenty",
     "tabQuizzes": "Kvízy",
     "tabJobs": "Práce",
@@ -996,15 +1056,41 @@
     "tabArchive": "Archiv aktivit",
     "tabGallery": "Fotogalerie",
     "tabBooks": "Burza učebnic",
+    "btnLoading": "Načítám…",
+    "btnMore": "Načíst další",
     "btnApprove": "Schválit",
     "btnReject": "Odmítnout",
+    "searchPlaceholder": "Vyhledat…",
+    "emptyApplications": "Žádné přihlášky",
+    "emptyDocuments": "Žádné dokumenty",
+    "missingSignature": "Chybí podpis",
     "chairwomanSignature": "Podpis předsedy",
     "tabFaq": "FAQ",
     "tabPartners": "Partneři",
     "btnExportRsvp": "Exportovat účastníky",
     "btnExportNewsletter": "Exportovat e-maily",
+    "labelActions": "Akce",
     "labelPublishedAt": "Plánované zveřejnění",
     "labelViews": "Počet zobrazení",
+    "labelDate": "Datum",
+    "labelDraft": "Koncept",
+    "labelName": "Název",
+    "labelPassword": "Heslo",
+    "labelAnswerEn": "Odpověď (EN)",
+    "labelQuestionEn": "Otázka (EN)",
+    "labelTicketSaleEnd": "Konec prodeje",
+    "time": "Čas",
+    "listBanners": "Bannery",
+    "map": {
+      "manageCategories": "Správa kategorií",
+      "manageCategoriesTitle": "Kategorie",
+      "iconLabel": "Ikona",
+      "addCategoryFirst": "Nejdřív přidej kategorii"
+    },
+    "users": {
+      "passwordStrength": "Síla hesla",
+      "passwordMinChars": "Minimálně 8 znaků"
+    },
     "title": "Admin Pupen",
     "backWeb": "Zpět na web",
     "logout": "Odhlásit se",
@@ -1015,6 +1101,9 @@
       "errors": {
         "generic": "Chyba"
       }
+    },
+    "common": {
+      "status": "Stav"
     },
     "navContent": "Obsah",
     "navStudents": "Studenti",
@@ -1610,6 +1699,7 @@
     "navCommunity": "Komunita",
     "navProfile": "Profil",
     "sidebarSubtitle": "Členská sekce",
+    "portalTitle": "Členská sekce",
     "adminPanelLink": "Pupen Control",
     "logoutShort": "Odhlásit se",
     "welcome": "Ahoj",

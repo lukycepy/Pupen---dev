@@ -1007,7 +1007,7 @@ export default function ClenskaSekcePage() {
                                 ? dict.member.appApproved
                                 : myApplication.status === 'rejected'
                                   ? dict.member.appRejected
-                                  : dict.member.appPending))
+                                  : dict.member.appPending)
                             : dict.member.appMissing}
                         </p>
                         <p className="text-xs text-stone-400 font-medium uppercase tracking-widest">

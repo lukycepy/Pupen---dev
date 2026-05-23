@@ -19,7 +19,7 @@ export async function tryReloadSchemaCache(supabase: any) {
   }
 }
 
-export async function withSchemaCacheRetry<T>(supabase: any, fn: () => Promise<T>): Promise<T> {
+export async function withSchemaCacheRetry<T>(supabase: any, fn: () => PromiseLike<T>): Promise<T> {
   try {
     const res: any = await fn();
     const err = (res as any)?.error;

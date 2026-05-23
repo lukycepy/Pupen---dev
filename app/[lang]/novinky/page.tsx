@@ -46,7 +46,7 @@ export default function NovinkyPage() {
     async function loadData() {
       try {
         const dictionary = await getDictionary(lang);
-        setDict(dictionary.newsPage || dictionary.news); // Zkusit oba klíče pro jistotu
+        setDict((dictionary as any).newsPage || (dictionary as any).news);
 
         const nowIso = new Date().toISOString();
         const { data, error } = await supabase
