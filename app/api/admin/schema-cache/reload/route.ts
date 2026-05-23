@@ -22,7 +22,7 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           error:
-            "Chybí DB funkce pro reload schema cache. Aplikujte migraci `migrace/33_admin_schema_cache_tools.sql`, nebo v Supabase Dashboard → Settings → API → Restart API.",
+            "Chybí DB funkce pro reload schema cache. Aplikujte migraci `supabase/migrations/20260414174642_33_admin_schema_cache_tools.sql`, nebo v Supabase Dashboard → Settings → API → Restart API.",
         },
         { status: 501 },
       );

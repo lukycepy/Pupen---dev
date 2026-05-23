@@ -30,9 +30,9 @@ function Get-ProjectRefFromDotEnv {
 
   try {
     $u = [Uri]$url
-    $host = $u.Host
-    if (-not $host) { return $null }
-    $first = ($host -split '\.')[0]
+    $urlHost = $u.Host
+    if (-not $urlHost) { return $null }
+    $first = ($urlHost -split '\.')[0]
     if ($first) { return $first }
   } catch {
   }
@@ -63,8 +63,25 @@ function Invoke-Supabase {
   )
 
   $allArgs = @('--workdir', $Workdir) + $Args
-  $lines = & npx supabase @allArgs 2>&1
-  $exitCode = $LASTEXITCODE
+  $prevEap = $ErrorActionPreference
+  $errCountBefore = $global:Error.Count
+  $ErrorActionPreference = 'SilentlyContinue'
+
+  try {
+    try {
+      $lines = & npx supabase @allArgs 2>&1
+      $exitCode = $LASTEXITCODE
+    } catch {
+      $lines = @("Invoke-Supabase failed: $($_.Exception.Message)")
+      $exitCode = 1
+    }
+  } finally {
+    $ErrorActionPreference = $prevEap
+    while ($global:Error.Count -gt $errCountBefore) {
+      $global:Error.RemoveAt(0)
+    }
+  }
+
   foreach ($l in $lines) { Write-Host $l }
   return @{
     ExitCode = $exitCode
@@ -72,21 +89,36 @@ function Invoke-Supabase {
   }
 }
 
-$repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
-$workdir = Join-Path $repoRoot 'supabase'
+function Get-MissingRemoteMigrationsFromTable {
+  param([Parameter(Mandatory)] [string] $Text)
+  $missing = @()
+  foreach ($line in ($Text -split "`r?`n")) {
+    $m = [regex]::Match($line, '^\s*(\d{14})\s*\|\s*([0-9]{14})?\s*\|')
+    if (-not $m.Success) { continue }
+    $local = $m.Groups[1].Value
+    $remote = $m.Groups[2].Value
+    if ($local -and (-not $remote)) { $missing += [string]$local }
+  }
+  return $missing | Select-Object -Unique | Sort-Object
+}
 
-if (-not (Test-Path $workdir)) {
-  throw "Chybi slozka supabase: $workdir"
+$repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
+$supabaseDir = Join-Path $repoRoot 'supabase'
+if (-not (Test-Path $supabaseDir)) {
+  throw "Chybi slozka supabase: $supabaseDir"
+}
+
+$migrationsDir = Join-Path $supabaseDir 'migrations'
+if (-not (Test-Path $migrationsDir)) {
+  throw "Chybi slozka supabase\\migrations: $migrationsDir"
 }
 
 $logDir = Join-Path $PSScriptRoot 'logs'
 New-Item -ItemType Directory -Path $logDir -Force | Out-Null
-
 $logFile = Join-Path $logDir ("Migrace_databaze_{0}.log" -f (Get-Date -Format 'yyyyMMdd_HHmmss'))
-$latestLog = Join-Path $repoRoot 'Migrace_databaze.log'
+$latestLog = Join-Path $PSScriptRoot 'Migrace_databaze.latest.log'
 
 Ensure-NodeInPath
-
 if (-not (Get-Command npx -ErrorAction SilentlyContinue)) {
   throw 'npx nebylo nalezeno. Nainstaluj Node.js (obsahuje npm/npx) nebo pridej do PATH.'
 }
@@ -113,64 +145,42 @@ try {
   $transcriptStarted = $true
 
   Write-Host "Repo: $repoRoot"
-  Write-Host "Supabase dir: $workdir"
+  Write-Host "Supabase dir: $supabaseDir"
   Write-Host "Linkuji projekt: $projectRef"
 
-  $r1 = Invoke-Supabase -Workdir $workdir -Args @('link', '--project-ref', $projectRef, '--yes')
-  if ($r1.ExitCode -ne 0) {
-    throw 'Supabase link selhal.'
+  $link = Invoke-Supabase -Workdir $repoRoot -Args @('link', '--project-ref', $projectRef, '--yes')
+  if ($link.ExitCode -ne 0) {
+    throw "Supabase link selhal.`n$($link.Output)"
   }
 
   Write-Host 'Aplikuji migrace na remote DB (db push)...'
-  $push = Invoke-Supabase -Workdir $workdir -Args @('db', 'push', '--linked', '--include-all', '-p', $dbPassword, '--yes')
-  if ($push.ExitCode -eq 0) {
-    Write-Host 'Hotovo.'
-    exit 0
+  $push = Invoke-Supabase -Workdir $repoRoot -Args @('db', 'push', '--linked', '--include-all', '-p', $dbPassword, '--yes')
+  if ($push.ExitCode -ne 0) {
+    throw "db push selhal (ExitCode=$($push.ExitCode)).`n$($push.Output)"
   }
 
-  if ($push.Output -match 'Remote migration versions not found in local migrations directory') {
-    $missing = @([regex]::Matches($push.Output, '\b\d{14}\b') | ForEach-Object { $_.Value } | Select-Object -Unique)
-    if ($missing.Count -eq 0) {
-      throw 'db push selhal a hlasi chybejici remote verze, ale nepodarilo se je vypsat.'
-    }
+  Write-Host ''
+  Write-Host 'Kontroluji stav migraci (migration list --linked)...'
+  $list = Invoke-Supabase -Workdir $repoRoot -Args @('migration', 'list', '--linked', '-p', $dbPassword)
+  if ($list.ExitCode -ne 0) {
+    throw "migration list selhal.`n$($list.Output)"
+  }
 
+  $missing = Get-MissingRemoteMigrationsFromTable -Text $list.Output
+  if ($missing.Count -gt 0) {
     Write-Host ''
-    Write-Host 'Remote DB obsahuje migration verze, ktere nejsou v lokalnim supabase/migrations:'
+    Write-Host 'Remote DB je stale pozadu. Chybi tyto migrace:'
     $missing | ForEach-Object { Write-Host " - $_" }
-
-    $autoRepair = $env:SUPABASE_AUTO_REPAIR_MIGRATIONS -eq '1'
-    $ok = $false
-    if ($autoRepair) {
-      $ok = $true
-    } else {
-      $ans = (Read-Host 'Oznacit tyto remote verze jako reverted a pokracovat? [y/N]').Trim().ToLowerInvariant()
-      $ok = $ans -eq 'y' -or $ans -eq 'yes'
-    }
-
-    if (-not $ok) {
-      throw 'Zruseno. Nastav SUPABASE_AUTO_REPAIR_MIGRATIONS=1 pro automatickou opravu, nebo oprav historii rucne.'
-    }
-
-    Write-Host ''
-    Write-Host 'Opravuji migration historii na remote (repair -> reverted)...'
-    $repairArgs = @('migration', 'repair') + $missing + @('--status', 'reverted', '--linked', '-p', $dbPassword, '--yes')
-    $repair = Invoke-Supabase -Workdir $workdir -Args $repairArgs
-    if ($repair.ExitCode -ne 0) {
-      throw 'migration repair selhal.'
-    }
-
-    Write-Host ''
-    Write-Host 'Zkousim db push znovu...'
-    $push2 = Invoke-Supabase -Workdir $workdir -Args @('db', 'push', '--linked', '--include-all', '-p', $dbPassword, '--yes')
-    if ($push2.ExitCode -ne 0) {
-      throw 'db push selhal i po repair.'
-    }
-
-    Write-Host 'Hotovo.'
-    exit 0
+    throw 'Remote migration list ukazuje chybejici migrace po db push.'
   }
 
-  throw 'db push selhal.'
+  Write-Host ''
+  Write-Host 'Hotovo.'
+  exit 0
+} catch {
+  Write-Host ''
+  Write-Host "CHYBA: $($_.Exception.Message)"
+  throw
 } finally {
   if ($transcriptStarted) {
     try { Stop-Transcript | Out-Null } catch { }
@@ -179,3 +189,4 @@ try {
     Copy-Item -Path $logFile -Destination $latestLog -Force
   }
 }
+

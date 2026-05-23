@@ -25,9 +25,9 @@ Skripty si v cílové databázi vytvoří tabulku `public.schema_migrations` pro
 
 1. Otevřít Supabase Dashboard → SQL Editor.
 2. Spustit obsah příslušných migrací z repozitáře:
-   - `migrace/26_app_roles.sql`
-   - `migrace/25_password_resets.sql` (pokud je v projektu používaná tokenová varianta resetu)
-   - `migrace/33_admin_schema_cache_tools.sql` (volitelné: umožní reload schema cache přes admin endpoint)
+   - `supabase/migrations/20260414174635_26_app_roles.sql`
+   - `supabase/migrations/20260414174634_25_password_resets.sql` (pokud je v projektu používaná tokenová varianta resetu)
+   - `supabase/migrations/20260414174642_33_admin_schema_cache_tools.sql` (volitelné: umožní reload schema cache přes admin endpoint)
 3. Po aplikaci změn obnovit schema cache:
    - Dashboard → Settings → API → Restart API
    - nebo v SQL Editoru:

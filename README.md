@@ -26,7 +26,7 @@ Pokud uvidíš chyby typu `Could not find ... in the schema cache`, chybí migra
   - `npm run db:drift-check`
   - `npm run db:rls-check`
 
-Podrobnosti: [supabase-migrations.md](file:///c:/Users/Lukas/Downloads/pupen%204.0/docs/supabase-migrations.md) a [migrace/README.md](file:///c:/Users/Lukas/Downloads/pupen%204.0/migrace/README.md)
+Podrobnosti: [supabase-migrations.md](file:///c:/Users/Lukas/Downloads/pupen%204.0/docs/supabase-migrations.md)
 
 ## Proměnné prostředí (.env)
 

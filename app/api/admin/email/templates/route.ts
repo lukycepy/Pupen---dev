@@ -38,7 +38,7 @@ export async function GET(req: Request) {
   } catch (e: any) {
     if (isSchemaCacheMissingTable(e)) {
       return NextResponse.json(
-        { error: 'Chybí tabulka email_template_overrides. Spusť migraci `migrace/38_email_template_overrides.sql` v Supabase.' },
+        { error: 'Chybí tabulka email_template_overrides. Spusť migraci `supabase/migrations/20260414174647_38_email_template_overrides.sql` v Supabase.' },
         { status: 501 },
       );
     }
@@ -101,7 +101,7 @@ export async function POST(req: Request) {
   } catch (e: any) {
     if (isSchemaCacheMissingTable(e)) {
       return NextResponse.json(
-        { error: 'Chybí tabulka email_template_overrides. Spusť migraci `migrace/38_email_template_overrides.sql` v Supabase.' },
+        { error: 'Chybí tabulka email_template_overrides. Spusť migraci `supabase/migrations/20260414174647_38_email_template_overrides.sql` v Supabase.' },
         { status: 501 },
       );
     }
