@@ -8,15 +8,13 @@ import { useToast } from '../../../../context/ToastContext';
 import ConfirmModal from '@/app/components/ConfirmModal';
 import { SkeletonTabContent } from '../../../components/Skeleton';
 import { tEnum } from '@/lib/i18n-enum';
-import { useParams } from 'next/navigation';
+import type { Dictionary } from '@/lib/dictionary-types';
 
-export default function BlogTab({ dict }: { dict: any }) {
-  const params = useParams();
-  const lang = (params?.lang as string) === 'en' ? 'en' : 'cs';
+export default function BlogTab({ dict }: { dict: Dictionary }) {
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const statusLabel = (v: any) => tEnum(dict, 'admin.blog.status', v);
-  const statusPrefix = lang === 'en' ? 'Status' : 'Stav';
+  const statusPrefix = dict.admin.common.status;
   const [searchTerm, setSearchTerm] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState<{ title: string; message: string; onConfirm: () => void }>({

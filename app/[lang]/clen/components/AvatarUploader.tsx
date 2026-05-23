@@ -6,6 +6,7 @@ import InlinePulse from '@/app/components/InlinePulse';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/app/context/ToastContext';
 import Image from 'next/image';
+import { useDictionary } from '@/app/context/DictionaryContext';
 
 export default function AvatarUploader({
   lang,
@@ -17,6 +18,8 @@ export default function AvatarUploader({
   currentUrl?: string | null;
   onUploaded: (url: string) => void;
 }) {
+  const dict = useDictionary();
+  const t = dict.memberComponents.avatarUploader;
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
 
@@ -45,18 +48,15 @@ export default function AvatarUploader({
       if (!url) throw new Error('Upload failed');
 
       onUploaded(url);
-      showToast(lang === 'en' ? 'Avatar updated' : 'Avatar uložen', 'success');
+      showToast(t.toastUpdated, 'success');
     } catch (e: any) {
       const msg = typeof e?.message === 'string' ? e.message : '';
       if (msg.toLowerCase().includes('unauthorized')) {
-        showToast(lang === 'en' ? 'Please sign in again' : 'Prosím znovu se přihlas', 'info');
+        showToast(t.toastSignInAgain, 'info');
       } else if (msg.toLowerCase().includes('avatar_url')) {
-        showToast(
-          lang === 'en' ? 'Avatar is not enabled in database yet' : 'Avatar zatím není zapnutý v databázi',
-          'info'
-        );
+        showToast(t.toastNotEnabled, 'info');
       } else {
-        showToast(lang === 'en' ? 'Upload failed' : 'Nahrání se nezdařilo', 'error');
+        showToast(t.toastUploadFailed, 'error');
       }
     } finally {
       setLoading(false);
@@ -68,10 +68,10 @@ export default function AvatarUploader({
       <div className="flex items-start justify-between gap-6">
         <div>
           <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">
-            {lang === 'en' ? 'Avatar' : 'Avatar'}
+            {t.title}
           </div>
           <div className="text-sm font-bold text-stone-700">
-            {lang === 'en' ? 'Upload a profile image' : 'Nahrajte profilový obrázek'}
+            {t.subtitle}
           </div>
         </div>
         <div className="w-14 h-14 bg-white border border-stone-100 rounded-2xl overflow-hidden flex items-center justify-center text-stone-300 shadow-sm">
@@ -86,7 +86,7 @@ export default function AvatarUploader({
       <div className="mt-4 flex flex-col sm:flex-row gap-3 sm:items-center">
         <label className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition cursor-pointer">
           {loading ? <InlinePulse className="bg-stone-300" size={12} /> : <Upload size={16} />}
-          {lang === 'en' ? 'Choose file' : 'Vybrat soubor'}
+          {t.chooseFile}
           <input
             type="file"
             accept="image/*"

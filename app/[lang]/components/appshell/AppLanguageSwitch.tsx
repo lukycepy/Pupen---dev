@@ -25,13 +25,13 @@ export default function AppLanguageSwitch({
   const enHref = `${swapLang(pathname || `/${lang}`, 'en')}${suffix}`;
 
   return (
-    <div className="flex items-center gap-1 p-1 rounded-2xl bg-white/80 border border-stone-200 shadow-sm">
+    <div className="flex items-center gap-1 p-1 rounded-2xl bg-white/80 dark:bg-stone-900/80 border border-stone-200 dark:border-stone-700 shadow-sm">
       <Link
         href={csHref}
         className={
           lang === 'cs'
-            ? 'px-3 py-1.5 rounded-xl bg-stone-900 text-white text-[10px] font-black uppercase tracking-widest'
-            : 'px-3 py-1.5 rounded-xl text-stone-500 hover:bg-stone-50 text-[10px] font-black uppercase tracking-widest'
+            ? 'px-3 py-1.5 rounded-xl bg-stone-900 dark:bg-stone-50 text-white dark:text-stone-900 text-[10px] font-black uppercase tracking-widest'
+            : 'px-3 py-1.5 rounded-xl text-stone-500 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 text-[10px] font-black uppercase tracking-widest'
         }
         aria-label={labels?.cs || 'CZ'}
       >
@@ -41,8 +41,8 @@ export default function AppLanguageSwitch({
         href={enHref}
         className={
           lang === 'en'
-            ? 'px-3 py-1.5 rounded-xl bg-stone-900 text-white text-[10px] font-black uppercase tracking-widest'
-            : 'px-3 py-1.5 rounded-xl text-stone-500 hover:bg-stone-50 text-[10px] font-black uppercase tracking-widest'
+            ? 'px-3 py-1.5 rounded-xl bg-stone-900 dark:bg-stone-50 text-white dark:text-stone-900 text-[10px] font-black uppercase tracking-widest'
+            : 'px-3 py-1.5 rounded-xl text-stone-500 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 text-[10px] font-black uppercase tracking-widest'
         }
         aria-label={labels?.en || 'EN'}
       >
@@ -51,4 +51,3 @@ export default function AppLanguageSwitch({
     </div>
   );
 }
-

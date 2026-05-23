@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { PROFILE_PERMISSION_KEYS_SET } from '@/lib/rbac/registry';
+import { withSchemaCacheRetry } from '@/lib/schema-cache-retry';
 
 function isSchemaCacheMissingTable(e: any) {
   const msg = String(e?.message || '');
@@ -11,10 +12,9 @@ function isSchemaCacheMissingTable(e: any) {
 const PROFILE_BOOL_FIELDS = PROFILE_PERMISSION_KEYS_SET;
 
 async function recomputeProfilePermissions(supabase: ReturnType<typeof getServerSupabase>, userId: string) {
-  const rolesRes = await supabase
-    .from('app_user_roles')
-    .select('role_id, app_roles:role_id (permissions)')
-    .eq('user_id', userId);
+  const rolesRes = await withSchemaCacheRetry(supabase, () =>
+    supabase.from('app_user_roles').select('role_id, app_roles:role_id (permissions)').eq('user_id', userId),
+  );
   if (rolesRes.error) throw rolesRes.error;
 
   const computed: any = {};
@@ -30,12 +30,16 @@ async function recomputeProfilePermissions(supabase: ReturnType<typeof getServer
     if ((perms as any)?.trustbox_admin) roleTrustBox = true;
   }
 
-  await supabase.from('profiles').update(computed).eq('id', userId).throwOnError();
+  await withSchemaCacheRetry(supabase, () => supabase.from('profiles').update(computed).eq('id', userId).throwOnError());
 
   if (roleTrustBox) {
-    const existing = await supabase.from('trust_box_admins').select('user_id, can_view_pii').eq('user_id', userId).maybeSingle();
+    const existing = await withSchemaCacheRetry(supabase, () =>
+      supabase.from('trust_box_admins').select('user_id, can_view_pii').eq('user_id', userId).maybeSingle(),
+    );
     if (!existing.error && !existing.data) {
-      await supabase.from('trust_box_admins').insert([{ user_id: userId, can_view_pii: false }]).throwOnError();
+      await withSchemaCacheRetry(supabase, () =>
+        supabase.from('trust_box_admins').insert([{ user_id: userId, can_view_pii: false }]).throwOnError(),
+      );
     }
   }
   return computed;
@@ -53,14 +57,16 @@ export async function POST(req: Request) {
 
     const supabase = getServerSupabase();
     if (!userId && email) {
-      const p = await supabase.from('profiles').select('id').eq('email', email).maybeSingle();
+      const p = await withSchemaCacheRetry(supabase, () => supabase.from('profiles').select('id').eq('email', email).maybeSingle());
       if (p.error) throw p.error;
       userId = p.data?.id ? String(p.data.id) : '';
     }
     if (!userId) return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
 
     if (action === 'unassign' && roleId) {
-      await supabase.from('app_user_roles').delete().eq('user_id', userId).eq('role_id', roleId).throwOnError();
+      await withSchemaCacheRetry(supabase, () =>
+        supabase.from('app_user_roles').delete().eq('user_id', userId).eq('role_id', roleId).throwOnError(),
+      );
       const computed = await recomputeProfilePermissions(supabase, userId);
       await supabase
         .from('admin_logs')
@@ -78,7 +84,7 @@ export async function POST(req: Request) {
     }
 
     if (!roleId) {
-      await supabase.from('app_user_roles').delete().eq('user_id', userId).throwOnError();
+      await withSchemaCacheRetry(supabase, () => supabase.from('app_user_roles').delete().eq('user_id', userId).throwOnError());
       const computed = await recomputeProfilePermissions(supabase, userId);
       await supabase
         .from('admin_logs')
@@ -95,17 +101,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, computed, enabledKeys: Object.keys(computed).filter((k) => computed[k]) });
     }
 
-    const roleRes = await supabase.from('app_roles').select('id,name,permissions').eq('id', roleId).single();
+    const roleRes = await withSchemaCacheRetry(supabase, () => supabase.from('app_roles').select('id,name,permissions').eq('id', roleId).single());
     if (roleRes.error) throw roleRes.error;
     const role: any = roleRes.data;
 
-    await supabase
-      .from('app_user_roles')
-      .upsert(
-        [{ user_id: userId, role_id: roleId, assigned_at: new Date().toISOString(), assigned_by_email: user.email || null }],
-        { onConflict: 'user_id,role_id' },
-      )
-      .throwOnError();
+    await withSchemaCacheRetry(supabase, () =>
+      supabase
+        .from('app_user_roles')
+        .upsert(
+          [{ user_id: userId, role_id: roleId, assigned_at: new Date().toISOString(), assigned_by_email: user.email || null }],
+          { onConflict: 'user_id,role_id' },
+        )
+        .throwOnError(),
+    );
 
     const computed = await recomputeProfilePermissions(supabase, userId);
 

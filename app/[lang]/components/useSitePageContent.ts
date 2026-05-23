@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 export function useSitePageContent(slug: string, lang: string) {
   const [title, setTitle] = useState('');
   const [html, setHtml] = useState('');
+  const [blocks, setBlocks] = useState<any[] | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -17,6 +18,7 @@ export function useSitePageContent(slug: string, lang: string) {
           if (mounted) {
             setTitle('');
             setHtml('');
+            setBlocks(null);
           }
           return;
         }
@@ -24,11 +26,13 @@ export function useSitePageContent(slug: string, lang: string) {
         if (mounted) {
           setTitle(String(page?.title || ''));
           setHtml(String(page?.content_html || ''));
+          setBlocks(Array.isArray(page?.content_blocks) ? page.content_blocks : null);
         }
       } catch {
         if (mounted) {
           setTitle('');
           setHtml('');
+          setBlocks(null);
         }
       }
     })();
@@ -37,5 +41,5 @@ export function useSitePageContent(slug: string, lang: string) {
     };
   }, [slug, lang]);
 
-  return { title, html };
+  return { title, html, blocks };
 }

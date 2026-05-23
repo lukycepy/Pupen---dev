@@ -5,6 +5,7 @@ import { Download, X } from 'lucide-react';
 import CopyButton from '@/app/components/CopyButton';
 import Image from 'next/image';
 import Dialog from '@/app/components/ui/Dialog';
+import { useDictionary } from '@/app/context/DictionaryContext';
 
 export default function TicketModal({
   open,
@@ -23,21 +24,18 @@ export default function TicketModal({
   status: string | null;
   expiresAt: string | null;
 }) {
+  const dict = useDictionary();
+  const locale = lang === 'en' ? 'en' : 'cs';
+  const dateLocale = ({ cs: 'cs-CZ', en: 'en-US' } as const)[locale];
+  const t = dict.memberComponents.ticketModal;
   const statusLabel = useMemo(() => {
     const s = String(status || '').trim();
-    if (lang === 'en') {
-      if (s === 'confirmed') return 'Confirmed';
-      if (s === 'reserved') return 'Reserved';
-      if (s === 'waitlist') return 'Waitlist';
-      if (s === 'cancelled') return 'Cancelled';
-      return s || '—';
-    }
-    if (s === 'confirmed') return 'Potvrzeno';
-    if (s === 'reserved') return 'Rezervováno';
-    if (s === 'waitlist') return 'Čekací listina';
-    if (s === 'cancelled') return 'Zrušeno';
+    if (s === 'confirmed') return t.statusConfirmed;
+    if (s === 'reserved') return t.statusReserved;
+    if (s === 'waitlist') return t.statusWaitlist;
+    if (s === 'cancelled') return t.statusCancelled;
     return s || '—';
-  }, [lang, status]);
+  }, [status, t.statusCancelled, t.statusConfirmed, t.statusReserved, t.statusWaitlist]);
 
   const payload = useMemo(() => `PUPEN-TICKET:${qrToken}`, [qrToken]);
   const [qrUrl, setQrUrl] = useState('');
@@ -81,7 +79,7 @@ export default function TicketModal({
           <div className="p-6 border-b border-stone-100 flex items-center justify-between">
             <div className="min-w-0">
               <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">
-                {lang === 'en' ? 'Ticket' : 'Vstupenka'}
+                {t.title}
               </div>
               <div className="font-black text-stone-900 truncate">{title}</div>
             </div>
@@ -89,7 +87,7 @@ export default function TicketModal({
               type="button"
               onClick={onClose}
               className="p-2 rounded-xl hover:bg-stone-50 transition text-stone-400"
-              aria-label="Zavřít"
+              aria-label={dict.common.close}
             >
               <X size={18} />
             </button>
@@ -122,17 +120,17 @@ export default function TicketModal({
                 <CopyButton
                   value={qrToken}
                   className="border-stone-200 bg-white text-stone-700 hover:bg-stone-50"
-                  idleLabel={lang === 'en' ? 'Copy' : 'Kopírovat'}
+                  idleLabel={t.copy}
                 />
               </div>
               <div className="mt-3 flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-stone-400">
                 <span>
-                  {lang === 'en' ? 'Status' : 'Stav'}: {statusLabel}
+                  {t.status}: {statusLabel}
                 </span>
                 {expiresAt ? (
                   <span>
-                    {lang === 'en' ? 'Valid until' : 'Platí do'}:{' '}
-                    {new Date(expiresAt).toLocaleString(lang === 'en' ? 'en-US' : 'cs-CZ')}
+                    {t.validUntil}:{' '}
+                    {new Date(expiresAt).toLocaleString(dateLocale)}
                   </span>
                 ) : (
                   <span />
@@ -148,14 +146,14 @@ export default function TicketModal({
                 className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
               >
                 <Download size={16} />
-                {lang === 'en' ? 'Download' : 'Stáhnout'}
+                {t.download}
               </button>
               <button
                 type="button"
                 onClick={onClose}
                 className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-green-200 bg-green-600 text-white hover:bg-green-700 transition"
               >
-                {lang === 'en' ? 'Done' : 'Hotovo'}
+                {t.done}
               </button>
             </div>
           </div>

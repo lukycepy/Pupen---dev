@@ -7,6 +7,7 @@ import ConfirmModal from '@/app/components/ConfirmModal';
 import { useToast } from '@/app/context/ToastContext';
 import { Mail, Plus, Search, Send, X, AlertTriangle, ShieldAlert, ShieldCheck } from 'lucide-react';
 import Dialog from '@/app/components/ui/Dialog';
+import { useDictionary } from '@/app/context/DictionaryContext';
 
 type Thread = {
   threadId: string;
@@ -20,6 +21,10 @@ type Thread = {
 };
 
 export default function MemberMessagesTab({ lang }: { lang: string }) {
+  const dict = useDictionary();
+  const locale = lang === 'en' ? 'en' : 'cs';
+  const dateLocale = ({ cs: 'cs-CZ', en: 'en-US' } as const)[locale];
+  const t = dict.memberComponents.memberMessagesTab;
   const { showToast } = useToast();
   const [threads, setThreads] = useState<Thread[]>([]);
   const [selected, setSelected] = useState<Thread | null>(null);
@@ -44,9 +49,9 @@ export default function MemberMessagesTab({ lang }: { lang: string }) {
   const getToken = useCallback(async () => {
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
-    if (!token) throw new Error(lang === 'en' ? 'Unauthorized' : 'Nepřihlášen');
+    if (!token) throw new Error(dict.common.unauthorized);
     return token;
-  }, [lang]);
+  }, [dict.common.unauthorized]);
 
   const loadThreads = useCallback(async () => {
     setLoadingThreads(true);
@@ -54,14 +59,14 @@ export default function MemberMessagesTab({ lang }: { lang: string }) {
       const token = await getToken();
       const res = await fetch('/api/dm/threads', { headers: { Authorization: `Bearer ${token}` } });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error || 'Request failed');
+      if (!res.ok) throw new Error(json?.error || dict.common.requestFailed);
       setThreads(json.threads || []);
     } catch (e: any) {
-      showToast(e?.message || 'Chyba', 'error');
+      showToast(e?.message || dict.common.errorGeneric, 'error');
     } finally {
       setLoadingThreads(false);
     }
-  }, [getToken, showToast]);
+  }, [dict.common.errorGeneric, dict.common.requestFailed, getToken, showToast]);
 
   const loadThread = async (thread: Thread) => {
     setLoadingThread(true);
@@ -71,7 +76,7 @@ export default function MemberMessagesTab({ lang }: { lang: string }) {
         headers: { Authorization: `Bearer ${token}` },
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error || 'Request failed');
+      if (!res.ok) throw new Error(json?.error || dict.common.requestFailed);
       setMessages(json.messages || []);
       setSelected(thread);
       
@@ -80,7 +85,7 @@ export default function MemberMessagesTab({ lang }: { lang: string }) {
 
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 0);
     } catch (e: any) {
-      showToast(e?.message || 'Chyba', 'error');
+      showToast(e?.message || dict.common.errorGeneric, 'error');
     } finally {
       setLoadingThread(false);
     }
@@ -97,13 +102,13 @@ export default function MemberMessagesTab({ lang }: { lang: string }) {
         body: JSON.stringify({ threadId: selected.threadId, action }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error || 'Action failed');
+      if (!res.ok) throw new Error(json?.error || dict.common.requestFailed);
       
       setSelected({ ...selected, isBlocked: json.isBlocked });
       setThreads((prev) => prev.map(t => t.threadId === selected.threadId ? { ...t, isBlocked: json.isBlocked } : t));
-      showToast(lang === 'en' ? 'Success' : 'Úspěšně změněno', 'success');
+      showToast(t.toastSuccess, 'success');
     } catch (e: any) {
-      showToast(e?.message || 'Chyba', 'error');
+      showToast(e?.message || dict.common.errorGeneric, 'error');
     }
   };
 
@@ -116,17 +121,17 @@ export default function MemberMessagesTab({ lang }: { lang: string }) {
         body: JSON.stringify({ messageId, reason: 'Nahlášeno uživatelem z DM' }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error || 'Report failed');
-      showToast(lang === 'en' ? 'Message reported' : 'Zpráva byla nahlášena', 'success');
+      if (!res.ok) throw new Error(json?.error || dict.common.requestFailed);
+      showToast(t.toastMessageReported, 'success');
     } catch (e: any) {
-      showToast(e?.message || 'Chyba', 'error');
+      showToast(e?.message || dict.common.errorGeneric, 'error');
     }
   };
 
   const send = async () => {
     if (!selected) return;
     if (!selected.peerId) {
-      showToast(lang === 'en' ? 'Missing recipient' : 'Chybí příjemce', 'error');
+      showToast(t.toastMissingRecipient, 'error');
       return;
     }
     const msg = text.trim();
@@ -145,12 +150,12 @@ export default function MemberMessagesTab({ lang }: { lang: string }) {
         }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error || 'Send failed');
+      if (!res.ok) throw new Error(json?.error || dict.common.requestFailed);
       setText('');
       await loadThread(selected);
       await loadThreads();
     } catch (e: any) {
-      showToast(e?.message || 'Chyba', 'error');
+      showToast(e?.message || dict.common.errorGeneric, 'error');
     } finally {
       setSending(false);
     }
@@ -168,7 +173,7 @@ export default function MemberMessagesTab({ lang }: { lang: string }) {
       if (error) throw error;
       setMembers((data || []).filter((m: any) => !!m.email));
     } catch (e: any) {
-      showToast(e?.message || 'Chyba', 'error');
+      showToast(e?.message || dict.common.errorGeneric, 'error');
     } finally {
       setMembersLoading(false);
     }
@@ -205,10 +210,10 @@ export default function MemberMessagesTab({ lang }: { lang: string }) {
         onConfirm={() => {
           if (reportingId) reportMessage(reportingId);
         }}
-        title={lang === 'en' ? 'Report message?' : 'Nahlásit zprávu?'}
-        message={lang === 'en' ? 'This will send a report to moderators.' : 'Tímto odešlete hlášení moderátorům.'}
-        confirmLabel={lang === 'en' ? 'Report' : 'Nahlásit'}
-        cancelLabel={lang === 'en' ? 'Cancel' : 'Zrušit'}
+        title={t.reportTitle}
+        message={t.reportMessage}
+        confirmLabel={t.reportConfirm}
+        cancelLabel={dict.common.cancel}
         variant="warning"
       />
       <div className="bg-white p-8 rounded-[3rem] border border-stone-100 shadow-sm">
@@ -216,11 +221,9 @@ export default function MemberMessagesTab({ lang }: { lang: string }) {
           <div>
             <h2 className="text-2xl font-black text-stone-900 tracking-tight flex items-center gap-3">
               <Mail className="text-green-600" />
-              {lang === 'en' ? 'Messages' : 'Zprávy'}
+              {t.headerTitle}
             </h2>
-            <p className="text-stone-500 font-medium mt-2">
-              {lang === 'en' ? 'Simple internal messaging between members.' : 'Jednoduché interní zprávy mezi členy.'}
-            </p>
+            <p className="text-stone-500 font-medium mt-2">{t.headerSubtitle}</p>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -232,14 +235,14 @@ export default function MemberMessagesTab({ lang }: { lang: string }) {
               className="inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-green-200 bg-green-600 text-white hover:bg-green-700 transition"
             >
               <Plus size={16} />
-              {lang === 'en' ? 'New' : 'Nová'}
+              {t.newThread}
             </button>
             <button
               type="button"
               onClick={loadThreads}
               className="inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
             >
-              {lang === 'en' ? 'Refresh' : 'Obnovit'}
+              {t.refresh}
             </button>
           </div>
         </div>
@@ -253,7 +256,7 @@ export default function MemberMessagesTab({ lang }: { lang: string }) {
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder={lang === 'en' ? 'Search…' : 'Hledat…'}
+                placeholder={t.search}
                 className="w-full bg-stone-50 border-none rounded-2xl pl-12 pr-4 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none"
               />
             </div>
@@ -264,7 +267,7 @@ export default function MemberMessagesTab({ lang }: { lang: string }) {
                 </div>
               ) : filteredThreads.length === 0 ? (
                 <div className="py-10 text-center text-stone-400 font-bold uppercase tracking-widest text-xs">
-                  {lang === 'en' ? 'No threads.' : 'Zatím žádné konverzace.'}
+                  {t.emptyThreads}
                 </div>
               ) : (
                 filteredThreads.slice(0, 60).map((t) => (
@@ -300,7 +303,7 @@ export default function MemberMessagesTab({ lang }: { lang: string }) {
             <div className="p-6 border-b border-stone-100 flex items-center justify-between">
               <div>
                 <div className="font-black text-stone-900 truncate">
-                  {selected ? selected.peerLabel || selected.peerEmail : lang === 'en' ? 'Select a thread' : 'Vyberte konverzaci'}
+                  {selected ? selected.peerLabel || selected.peerEmail : t.selectThread}
                 </div>
                 {selected && <div className="text-[10px] font-black uppercase tracking-widest text-stone-300">{selected.peerEmail}</div>}
               </div>
@@ -317,12 +320,12 @@ export default function MemberMessagesTab({ lang }: { lang: string }) {
                   {selected.isBlocked ? (
                     <>
                       <ShieldCheck size={14} />
-                      {lang === 'en' ? 'Unblock' : 'Odblokovat'}
+                      {t.unblock}
                     </>
                   ) : (
                     <>
                       <ShieldAlert size={14} />
-                      {lang === 'en' ? 'Block' : 'Blokovat'}
+                      {t.block}
                     </>
                   )}
                 </button>
@@ -336,11 +339,11 @@ export default function MemberMessagesTab({ lang }: { lang: string }) {
                 </div>
               ) : !selected ? (
                 <div className="py-16 text-center text-stone-400 font-bold uppercase tracking-widest text-xs">
-                  {lang === 'en' ? 'Choose a conversation.' : 'Zvolte konverzaci.'}
+                  {t.chooseConversation}
                 </div>
               ) : messages.length === 0 ? (
                 <div className="py-16 text-center text-stone-400 font-bold uppercase tracking-widest text-xs">
-                  {lang === 'en' ? 'No messages yet.' : 'Zatím žádné zprávy.'}
+                  {t.emptyMessages}
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -355,16 +358,16 @@ export default function MemberMessagesTab({ lang }: { lang: string }) {
                           <div className={`mt-2 flex items-center justify-between gap-4 text-[10px] font-black uppercase tracking-widest ${
                             isMine ? 'text-white/70' : 'text-stone-300'
                           }`}>
-                            <span>{m.createdAt ? new Date(m.createdAt).toLocaleString(lang === 'en' ? 'en-US' : 'cs-CZ') : ''}</span>
+                            <span>{m.createdAt ? new Date(m.createdAt).toLocaleString(dateLocale) : ''}</span>
                             {!isMine && (
                               <button
                                 type="button"
                                 onClick={() => setReportingId(String(m.id))}
                                 className="opacity-0 group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-600 flex items-center gap-1"
-                                title={lang === 'en' ? 'Report message' : 'Nahlásit zprávu'}
+                                title={t.reportButtonTitle}
                               >
                                 <AlertTriangle size={12} />
-                                <span className="sr-only">{lang === 'en' ? 'Report' : 'Nahlásit'}</span>
+                                <span className="sr-only">{t.reportButtonSr}</span>
                               </button>
                             )}
                           </div>
@@ -386,10 +389,10 @@ export default function MemberMessagesTab({ lang }: { lang: string }) {
                   disabled={!selected || sending || selected.isBlocked}
                   placeholder={
                     !selected 
-                      ? (lang === 'en' ? 'Select a thread' : 'Vyberte konverzaci')
+                      ? t.placeholderSelect
                       : selected.isBlocked 
-                        ? (lang === 'en' ? 'Thread is blocked' : 'Konverzace je blokována')
-                        : (lang === 'en' ? 'Write a message…' : 'Napište zprávu…')
+                        ? t.placeholderBlocked
+                        : t.placeholderWrite
                   }
                   className="flex-1 bg-stone-50 border-none rounded-2xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none resize-none disabled:opacity-50"
                 />
@@ -400,7 +403,7 @@ export default function MemberMessagesTab({ lang }: { lang: string }) {
                   className="inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-4 text-[10px] font-black uppercase tracking-widest border border-green-200 bg-green-600 text-white hover:bg-green-700 transition disabled:opacity-50"
                 >
                   {sending ? <InlinePulse className="bg-white/80" size={14} /> : <Send size={16} />}
-                  {lang === 'en' ? 'Send' : 'Odeslat'}
+                  {t.send}
                 </button>
               </div>
             </div>
@@ -416,7 +419,7 @@ export default function MemberMessagesTab({ lang }: { lang: string }) {
           panelClassName="relative w-full max-w-xl bg-white rounded-[2.5rem] border border-stone-100 shadow-2xl overflow-hidden"
         >
           <div className="p-6 border-b border-stone-100 flex items-center justify-between">
-                <div className="font-black text-stone-900">{lang === 'en' ? 'Start new message' : 'Nová zpráva'}</div>
+                <div className="font-black text-stone-900">{t.startNewMessage}</div>
                 <button type="button" onClick={() => setNewOpen(false)} className="p-2 rounded-xl hover:bg-stone-50 transition text-stone-400" aria-label="Zavřít">
                   <X size={18} />
                 </button>
@@ -427,7 +430,7 @@ export default function MemberMessagesTab({ lang }: { lang: string }) {
                 <input
                   value={memberQ}
                   onChange={(e) => setMemberQ(e.target.value)}
-                  placeholder={lang === 'en' ? 'Search member…' : 'Hledat člena…'}
+                  placeholder={t.searchMember}
                   className="w-full bg-stone-50 border-none rounded-2xl pl-12 pr-4 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none"
                 />
               </div>
@@ -443,7 +446,7 @@ export default function MemberMessagesTab({ lang }: { lang: string }) {
                       type="button"
                       onClick={() => {
                         if (!me?.id) {
-                          showToast(lang === 'en' ? 'Unauthorized' : 'Nepřihlášen', 'error');
+                          showToast(t.unauthorized, 'error');
                           return;
                         }
                         const label = `${m.first_name || ''} ${m.last_name || ''}`.trim() || m.email;

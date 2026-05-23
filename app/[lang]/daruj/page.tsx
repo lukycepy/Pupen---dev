@@ -4,6 +4,8 @@ import { getDictionary } from '@/lib/get-dictionary';
 import { getSitePageContent } from '@/lib/site/page-content';
 import PageHeader from '@/app/components/ui/PageHeader';
 import Panel from '@/app/components/ui/Panel';
+import PageBlocksRenderer from '@/app/[lang]/components/PageBlocksRenderer';
+import { parsePageBlocks } from '@/lib/site/page-blocks';
 
 export default async function DonatePage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang: rawLang } = await params;
@@ -14,6 +16,7 @@ export default async function DonatePage({ params }: { params: Promise<{ lang: s
   const page = await getSitePageContent('daruj', lang);
   const title = page?.title || (lang === 'en' ? 'Donate' : 'Daruj');
   const subtitle = lang === 'en' ? 'Support Pupen, z.s.' : 'Podpořte Pupen, z.s.';
+  const blocks = parsePageBlocks(page?.content_blocks);
 
   return (
     <div className="min-h-screen bg-stone-50 pt-16 pb-24">
@@ -35,7 +38,11 @@ export default async function DonatePage({ params }: { params: Promise<{ lang: s
         />
 
         <Panel className="mt-8" padded>
-          {page?.content_html ? (
+          {blocks?.length ? (
+            <div className="bg-white border border-stone-100 rounded-[2rem] p-6 shadow-sm">
+              <PageBlocksRenderer blocks={blocks} />
+            </div>
+          ) : page?.content_html ? (
             <div className="bg-white border border-stone-100 rounded-[2rem] p-6 shadow-sm">
               <div className="prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: page.content_html }} />
             </div>

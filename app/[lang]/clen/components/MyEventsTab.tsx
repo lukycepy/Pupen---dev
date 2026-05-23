@@ -6,6 +6,7 @@ import InlinePulse from '@/app/components/InlinePulse';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/app/context/ToastContext';
+import { useDictionary } from '@/app/context/DictionaryContext';
 import TicketModal from './TicketModal';
 import InvoiceRequestModal from './InvoiceRequestModal';
 import RefundRequestModal from './RefundRequestModal';
@@ -63,6 +64,10 @@ function buildIcs(events: any[]) {
 }
 
 export default function MyEventsTab({ lang, userEmail }: { lang: string; userEmail: string }) {
+  const dict = useDictionary();
+  const locale = lang === 'en' ? 'en' : 'cs';
+  const dateLocale = ({ cs: 'cs-CZ', en: 'en-US' } as const)[locale];
+  const t = dict.memberComponents.myEventsTab;
   const qc = useQueryClient();
   const { showToast } = useToast();
   const [cancelId, setCancelId] = useState<string | null>(null);
@@ -132,7 +137,7 @@ export default function MyEventsTab({ lang, userEmail }: { lang: string; userEma
       const eventTitle = row?.event?.title || '';
 
       if (!email || !row?.qr_code || !eventTitle) {
-        showToast(lang === 'en' ? 'Missing data' : 'Chybí data', 'error');
+        showToast(t.toastMissingData, 'error');
         return;
       }
 
@@ -150,9 +155,9 @@ export default function MyEventsTab({ lang, userEmail }: { lang: string; userEma
         }),
       });
 
-      showToast(lang === 'en' ? 'Ticket email sent' : 'E-mail se vstupenkou odeslán', 'success');
+      showToast(t.toastTicketSent, 'success');
     } catch {
-      showToast(lang === 'en' ? 'Send failed' : 'Odeslání se nezdařilo', 'error');
+      showToast(t.toastSendFailed, 'error');
     } finally {
       setResendId(null);
     }
@@ -199,10 +204,10 @@ export default function MyEventsTab({ lang, userEmail }: { lang: string; userEma
     try {
       const { error } = await supabase.from('rsvp').update({ status: 'cancelled' }).eq('id', id);
       if (error) throw error;
-      showToast(lang === 'en' ? 'Registration cancelled' : 'Registrace zrušena', 'success');
+      showToast(t.toastRegistrationCancelled, 'success');
       await qc.invalidateQueries({ queryKey: ['member_rsvp', userEmail] });
     } catch {
-      showToast(lang === 'en' ? 'Cancellation failed' : 'Zrušení se nezdařilo', 'error');
+      showToast(t.toastCancellationFailed, 'error');
     } finally {
       setCancelLoading(false);
       setCancelId(null);
@@ -235,13 +240,9 @@ export default function MyEventsTab({ lang, userEmail }: { lang: string; userEma
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
             <h2 className="text-2xl font-black text-stone-900 tracking-tight flex items-center gap-3">
-              <Ticket className="text-green-600" /> {lang === 'en' ? 'My events' : 'Moje akce'}
+              <Ticket className="text-green-600" /> {t.title}
             </h2>
-            <p className="text-stone-500 font-medium mt-2">
-              {lang === 'en'
-                ? 'Your registrations and calendar export.'
-                : 'Vaše registrace (RSVP) a export do kalendáře.'}
-            </p>
+            <p className="text-stone-500 font-medium mt-2">{t.subtitle}</p>
           </div>
           <button
             type="button"
@@ -250,26 +251,26 @@ export default function MyEventsTab({ lang, userEmail }: { lang: string; userEma
             className="inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
           >
             <Download size={16} />
-            {lang === 'en' ? 'Download .ics' : 'Stáhnout .ics'}
+            {t.downloadIcs}
           </button>
         </div>
 
         <div className="mt-6 grid sm:grid-cols-3 gap-3">
           <div className="bg-stone-50 border border-stone-100 rounded-2xl p-4">
             <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">
-              {lang === 'en' ? 'Total' : 'Celkem'}
+              {t.total}
             </div>
             <div className="mt-1 text-2xl font-black text-stone-900">{counts.total}</div>
           </div>
           <div className="bg-stone-50 border border-stone-100 rounded-2xl p-4">
             <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">
-              {lang === 'en' ? 'Attended (check-in)' : 'Účast (check-in)'}
+              {t.attended}
             </div>
             <div className="mt-1 text-2xl font-black text-stone-900">{counts.attended}</div>
           </div>
           <div className="bg-stone-50 border border-stone-100 rounded-2xl p-4">
             <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">
-              {lang === 'en' ? 'Upcoming' : 'Nadcházející'}
+              {t.upcoming}
             </div>
             <div className="mt-1 text-2xl font-black text-stone-900">{counts.upcoming}</div>
           </div>
@@ -283,7 +284,7 @@ export default function MyEventsTab({ lang, userEmail }: { lang: string; userEma
           </div>
         ) : rows.length === 0 ? (
           <div className="py-16 text-center text-stone-400 font-bold uppercase tracking-widest text-xs">
-            {lang === 'en' ? 'No registrations yet.' : 'Zatím žádné registrace.'}
+            {t.empty}
           </div>
         ) : (
           <div className="space-y-4">
@@ -298,7 +299,7 @@ export default function MyEventsTab({ lang, userEmail }: { lang: string; userEma
                       {r.event?.date && (
                         <span className="inline-flex items-center gap-2 bg-white border border-stone-100 px-3 py-2 rounded-xl">
                           <Calendar size={16} className="text-green-600" />
-                          {new Date(r.event.date).toLocaleDateString(lang === 'en' ? 'en-US' : 'cs-CZ')}
+                          {new Date(r.event.date).toLocaleDateString(dateLocale)}
                         </span>
                       )}
                       {r.event?.time && (
@@ -329,25 +330,17 @@ export default function MyEventsTab({ lang, userEmail }: { lang: string; userEma
                       }`}
                     >
                       {r.status === 'cancelled'
-                        ? lang === 'en'
-                          ? 'Cancelled'
-                          : 'Zrušeno'
+                        ? t.statusCancelled
                         : r.status === 'waitlist'
-                          ? lang === 'en'
-                            ? 'Waitlist'
-                            : 'Čekací listina'
+                          ? t.statusWaitlist
                           : r.status === 'reserved'
-                            ? lang === 'en'
-                              ? 'Reserved'
-                              : 'Rezervováno'
-                            : lang === 'en'
-                              ? 'Confirmed'
-                              : 'Potvrzeno'}
+                            ? t.statusReserved
+                            : t.statusConfirmed}
                     </span>
 
                     {r.checked_in === true && (
                       <span className="inline-flex items-center rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-widest bg-violet-100 text-violet-700">
-                        {lang === 'en' ? 'Checked in' : 'Odbaveno'}
+                        {t.checkedIn}
                       </span>
                     )}
 
@@ -367,7 +360,7 @@ export default function MyEventsTab({ lang, userEmail }: { lang: string; userEma
                             className="inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
                           >
                             <Ticket size={16} />
-                            {lang === 'en' ? 'Ticket' : 'Vstupenka'}
+                            {t.ticket}
                           </button>
                         )}
                         {(r.status === 'confirmed' || r.status === 'reserved') && (
@@ -384,7 +377,7 @@ export default function MyEventsTab({ lang, userEmail }: { lang: string; userEma
                             }
                             className="inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
                           >
-                            {lang === 'en' ? 'Invoice' : 'Faktura'}
+                            {t.invoice}
                           </button>
                         )}
                         {(r.status === 'confirmed' || r.status === 'reserved') && (
@@ -393,7 +386,7 @@ export default function MyEventsTab({ lang, userEmail }: { lang: string; userEma
                             onClick={() => setRefundOpen(r)}
                             className="inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 transition"
                           >
-                            {lang === 'en' ? 'Refund' : 'Refund'}
+                            {t.refund}
                           </button>
                         )}
                         <button
@@ -403,7 +396,7 @@ export default function MyEventsTab({ lang, userEmail }: { lang: string; userEma
                           className="inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
                         >
                           {resendId === r.id ? <InlinePulse className="bg-stone-300" size={12} /> : <Send size={16} />}
-                          {lang === 'en' ? 'Resend' : 'Znovu poslat'}
+                          {t.resend}
                         </button>
                         <button
                           type="button"
@@ -411,7 +404,7 @@ export default function MyEventsTab({ lang, userEmail }: { lang: string; userEma
                           className="inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
                         >
                           <X size={16} />
-                          {lang === 'en' ? 'Cancel' : 'Zrušit'}
+                          {t.cancel}
                         </button>
                       </div>
                     )}
@@ -421,7 +414,7 @@ export default function MyEventsTab({ lang, userEmail }: { lang: string; userEma
                 {cancelId === r.id && (
                   <div className="mt-5 bg-white border border-stone-100 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="text-sm font-bold text-stone-700">
-                      {lang === 'en' ? 'Cancel this registration?' : 'Zrušit tuto registraci?'}
+                      {t.cancelConfirmTitle}
                     </div>
                     <div className="flex items-center gap-2">
                       <button
@@ -430,7 +423,7 @@ export default function MyEventsTab({ lang, userEmail }: { lang: string; userEma
                         disabled={cancelLoading}
                         className="rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
                       >
-                        {lang === 'en' ? 'Back' : 'Zpět'}
+                        {t.back}
                       </button>
                       <button
                         type="button"
@@ -439,7 +432,7 @@ export default function MyEventsTab({ lang, userEmail }: { lang: string; userEma
                         className="rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest border border-red-200 bg-red-600 text-white hover:bg-red-700 transition disabled:opacity-50 inline-flex items-center gap-2"
                       >
                         {cancelLoading && <InlinePulse className="bg-white/80" size={12} />}
-                        {lang === 'en' ? 'Confirm' : 'Potvrdit'}
+                        {t.confirm}
                       </button>
                     </div>
                   </div>

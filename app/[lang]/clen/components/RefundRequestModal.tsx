@@ -6,6 +6,7 @@ import InlinePulse from '@/app/components/InlinePulse';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/app/context/ToastContext';
 import Dialog from '@/app/components/ui/Dialog';
+import { useDictionary } from '@/app/context/DictionaryContext';
 
 export default function RefundRequestModal({
   open,
@@ -18,6 +19,8 @@ export default function RefundRequestModal({
   lang: string;
   rsvp: any | null;
 }) {
+  const dict = useDictionary();
+  const t = dict.memberComponents.refundRequestModal;
   const { showToast } = useToast();
   const [policy, setPolicy] = useState('');
   const [policyLoading, setPolicyLoading] = useState(false);
@@ -39,10 +42,10 @@ export default function RefundRequestModal({
       try {
         const { data } = await supabase.auth.getSession();
         const token = data.session?.access_token;
-        if (!token) throw new Error(lang === 'en' ? 'Unauthorized' : 'Nepřihlášen');
+        if (!token) throw new Error(dict.common.unauthorized);
         const res = await fetch('/api/governance/refund-policy', { headers: { Authorization: `Bearer ${token}` } });
         const json = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(json?.error || 'Request failed');
+        if (!res.ok) throw new Error(json?.error || dict.common.requestFailed);
         setPolicy(String(json?.text || ''));
       } catch {
         setPolicy('');
@@ -58,7 +61,7 @@ export default function RefundRequestModal({
     try {
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
-      if (!token) throw new Error(lang === 'en' ? 'Unauthorized' : 'Nepřihlášen');
+      if (!token) throw new Error(dict.common.unauthorized);
 
       const res = await fetch('/api/refunds/request', {
         method: 'POST',
@@ -72,11 +75,11 @@ export default function RefundRequestModal({
         }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error || 'Request failed');
-      showToast(lang === 'en' ? 'Refund request sent' : 'Žádost o refund odeslána', 'success');
+      if (!res.ok) throw new Error(json?.error || dict.common.requestFailed);
+      showToast(t.toastSent, 'success');
       onClose();
     } catch (e: any) {
-      showToast(e?.message || 'Chyba', 'error');
+      showToast(e?.message || dict.common.errorGeneric, 'error');
     } finally {
       setLoading(false);
     }
@@ -94,11 +97,16 @@ export default function RefundRequestModal({
         <div className="p-6 border-b border-stone-100 flex items-center justify-between">
           <div className="min-w-0">
             <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">
-              {lang === 'en' ? 'Refund request' : 'Žádost o refund'}
+              {t.title}
             </div>
             <div className="font-black text-stone-900 truncate">{lang === 'en' && rsvp.event?.title_en ? rsvp.event.title_en : rsvp.event?.title}</div>
           </div>
-          <button type="button" onClick={onClose} className="p-2 rounded-xl hover:bg-stone-50 transition text-stone-400" aria-label="Zavřít">
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 rounded-xl hover:bg-stone-50 transition text-stone-400"
+            aria-label={dict.common.close}
+          >
             <X size={18} />
           </button>
         </div>
@@ -107,41 +115,41 @@ export default function RefundRequestModal({
           <div className="bg-stone-50 border border-stone-100 rounded-2xl p-5">
             <div className="flex items-center justify-between gap-4 mb-2">
               <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">
-                {lang === 'en' ? 'Policy' : 'Refund politika'}
+                {t.policy}
               </div>
               {policyLoading && <InlinePulse className="bg-stone-300" size={12} />}
             </div>
             <div className="text-sm font-medium text-stone-700 whitespace-pre-line">
-              {policy || (lang === 'en' ? 'No policy text set.' : 'Politika zatím není nastavena.')}
+              {policy || t.noPolicy}
             </div>
           </div>
 
           <div className="bg-stone-50 border border-stone-100 rounded-2xl p-5">
             <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">
-              {lang === 'en' ? 'Reason' : 'Důvod'}
+              {t.reason}
             </div>
             <select
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition"
             >
-              <option value="changed_mind">{lang === 'en' ? 'Changed my mind' : 'Změna plánů'}</option>
-              <option value="illness">{lang === 'en' ? 'Illness' : 'Nemoc'}</option>
-              <option value="duplicate">{lang === 'en' ? 'Duplicate order' : 'Duplicitní registrace'}</option>
-              <option value="other">{lang === 'en' ? 'Other' : 'Jiné'}</option>
+              <option value="changed_mind">{t.reasonChangedMind}</option>
+              <option value="illness">{t.reasonIllness}</option>
+              <option value="duplicate">{t.reasonDuplicate}</option>
+              <option value="other">{t.reasonOther}</option>
             </select>
           </div>
 
           <div className="bg-stone-50 border border-stone-100 rounded-2xl p-5">
             <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">
-              {lang === 'en' ? 'Note (optional)' : 'Poznámka (volitelné)'}
+              {t.note}
             </div>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={4}
               className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition resize-none"
-              placeholder={lang === 'en' ? 'Anything we should know?' : 'Doplňte informace…'}
+              placeholder={t.notePlaceholder}
             />
           </div>
 
@@ -153,7 +161,7 @@ export default function RefundRequestModal({
               className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-4 text-[10px] font-black uppercase tracking-widest border border-amber-200 bg-amber-500 text-white hover:bg-amber-600 transition disabled:opacity-50"
             >
               {loading ? <InlinePulse className="bg-white/80" size={14} /> : <RefreshCcw size={16} />}
-              {lang === 'en' ? 'Send request' : 'Odeslat žádost'}
+              {t.sendRequest}
             </button>
             <button
               type="button"
@@ -162,7 +170,7 @@ export default function RefundRequestModal({
               className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-4 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
             >
               <AlertCircle size={16} />
-              {lang === 'en' ? 'Cancel' : 'Zrušit'}
+              {dict.common.cancel}
             </button>
           </div>
         </div>

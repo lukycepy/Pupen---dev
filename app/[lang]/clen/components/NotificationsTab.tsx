@@ -5,6 +5,7 @@ import { Bell, Calendar, Clock, FileCheck, Settings } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import InlinePulse from '@/app/components/InlinePulse';
+import { useDictionary } from '@/app/context/DictionaryContext';
 
 type Prefs = {
   categories: Record<string, boolean>;
@@ -60,13 +61,17 @@ export default function NotificationsTab({
   lang: string;
   userEmail: string;
 }) {
+  const dict = useDictionary();
+  const locale = lang === 'en' ? 'en' : 'cs';
+  const dateLocale = ({ cs: 'cs-CZ', en: 'en-US' } as const)[locale];
+  const t = dict.memberComponents.notificationsTab;
   const applicationStatusLabel = useCallback((v: any) => {
     const s = String(v || '').trim();
-    if (s === 'pending') return lang === 'en' ? 'Pending' : 'Čeká na vyřízení';
-    if (s === 'approved') return lang === 'en' ? 'Approved' : 'Schváleno';
-    if (s === 'rejected') return lang === 'en' ? 'Rejected' : 'Zamítnuto';
+    if (s === 'pending') return t.applicationPending;
+    if (s === 'approved') return t.applicationApproved;
+    if (s === 'rejected') return t.applicationRejected;
     return s || '—';
-  }, [lang]);
+  }, [t.applicationApproved, t.applicationPending, t.applicationRejected]);
   const [prefs, setPrefs] = useState<Prefs>({
     categories: { events: true, payments: true, admin: true, community: true },
     quietHours: { enabled: false, from: '22:00', to: '08:00' },
@@ -126,9 +131,9 @@ export default function NotificationsTab({
       if (!r.status || r.status === 'cancelled') continue;
       const createdAt = r.created_at || new Date().toISOString();
       const eventTitle =
-        lang === 'en' && r.event?.title_en ? r.event.title_en : r.event?.title || (lang === 'en' ? 'Event' : 'Akce');
+        lang === 'en' && r.event?.title_en ? r.event.title_en : r.event?.title || t.eventFallback;
       const when = r.event?.date
-        ? new Date(r.event.date).toLocaleDateString(lang === 'en' ? 'en-US' : 'cs-CZ')
+        ? new Date(r.event.date).toLocaleDateString(dateLocale)
         : '';
       const time = r.event?.time || '';
       const meta = [when, time].filter(Boolean).join(' • ');
@@ -140,12 +145,10 @@ export default function NotificationsTab({
           id: `rsvp:${r.id}:reserved`,
           createdAt,
           category: 'payments',
-          title: lang === 'en' ? 'Reservation waiting for payment' : 'Rezervace čeká na platbu',
+          title: t.titleReservationWaiting,
           body: `${eventTitle}`,
           meta: exp
-            ? `${meta}${meta ? ' • ' : ''}${lang === 'en' ? 'Valid until' : 'Platí do'} ${exp.toLocaleString(
-                lang === 'en' ? 'en-US' : 'cs-CZ'
-              )}${expired ? ` • ${lang === 'en' ? 'expired' : 'expirace'}` : ''}`
+            ? `${meta}${meta ? ' • ' : ''}${t.validUntil} ${exp.toLocaleString(dateLocale)}${expired ? ` • ${t.expired}` : ''}`
             : meta,
           icon: Clock,
         });
@@ -154,7 +157,7 @@ export default function NotificationsTab({
           id: `rsvp:${r.id}:waitlist`,
           createdAt,
           category: 'events',
-          title: lang === 'en' ? 'Waitlist' : 'Čekací listina',
+          title: t.titleWaitlist,
           body: `${eventTitle}`,
           meta,
           icon: Calendar,
@@ -164,7 +167,7 @@ export default function NotificationsTab({
           id: `rsvp:${r.id}:confirmed`,
           createdAt,
           category: 'events',
-          title: lang === 'en' ? 'Registration confirmed' : 'Registrace potvrzena',
+          title: t.titleRegistrationConfirmed,
           body: `${eventTitle}`,
           meta,
           icon: Calendar,
@@ -178,7 +181,7 @@ export default function NotificationsTab({
         id: `app:${app.id}:${app.status}`,
         createdAt: app.created_at || new Date().toISOString(),
         category: 'admin',
-        title: lang === 'en' ? 'Application status' : 'Stav přihlášky',
+        title: t.titleApplicationStatus,
         body: `${applicationStatusLabel(app.status)}`,
         icon: FileCheck,
       });
@@ -214,24 +217,20 @@ export default function NotificationsTab({
           <div>
             <h2 className="text-2xl font-black text-stone-900 tracking-tight flex items-center gap-3">
               <Bell className="text-green-600" />
-              {lang === 'en' ? 'Notifications' : 'Notifikace'}
+              {t.headerTitle}
             </h2>
-            <p className="text-stone-500 font-medium mt-2">
-              {lang === 'en'
-                ? 'Important updates about your registrations and status.'
-                : 'Důležité informace o vašich registracích a stavu.'}
-            </p>
+            <p className="text-stone-500 font-medium mt-2">{t.headerSubtitle}</p>
           </div>
           <div className="flex items-center gap-3">
             <div className="text-[10px] font-black uppercase tracking-widest text-stone-300">
-              {lang === 'en' ? 'Unread' : 'Nepřečtené'}: {unreadCount}
+              {t.unread}: {unreadCount}
             </div>
             <button
               type="button"
               onClick={markAllRead}
               className="inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
             >
-              {lang === 'en' ? 'Mark all read' : 'Označit jako přečtené'}
+              {t.markAllRead}
             </button>
           </div>
         </div>
@@ -240,14 +239,14 @@ export default function NotificationsTab({
       <div className="bg-white p-8 rounded-[3rem] border border-stone-100 shadow-sm">
         <h3 className="text-lg font-black text-stone-900 mb-6 flex items-center gap-3">
           <Settings className="text-green-600" />
-          {lang === 'en' ? 'Preferences' : 'Nastavení'}
+          {t.preferences}
         </h3>
         <div className="grid md:grid-cols-2 gap-4">
           {[
-            { key: 'events', label: lang === 'en' ? 'Events' : 'Akce' },
-            { key: 'payments', label: lang === 'en' ? 'Payments' : 'Platby' },
-            { key: 'admin', label: lang === 'en' ? 'Admin' : 'Admin' },
-            { key: 'community', label: lang === 'en' ? 'Community' : 'Komunita' },
+            { key: 'events', label: t.categoryEvents },
+            { key: 'payments', label: t.categoryPayments },
+            { key: 'admin', label: t.categoryAdmin },
+            { key: 'community', label: t.categoryCommunity },
           ].map((c) => (
             <button
               key={c.key}
@@ -258,7 +257,7 @@ export default function NotificationsTab({
               }`}
             >
               <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">{c.label}</div>
-              <div className="font-black text-stone-900">{prefs.categories[c.key] !== false ? (lang === 'en' ? 'On' : 'Zapnuto') : (lang === 'en' ? 'Off' : 'Vypnuto')}</div>
+              <div className="font-black text-stone-900">{prefs.categories[c.key] !== false ? t.on : t.off}</div>
             </button>
           ))}
         </div>
@@ -271,7 +270,7 @@ export default function NotificationsTab({
           </div>
         ) : filtered.length === 0 ? (
           <div className="py-16 text-center text-stone-400 font-bold uppercase tracking-widest text-xs">
-            {lang === 'en' ? 'No notifications.' : 'Zatím žádné notifikace.'}
+            {t.empty}
           </div>
         ) : (
           <div className="space-y-3">
@@ -298,7 +297,7 @@ export default function NotificationsTab({
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-1">
                       <div className="font-black text-stone-900">{n.title}</div>
                       <div className="text-[10px] font-black uppercase tracking-widest text-stone-300">
-                        {new Date(n.createdAt).toLocaleString(lang === 'en' ? 'en-US' : 'cs-CZ')}
+                        {new Date(n.createdAt).toLocaleString(dateLocale)}
                       </div>
                     </div>
                     <div className="text-sm font-bold text-stone-700 mt-1">{n.body}</div>

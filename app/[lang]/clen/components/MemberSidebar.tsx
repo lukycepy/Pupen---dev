@@ -11,10 +11,10 @@ import {
 import Drawer from '@/app/components/ui/Drawer';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useDictionary } from '@/app/context/DictionaryContext';
 
 interface MemberSidebarProps {
   lang: string;
-  dict: any;
   activeTab: string;
   onTabChange: (tab: string) => void;
   userProfile: any;
@@ -27,7 +27,6 @@ interface MemberSidebarProps {
 
 interface SidebarContentProps {
   lang: string;
-  dict: any;
   activeTab: string;
   onTabChange: (tab: string) => void;
   userProfile: any;
@@ -38,8 +37,9 @@ interface SidebarContentProps {
 }
 
 const SidebarContent = ({ 
-  lang, dict, activeTab, onTabChange, userProfile, onLogout, setIsMobileOpen, hiddenTabs, pinnedTabs
+  lang, activeTab, onTabChange, userProfile, onLogout, setIsMobileOpen, hiddenTabs, pinnedTabs
 }: SidebarContentProps) => {
+  const dict = useDictionary();
   const hidden = new Set((hiddenTabs || []).map(String));
   const pinned = new Set((pinnedTabs || []).map(String));
   const unreadDmQuery = useQuery({
@@ -57,39 +57,39 @@ const SidebarContent = ({
   const unreadDm = Number(unreadDmQuery.data || 0);
   const menuGroups = [
     {
-      title: dict.member?.navOverview || (lang === 'en' ? 'Overview' : 'Přehled'),
+      title: dict.member.navOverview,
       items: [
-        { id: 'dashboard', label: dict.member?.tabDashboard || 'Nástěnka', icon: LayoutDashboard },
-        { id: 'notifications', label: dict.member?.tabNotifications || 'Notifikace', icon: Bell },
+        { id: 'dashboard', label: dict.member.tabDashboard, icon: LayoutDashboard },
+        { id: 'notifications', label: dict.member.tabNotifications, icon: Bell },
       ],
     },
     {
-      title: dict.member?.navContentBenefits || (lang === 'en' ? 'Content & benefits' : 'Obsah a výhody'),
+      title: dict.member.navContentBenefits,
       items: [
-        { id: 'events', label: dict.member?.tabEvents || 'Akce pro členy', icon: Calendar },
-        { id: 'my_events', label: dict.member?.tabMyEvents || 'Moje akce', icon: Ticket },
-        { id: 'documents', label: dict.member?.tabDocuments || 'Dokumenty', icon: FileText },
-        { id: 'card', label: dict.member?.tabCard || 'Členská karta', icon: QrCode },
-        { id: 'guidelines', label: dict.member?.tabGuidelines || 'Pravidla', icon: ShieldCheck },
-        { id: 'articles', label: dict.member?.tabArticles || 'Moje články', icon: BookOpen },
-        { id: 'release_notes', label: (dict.member as any)?.tabReleaseNotes || 'Release notes', icon: ScrollText },
+        { id: 'events', label: dict.member.tabEvents, icon: Calendar },
+        { id: 'my_events', label: dict.member.tabMyEvents, icon: Ticket },
+        { id: 'documents', label: dict.member.tabDocuments, icon: FileText },
+        { id: 'card', label: dict.member.tabCard, icon: QrCode },
+        { id: 'guidelines', label: dict.member.tabGuidelines, icon: ShieldCheck },
+        { id: 'articles', label: dict.member.tabArticles, icon: BookOpen },
+        { id: 'release_notes', label: dict.member.tabReleaseNotes, icon: ScrollText },
       ],
     },
     {
-      title: dict.member?.navCommunity || (lang === 'en' ? 'Community' : 'Komunita'),
+      title: dict.member.navCommunity,
       items: [
-        { id: 'messages', label: dict.member?.tabMessages || 'Zprávy', icon: Mail },
-        { id: 'directory', label: dict.member?.tabDirectory || 'Adresář členů', icon: Users },
-        { id: 'projects', label: dict.member?.tabProjects || 'Projekty', icon: FolderKanban },
-        { id: 'polls', label: dict.member?.tabPolls || 'Ankety', icon: BarChart3 },
-        { id: 'badges', label: (dict.member as any)?.tabBadges || (lang === 'en' ? 'Badges' : 'Odznaky'), icon: Award },
-        { id: 'governance', label: dict.member?.tabGovernance || 'Governance', icon: ScrollText },
-        { id: 'board', label: dict.member?.tabBoard || 'Vedení', icon: Users },
+        { id: 'messages', label: dict.member.tabMessages, icon: Mail },
+        { id: 'directory', label: dict.member.tabDirectory, icon: Users },
+        { id: 'projects', label: dict.member.tabProjects, icon: FolderKanban },
+        { id: 'polls', label: dict.member.tabPolls, icon: BarChart3 },
+        { id: 'badges', label: dict.member.tabBadges, icon: Award },
+        { id: 'governance', label: dict.member.tabGovernance, icon: ScrollText },
+        { id: 'board', label: dict.member.tabBoard, icon: Users },
       ],
     },
     {
-      title: dict.member?.navProfile || (lang === 'en' ? 'Profile' : 'Profil'),
-      items: [{ id: 'settings', label: dict.member?.tabSettings || 'Můj profil', icon: Settings }],
+      title: dict.member.navProfile,
+      items: [{ id: 'settings', label: dict.member.tabSettings, icon: Settings }],
     },
   ];
   const filteredGroups = menuGroups
@@ -137,7 +137,7 @@ const SidebarContent = ({
           </div>
           <div>
             <h1 className="text-lg font-black text-stone-900 leading-none">Pupen</h1>
-            <p className="text-[10px] font-black uppercase tracking-widest text-green-600 mt-1">{dict.member?.sidebarSubtitle || (lang === 'en' ? 'Member area' : 'Členská sekce')}</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-green-600 mt-1">{dict.member.sidebarSubtitle}</p>
           </div>
         </Link>
         <button onClick={() => setIsMobileOpen(false)} className="lg:hidden p-2 hover:bg-stone-50 rounded-lg transition">
@@ -174,7 +174,7 @@ const SidebarContent = ({
               <div className="space-y-1">
                 <div className="px-4 py-2">
                   <span className="text-[9px] font-black uppercase tracking-[0.2em] text-stone-400">
-                    {dict?.common?.pinned || (lang === 'en' ? 'Pinned' : 'Připnuté')}
+                    {dict.common.pinned}
                   </span>
                 </div>
                 <div className="space-y-1">
@@ -263,7 +263,7 @@ const SidebarContent = ({
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-stone-600 hover:bg-stone-50 transition"
           >
             <ShieldCheck size={18} className="text-stone-400" />
-            <span>{dict.member?.adminPanelLink || 'Pupen Control'}</span>
+            <span>{dict.member.adminPanelLink}</span>
           </Link>
         )}
         <button 
@@ -271,7 +271,7 @@ const SidebarContent = ({
           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-red-500 hover:bg-red-50/10 transition"
         >
           <LogOut size={18} />
-          <span>{dict.member?.logoutShort || (lang === 'en' ? 'Log out' : 'Odhlásit se')}</span>
+          <span>{dict.member.logoutShort}</span>
         </button>
       </div>
     </div>
@@ -280,7 +280,6 @@ const SidebarContent = ({
 
 export default function MemberSidebar({ 
   lang,
-  dict,
   activeTab,
   onTabChange,
   userProfile,
@@ -295,7 +294,7 @@ export default function MemberSidebar({
   const setIsMobileOpen = onMobileOpenChange || setInternalMobileOpen;
 
   const commonProps = {
-    lang, dict, activeTab, onTabChange, userProfile, onLogout, setIsMobileOpen, hiddenTabs, pinnedTabs
+    lang, activeTab, onTabChange, userProfile, onLogout, setIsMobileOpen, hiddenTabs, pinnedTabs
   };
 
   return (

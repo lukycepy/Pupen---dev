@@ -219,7 +219,7 @@ export default function MapTab({ dict }: { dict: any }) {
         <h2 className="text-2xl font-black flex items-center gap-3"><MapIcon className="text-green-600" /> {dict.admin.tabMap}</h2>
         <div className="flex gap-4">
           <button onClick={() => setIsManagingCategories(!isManagingCategories)} className="bg-stone-100 text-stone-600 px-6 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-stone-200 transition">
-            <Settings size={18} /> {lang === 'cs' ? 'Správa kategorií' : 'Manage categories'}
+            <Settings size={18} /> {dict.admin.map.manageCategories}
           </button>
           <button onClick={() => { if(isAdding) handleCancelPoint(); else setIsAdding(true); }} className="bg-green-600 text-white px-6 py-2 rounded-xl font-bold flex items-center gap-2">
             {isAdding ? <X size={18} /> : <Plus size={18} />} {isAdding ? dict.admin.btnCancel : dict.map.addPoint}
@@ -229,7 +229,7 @@ export default function MapTab({ dict }: { dict: any }) {
 
       {isManagingCategories && (
         <div className="bg-white p-8 rounded-3xl border shadow-sm space-y-6 animate-in fade-in slide-in-from-top-4 duration-300">
-          <h3 className="text-lg font-black uppercase tracking-widest text-stone-400">{lang === 'cs' ? 'Správa kategorií' : 'Manage Categories'}</h3>
+          <h3 className="text-lg font-black uppercase tracking-widest text-stone-400">{dict.admin.map.manageCategoriesTitle}</h3>
           
           <div className="grid md:grid-cols-3 gap-4 items-end bg-stone-50 p-6 rounded-2xl">
             <div className="space-y-1">
@@ -243,7 +243,7 @@ export default function MapTab({ dict }: { dict: any }) {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{lang === 'cs' ? 'Ikona' : 'Icon'}</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.admin.map.iconLabel}</label>
               <div className="grid grid-cols-6 gap-2 bg-white p-4 rounded-xl border max-h-48 overflow-y-auto">
                 {AVAILABLE_ICONS.map(icon => (
                   <button
@@ -325,7 +325,7 @@ export default function MapTab({ dict }: { dict: any }) {
                   {categories.map((cat: any) => (
                     <option key={cat.id} value={cat.name}>{cat.name}</option>
                   ))}
-                  {categories.length === 0 && <option value="">{lang === 'cs' ? 'Nejdříve přidejte kategorii' : 'Add a category first'}</option>}
+                  {categories.length === 0 && <option value="">{dict.admin.map.addCategoryFirst}</option>}
                 </select>
               </div>
             </div>

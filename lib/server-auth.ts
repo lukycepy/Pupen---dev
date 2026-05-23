@@ -1,4 +1,6 @@
 import { getServerSupabase } from '@/lib/supabase-server';
+import { getClientIp } from '@/lib/rate-limit';
+import { isRequestBanned } from '@/lib/security/bans';
 
 export function getBearerToken(req: Request) {
   const auth = req.headers.get('authorization') || req.headers.get('Authorization') || '';
@@ -19,6 +21,8 @@ export async function requireUser(req: Request) {
   const res = await supabase.auth.getUser(token);
   const user = res.data?.user;
   if (!user) throw new Error('Unauthorized');
+  const ip = getClientIp(req) || 'unknown';
+  if (await isRequestBanned({ ip, identityId: user.id })) throw new Error('Banned');
   return user;
 }
 

@@ -704,20 +704,20 @@ export default function UsersTab({ dict }: UsersTabProps) {
                   {(() => {
                     const r = evaluatePassword(String(passwordValue || ''), { email: String(emailValue || '') });
                     const score = r.score;
-                    const label = passwordScoreLabel(score, lang === 'en' ? 'en' : 'cs');
+                    const label = passwordScoreLabel(score, lang);
                     const pct = (score / 4) * 100;
                     const bar = score <= 1 ? 'bg-red-500' : score === 2 ? 'bg-amber-500' : score === 3 ? 'bg-green-500' : 'bg-green-600';
                     return (
                       <>
                         <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">
-                          <span>{lang === 'cs' ? 'Síla hesla' : 'Password strength'}</span>
+                          <span>{dict.admin.users.passwordStrength}</span>
                           <span className="text-stone-500">{label}</span>
                         </div>
                         <div className="mt-2 h-2 bg-stone-200 rounded-full overflow-hidden">
                           <div className={`h-2 ${bar}`} style={{ width: `${pct}%` }} />
                         </div>
                         <div className={`mt-2 text-[10px] font-bold px-1 ${r.ok ? 'text-stone-500' : 'text-red-600'}`}>
-                          {lang === 'cs' ? 'Min. 5 znaků' : 'Min. 5 characters'}
+                          {dict.admin.users.passwordMinChars}
                         </div>
                       </>
                     );

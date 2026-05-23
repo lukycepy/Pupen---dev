@@ -6,6 +6,7 @@ import InlinePulse from '@/app/components/InlinePulse';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/app/context/ToastContext';
 import Dialog from '@/app/components/ui/Dialog';
+import { useDictionary } from '@/app/context/DictionaryContext';
 
 export default function ReportModal({
   open,
@@ -24,6 +25,8 @@ export default function ReportModal({
   targetLabel?: string | null;
   sourceUrl?: string | null;
 }) {
+  const dict = useDictionary();
+  const t = dict.memberComponents.reportModal;
   const { showToast } = useToast();
   const [reason, setReason] = useState('spam');
   const [details, setDetails] = useState('');
@@ -41,7 +44,7 @@ export default function ReportModal({
     try {
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token || '';
-      if (!token) throw new Error(lang === 'en' ? 'Unauthorized' : 'Nepřihlášen');
+      if (!token) throw new Error(dict.common.unauthorized);
 
       const res = await fetch('/api/reports/create', {
         method: 'POST',
@@ -56,11 +59,11 @@ export default function ReportModal({
         }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error || 'Request failed');
-      showToast(lang === 'en' ? 'Report submitted' : 'Nahlášení odesláno', 'success');
+      if (!res.ok) throw new Error(json?.error || dict.common.requestFailed);
+      showToast(t.toastSubmitted, 'success');
       onClose();
     } catch (e: any) {
-      showToast(e?.message || (lang === 'en' ? 'Report failed' : 'Nahlášení se nezdařilo'), 'error');
+      showToast(e?.message || t.toastFailed, 'error');
     } finally {
       setLoading(false);
     }
@@ -77,10 +80,15 @@ export default function ReportModal({
     >
         <div className="p-6 border-b border-stone-100 flex items-center justify-between">
             <div className="min-w-0">
-              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">{lang === 'en' ? 'Report' : 'Nahlásit'}</div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">{t.title}</div>
               <div className="font-black text-stone-900 truncate">{targetLabel || targetId}</div>
             </div>
-            <button type="button" onClick={onClose} className="p-2 rounded-xl hover:bg-stone-50 transition text-stone-400" aria-label="Zavřít">
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 rounded-xl hover:bg-stone-50 transition text-stone-400"
+              aria-label={dict.common.close}
+            >
               <X size={18} />
             </button>
           </div>
@@ -88,30 +96,30 @@ export default function ReportModal({
           <div className="p-8 space-y-5">
           <div className="bg-stone-50 border border-stone-100 rounded-2xl p-4">
             <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">
-              {lang === 'en' ? 'Reason' : 'Důvod'}
+              {t.reason}
             </div>
             <select
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition"
             >
-              <option value="spam">{lang === 'en' ? 'Spam' : 'Spam'}</option>
-              <option value="abuse">{lang === 'en' ? 'Abuse' : 'Obtěžování'}</option>
-              <option value="harassment">{lang === 'en' ? 'Harassment' : 'Nátlak / šikana'}</option>
-              <option value="other">{lang === 'en' ? 'Other' : 'Jiné'}</option>
+              <option value="spam">{t.spam}</option>
+              <option value="abuse">{t.abuse}</option>
+              <option value="harassment">{t.harassment}</option>
+              <option value="other">{t.other}</option>
             </select>
           </div>
 
           <div className="bg-stone-50 border border-stone-100 rounded-2xl p-4">
             <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">
-              {lang === 'en' ? 'Details (optional)' : 'Popis (volitelné)'}
+              {t.details}
             </div>
             <textarea
               value={details}
               onChange={(e) => setDetails(e.target.value)}
               rows={4}
               className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition resize-none"
-              placeholder={lang === 'en' ? 'What happened?' : 'Co se stalo?'}
+              placeholder={t.detailsPlaceholder}
             />
           </div>
 
@@ -123,7 +131,7 @@ export default function ReportModal({
               className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-4 text-[10px] font-black uppercase tracking-widest border border-red-200 bg-red-600 text-white hover:bg-red-700 transition disabled:opacity-50"
             >
               {loading ? <InlinePulse className="bg-white/80" size={14} /> : <AlertTriangle size={16} />}
-              {lang === 'en' ? 'Submit' : 'Odeslat'}
+              {t.submit}
             </button>
             <button
               type="button"
@@ -131,7 +139,7 @@ export default function ReportModal({
               disabled={loading}
               className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-4 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
             >
-              {lang === 'en' ? 'Cancel' : 'Zrušit'}
+              {dict.common.cancel}
             </button>
           </div>
           </div>

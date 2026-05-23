@@ -3,6 +3,7 @@ import { createHash } from 'crypto';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { evaluatePassword } from '@/lib/auth/password-policy';
 import { guardPublicJsonPost } from '@/lib/public-post-guard';
+import { withSchemaCacheRetry } from '@/lib/schema-cache-retry';
 
 function isSchemaCacheMissingTable(e: any) {
   const msg = String(e?.message || '');
@@ -35,11 +36,9 @@ export async function POST(req: Request) {
     const supabase = getServerSupabase();
     const tokenHash = sha256Hex(token);
 
-    const res = await supabase
-      .from('password_resets')
-      .select('user_id, expires_at, used_at')
-      .eq('token_hash', tokenHash)
-      .maybeSingle();
+    const res = await withSchemaCacheRetry(supabase, () =>
+      supabase.from('password_resets').select('user_id, expires_at, used_at').eq('token_hash', tokenHash).maybeSingle(),
+    );
     if (res.error) throw res.error;
     const row: any = res.data;
     if (!row?.user_id) return NextResponse.json({ error: 'Invalid token' }, { status: 400 });
@@ -50,10 +49,9 @@ export async function POST(req: Request) {
     const upd = await supabase.auth.admin.updateUserById(String(row.user_id), { password });
     if (upd.error) throw upd.error;
 
-    await supabase
-      .from('password_resets')
-      .update({ used_at: new Date().toISOString() })
-      .eq('token_hash', tokenHash);
+    await withSchemaCacheRetry(supabase, () =>
+      supabase.from('password_resets').update({ used_at: new Date().toISOString() }).eq('token_hash', tokenHash),
+    );
 
     return NextResponse.json({ ok: true });
   } catch (e: any) {

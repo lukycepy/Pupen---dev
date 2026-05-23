@@ -61,6 +61,7 @@ const SidebarContent = ({
   hiddenTabs,
   pinnedTabs,
 }: SidebarContentProps) => {
+  const t = dict.admin.sidebar;
   const hidden = new Set((hiddenTabs || []).map(String));
   const pinned = new Set((pinnedTabs || []).map(String));
   const menuGroups = buildAdminMenuGroups(dict, permissions).map((g) => ({
@@ -84,7 +85,7 @@ const SidebarContent = ({
       if (!token) return 0;
       const res = await fetch('/api/admin/applications?pendingCount=1', { headers: { Authorization: `Bearer ${token}` } });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error || 'Chyba');
+      if (!res.ok) throw new Error(json?.error || t.errors.generic);
       return Number(json?.count || 0);
     },
   });
@@ -111,38 +112,38 @@ const SidebarContent = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-white/80 backdrop-blur text-stone-800">
+    <div className="flex flex-col h-full bg-white/80 dark:bg-stone-950/70 backdrop-blur text-stone-800 dark:text-stone-100">
       {/* BRAND */}
-      <div className="p-4 border-b border-stone-100 flex items-center justify-between gap-3">
+      <div className="p-4 border-b border-stone-100 dark:border-stone-800 flex items-center justify-between gap-3">
         <Link href={`/${lang}`} className="flex items-center gap-3 min-w-0">
           <div className="w-10 h-10 bg-green-600 rounded-2xl flex items-center justify-center shadow-sm shrink-0">
             <ShieldCheck size={22} className="text-white" />
           </div>
           {!desktopCollapsed ? (
             <div className="min-w-0">
-              <div className="text-sm font-black text-stone-900 leading-none truncate">Pupen</div>
+              <div className="text-sm font-black text-stone-900 dark:text-stone-50 leading-none truncate">Pupen</div>
               <div className="text-[10px] font-black uppercase tracking-widest text-green-700 mt-1 truncate">
-                {dict?.admin?.title || (lang === 'en' ? 'Admin' : 'Administrace')}
+                {dict.admin.title}
               </div>
             </div>
           ) : (
-            <span className="sr-only">{dict?.admin?.title || (lang === 'en' ? 'Admin' : 'Administrace')}</span>
+            <span className="sr-only">{dict.admin.title}</span>
           )}
         </Link>
         <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={onToggleDesktopCollapsed}
-            className="hidden lg:inline-flex p-2 rounded-xl hover:bg-stone-50 text-stone-500"
-            aria-label={desktopCollapsed ? 'Rozbalit navigaci' : 'Sbalit navigaci'}
-            title={desktopCollapsed ? 'Rozbalit navigaci' : 'Sbalit navigaci'}
+            className="hidden lg:inline-flex p-2 rounded-xl hover:bg-stone-50 dark:hover:bg-stone-900/60 text-stone-500 dark:text-stone-400"
+            aria-label={desktopCollapsed ? t.expandNav : t.collapseNav}
+            title={desktopCollapsed ? t.expandNav : t.collapseNav}
           >
             {desktopCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
           </button>
           <button
             onClick={() => setIsMobileOpen(false)}
-            className="lg:hidden inline-flex p-2 rounded-xl hover:bg-stone-50 text-stone-500"
-            aria-label="Zavřít navigaci"
+            className="lg:hidden inline-flex p-2 rounded-xl hover:bg-stone-50 dark:hover:bg-stone-900/60 text-stone-500 dark:text-stone-400"
+            aria-label={t.closeNav}
           >
             <X size={18} />
           </button>
@@ -150,15 +151,15 @@ const SidebarContent = ({
       </div>
 
       {/* USER PROFILE */}
-      <div className="p-4 border-b border-stone-100">
+      <div className="p-4 border-b border-stone-100 dark:border-stone-800">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-green-50 rounded-2xl flex items-center justify-center font-black text-green-700 border border-green-100 shrink-0">
+          <div className="w-10 h-10 bg-green-50 dark:bg-green-950/40 rounded-2xl flex items-center justify-center font-black text-green-700 dark:text-green-400 border border-green-100 dark:border-green-900 shrink-0">
             {userProfile?.first_name?.charAt(0) || userProfile?.email?.charAt(0).toUpperCase()}
           </div>
           {!desktopCollapsed ? (
             <div className="min-w-0">
-              <div className="text-sm font-bold text-stone-900 truncate">{userProfile?.first_name} {userProfile?.last_name}</div>
-              <div className="text-[11px] font-medium text-stone-500 truncate">{userProfile?.email}</div>
+              <div className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate">{userProfile?.first_name} {userProfile?.last_name}</div>
+              <div className="text-[11px] font-medium text-stone-500 dark:text-stone-400 truncate">{userProfile?.email}</div>
             </div>
           ) : (
             <span className="sr-only">{userProfile?.email}</span>
@@ -179,7 +180,7 @@ const SidebarContent = ({
                 {!desktopCollapsed ? (
                   <div className="px-3 py-2">
                     <span className="text-[9px] font-black uppercase tracking-[0.22em] text-stone-400">
-                      {dict?.common?.pinned || (lang === 'en' ? 'Pinned' : 'Připnuté')}
+                      {dict.common.pinned}
                     </span>
                   </div>
                 ) : null}
@@ -196,7 +197,7 @@ const SidebarContent = ({
                         desktopCollapsed ? 'px-3 py-3 justify-center' : 'px-3 py-2.5 text-sm',
                         activeTab === item.id
                           ? 'bg-green-600 text-white shadow-sm'
-                          : 'hover:bg-stone-50 text-stone-700',
+                          : 'hover:bg-stone-50 dark:hover:bg-stone-900/60 text-stone-700 dark:text-stone-200',
                       ].join(' ')}
                       aria-current={activeTab === item.id ? 'page' : undefined}
                       title={desktopCollapsed ? item.label : undefined}
@@ -222,7 +223,7 @@ const SidebarContent = ({
                 <button
                   type="button"
                   onClick={() => toggleGroup(group.title)}
-                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-stone-50 transition"
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-stone-50 dark:hover:bg-stone-900/60 transition"
                 >
                   <span className="text-[9px] font-black uppercase tracking-[0.22em] text-stone-400">{group.title}</span>
                   <ChevronDown
@@ -245,7 +246,7 @@ const SidebarContent = ({
                       desktopCollapsed ? 'px-3 py-3 justify-center' : 'px-3 py-2.5 text-sm',
                       activeTab === item.id
                         ? 'bg-green-600 text-white shadow-sm'
-                        : 'hover:bg-stone-50 text-stone-700',
+                        : 'hover:bg-stone-50 dark:hover:bg-stone-900/60 text-stone-700 dark:text-stone-200',
                     ].join(' ')}
                     aria-current={activeTab === item.id ? 'page' : undefined}
                     title={desktopCollapsed ? item.label : undefined}
@@ -255,7 +256,9 @@ const SidebarContent = ({
                     {item.id === 'apps' && pendingAppsCount > 0 ? (
                       <span className={[
                         'shrink-0 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest',
-                        activeTab === item.id ? 'bg-white/20 text-white' : 'border border-amber-300 bg-amber-50 text-amber-800',
+                        activeTab === item.id
+                          ? 'bg-white/20 text-white'
+                          : 'border border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300',
                         desktopCollapsed ? 'absolute right-2 top-2' : '',
                       ].join(' ')}>
                         {pendingAppsCount}
@@ -274,22 +277,22 @@ const SidebarContent = ({
       </nav>
 
       {/* FOOTER */}
-      <div className="p-3 border-t border-stone-100 space-y-1">
+      <div className="p-3 border-t border-stone-100 dark:border-stone-800 space-y-1">
         {userProfile?.is_member && (
           <Link
             href={`/${lang}/clen`}
             className={[
               'w-full flex items-center gap-3 rounded-xl font-bold transition',
               desktopCollapsed ? 'px-3 py-3 justify-center' : 'px-3 py-2.5 text-sm',
-              'text-blue-700 hover:bg-blue-50',
+              'text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/40',
             ].join(' ')}
-            title={desktopCollapsed ? (dict?.member?.sidebarSubtitle || (lang === 'en' ? 'Member area' : 'Členská sekce')) : undefined}
+            title={desktopCollapsed ? dict.member.sidebarSubtitle : undefined}
           >
             <ShieldCheck size={18} />
             {!desktopCollapsed ? (
-              <span>{dict?.member?.sidebarSubtitle || (lang === 'en' ? 'Member area' : 'Členská sekce')}</span>
+              <span>{dict.member.sidebarSubtitle}</span>
             ) : (
-              <span className="sr-only">{dict?.member?.sidebarSubtitle || (lang === 'en' ? 'Member area' : 'Členská sekce')}</span>
+              <span className="sr-only">{dict.member.sidebarSubtitle}</span>
             )}
           </Link>
         )}
@@ -298,15 +301,15 @@ const SidebarContent = ({
           className={[
             'w-full flex items-center gap-3 rounded-xl font-bold transition',
             desktopCollapsed ? 'px-3 py-3 justify-center' : 'px-3 py-2.5 text-sm',
-            'text-red-700 hover:bg-red-50',
+            'text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40',
           ].join(' ')}
-          title={desktopCollapsed ? (dict?.common?.logout || (lang === 'en' ? 'Log out' : 'Odhlásit se')) : undefined}
+          title={desktopCollapsed ? dict.common.logout : undefined}
         >
           <LogOut size={18} />
           {!desktopCollapsed ? (
-            <span>{dict?.common?.logout || (lang === 'en' ? 'Log out' : 'Odhlásit se')}</span>
+            <span>{dict.common.logout}</span>
           ) : (
-            <span className="sr-only">{dict?.common?.logout || (lang === 'en' ? 'Log out' : 'Odhlásit se')}</span>
+            <span className="sr-only">{dict.common.logout}</span>
           )}
         </button>
       </div>
@@ -344,6 +347,7 @@ export default function AdminSidebar({
       <aside
         className={[
           'hidden lg:block fixed left-0 top-0 bottom-0 shrink-0 z-[10000] border-r border-stone-100 bg-white',
+          'dark:border-stone-800 dark:bg-stone-950',
           desktopCollapsed ? 'w-[72px]' : 'w-[260px]',
         ].join(' ')}
       >

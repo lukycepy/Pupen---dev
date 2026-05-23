@@ -18,10 +18,10 @@ const EXCLUDED_ACTIONS = [
 
 export async function POST(req: Request) {
   try {
-    const { user, profile } = await requireAdmin(req);
-    if (!profile?.can_manage_admins) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    const { user } = await requireAdmin(req);
 
     const body = await req.json().catch(() => ({}));
+    const source = String(body?.source || 'admin');
     const olderThanDaysRaw = body?.olderThanDays;
     const dryRun = body?.dryRun !== false;
 
@@ -31,43 +31,117 @@ export async function POST(req: Request) {
 
     const supabase = getServerSupabase();
 
-    const countRes = await supabase
-      .from('admin_logs')
-      .select('id', { count: 'exact', head: true })
-      .lt('created_at', cutoffIso)
-      .not('action', 'in', `(${EXCLUDED_ACTIONS.map((a) => `"${a}"`).join(',')})`);
+    const profRes = await supabase
+      .from('profiles')
+      .select('can_manage_admins, can_edit_logs')
+      .eq('id', user.id)
+      .maybeSingle();
+    if (profRes.error) throw profRes.error;
+    const profile = profRes.data as any;
+    const canEdit = !!(profile?.can_manage_admins || profile?.can_edit_logs);
+    if (!canEdit) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    if (countRes.error) throw countRes.error;
-    const wouldDelete = Number(countRes.count || 0);
+    if (source === 'admin') {
+      const countRes = await supabase
+        .from('admin_logs')
+        .select('id', { count: 'exact', head: true })
+        .lt('created_at', cutoffIso)
+        .not('action', 'in', `(${EXCLUDED_ACTIONS.map((a) => `"${a}"`).join(',')})`);
+      if (countRes.error) throw countRes.error;
+      const wouldDelete = Number(countRes.count || 0);
 
-    if (dryRun) {
-      return NextResponse.json({ ok: true, dryRun: true, olderThanDays, cutoff: cutoffIso, wouldDelete });
+      if (dryRun) {
+        return NextResponse.json({ ok: true, dryRun: true, source, olderThanDays, cutoff: cutoffIso, wouldDelete });
+      }
+
+      const delRes = await supabase
+        .from('admin_logs')
+        .delete({ count: 'exact' })
+        .lt('created_at', cutoffIso)
+        .not('action', 'in', `(${EXCLUDED_ACTIONS.map((a) => `"${a}"`).join(',')})`);
+      if (delRes.error) throw delRes.error;
+      const deletedCount = Number(delRes.count || 0);
+
+      try {
+        await supabase.from('admin_logs').insert([
+          {
+            admin_email: user.email || 'admin',
+            admin_name: user.user_metadata?.full_name || user.email || 'admin',
+            action: 'LOGS_PURGE',
+            target_id: 'admin_logs',
+            details: { source, olderThanDays, cutoff: cutoffIso, deletedCount, excludedActions: EXCLUDED_ACTIONS },
+          },
+        ]);
+      } catch {}
+
+      return NextResponse.json({ ok: true, dryRun: false, source, olderThanDays, cutoff: cutoffIso, deletedCount });
     }
 
-    const delRes = await supabase
-      .from('admin_logs')
-      .delete({ count: 'exact' })
-      .lt('created_at', cutoffIso)
-      .not('action', 'in', `(${EXCLUDED_ACTIONS.map((a) => `"${a}"`).join(',')})`);
-    if (delRes.error) throw delRes.error;
-    const deletedCount = Number(delRes.count || 0);
+    if (source === 'error') {
+      const countRes = await supabase
+        .from('error_logs')
+        .select('id', { count: 'exact', head: true })
+        .lt('created_at', cutoffIso);
+      if (countRes.error) throw countRes.error;
+      const wouldDelete = Number(countRes.count || 0);
+      if (dryRun) return NextResponse.json({ ok: true, dryRun: true, source, olderThanDays, cutoff: cutoffIso, wouldDelete });
 
-    try {
-      await supabase.from('admin_logs').insert([
-        {
-          admin_email: user.email || 'admin',
-          admin_name: user.user_metadata?.full_name || user.email || 'admin',
-          action: 'ADMIN_LOGS_PURGE',
-          target_id: 'admin_logs',
-          details: { olderThanDays, cutoff: cutoffIso, deletedCount, excludedActions: EXCLUDED_ACTIONS },
-        },
-      ]);
-    } catch {}
+      const delRes = await supabase.from('error_logs').delete({ count: 'exact' }).lt('created_at', cutoffIso);
+      if (delRes.error) throw delRes.error;
+      const deletedCount = Number(delRes.count || 0);
 
-    return NextResponse.json({ ok: true, dryRun: false, olderThanDays, cutoff: cutoffIso, deletedCount });
+      try {
+        await supabase.from('admin_logs').insert([
+          {
+            admin_email: user.email || 'admin',
+            admin_name: user.user_metadata?.full_name || user.email || 'admin',
+            action: 'LOGS_PURGE',
+            target_id: 'error_logs',
+            details: { source, olderThanDays, cutoff: cutoffIso, deletedCount },
+          },
+        ]);
+      } catch {}
+
+      return NextResponse.json({ ok: true, dryRun: false, source, olderThanDays, cutoff: cutoffIso, deletedCount });
+    }
+
+    if (source === 'server') {
+      const level = String(body?.level || '').trim();
+      const category = String(body?.category || '').trim();
+
+      let countQ = supabase.from('server_logs').select('id', { count: 'exact', head: true }).lt('created_at', cutoffIso);
+      if (level) countQ = countQ.eq('level', level);
+      if (category) countQ = countQ.eq('category', category);
+      const countRes = await countQ;
+      if (countRes.error) throw countRes.error;
+      const wouldDelete = Number(countRes.count || 0);
+      if (dryRun) return NextResponse.json({ ok: true, dryRun: true, source, olderThanDays, cutoff: cutoffIso, wouldDelete });
+
+      let delQ = supabase.from('server_logs').delete({ count: 'exact' }).lt('created_at', cutoffIso);
+      if (level) delQ = delQ.eq('level', level);
+      if (category) delQ = delQ.eq('category', category);
+      const delRes = await delQ;
+      if (delRes.error) throw delRes.error;
+      const deletedCount = Number(delRes.count || 0);
+
+      try {
+        await supabase.from('admin_logs').insert([
+          {
+            admin_email: user.email || 'admin',
+            admin_name: user.user_metadata?.full_name || user.email || 'admin',
+            action: 'LOGS_PURGE',
+            target_id: 'server_logs',
+            details: { source, olderThanDays, cutoff: cutoffIso, deletedCount, level: level || null, category: category || null },
+          },
+        ]);
+      } catch {}
+
+      return NextResponse.json({ ok: true, dryRun: false, source, olderThanDays, cutoff: cutoffIso, deletedCount });
+    }
+
+    return NextResponse.json({ error: 'Invalid source' }, { status: 400 });
   } catch (e: any) {
     const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
     return NextResponse.json({ error: e?.message || 'Error' }, { status });
   }
 }
-

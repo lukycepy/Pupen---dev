@@ -5,8 +5,13 @@ import { supabase } from '@/lib/supabase';
 import InlinePulse from '@/app/components/InlinePulse';
 import { useToast } from '@/app/context/ToastContext';
 import { Users } from 'lucide-react';
+import { useDictionary } from '@/app/context/DictionaryContext';
 
 export default function MemberBoardTab({ lang }: { lang: string }) {
+  const dict = useDictionary();
+  const locale = lang === 'en' ? 'en' : 'cs';
+  const dateLocale = ({ cs: 'cs-CZ', en: 'en-US' } as const)[locale];
+  const t = dict.memberComponents.memberBoardTab;
   const { showToast } = useToast();
   const [roles, setRoles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -18,35 +23,31 @@ export default function MemberBoardTab({ lang }: { lang: string }) {
       try {
         const { data } = await supabase.auth.getSession();
         const token = data.session?.access_token;
-        if (!token) throw new Error(lang === 'en' ? 'Unauthorized' : 'Nepřihlášen');
+        if (!token) throw new Error(dict.common.unauthorized);
         const res = await fetch('/api/governance/board', { headers: { Authorization: `Bearer ${token}` } });
         const json = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(json?.error || 'Request failed');
+        if (!res.ok) throw new Error(json?.error || dict.common.requestFailed);
         setRoles(Array.isArray(json.roles) ? json.roles : []);
         setUpdatedAt(json.updatedAt || null);
       } catch (e: any) {
-        showToast(e?.message || 'Chyba', 'error');
+        showToast(e?.message || dict.common.errorGeneric, 'error');
       } finally {
         setLoading(false);
       }
     })();
-  }, [lang, showToast]);
+  }, [dict.common.errorGeneric, dict.common.requestFailed, dict.common.unauthorized, showToast]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="bg-white p-10 rounded-[3rem] border border-stone-100 shadow-sm">
         <h2 className="text-2xl font-black text-stone-900 tracking-tight flex items-center gap-3">
           <Users className="text-green-600" />
-          {lang === 'en' ? 'Faces' : 'Tváře spolku'}
+          {t.headerTitle}
         </h2>
-        <p className="text-stone-500 font-medium mt-3">
-          {lang === 'en'
-            ? 'Contacts for the club.'
-            : 'Kontakty na spolek.'}
-        </p>
+        <p className="text-stone-500 font-medium mt-3">{t.headerSubtitle}</p>
         {updatedAt && (
           <div className="mt-4 text-[10px] font-black uppercase tracking-widest text-stone-300">
-            {lang === 'en' ? 'Updated' : 'Aktualizováno'}: {new Date(updatedAt).toLocaleString(lang === 'en' ? 'en-US' : 'cs-CZ')}
+            {t.updated}: {new Date(updatedAt).toLocaleString(dateLocale)}
           </div>
         )}
       </div>
@@ -58,7 +59,7 @@ export default function MemberBoardTab({ lang }: { lang: string }) {
           </div>
         ) : roles.length === 0 ? (
           <div className="py-16 text-center text-stone-400 font-bold uppercase tracking-widest text-xs">
-            {lang === 'en' ? 'No entries yet.' : 'Zatím bez záznamu.'}
+            {t.empty}
           </div>
         ) : (
           <div className="grid md:grid-cols-2 gap-4">

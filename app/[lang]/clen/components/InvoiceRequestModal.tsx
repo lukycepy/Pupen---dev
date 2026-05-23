@@ -5,6 +5,7 @@ import { FileText, X } from 'lucide-react';
 import InlinePulse from '@/app/components/InlinePulse';
 import { useToast } from '@/app/context/ToastContext';
 import Dialog from '@/app/components/ui/Dialog';
+import { useDictionary } from '@/app/context/DictionaryContext';
 
 type BuyerType = 'person' | 'company';
 
@@ -27,6 +28,8 @@ export default function InvoiceRequestModal({
   email: string;
   defaultName: string;
 }) {
+  const dict = useDictionary();
+  const t = dict.memberComponents.invoiceRequestModal;
   const { showToast } = useToast();
   const [buyerType, setBuyerType] = useState<BuyerType>('person');
   const [buyerName, setBuyerName] = useState('');
@@ -35,8 +38,7 @@ export default function InvoiceRequestModal({
   const [dic, setDic] = useState('');
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
-
-  const title = useMemo(() => (lang === 'en' ? 'Invoice request' : 'Žádost o fakturu'), [lang]);
+  const title = useMemo(() => t.title, [t.title]);
 
   useEffect(() => {
     if (!open) return;
@@ -51,7 +53,7 @@ export default function InvoiceRequestModal({
 
   const submit = async () => {
     if (!buyerName.trim() || !buyerAddress.trim()) {
-      showToast(lang === 'en' ? 'Fill name and address' : 'Vyplňte jméno/název a adresu', 'error');
+      showToast(t.toastFill, 'error');
       return;
     }
     setLoading(true);
@@ -74,12 +76,12 @@ export default function InvoiceRequestModal({
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        throw new Error(j?.error || 'Request failed');
+        throw new Error(j?.error || dict.common.requestFailed);
       }
-      showToast(lang === 'en' ? 'Invoice requested' : 'Žádost o fakturu odeslána', 'success');
+      showToast(t.toastSuccess, 'success');
       onClose();
     } catch (e: any) {
-      showToast(e?.message || (lang === 'en' ? 'Request failed' : 'Odeslání se nezdařilo'), 'error');
+      showToast(e?.message || t.toastFailed, 'error');
     } finally {
       setLoading(false);
     }
@@ -99,7 +101,12 @@ export default function InvoiceRequestModal({
               <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">{title}</div>
               <div className="font-black text-stone-900 truncate">{eventTitle}</div>
             </div>
-            <button type="button" onClick={onClose} className="p-2 rounded-xl hover:bg-stone-50 transition text-stone-400" aria-label="Zavřít">
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 rounded-xl hover:bg-stone-50 transition text-stone-400"
+              aria-label={dict.common.close}
+            >
               <X size={18} />
             </button>
           </div>
@@ -107,7 +114,7 @@ export default function InvoiceRequestModal({
           <div className="p-8 space-y-6">
           <div className="bg-stone-50 border border-stone-100 rounded-2xl p-5">
             <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">
-              {lang === 'en' ? 'Buyer type' : 'Typ odběratele'}
+              {t.buyerType}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <button
@@ -119,7 +126,7 @@ export default function InvoiceRequestModal({
                     : 'bg-white border-stone-200 text-stone-500 hover:bg-stone-50'
                 }`}
               >
-                {lang === 'en' ? 'Person' : 'Osoba'}
+                {t.person}
               </button>
               <button
                 type="button"
@@ -130,7 +137,7 @@ export default function InvoiceRequestModal({
                     : 'bg-white border-stone-200 text-stone-500 hover:bg-stone-50'
                 }`}
               >
-                {lang === 'en' ? 'Company' : 'Firma'}
+                {t.company}
               </button>
             </div>
           </div>
@@ -138,7 +145,7 @@ export default function InvoiceRequestModal({
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-1 md:col-span-2">
               <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">
-                {lang === 'en' ? 'Name / Company' : 'Jméno / Název firmy'}
+                {t.nameCompany}
               </label>
               <input
                 value={buyerName}
@@ -148,14 +155,14 @@ export default function InvoiceRequestModal({
             </div>
             <div className="space-y-1 md:col-span-2">
               <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">
-                {lang === 'en' ? 'Address' : 'Adresa'}
+                {t.address}
               </label>
               <textarea
                 value={buyerAddress}
                 onChange={(e) => setBuyerAddress(e.target.value)}
                 rows={3}
                 className="w-full bg-stone-50 border-none rounded-xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none resize-none"
-                placeholder={lang === 'en' ? 'Street, City, ZIP, Country' : 'Ulice, město, PSČ, stát'}
+                placeholder={t.addressPlaceholder}
               />
             </div>
             {buyerType === 'company' && (
@@ -180,13 +187,13 @@ export default function InvoiceRequestModal({
             )}
             <div className="space-y-1 md:col-span-2">
               <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">
-                {lang === 'en' ? 'Note (optional)' : 'Poznámka (volitelné)'}
+                {t.note}
               </label>
               <input
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 className="w-full bg-stone-50 border-none rounded-xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none"
-                placeholder={lang === 'en' ? 'e.g. proforma, PO number…' : 'např. číslo objednávky…'}
+                placeholder={t.notePlaceholder}
               />
             </div>
           </div>
@@ -199,7 +206,7 @@ export default function InvoiceRequestModal({
               className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-4 text-[10px] font-black uppercase tracking-widest border border-green-200 bg-green-600 text-white hover:bg-green-700 transition disabled:opacity-50"
             >
               {loading ? <InlinePulse className="bg-white/80" size={14} /> : <FileText size={16} />}
-              {lang === 'en' ? 'Request invoice' : 'Vyžádat fakturu'}
+              {t.requestInvoice}
             </button>
             <button
               type="button"
@@ -207,7 +214,7 @@ export default function InvoiceRequestModal({
               disabled={loading}
               className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-4 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
             >
-              {lang === 'en' ? 'Cancel' : 'Zrušit'}
+              {dict.common.cancel}
             </button>
           </div>
           <div className="text-[10px] font-black uppercase tracking-widest text-stone-300">

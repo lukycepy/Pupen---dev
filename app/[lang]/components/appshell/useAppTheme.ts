@@ -1,29 +1,35 @@
 'use client';
 
 import React from 'react';
-import type { AppTheme } from './theme';
-import { applyThemeToDom, readStoredTheme, writeStoredTheme } from './theme';
+import type { AppTheme, ResolvedTheme } from './theme';
+import { applyThemeToDom, onSystemThemeChange, readStoredTheme, resolveTheme, writeStoredTheme } from './theme';
 
 export function useAppTheme(initial?: AppTheme | null) {
-  const [theme, setTheme] = React.useState<AppTheme>('light');
+  const [theme, setTheme] = React.useState<AppTheme>('system');
+  const [resolvedTheme, setResolvedTheme] = React.useState<ResolvedTheme>('light');
 
   React.useEffect(() => {
     const stored = readStoredTheme();
-    const next = stored || initial || 'light';
+    const next = stored || initial || 'system';
     setTheme(next);
     applyThemeToDom(next);
+    setResolvedTheme(resolveTheme(next));
   }, [initial]);
 
   const set = React.useCallback((next: AppTheme) => {
     setTheme(next);
     writeStoredTheme(next);
     applyThemeToDom(next);
+    setResolvedTheme(resolveTheme(next));
   }, []);
 
-  const toggle = React.useCallback(() => {
-    set(theme === 'dark' ? 'light' : 'dark');
-  }, [set, theme]);
+  React.useEffect(() => {
+    if (theme !== 'system') return;
+    return onSystemThemeChange(() => {
+      applyThemeToDom('system');
+      setResolvedTheme(resolveTheme('system'));
+    });
+  }, [theme]);
 
-  return { theme, setTheme: set, toggleTheme: toggle, isDark: theme === 'dark' };
+  return { theme, resolvedTheme, setTheme: set, isDark: resolvedTheme === 'dark' };
 }
-

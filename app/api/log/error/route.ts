@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { getBearerToken } from '@/lib/server-auth';
 import { guardPublicJsonPost } from '@/lib/public-post-guard';
+import { sanitizeLogMessage, sanitizeLogUrl } from '@/lib/logs/sanitize';
 
 export async function POST(req: Request) {
   try {
@@ -33,11 +34,11 @@ export async function POST(req: Request) {
     const { error } = await supabase
       .from('error_logs')
       .insert([{
-        level: String(level || 'error').slice(0, 20),
-        message: String(message).substring(0, 2000), // Limit length
-        stack: stack ? String(stack).substring(0, 5000) : null,
-        url: url ? String(url).substring(0, 1000) : null,
-        user_agent: user_agent ? String(user_agent).substring(0, 1000) : null,
+        level: sanitizeLogMessage(level || 'error').slice(0, 20),
+        message: sanitizeLogMessage(message).substring(0, 2000), // Limit length
+        stack: stack ? sanitizeLogMessage(stack).substring(0, 5000) : null,
+        url: url ? sanitizeLogUrl(url).substring(0, 1000) : null,
+        user_agent: user_agent ? sanitizeLogMessage(user_agent).substring(0, 1000) : null,
         user_id
       }]);
 

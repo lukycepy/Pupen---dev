@@ -8,7 +8,7 @@ import InlinePulse from '@/app/components/InlinePulse';
 import { useToast } from '@/app/context/ToastContext';
 import { logAdminAction } from '@/lib/admin-logger';
 import Dialog from '@/app/components/ui/Dialog';
-import { useParams } from 'next/navigation';
+import { useDictionary } from '@/app/context/DictionaryContext';
 
 export default function ProjectsTab({
   currentUser,
@@ -17,15 +17,13 @@ export default function ProjectsTab({
   currentUser: any;
   userProfile: any;
 }) {
-  const params = useParams();
-  const lang = (params?.lang as string) === 'en' ? 'en' : 'cs';
+  const dict = useDictionary();
   const qc = useQueryClient();
   const { showToast } = useToast();
   const statusLabel = (v: any) => {
     const s = String(v || '').trim();
-    if (s === 'open') return lang === 'en' ? 'Open' : 'Otevřené';
-    if (s === 'closed') return lang === 'en' ? 'Closed' : 'Uzavřené';
-    if (s === 'paused') return lang === 'en' ? 'Paused' : 'Pozastavené';
+    const mapped = (dict.admin.projects.status as any)?.[s];
+    if (mapped) return String(mapped);
     return s || '—';
   };
   const [q, setQ] = useState('');

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { PROFILE_PERMISSION_KEYS_SET } from '@/lib/rbac/registry';
+import { withSchemaCacheRetry } from '@/lib/schema-cache-retry';
 
 function isSchemaCacheMissingTable(e: any) {
   const msg = String(e?.message || '');
@@ -24,20 +25,21 @@ export async function GET(req: Request) {
     const { profile } = await requireAdmin(req);
     if (!profile?.can_manage_admins) throw new Error('Forbidden');
     const supabase = getServerSupabase();
-    const roles = await supabase.from('app_roles').select('id,name,permissions,color_hex,updated_at,created_at').order('name', { ascending: true });
+    const roles = await withSchemaCacheRetry(supabase, () =>
+      supabase.from('app_roles').select('id,name,permissions,color_hex,updated_at,created_at').order('name', { ascending: true }),
+    );
     if (roles.error) throw roles.error;
 
-    const assignmentsRes = await supabase
-      .from('app_user_roles')
-      .select('user_id, role_id, assigned_at, assigned_by_email')
-      .order('assigned_at', { ascending: false });
+    const assignmentsRes = await withSchemaCacheRetry(supabase, () =>
+      supabase.from('app_user_roles').select('user_id, role_id, assigned_at, assigned_by_email').order('assigned_at', { ascending: false }),
+    );
     if (assignmentsRes.error) throw assignmentsRes.error;
     const assignments = (assignmentsRes.data || []) as any[];
 
     const userIds = Array.from(new Set(assignments.map((a) => String(a.user_id)).filter(Boolean)));
     let profilesById: Record<string, any> = {};
     if (userIds.length) {
-      const profRes = await supabase.from('profiles').select('id,email,first_name,last_name').in('id', userIds);
+      const profRes = await withSchemaCacheRetry(supabase, () => supabase.from('profiles').select('id,email,first_name,last_name').in('id', userIds));
       if (profRes.error) throw profRes.error;
       profilesById = Object.fromEntries((profRes.data || []).map((p: any) => [String(p.id), p]));
     }
@@ -77,18 +79,20 @@ export async function POST(req: Request) {
 
     const supabase = getServerSupabase();
     const now = new Date().toISOString();
-    const up = roleId
-      ? await supabase
-          .from('app_roles')
-          .update({ name, permissions, color_hex: colorHex, updated_at: now })
-          .eq('id', roleId)
-          .select('id,name,permissions,color_hex,updated_at,created_at')
-          .single()
-      : await supabase
-          .from('app_roles')
-          .insert([{ name, permissions, color_hex: colorHex, updated_at: now }])
-          .select('id,name,permissions,color_hex,updated_at,created_at')
-          .single();
+    const up = await withSchemaCacheRetry(supabase, () =>
+      roleId
+        ? supabase
+            .from('app_roles')
+            .update({ name, permissions, color_hex: colorHex, updated_at: now })
+            .eq('id', roleId)
+            .select('id,name,permissions,color_hex,updated_at,created_at')
+            .single()
+        : supabase
+            .from('app_roles')
+            .insert([{ name, permissions, color_hex: colorHex, updated_at: now }])
+            .select('id,name,permissions,color_hex,updated_at,created_at')
+            .single(),
+    );
     if (up.error) throw up.error;
 
     await supabase

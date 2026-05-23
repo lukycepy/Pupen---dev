@@ -38,8 +38,8 @@ export default async function PrivacyPage({ params }: { params: Promise<{ lang: 
   const { lang: rawLang } = await params;
   const lang = rawLang === 'en' ? 'en' : 'cs';
   const page = await getSitePageContent('ochrana-soukromi', lang);
-  if (page?.content_html) {
-    return <DbContentPage title={page.title || (lang === 'en' ? 'Privacy' : 'Ochrana soukromí')} html={page.content_html} />;
+  if (page?.content_blocks || page?.content_html) {
+    return <DbContentPage title={page.title || (lang === 'en' ? 'Privacy' : 'Ochrana soukromí')} html={page?.content_html} blocks={page?.content_blocks} />;
   }
   const dict = (await getDictionary(lang)).privacyPage;
 

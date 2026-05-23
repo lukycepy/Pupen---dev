@@ -9,6 +9,8 @@ import { UserPlus, CheckCircle, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import InlinePulse from '@/app/components/InlinePulse';
 import AddressAutocomplete from '@/app/components/AddressAutocomplete';
+import PageBlocksRenderer from '@/app/[lang]/components/PageBlocksRenderer';
+import { parsePageBlocks } from '@/lib/site/page-blocks';
 
 export default function PrihlaskaPage() {
   const params = useParams();
@@ -20,6 +22,7 @@ export default function PrihlaskaPage() {
   const [success, setSuccess] = useState(false);
   const [pageHtml, setPageHtml] = useState<string>('');
   const [pageTitle, setPageTitle] = useState<string>('');
+  const [pageBlocks, setPageBlocks] = useState<any[] | null>(null);
   const [formData, setFormData] = useState({
     membership_type: 'regular' as 'regular' | 'external',
     first_name: '',
@@ -54,11 +57,13 @@ export default function PrihlaskaPage() {
         if (mounted) {
           setPageHtml(String(page?.content_html || ''));
           setPageTitle(String(page?.title || ''));
+          setPageBlocks(Array.isArray(page?.content_blocks) ? page.content_blocks : null);
         }
       } catch {
         if (mounted) {
           setPageHtml('');
           setPageTitle('');
+          setPageBlocks(null);
         }
       }
     })();
@@ -154,6 +159,7 @@ export default function PrihlaskaPage() {
   };
 
   if (!dict) return null;
+  const blocks = parsePageBlocks(pageBlocks);
 
   if (success) {
     return (
@@ -224,10 +230,10 @@ export default function PrihlaskaPage() {
           <p className="text-stone-500 text-lg font-medium">{dict.subtitle}</p>
         </header>
 
-        {pageHtml ? (
+        {blocks?.length || pageHtml ? (
           <div className="bg-white border border-stone-100 rounded-[2.5rem] p-8 md:p-10 shadow-sm mb-8">
             {pageTitle ? <div className="text-2xl font-black text-stone-900 mb-4">{pageTitle}</div> : null}
-            <div className="prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: pageHtml }} />
+            {blocks?.length ? <PageBlocksRenderer blocks={blocks} /> : <div className="prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: pageHtml }} />}
           </div>
         ) : null}
 

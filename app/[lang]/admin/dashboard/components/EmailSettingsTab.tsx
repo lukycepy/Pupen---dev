@@ -7,9 +7,12 @@ import { useToast } from '@/app/context/ToastContext';
 import { SkeletonTabContent } from '@/app/[lang]/components/Skeleton';
 import AdminModuleHeader from './ui/AdminModuleHeader';
 import AdminPanel from './ui/AdminPanel';
+import { useParams } from 'next/navigation';
 
 export default function EmailSettingsTab({ dict }: { dict: any }) {
   const { showToast } = useToast();
+  const params = useParams();
+  const lang = (params?.lang as string) === 'en' ? 'en' : 'cs';
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState({
@@ -117,7 +120,7 @@ export default function EmailSettingsTab({ dict }: { dict: any }) {
       const res = await fetch('/api/admin/applications/status-email/test-admin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ lang: dict?.lang === 'en' ? 'en' : 'cs', status }),
+        body: JSON.stringify({ lang, status }),
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(j?.error || 'Test selhal');

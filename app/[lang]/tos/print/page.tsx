@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { getDictionary } from '@/lib/get-dictionary';
 import { getSitePageContent } from '@/lib/site/page-content';
 import PrintButton from '@/app/components/PrintButton';
+import PageBlocksRenderer from '@/app/[lang]/components/PageBlocksRenderer';
+import { parsePageBlocks } from '@/lib/site/page-blocks';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +26,7 @@ export default async function ToSPrintPage({ params }: { params: Promise<{ lang:
   const lang = rawLang === 'en' ? 'en' : 'cs';
   const dict = (await getDictionary(lang)).tosPage;
   const page = await getSitePageContent('tos', lang);
+  const blocks = parsePageBlocks(page?.content_blocks);
 
   return (
     <div className="min-h-screen bg-white text-stone-900 pb-16">
@@ -44,7 +47,9 @@ export default async function ToSPrintPage({ params }: { params: Promise<{ lang:
         <h1 className="text-3xl font-black mb-3">{page?.title || dict.title}</h1>
         <div className="text-stone-600 font-medium mb-10">{dict.intro}</div>
 
-        {page?.content_html ? (
+        {blocks?.length ? (
+          <PageBlocksRenderer blocks={blocks} />
+        ) : page?.content_html ? (
           <div className="prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: page.content_html }} />
         ) : (
           <>

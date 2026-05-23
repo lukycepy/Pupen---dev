@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { listEmailTemplates } from '@/lib/email/templates';
+import { withSchemaCacheRetry } from '@/lib/schema-cache-retry';
 
 function isSchemaCacheMissingTable(e: any) {
   const msg = String(e?.message || '');
@@ -22,7 +23,7 @@ export async function DELETE(req: Request, ctx: { params: Promise<{ templateKey:
     if (!allowed.has(key)) return NextResponse.json({ error: 'Invalid template key' }, { status: 400 });
 
     const supabase = getServerSupabase();
-    const del = await supabase.from('email_template_overrides').delete().eq('template_key', key);
+    const del = await withSchemaCacheRetry(supabase, () => supabase.from('email_template_overrides').delete().eq('template_key', key));
     if (del.error) throw del.error;
 
     await supabase
@@ -50,4 +51,3 @@ export async function DELETE(req: Request, ctx: { params: Promise<{ templateKey:
     return NextResponse.json({ error: e?.message || 'Error' }, { status });
   }
 }
-

@@ -3,7 +3,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { getDictionary } from '@/lib/get-dictionary';
 import { useQuery } from '@tanstack/react-query';
 import { ShieldCheck, X, Loader2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
@@ -64,7 +63,6 @@ const SosTab = dynamic<any>(() => import('./components/SosTab'), { loading: () =
 const BrokenLinksTab = dynamic<any>(() => import('./components/BrokenLinksTab'), { loading: () => <SkeletonTabContent /> });
 const GodModeTab = dynamic<any>(() => import('./components/GodModeTab'), { loading: () => <SkeletonTabContent /> });
 const BadgesTab = dynamic<any>(() => import('./components/BadgesTab'), { loading: () => <SkeletonTabContent /> });
-const ErrorLogsTab = dynamic<any>(() => import('./components/ErrorLogsTab'), { loading: () => <SkeletonTabContent /> });
 const WebhooksTab = dynamic<any>(() => import('./components/WebhooksTab'), { loading: () => <SkeletonTabContent /> });
 const TrustBoxTab = dynamic<any>(() => import('./components/TrustBoxTab'), { loading: () => <SkeletonTabContent /> });
 
@@ -77,12 +75,14 @@ import { buildAdminMenuGroups } from './components/adminMenu';
 import Dialog from '@/app/components/ui/Dialog';
 import AdminShell from './components/AdminShell';
 import TabPersonalizationDialog from '@/app/[lang]/components/appshell/TabPersonalizationDialog';
+import { useDictionary } from '@/app/context/DictionaryContext';
 
 export default function AdminDashboard() {
   const params = useParams();
   const lang = (params?.lang as string) || 'cs';
   const router = useRouter();
   const { showToast } = useToast();
+  const dict = useDictionary();
 
   const [activeTab, setActiveTab] = useState<string>('');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -90,18 +90,16 @@ export default function AdminDashboard() {
   const [tabsDialogOpen, setTabsDialogOpen] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [editProfile, setEditProfile] = useState({ first_name: '', last_name: '' });
-
-  const [dict, setDict] = useState<any>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [permissions, setPermissions] = useState<any>({
     can_manage_admins: false,
     trustbox_admin: false,
     trustbox_can_view_pii: false,
+    site_pages_any: false,
   });
 
   const tabLabels = useMemo(() => {
-    if (!dict) return new Map<string, string>();
     const groups = buildAdminMenuGroups(dict, permissions);
     const map = new Map<string, string>();
     for (const g of groups) {
@@ -109,7 +107,7 @@ export default function AdminDashboard() {
         map.set(it.id, it.label);
       }
     }
-    map.set('content', dict.admin?.tabContent || 'Knihovna obsahu');
+    map.set('content', dict.admin.tabContent);
     return map;
   }, [dict, permissions]);
 
@@ -135,7 +133,7 @@ export default function AdminDashboard() {
     return typeof x === 'string' ? x : '';
   }, [adminUiPrefs]);
 
-  const activeTitle = tabLabels.get(String(activeTab)) || (activeTab ? String(activeTab).replaceAll('_', ' ') : 'Pupen Control');
+  const activeTitle = tabLabels.get(String(activeTab)) || (activeTab ? String(activeTab).replaceAll('_', ' ') : dict.admin.title);
 
   // Handle URL hash for tab persistence
   useEffect(() => {
@@ -149,7 +147,6 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => {
-    if (!dict) return;
     const groups = buildAdminMenuGroups(dict, permissions);
     const hidden = new Set(adminHiddenTabs.map(String));
     const visible = groups.flatMap((g) => g.items).filter((it) => it.visible && !hidden.has(it.id));
@@ -198,7 +195,7 @@ export default function AdminDashboard() {
 
       if (error) throw error;
       
-      showToast(lang === 'cs' ? 'Profil byl aktualizován' : 'Profile updated', 'success');
+      showToast(dict.common.profileUpdated, 'success');
       setIsProfileOpen(false);
       // Refresh session or profile data if needed
       window.location.reload(); 
@@ -235,11 +232,6 @@ export default function AdminDashboard() {
   const canEdit = (module: string) => permissions.can_manage_admins || permissions[`can_edit_${module}`];
   const canViewContent = canView('news') || canView('events') || canView('faq');
   const canViewFinance = canView('budget') || permissions.can_manage_admins;
-
-  // Fetch dictionary
-  useEffect(() => {
-    getDictionary(lang).then(setDict);
-  }, [lang]);
 
   // Auth and Permissions
   useEffect(() => {
@@ -297,8 +289,19 @@ export default function AdminDashboard() {
 
         setUserProfile(profile);
         
-        const finalPerms: any = { ...profile, trustbox_admin: false, trustbox_can_view_pii: false };
+        const finalPerms: any = { ...profile, trustbox_admin: false, trustbox_can_view_pii: false, site_pages_any: false };
         setPermissions(finalPerms);
+
+        try {
+          const token = session.access_token;
+          if (token) {
+            const res = await fetch('/api/admin/site-pages/allowed', { headers: { Authorization: `Bearer ${token}` } });
+            const json = await res.json().catch(() => ({}));
+            if (res.ok && isMounted) {
+              setPermissions((prev: any) => ({ ...prev, site_pages_any: !!json?.any || !!json?.allView || !!json?.allEdit }));
+            }
+          }
+        } catch {}
 
         try {
           const token = session.access_token;
@@ -384,14 +387,14 @@ export default function AdminDashboard() {
     }
   };
 
-  if (!dict || !currentUser)
+  if (!currentUser)
     return (
       <div className="min-h-screen bg-stone-50">
         <header className="sticky top-0 z-40 border-b border-stone-100 bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/70">
           <div className="mx-auto max-w-7xl px-4 py-3 lg:px-8">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <div className="text-[10px] font-black uppercase tracking-[0.22em] text-stone-400 truncate">Administrace</div>
+                <div className="text-[10px] font-black uppercase tracking-[0.22em] text-stone-400 truncate">{dict.admin.title}</div>
                 <Skeleton className="h-7 w-40 rounded-xl" />
               </div>
               <div className="flex items-center gap-2">
@@ -426,13 +429,11 @@ export default function AdminDashboard() {
       <TabPersonalizationDialog
         open={tabsDialogOpen}
         onClose={() => setTabsDialogOpen(false)}
-        title={lang === 'en' ? 'Customize tabs' : 'Upravit záložky'}
+        title={dict.common.customizeTabs}
         tabs={
-          dict
-            ? buildAdminMenuGroups(dict, permissions)
-                .flatMap((g) => g.items.filter((it) => it.visible).map((it) => ({ id: it.id, label: it.label, group: g.title })))
-                .filter((x) => !!x.id)
-            : []
+          buildAdminMenuGroups(dict, permissions)
+            .flatMap((g) => g.items.filter((it) => it.visible).map((it) => ({ id: it.id, label: it.label, group: g.title })))
+            .filter((x) => !!x.id)
         }
         initial={{ defaultTab: adminDefaultTabPref || undefined, hiddenTabs: adminHiddenTabs, pinnedTabs: adminPinnedTabs }}
         onSave={async (prefs) => {
@@ -457,7 +458,7 @@ export default function AdminDashboard() {
       <AdminShell
         lang={lang}
         title={activeTitle}
-        subtitle={dict?.admin?.title || (lang === 'en' ? 'Admin' : 'Administrace')}
+        subtitle={dict.admin.title}
         userProfile={userProfile}
         dict={dict}
         permissions={permissions}
@@ -478,7 +479,7 @@ export default function AdminDashboard() {
             panelClassName="bg-white w-full max-w-md rounded-[2rem] p-8 shadow-2xl animate-in zoom-in-95 duration-300"
           >
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-black text-stone-900">{lang === 'cs' ? 'Nastavení profilu' : 'Profile Settings'}</h2>
+              <h2 className="text-xl font-black text-stone-900">{dict.member.profileSettings}</h2>
               <button onClick={() => setIsProfileOpen(false)} className="p-2 hover:bg-stone-100 rounded-full transition text-stone-400">
                 <X size={24} />
               </button>
@@ -486,7 +487,7 @@ export default function AdminDashboard() {
 
             <form onSubmit={handleUpdateProfile} className="space-y-4">
               <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{lang === 'cs' ? 'Jméno' : 'First Name'}</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.member.firstName}</label>
                 <input
                   type="text"
                   required
@@ -496,7 +497,7 @@ export default function AdminDashboard() {
                 />
               </div>
               <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{lang === 'cs' ? 'Příjmení' : 'Last Name'}</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.member.lastName}</label>
                 <input
                   type="text"
                   required
@@ -506,7 +507,7 @@ export default function AdminDashboard() {
                 />
               </div>
               <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{lang === 'cs' ? 'E-mail (nelze měnit)' : 'Email (cannot change)'}</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.member.emailLabel}</label>
                 <input
                   type="email"
                   disabled
@@ -521,7 +522,7 @@ export default function AdminDashboard() {
                   onClick={() => setIsProfileOpen(false)}
                   className="flex-1 py-3 bg-stone-100 text-stone-600 rounded-xl font-bold hover:bg-stone-200 transition"
                 >
-                  {lang === 'cs' ? 'Zrušit' : 'Cancel'}
+                  {dict.common.cancel}
                 </button>
                 <button
                   type="submit"
@@ -529,7 +530,7 @@ export default function AdminDashboard() {
                   className="flex-[2] py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition shadow-lg shadow-green-600/20 flex items-center justify-center gap-2"
                 >
                   {isSavingProfile ? <Loader2 size={20} className="animate-spin" /> : <ShieldCheck size={20} />}
-                  {lang === 'cs' ? 'Uložit změny' : 'Save Changes'}
+                  {dict.common.saveChanges}
                 </button>
               </div>
             </form>
@@ -573,8 +574,8 @@ export default function AdminDashboard() {
               <RolesTab dict={dict} />
             )}
 
-            {activeTab === 'site_pages' && permissions.can_manage_admins && (
-              <SiteConfigTab dict={dict} />
+            {activeTab === 'site_pages' && (permissions.can_manage_admins || permissions.site_pages_any || canView('site_pages')) && (
+              <SiteConfigTab dict={dict} permissions={permissions} />
             )}
 
             {activeTab === 'db_health' && permissions.can_manage_admins && (
@@ -595,10 +596,6 @@ export default function AdminDashboard() {
 
             {activeTab === 'webhooks' && permissions.can_manage_admins && (
               <WebhooksTab />
-            )}
-
-            {activeTab === 'error_logs' && permissions.can_manage_admins && (
-              <ErrorLogsTab />
             )}
 
             {activeTab === 'god_mode' && permissions.can_manage_admins && (

@@ -491,7 +491,7 @@ export default function RolesTab({ dict }: { dict: any }) {
                       panelClassName="bg-white border border-stone-200 rounded-2xl shadow-xl overflow-hidden"
                     >
                       {assignSearching ? (
-                        <div className="p-4 text-stone-400 font-bold text-sm">Načítám…</div>
+                        <div className="p-4 text-stone-400 font-bold text-sm">{t.loading}</div>
                       ) : assignResults.length ? (
                         <div className="max-h-72 overflow-auto">
                           {assignResults.map((u: any) => {
@@ -515,15 +515,15 @@ export default function RolesTab({ dict }: { dict: any }) {
                                 <div className="font-black text-stone-900">{full}</div>
                                 <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mt-1">
                                   {emailValue}
-                                  {u.is_member ? ' • člen' : ''}
-                                  {u.is_admin ? ' • admin' : ''}
+                                  {u.is_member ? ` • ${t.memberBadge}` : ''}
+                                  {u.is_admin ? ` • ${t.adminBadge}` : ''}
                                 </div>
                               </button>
                             );
                           })}
                         </div>
                       ) : (
-                        <div className="p-4 text-stone-400 font-bold text-sm">{t.noResults || 'Nic nenalezeno.'}</div>
+                        <div className="p-4 text-stone-400 font-bold text-sm">{t.noResults}</div>
                       )}
                     </Popover>
                   ) : null}
@@ -533,7 +533,7 @@ export default function RolesTab({ dict }: { dict: any }) {
                 ) : null}
               </div>
               <div className="md:col-span-1">
-                <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{t.assignRoleLabel || 'Role'}</div>
+                <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{t.assignRoleLabel}</div>
                 <select
                   value={assignRoleId}
                   onChange={(e) => setAssignRoleId(e.target.value)}
@@ -561,7 +561,7 @@ export default function RolesTab({ dict }: { dict: any }) {
                   }
                   className="w-full bg-stone-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-600 transition disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  {assigning ? <InlinePulse className="bg-white/80" size={14} /> : <UserPlus size={16} />} {t.assign || 'Přiřadit'}
+                  {assigning ? <InlinePulse className="bg-white/80" size={14} /> : <UserPlus size={16} />} {t.assign}
                 </button>
               </div>
             </div>

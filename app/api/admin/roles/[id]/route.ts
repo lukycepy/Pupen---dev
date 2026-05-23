@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { withSchemaCacheRetry } from '@/lib/schema-cache-retry';
 
 function isSchemaCacheMissingTable(e: any) {
   const msg = String(e?.message || '');
@@ -13,7 +14,7 @@ export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }
     if (!profile?.can_manage_admins) throw new Error('Forbidden');
     const { id } = await ctx.params;
     const supabase = getServerSupabase();
-    const del = await supabase.from('app_roles').delete().eq('id', id);
+    const del = await withSchemaCacheRetry(supabase, () => supabase.from('app_roles').delete().eq('id', id));
     if (del.error) throw del.error;
 
     await supabase

@@ -13,14 +13,14 @@ export default function EmptyState({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="text-center py-16 bg-white rounded-[2.5rem] border border-dashed border-stone-200">
+    <div className="text-center py-16 bg-white rounded-[2.5rem] border border-dashed border-stone-200 dark:bg-stone-950 dark:border-stone-800">
       {Icon ? (
-        <div className="mx-auto mb-4 w-14 h-14 rounded-2xl bg-stone-50 border border-stone-100 flex items-center justify-center">
-          <Icon className="text-stone-400" size={26} />
+        <div className="mx-auto mb-4 w-14 h-14 rounded-2xl bg-stone-50 border border-stone-100 flex items-center justify-center dark:bg-stone-900/60 dark:border-stone-800">
+          <Icon className="text-stone-400 dark:text-stone-500" size={26} />
         </div>
       ) : null}
-      <div className="text-stone-900 font-black">{title}</div>
-      {description ? <div className="text-stone-400 text-sm font-medium mt-2 max-w-md mx-auto">{description}</div> : null}
+      <div className="text-stone-900 font-black dark:text-stone-100">{title}</div>
+      {description ? <div className="text-stone-400 text-sm font-medium mt-2 max-w-md mx-auto dark:text-stone-400">{description}</div> : null}
       {action ? <div className="mt-6 flex justify-center">{action}</div> : null}
     </div>
   );

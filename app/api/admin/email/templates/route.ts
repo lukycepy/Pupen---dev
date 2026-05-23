@@ -3,6 +3,7 @@ import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { listEmailTemplates } from '@/lib/email/templates';
 import { sanitizeEmailWrapperHtml } from '@/lib/email/sanitize';
+import { withSchemaCacheRetry } from '@/lib/schema-cache-retry';
 
 function isSchemaCacheMissingTable(e: any) {
   const msg = String(e?.message || '');
@@ -26,10 +27,12 @@ export async function GET(req: Request) {
     const { profile } = await requireAdmin(req);
     if (!profile?.can_manage_admins) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     const supabase = getServerSupabase();
-    const res = await supabase
-      .from('email_template_overrides')
-      .select('template_key, subject, html, is_enabled, created_at, updated_at')
-      .order('template_key', { ascending: true });
+    const res = await withSchemaCacheRetry(supabase, () =>
+      supabase
+        .from('email_template_overrides')
+        .select('template_key, subject, html, is_enabled, created_at, updated_at')
+        .order('template_key', { ascending: true }),
+    );
     if (res.error) throw res.error;
     return NextResponse.json({ ok: true, overrides: res.data || [] });
   } catch (e: any) {
@@ -72,11 +75,13 @@ export async function POST(req: Request) {
 
     const supabase = getServerSupabase();
     const now = new Date().toISOString();
-    const up = await supabase
-      .from('email_template_overrides')
-      .upsert([{ template_key: templateKey, subject, html: sanitizedHtml, is_enabled: isEnabled, updated_at: now }], { onConflict: 'template_key' })
-      .select('template_key, subject, html, is_enabled, created_at, updated_at')
-      .single();
+    const up = await withSchemaCacheRetry(supabase, () =>
+      supabase
+        .from('email_template_overrides')
+        .upsert([{ template_key: templateKey, subject, html: sanitizedHtml, is_enabled: isEnabled, updated_at: now }], { onConflict: 'template_key' })
+        .select('template_key, subject, html, is_enabled, created_at, updated_at')
+        .single(),
+    );
     if (up.error) throw up.error;
 
     await supabase

@@ -2,10 +2,11 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { Moon, Sun } from 'lucide-react';
+import { Monitor, Moon, Sun } from 'lucide-react';
+import type { AppTheme, ResolvedTheme } from './theme';
+import { applyThemeToDom, onSystemThemeChange, readStoredTheme, resolveTheme, writeStoredTheme } from './theme';
 
 const SCALE_KEY = 'pupen_font_scale';
-const THEME_KEY = 'pupen_theme';
 const MOTION_KEY = 'pupen_reduce_motion';
 
 function clamp(n: number, min: number, max: number) {
@@ -15,7 +16,8 @@ function clamp(n: number, min: number, max: number) {
 export default function AccessibilityControls() {
   const pathname = usePathname();
   const [scale, setScale] = useState(1);
-  const [isDark, setIsDark] = useState(false);
+  const [theme, setTheme] = useState<AppTheme>('system');
+  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>('light');
   const [reduceMotion, setReduceMotion] = useState(false);
 
   const roundedScale = useMemo(() => Math.round(scale * 100), [scale]);
@@ -28,11 +30,11 @@ export default function AccessibilityControls() {
 
     if (!Number.isNaN(storedScale)) setScale(clamp(storedScale, 0.9, 1.2));
 
-    const storedTheme = window.localStorage.getItem(THEME_KEY);
-    if (storedTheme === 'dark') {
-      setIsDark(true);
-      document.documentElement.classList.add('dark');
-    }
+    const storedTheme = readStoredTheme();
+    const nextTheme = storedTheme || 'system';
+    setTheme(nextTheme);
+    applyThemeToDom(nextTheme);
+    setResolvedTheme(resolveTheme(nextTheme));
 
     const storedMotion = window.localStorage.getItem(MOTION_KEY);
     if (storedMotion === '1') {
@@ -49,19 +51,25 @@ export default function AccessibilityControls() {
 
   useEffect(() => {
     if (hide) return;
+    if (theme !== 'system') return;
+    return onSystemThemeChange(() => {
+      applyThemeToDom('system');
+      setResolvedTheme(resolveTheme('system'));
+    });
+  }, [hide, theme]);
+
+  useEffect(() => {
+    if (hide) return;
     document.documentElement.style.setProperty('--font-scale', String(scale));
     window.localStorage.setItem(SCALE_KEY, String(scale));
   }, [hide, scale]);
 
-  const toggleTheme = () => {
-    const nextDark = !isDark;
-    setIsDark(nextDark);
-    window.localStorage.setItem(THEME_KEY, nextDark ? 'dark' : 'light');
-    if (nextDark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+  const cycleTheme = () => {
+    const next: AppTheme = theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light';
+    setTheme(next);
+    writeStoredTheme(next);
+    applyThemeToDom(next);
+    setResolvedTheme(resolveTheme(next));
   };
 
   const toggleReduceMotion = () => {
@@ -108,11 +116,19 @@ export default function AccessibilityControls() {
       
       <button
         type="button"
-        onClick={toggleTheme}
+        onClick={cycleTheme}
         className="h-9 w-9 flex items-center justify-center rounded-xl bg-stone-50 dark:bg-stone-800 text-stone-700 dark:text-yellow-400 hover:bg-stone-100 dark:hover:bg-stone-700 transition"
-        aria-label="Přepnout tmavý režim"
+        aria-label="Přepnout motiv"
+        title={theme === 'system' ? 'Systém' : theme === 'dark' ? 'Tmavý' : 'Světlý'}
+        data-testid="accessibility-theme-toggle"
       >
-        {isDark ? <Sun size={16} /> : <Moon size={16} />}
+        {theme === 'system' ? (
+          <Monitor size={16} />
+        ) : resolvedTheme === 'dark' ? (
+          <Sun size={16} />
+        ) : (
+          <Moon size={16} />
+        )}
       </button>
 
       <button

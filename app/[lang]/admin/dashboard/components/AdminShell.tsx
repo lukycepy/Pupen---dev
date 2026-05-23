@@ -49,9 +49,9 @@ export default function AdminShell({
   const storageKey = useMemo(() => 'pupen_admin_shell_desktop_collapsed_v1', []);
 
   const initialTheme = (userProfile?.ui_prefs && typeof userProfile.ui_prefs === 'object' ? userProfile.ui_prefs.theme : null) as any;
-  const { theme, toggleTheme } = useAppTheme(initialTheme);
+  const { theme, setTheme } = useAppTheme(initialTheme);
 
-  const persistTheme = async (next: 'light' | 'dark') => {
+  const persistTheme = async (next: 'light' | 'dark' | 'system') => {
     const id = String(userProfile?.id || '').trim();
     if (!id) return;
     const ui = userProfile?.ui_prefs && typeof userProfile.ui_prefs === 'object' ? userProfile.ui_prefs : {};
@@ -106,19 +106,19 @@ export default function AdminShell({
             <button
               type="button"
               onClick={onOpenCommandPalette}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl border border-stone-200 bg-white/80 hover:bg-stone-50 text-stone-700 font-bold shadow-sm"
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl border border-stone-200 dark:border-stone-700 bg-white/80 dark:bg-stone-900/80 hover:bg-stone-50 dark:hover:bg-stone-800 text-stone-700 dark:text-stone-200 font-bold shadow-sm"
             >
-              <Search size={16} className="text-stone-400" />
-              <span className="hidden sm:inline">{dict?.common?.search || (lang === 'en' ? 'Search' : 'Hledat')}</span>
-              <span className="hidden md:inline text-[10px] font-black uppercase tracking-widest text-stone-300">Ctrl K</span>
+              <Search size={16} className="text-stone-400 dark:text-stone-400" />
+              <span className="hidden sm:inline">{dict.common.search}</span>
+              <span className="hidden md:inline text-[10px] font-black uppercase tracking-widest text-stone-300 dark:text-stone-500">Ctrl K</span>
             </button>
             {onOpenTabPersonalization ? (
               <button
                 type="button"
                 onClick={onOpenTabPersonalization}
-                className="h-10 w-10 rounded-2xl bg-white/80 border border-stone-200 shadow-sm flex items-center justify-center text-stone-700 hover:bg-stone-50"
-                aria-label={dict?.common?.customize || (lang === 'en' ? 'Customize' : 'Upravit')}
-                title={dict?.common?.customize || (lang === 'en' ? 'Customize' : 'Upravit')}
+                className="h-10 w-10 rounded-2xl bg-white/80 dark:bg-stone-900/80 border border-stone-200 dark:border-stone-700 shadow-sm flex items-center justify-center text-stone-700 dark:text-stone-200 hover:bg-stone-50 dark:hover:bg-stone-800"
+                aria-label={dict.common.customize}
+                title={dict.common.customize}
               >
                 <SlidersHorizontal size={16} />
               </button>
@@ -126,9 +126,14 @@ export default function AdminShell({
             <AppLanguageSwitch lang={lang} hash={activeTab || null} />
             <AppThemeToggle
               theme={theme}
-              onToggle={async () => {
-                const next = theme === 'dark' ? 'light' : 'dark';
-                toggleTheme();
+              labels={{
+                title: dict.common.theme,
+                light: dict.common.themeLight,
+                dark: dict.common.themeDark,
+                system: dict.common.themeSystem,
+              }}
+              onChange={async (next) => {
+                setTheme(next);
                 await persistTheme(next);
               }}
             />
@@ -137,24 +142,24 @@ export default function AdminShell({
               onOpenProfile={onOpenProfile}
               onLogout={onLogout}
               labels={{
-                profile: dict?.common?.profile || (lang === 'en' ? 'Profile' : 'Profil'),
-                logout: dict?.common?.logout || (lang === 'en' ? 'Log out' : 'Odhlásit se'),
+                profile: dict.common.profile,
+                logout: dict.common.logout,
               }}
             />
           </>
         }
       >
-        <div className="flex items-center gap-2 text-[11px] font-medium text-stone-500 mb-4">
-          <Link href={`/${lang}`} className="inline-flex items-center gap-2 hover:text-stone-700">
-            <span className="inline-flex items-center justify-center w-6 h-6 rounded-xl bg-green-50 border border-green-100 text-green-700">
+        <div className="flex items-center gap-2 text-[11px] font-medium text-stone-500 dark:text-stone-400 mb-4">
+          <Link href={`/${lang}`} className="inline-flex items-center gap-2 hover:text-stone-700 dark:hover:text-stone-200">
+            <span className="inline-flex items-center justify-center w-6 h-6 rounded-xl bg-green-50 dark:bg-green-950/40 border border-green-100 dark:border-green-900 text-green-700 dark:text-green-400">
               <ShieldCheck size={14} />
             </span>
-            <span>{dict?.common?.web || (lang === 'en' ? 'Web' : 'Web')}</span>
+            <span>{dict.common.web}</span>
           </Link>
-          <ChevronRight size={14} className="text-stone-300" />
-          <span className="truncate">{dict?.admin?.title || (lang === 'en' ? 'Admin' : 'Administrace')}</span>
-          <ChevronRight size={14} className="text-stone-300" />
-          <span className="truncate text-stone-700">{title}</span>
+          <ChevronRight size={14} className="text-stone-300 dark:text-stone-600" />
+          <span className="truncate">{dict.admin.title}</span>
+          <ChevronRight size={14} className="text-stone-300 dark:text-stone-600" />
+          <span className="truncate text-stone-700 dark:text-stone-200">{title}</span>
         </div>
         {children}
       </AppShell>

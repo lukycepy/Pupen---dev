@@ -22,7 +22,7 @@ export async function GET(req: Request) {
   }
   const res = await supabase
     .from('site_page_contents')
-    .select('slug,lang,title,content_html,updated_at')
+    .select('slug,lang,title,content_html,content_blocks,updated_at')
     .eq('slug', slug)
     .eq('lang', lang)
     .maybeSingle();

@@ -4,16 +4,22 @@ import { getServerSupabase } from '@/lib/supabase-server';
 
 export async function GET(req: Request) {
   try {
-    const { profile } = await requireAdmin(req);
-    if (!profile?.is_admin && !profile?.can_manage_admins) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
     const supabase = getServerSupabase();
+    const { user } = await requireAdmin(req);
+    const profRes = await supabase
+      .from('profiles')
+      .select('can_manage_admins, can_view_logs, can_edit_logs')
+      .eq('id', user.id)
+      .maybeSingle();
+    if (profRes.error) throw profRes.error;
+    const profile = profRes.data as any;
+    const canView = !!(profile?.can_manage_admins || profile?.can_view_logs || profile?.can_edit_logs);
+    if (!canView) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     const { data, error } = await supabase
-      .from('error_logs')
       .select('*, profiles(email)')
       .order('created_at', { ascending: false })
+      .limit(100);
+
       .limit(100);
 
     if (error) throw error;
@@ -26,12 +32,17 @@ export async function GET(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
-    const { profile } = await requireAdmin(req);
-    if (!profile?.is_admin && !profile?.can_manage_admins) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
     const supabase = getServerSupabase();
+    const { user } = await requireAdmin(req);
+    const profRes = await supabase
+      .from('profiles')
+      .select('can_manage_admins, can_edit_logs')
+      .eq('id', user.id)
+      .maybeSingle();
+    if (profRes.error) throw profRes.error;
+    const profile = profRes.data as any;
+    const canEdit = !!(profile?.can_manage_admins || profile?.can_edit_logs);
+    if (!canEdit) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     
     // Purge older logs or all? Let's purge all for now
     const { error } = await supabase

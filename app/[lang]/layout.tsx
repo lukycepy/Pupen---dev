@@ -1,7 +1,9 @@
 // app/[lang]/layout.tsx
 import type { Metadata, Viewport } from 'next';
-import { getDictionary } from '@/lib/get-dictionary';
+import { getDictionary, normalizeLocale } from '@/lib/get-dictionary';
 import Providers from '../providers'
+import { DictionaryProvider } from '@/app/context/DictionaryContext';
+import type { Dictionary, Locale } from '@/lib/dictionary-types';
 
 
 // Import komponent
@@ -87,45 +89,50 @@ export default async function RootLayout({
 }) {
   // 1. Rozbalení parametrů (Next.js 15)
   const { lang } = await params;
+  const locale = normalizeLocale(lang);
   
   // 2. Načtení slovníku podle aktuálního jazyka
-  let dict: any = {};
+  let dict: Dictionary;
   try {
-    dict = await getDictionary(lang);
+    dict = await getDictionary(locale);
   } catch {
-    dict = { nav: {}, footer: {}, homePage: {} };
+    dict = await getDictionary('cs');
   }
 
   return (
-    <Providers>
-      <ErrorReporter />
-      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-green-600 text-white p-4 z-[100] rounded-xl font-bold shadow-xl">
-        {lang === 'en' ? 'Skip to content' : 'Přeskočit na obsah'}
-      </a>
-      <div data-pupen-banner>
-        <Banner lang={lang} dict={dict.homePage} />
-      </div>
-      {/* 3. Předání slovníku do komponenty Navbar - oprava předávání celého dict.nav */}
-      <div data-pupen-navbar>
-        <Navbar lang={lang} dict={dict.nav || {}} />
-      </div>
-
-      <div className="flex flex-col min-h-screen">
-        <main id="main-content" className="flex-grow">
-          {children}
-        </main>
-
-        <div data-pupen-footer>
-          <Footer lang={lang} dict={dict.footer} />
+    <DictionaryProvider lang={locale as Locale} dict={dict}>
+      <Providers>
+        <ErrorReporter />
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-green-600 text-white p-4 z-[100] rounded-xl font-bold shadow-xl"
+        >
+          {dict.common.skipToContent}
+        </a>
+        <div data-pupen-banner>
+          <Banner lang={lang} dict={dict.homePage} />
         </div>
-      </div>
-      
-      <div data-pupen-cookie>
-        <CookieBanner lang={lang} dict={dict} />
-      </div>
-      <div data-pupen-faq>
-        <FAQWidget lang={lang} />
-      </div>
-    </Providers>
+        <div data-pupen-navbar>
+          <Navbar lang={lang} dict={dict.nav || {}} />
+        </div>
+
+        <div className="flex flex-col min-h-screen">
+          <main id="main-content" className="flex-grow">
+            {children}
+          </main>
+
+          <div data-pupen-footer>
+            <Footer lang={lang} dict={dict.footer} />
+          </div>
+        </div>
+
+        <div data-pupen-cookie>
+          <CookieBanner lang={lang} dict={dict} />
+        </div>
+        <div data-pupen-faq>
+          <FAQWidget lang={lang} />
+        </div>
+      </Providers>
+    </DictionaryProvider>
   )
 }

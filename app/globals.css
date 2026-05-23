@@ -11,7 +11,28 @@
   --foreground-rgb: 28, 25, 23;
   --background-start-rgb: 250, 250, 249;
   --background-end-rgb: 255, 255, 255;
+  --bg-rgb: 255, 255, 255;
+  --surface-rgb: 255, 255, 255;
+  --surface-2-rgb: 250, 250, 249;
+  --surface-3-rgb: 245, 245, 244;
+  --text-rgb: 28, 25, 23;
+  --text-muted-rgb: 120, 113, 108;
+  --text-subtle-rgb: 168, 162, 158;
+  --border-rgb: 231, 229, 228;
+  --border-soft-rgb: 245, 245, 244;
   --font-scale: 1;
+}
+
+.dark {
+  --bg-rgb: 12, 10, 9;
+  --surface-rgb: 28, 25, 23;
+  --surface-2-rgb: 41, 37, 36;
+  --surface-3-rgb: 68, 64, 60;
+  --text-rgb: 245, 245, 244;
+  --text-muted-rgb: 214, 211, 209;
+  --text-subtle-rgb: 168, 162, 158;
+  --border-rgb: 68, 64, 60;
+  --border-soft-rgb: 87, 83, 78;
 }
 
 html {
@@ -25,42 +46,43 @@ h1, h2, h3, h4, h5, h6 {
 
 body {
   font-family: var(--font-inter), sans-serif;
-  color: rgb(var(--foreground-rgb));
-  background: white;
+  color: rgb(var(--text-rgb));
+  background: rgb(var(--bg-rgb));
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-.dark body {
-  background-color: #1c1917; /* stone-900 */
-  color: #f5f5f4; /* stone-50 */
-}
-
 /* Base utility pro dark mode overrides */
 .dark .bg-white {
-  background-color: #1c1917 !important; /* stone-900 */
+  background-color: rgb(var(--surface-rgb)) !important;
 }
 .dark .bg-stone-50 {
-  background-color: #292524 !important; /* stone-800 */
+  background-color: rgb(var(--surface-2-rgb)) !important;
 }
 .dark .bg-stone-100 {
-  background-color: #44403c !important; /* stone-700 */
+  background-color: rgb(var(--surface-3-rgb)) !important;
 }
 .dark .text-stone-900 {
-  color: #f5f5f4 !important; /* stone-50 */
+  color: rgb(var(--text-rgb)) !important;
 }
 .dark .text-stone-800 {
-  color: #e7e5e4 !important; /* stone-200 */
+  color: rgb(var(--text-rgb)) !important;
 }
 .dark .text-stone-700 {
-  color: #d6d3d1 !important; /* stone-300 */
+  color: rgb(var(--text-muted-rgb)) !important;
 }
 .dark .text-stone-600, .dark .text-stone-500 {
-  color: #a8a29e !important; /* stone-400 */
+  color: rgb(var(--text-subtle-rgb)) !important;
+}
+.dark .text-stone-400, .dark .text-stone-300, .dark .text-stone-200 {
+  color: rgb(var(--text-subtle-rgb)) !important;
 }
 .dark .border-stone-100, .dark .border-stone-200 {
-  border-color: #44403c !important; /* stone-700 */
+  border-color: rgb(var(--border-rgb)) !important;
+}
+.dark .border-stone-300 {
+  border-color: rgb(var(--border-soft-rgb)) !important;
 }
 
 :where(a, button, input, textarea, select, summary, [role="button"], [tabindex]):focus-visible {
@@ -242,12 +264,12 @@ body {
 }
 
 .admin-scope {
-  --admin-surface: #ffffff;
-  --admin-surface-2: #fafaf9;
-  --admin-border: #f5f5f4;
-  --admin-border-strong: #e7e5e4;
-  --admin-text: #1c1917;
-  --admin-text-muted: #78716c;
+  --admin-surface: rgb(var(--surface-rgb));
+  --admin-surface-2: rgb(var(--surface-2-rgb));
+  --admin-border: rgb(var(--border-soft-rgb));
+  --admin-border-strong: rgb(var(--border-rgb));
+  --admin-text: rgb(var(--text-rgb));
+  --admin-text-muted: rgb(var(--text-subtle-rgb));
   --admin-radius: 16px;
   --admin-radius-lg: 24px;
 }

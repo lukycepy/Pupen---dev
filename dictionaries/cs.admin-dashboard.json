@@ -1,0 +1,80 @@
+{
+  "admin": {
+    "queue": {
+      "searchPlaceholder": "Hledat e‑mail / předmět / chybu",
+      "allStatuses": "Všechny stavy",
+      "kindPlaceholder": "kind (např. newsletter)",
+      "dueOn": "Due: zapnuto",
+      "dueOff": "Due: vypnuto",
+      "processQueue": "Zpracovat frontu",
+      "summaryDueNow": "Due teď",
+      "summaryStuck": "Zaseknuté",
+      "emptyTitle": "Žádné položky",
+      "emptyDescription": "Fronta je prázdná.",
+      "hintTimeout": "Tip: Connection timeout obvykle znamená blokovaný outbound SMTP port / firewall nebo špatný host.",
+      "table": {
+        "to": "Komu",
+        "subject": "Předmět",
+        "status": "Stav",
+        "attempts": "Pokusy",
+        "nextFailed": "Další / Selhalo"
+      },
+      "pagination": {
+        "showing": "Zobrazeno",
+        "of": "z",
+        "previous": "Předchozí",
+        "next": "Další"
+      }
+    },
+    "trustbox": {
+      "labels": {
+        "status": "Stav",
+        "priority": "Priorita",
+        "category": "Kategorie",
+        "owner": "Owner"
+      },
+      "ownerUnassigned": "Nepřiřazeno",
+      "templatePlaceholder": "Šablona…",
+      "insert": "Vložit",
+      "reporter": "nahlašující",
+      "audit": {
+        "title": "Globální audit log",
+        "subtitle": "Záznamy o přístupech a změnách",
+        "allActions": "Všechny akce",
+        "empty": "Zadaným filtrům neodpovídají žádné záznamy.",
+        "actions": {
+          "ADMIN_VIEW_PII": "Zobrazení PII",
+          "ADMIN_EXPORT_PDF": "Export PDF",
+          "ADMIN_DOWNLOAD_ATTACHMENT": "Stažení přílohy",
+          "ADMIN_MESSAGE_SENT": "Odeslání zprávy",
+          "ADMIN_THREAD_UPDATE": "Změna vlákna",
+          "ADMIN_ASSIGN_OWNER": "Přiřazení ownera",
+          "ADMIN_UPDATE_SETTINGS": "Změna nastavení",
+          "ADMIN_ADD_ADMIN": "Přidání admina",
+          "ADMIN_REMOVE_ADMIN": "Odebrání admina",
+          "ADMIN_UPDATE_ADMIN_PERMS": "Úprava oprávnění"
+        }
+      }
+    },
+    "common": {
+      "status": "Stav"
+    },
+    "projects": {
+      "status": {
+        "open": "Otevřené",
+        "closed": "Uzavřené",
+        "paused": "Pozastavené"
+      }
+    },
+    "map": {
+      "manageCategories": "Správa kategorií",
+      "manageCategoriesTitle": "Správa kategorií",
+      "iconLabel": "Ikona",
+      "addCategoryFirst": "Nejdříve přidejte kategorii"
+    },
+    "users": {
+      "passwordStrength": "Síla hesla",
+      "passwordMinChars": "Min. 5 znaků"
+    }
+  }
+}

@@ -38,8 +38,8 @@ export default async function ToSPage({ params }: { params: Promise<{ lang: stri
   const { lang: rawLang } = await params;
   const lang = rawLang === 'en' ? 'en' : 'cs';
   const page = await getSitePageContent('tos', lang);
-  if (page?.content_html) {
-    return <DbContentPage title={page.title || (lang === 'en' ? 'Terms of service' : 'Podmínky')} html={page.content_html} />;
+  if (page?.content_blocks || page?.content_html) {
+    return <DbContentPage title={page.title || (lang === 'en' ? 'Terms of service' : 'Podmínky')} html={page?.content_html} blocks={page?.content_blocks} />;
   }
   const dict = (await getDictionary(lang)).tosPage;
 

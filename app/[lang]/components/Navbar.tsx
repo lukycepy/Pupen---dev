@@ -191,7 +191,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
   if (isAppSection) return null;
 
   return (
-    <nav className="sticky top-0 z-[10001] w-full bg-white/90 backdrop-blur-xl border-b border-stone-100 shadow-sm">
+    <nav className="sticky top-0 z-[10001] w-full bg-white/90 dark:bg-stone-950/70 backdrop-blur-xl border-b border-stone-100 dark:border-stone-800 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex justify-between items-center h-16">
           
@@ -205,13 +205,13 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                 className="object-cover"
               />
             </div>
-            <span className="hidden sm:inline font-bold text-base sm:text-lg tracking-tight text-stone-900 group-hover:text-green-600 transition truncate max-w-[150px] sm:max-w-none">
+            <span className="hidden sm:inline font-bold text-base sm:text-lg tracking-tight text-stone-900 dark:text-stone-50 group-hover:text-green-600 transition truncate max-w-[150px] sm:max-w-none">
               Studentský spolek Pupen, z.s.
             </span>
           </Link>
 
           {/* DESKTOP MENU */}
-          <div className="hidden xl:flex items-center gap-6 font-medium text-[13px] tracking-normal text-stone-600">
+          <div className="hidden xl:flex items-center gap-6 font-medium text-[13px] tracking-normal text-stone-600 dark:text-stone-300">
             {[ 
               { slug: 'home', href: `/${lang}`, label: navHome, active: pathname === `/${lang}` },
               { slug: 'akce', href: `/${lang}/akce`, label: navEvents, active: pathname.includes('/akce') },

@@ -9,8 +9,8 @@ export default async function FirstAidPage({ params }: { params: Promise<{ lang:
   const { lang: rawLang } = await params;
   const lang = rawLang === 'en' ? 'en' : 'cs';
   const page = await getSitePageContent('prvni-pomoc', lang);
-  if (page?.content_html) {
-    return <DbContentPage title={page.title || (lang === 'en' ? 'First aid' : 'První pomoc')} html={page.content_html} />;
+  if (page?.content_blocks || page?.content_html) {
+    return <DbContentPage title={page.title || (lang === 'en' ? 'First aid' : 'První pomoc')} html={page?.content_html} blocks={page?.content_blocks} />;
   }
   const dict = await getDictionary(lang);
   const common: any = (dict as any)?.common || {};

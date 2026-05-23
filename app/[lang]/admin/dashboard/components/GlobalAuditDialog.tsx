@@ -6,7 +6,7 @@ import Dialog from '@/app/components/ui/Dialog';
 import InlinePulse from '@/app/components/InlinePulse';
 import { supabase } from '@/lib/supabase';
 import { FileText, Search, X } from 'lucide-react';
-import { useParams } from 'next/navigation';
+import { useDictionary } from '@/app/context/DictionaryContext';
 
 function fmtDate(value: any) {
   try {
@@ -29,8 +29,8 @@ async function authFetch(url: string, init?: RequestInit) {
 }
 
 export default function GlobalAuditDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const params = useParams();
-  const lang = (params?.lang as string) || 'cs';
+  const dict = useDictionary();
+  const t = dict.admin.trustbox.audit;
   const [action, setAction] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [dateFrom, setDateFrom] = React.useState('');
@@ -61,29 +61,8 @@ export default function GlobalAuditDialog({ open, onClose }: { open: boolean; on
 
   const actionLabel = (a: any) => {
     const v = String(a || '').trim();
-    if (lang === 'en') {
-      if (v === 'ADMIN_VIEW_PII') return 'View PII';
-      if (v === 'ADMIN_EXPORT_PDF') return 'Export PDF';
-      if (v === 'ADMIN_DOWNLOAD_ATTACHMENT') return 'Download attachment';
-      if (v === 'ADMIN_MESSAGE_SENT') return 'Message sent';
-      if (v === 'ADMIN_THREAD_UPDATE') return 'Thread update';
-      if (v === 'ADMIN_ASSIGN_OWNER') return 'Assign owner';
-      if (v === 'ADMIN_UPDATE_SETTINGS') return 'Update settings';
-      if (v === 'ADMIN_ADD_ADMIN') return 'Add admin';
-      if (v === 'ADMIN_REMOVE_ADMIN') return 'Remove admin';
-      if (v === 'ADMIN_UPDATE_ADMIN_PERMS') return 'Update permissions';
-      return v || '—';
-    }
-    if (v === 'ADMIN_VIEW_PII') return 'Zobrazení PII';
-    if (v === 'ADMIN_EXPORT_PDF') return 'Export PDF';
-    if (v === 'ADMIN_DOWNLOAD_ATTACHMENT') return 'Stažení přílohy';
-    if (v === 'ADMIN_MESSAGE_SENT') return 'Odeslání zprávy';
-    if (v === 'ADMIN_THREAD_UPDATE') return 'Změna vlákna';
-    if (v === 'ADMIN_ASSIGN_OWNER') return 'Přiřazení ownera';
-    if (v === 'ADMIN_UPDATE_SETTINGS') return 'Změna nastavení';
-    if (v === 'ADMIN_ADD_ADMIN') return 'Přidání admina';
-    if (v === 'ADMIN_REMOVE_ADMIN') return 'Odebrání admina';
-    if (v === 'ADMIN_UPDATE_ADMIN_PERMS') return 'Úprava oprávnění';
+    const mapped = (t.actions as any)?.[v];
+    if (mapped) return String(mapped);
     return v || '—';
   };
 
@@ -100,9 +79,9 @@ export default function GlobalAuditDialog({ open, onClose }: { open: boolean; on
             <FileText size={24} />
           </div>
           <div>
-            <h2 className="text-xl font-black text-stone-900">{lang === 'en' ? 'Global audit log' : 'Globální audit log'}</h2>
+            <h2 className="text-xl font-black text-stone-900">{t.title}</h2>
             <div className="text-sm font-bold text-stone-500">
-              {lang === 'en' ? 'Records of PII access and changes' : 'Záznamy o přístupech a změnách'}
+              {t.subtitle}
             </div>
           </div>
         </div>
@@ -123,7 +102,7 @@ export default function GlobalAuditDialog({ open, onClose }: { open: boolean; on
               onChange={(e) => setAction(e.target.value)}
               className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 font-bold text-stone-700 outline-none"
             >
-              <option value="">{lang === 'en' ? 'All actions' : 'Všechny akce'}</option>
+              <option value="">{t.allActions}</option>
               <option value="ADMIN_VIEW_PII">{actionLabel('ADMIN_VIEW_PII')}</option>
               <option value="ADMIN_EXPORT_PDF">{actionLabel('ADMIN_EXPORT_PDF')}</option>
               <option value="ADMIN_DOWNLOAD_ATTACHMENT">{actionLabel('ADMIN_DOWNLOAD_ATTACHMENT')}</option>
@@ -179,7 +158,7 @@ export default function GlobalAuditDialog({ open, onClose }: { open: boolean; on
           <div className="space-y-3">
             {(auditQuery.data?.items || []).length === 0 ? (
               <div className="text-center py-12 text-stone-500 font-bold">
-                {lang === 'en' ? 'No records match the filters.' : 'Zadaným filtrům neodpovídají žádné záznamy.'}
+                {t.empty}
               </div>
             ) : (
               (auditQuery.data?.items || []).map((log: any) => (

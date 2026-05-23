@@ -9,13 +9,14 @@ import AdminEmptyState from './ui/AdminEmptyState';
 import { AlertTriangle, Clock, Inbox, RefreshCw, Save, Search, Trash2, Zap, X } from 'lucide-react';
 import Dialog from '@/app/components/ui/Dialog';
 import { useParams } from 'next/navigation';
+import type { Dictionary } from '@/lib/dictionary-types';
 
 type View = 'queue' | 'dead';
 
-export default function QueueTab({ dict }: { dict: any }) {
+export default function QueueTab({ dict }: { dict: Dictionary }) {
   const params = useParams();
   const lang = (params?.lang as string) === 'en' ? 'en' : 'cs';
-  const t = (dict?.admin?.queue || {}) as any;
+  const t = dict.admin.queue;
   const { showToast } = useToast();
   const qc = useQueryClient();
   const [view, setView] = useState<View>('queue');
@@ -96,9 +97,7 @@ export default function QueueTab({ dict }: { dict: any }) {
   const errorInfo = (detail as any)?.meta?.last_error || (selected as any)?.meta?.last_error || (detail as any)?.meta?.enqueue_error;
   const errorHint =
     String(detail?.last_error || selected?.last_error || '').toLowerCase().includes('timeout')
-      ? lang === 'en'
-        ? 'Tip: Connection timeout usually means outbound SMTP port is blocked / firewall, or the host is wrong.'
-        : 'Tip: Connection timeout obvykle znamená blokovaný outbound SMTP port / firewall nebo špatný host.'
+      ? t.hintTimeout
       : '';
 
   const updateMutation = useMutation({
@@ -207,25 +206,23 @@ export default function QueueTab({ dict }: { dict: any }) {
     onError: (e: any) => showToast(e?.message || 'Chyba', 'error'),
   });
 
-  const title = view === 'queue' ? String(t?.titleQueue || (lang === 'en' ? 'Email queue' : 'E-mail fronta')) : String(t?.titleDead || 'Dead letters');
-  const desc =
-    view === 'queue'
-      ? String(t?.descQueue || (lang === 'en' ? 'Unsent emails in the queue (queued, retry, processing) with manual management.' : 'Neodeslané e‑maily ve frontě (čeká, opakování, zpracování) a ruční správa.'))
-      : String(t?.descDead || (lang === 'en' ? 'Emails that failed after the maximum number of attempts.' : 'E‑maily, které selhaly po maximálním počtu pokusů.'));
+  const title = view === 'queue' ? String(t.titleQueue) : String(t.titleDead);
+  const desc = view === 'queue' ? String(t.descQueue) : String(t.descDead);
 
   const statusLabel = (s: string) => {
     const raw = String(s || '').trim();
-    const mapped = t?.status?.[raw];
+    const mapped = (t.status as any)?.[raw];
     if (mapped) return String(mapped);
     if (!raw) return '—';
-    if (raw === 'queued') return lang === 'en' ? 'Queued' : 'Čeká';
-    if (raw === 'retry') return lang === 'en' ? 'Retry' : 'Opakování';
-    if (raw === 'processing') return lang === 'en' ? 'Processing' : 'Zpracování';
-    if (raw === 'dead') return 'Dead letters';
+    if (raw === 'queued') return String(t.status.queued);
+    if (raw === 'retry') return String(t.status.retry);
+    if (raw === 'processing') return String(t.status.processing);
+    if (raw === 'dead') return String(t.status.dead);
     return raw;
   };
 
   const kindValue = (it: any) => String(it?.meta?.kind || '').trim();
+  const dateLocale = ({ en: 'en-US', cs: 'cs-CZ' } as const)[lang];
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -242,7 +239,7 @@ export default function QueueTab({ dict }: { dict: any }) {
                   setQ(e.target.value);
                   setPage(0);
                 }}
-                placeholder={lang === 'en' ? 'Search email / subject / error' : 'Hledat e‑mail / předmět / chybu'}
+                placeholder={t.searchPlaceholder}
                 className="ml-2 w-64 bg-transparent text-sm font-bold text-stone-700 outline-none"
               />
             </div>
@@ -255,8 +252,8 @@ export default function QueueTab({ dict }: { dict: any }) {
               }}
               className="px-4 py-3 rounded-2xl border border-stone-200 bg-white text-sm font-bold text-stone-700 shadow-sm"
             >
-              <option value="queue">{String(t?.tabQueue || (lang === 'en' ? 'Queue' : 'Fronta'))}</option>
-              <option value="dead">{String(t?.tabDead || 'Dead letters')}</option>
+              <option value="queue">{String(t.tabQueue)}</option>
+              <option value="dead">{String(t.tabDead)}</option>
             </select>
             {view === 'queue' && (
               <select
@@ -267,7 +264,7 @@ export default function QueueTab({ dict }: { dict: any }) {
                 }}
                 className="px-4 py-3 rounded-2xl border border-stone-200 bg-white text-sm font-bold text-stone-700 shadow-sm"
               >
-                <option value="">{lang === 'en' ? 'All statuses' : 'Všechny stavy'}</option>
+                <option value="">{t.allStatuses}</option>
                 <option value="queued">{statusLabel('queued')}</option>
                 <option value="retry">{statusLabel('retry')}</option>
                 <option value="processing">{statusLabel('processing')}</option>
@@ -279,7 +276,7 @@ export default function QueueTab({ dict }: { dict: any }) {
                 setKind(e.target.value);
                 setPage(0);
               }}
-              placeholder={lang === 'en' ? 'kind (e.g. newsletter)' : 'kind (např. newsletter)'}
+              placeholder={t.kindPlaceholder}
               className="px-4 py-3 rounded-2xl border border-stone-200 bg-white text-sm font-bold text-stone-700 shadow-sm w-56"
             />
             {view === 'queue' && (
@@ -293,7 +290,7 @@ export default function QueueTab({ dict }: { dict: any }) {
                   dueOnly ? 'bg-green-600 text-white border-green-600' : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-50'
                 }`}
               >
-                <Clock size={14} /> {dueOnly ? (lang === 'en' ? 'Due: on' : 'Due: zapnuto') : (lang === 'en' ? 'Due: off' : 'Due: vypnuto')}
+                <Clock size={14} /> {dueOnly ? t.dueOn : t.dueOff}
               </button>
             )}
             {view === 'queue' ? (
@@ -303,7 +300,7 @@ export default function QueueTab({ dict }: { dict: any }) {
                 disabled={processMutation.isPending}
                 className="inline-flex items-center gap-2 px-4 py-3 rounded-2xl border border-green-200 bg-green-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-green-700 transition disabled:opacity-50 shadow-sm"
               >
-                <Zap size={14} /> {lang === 'en' ? 'Process queue' : 'Zpracovat frontu'}
+                <Zap size={14} /> {t.processQueue}
               </button>
             ) : null}
           </div>
@@ -325,11 +322,11 @@ export default function QueueTab({ dict }: { dict: any }) {
             <div className="mt-2 text-2xl font-black text-stone-900">{Number(summary.queue.processing || 0)}</div>
           </div>
           <div className="bg-white border border-stone-100 rounded-[2rem] p-5 shadow-sm">
-            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{lang === 'en' ? 'Due now' : 'Due teď'}</div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{t.summaryDueNow}</div>
             <div className="mt-2 text-2xl font-black text-stone-900">{Number(summary.queue.dueNow || 0)}</div>
           </div>
           <div className="bg-white border border-stone-100 rounded-[2rem] p-5 shadow-sm">
-            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{lang === 'en' ? 'Stuck' : 'Zaseknuté'}</div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{t.summaryStuck}</div>
             <div className="mt-2 text-2xl font-black text-stone-900">{Number(summary.queue.stuckProcessing || 0)}</div>
           </div>
         </div>
@@ -345,8 +342,8 @@ export default function QueueTab({ dict }: { dict: any }) {
       {!isLoading && items.length === 0 ? (
         <AdminEmptyState
           icon={Inbox}
-          title={lang === 'en' ? 'No items' : 'Žádné položky'}
-          description={lang === 'en' ? 'The queue is empty.' : 'Fronta je prázdná.'}
+          title={t.emptyTitle}
+          description={t.emptyDescription}
         />
       ) : (
         <div className="bg-white border border-stone-100 rounded-[2.5rem] shadow-sm overflow-hidden">
@@ -355,11 +352,11 @@ export default function QueueTab({ dict }: { dict: any }) {
               <thead className="bg-stone-50 border-b border-stone-100">
                 <tr>
                   <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">Kind</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">{lang === 'en' ? 'To' : 'Komu'}</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">{lang === 'en' ? 'Subject' : 'Předmět'}</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">{lang === 'en' ? 'Status' : 'Stav'}</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">{lang === 'en' ? 'Attempts' : 'Pokusy'}</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">{lang === 'en' ? 'Next / Failed' : 'Další / Selhalo'}</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">{t.table.to}</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">{t.table.subject}</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">{t.table.status}</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">{t.table.attempts}</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">{t.table.nextFailed}</th>
                 </tr>
               </thead>
               <tbody>
@@ -395,8 +392,8 @@ export default function QueueTab({ dict }: { dict: any }) {
                     <td className="px-6 py-4 text-xs font-black text-stone-500">{Number(it.attempt_count || 0)}/{Number(it.max_attempts || 0) || '—'}</td>
                     <td className="px-6 py-4 text-xs font-bold text-stone-500">
                       {view === 'dead'
-                        ? (it.failed_at ? new Date(it.failed_at).toLocaleString(lang === 'en' ? 'en-US' : 'cs-CZ') : '—')
-                        : (it.next_attempt_at ? new Date(it.next_attempt_at).toLocaleString(lang === 'en' ? 'en-US' : 'cs-CZ') : '—')}
+                        ? (it.failed_at ? new Date(it.failed_at).toLocaleString(dateLocale) : '—')
+                        : (it.next_attempt_at ? new Date(it.next_attempt_at).toLocaleString(dateLocale) : '—')}
                     </td>
                   </tr>
                 ))}
@@ -406,7 +403,7 @@ export default function QueueTab({ dict }: { dict: any }) {
 
           <div className="flex items-center justify-between px-6 py-4 bg-white">
             <div className="text-xs font-bold text-stone-500">
-              {lang === 'en' ? 'Showing' : 'Zobrazeno'} {items.length} {lang === 'en' ? 'of' : 'z'} {total}
+              {t.pagination.showing} {items.length} {t.pagination.of} {total}
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -415,7 +412,7 @@ export default function QueueTab({ dict }: { dict: any }) {
                 disabled={!canPrev}
                 className="px-4 py-2 rounded-xl border border-stone-200 bg-white text-[10px] font-black uppercase tracking-widest text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
               >
-                {lang === 'en' ? 'Previous' : 'Předchozí'}
+                {t.pagination.previous}
               </button>
               <button
                 type="button"
@@ -423,7 +420,7 @@ export default function QueueTab({ dict }: { dict: any }) {
                 disabled={!canNext}
                 className="px-4 py-2 rounded-xl border border-stone-200 bg-white text-[10px] font-black uppercase tracking-widest text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
               >
-                {lang === 'en' ? 'Next' : 'Další'}
+                {t.pagination.next}
               </button>
             </div>
           </div>

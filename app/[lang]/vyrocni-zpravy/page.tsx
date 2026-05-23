@@ -9,6 +9,8 @@ import InlinePulse from '@/app/components/InlinePulse';
 import { getDictionary } from '@/lib/get-dictionary';
 import PageHeader from '@/app/components/ui/PageHeader';
 import EmptyState from '@/app/components/ui/EmptyState';
+import PageBlocksRenderer from '@/app/[lang]/components/PageBlocksRenderer';
+import { parsePageBlocks } from '@/lib/site/page-blocks';
 
 export default function AnnualReportsPage() {
   const params = useParams();
@@ -20,6 +22,7 @@ export default function AnnualReportsPage() {
   const [loading, setLoading] = useState(true);
   const [pageHtml, setPageHtml] = useState<string>('');
   const [pageTitle, setPageTitle] = useState<string>('');
+  const [pageBlocks, setPageBlocks] = useState<any[] | null>(null);
 
   useEffect(() => {
     getDictionary(lang).then((d) => setDict(d));
@@ -39,11 +42,13 @@ export default function AnnualReportsPage() {
         if (mounted) {
           setPageHtml(String(page?.content_html || ''));
           setPageTitle(String(page?.title || ''));
+          setPageBlocks(Array.isArray(page?.content_blocks) ? page.content_blocks : null);
         }
       } catch {
         if (mounted) {
           setPageHtml('');
           setPageTitle('');
+          setPageBlocks(null);
         }
       }
     })();
@@ -79,6 +84,7 @@ export default function AnnualReportsPage() {
 
   const common = dict?.common || {};
   const t = dict?.annualReportsPage || {};
+  const blocks = parsePageBlocks(pageBlocks);
 
   return (
     <div className="min-h-screen bg-stone-50 pt-16 pb-24">
@@ -100,10 +106,10 @@ export default function AnnualReportsPage() {
         />
 
         <div className="mt-8">
-          {pageHtml ? (
+          {blocks?.length || pageHtml ? (
             <div className="bg-white border border-stone-100 rounded-[2rem] p-8 shadow-sm mb-6">
               {pageTitle ? <div className="text-xl font-black text-stone-900 mb-4">{pageTitle}</div> : null}
-              <div className="prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: pageHtml }} />
+              {blocks?.length ? <PageBlocksRenderer blocks={blocks} /> : <div className="prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: pageHtml }} />}
             </div>
           ) : null}
           {loading ? (

@@ -38,8 +38,8 @@ export default async function CookiesPage({ params }: { params: Promise<{ lang: 
   const { lang: rawLang } = await params;
   const lang = rawLang === 'en' ? 'en' : 'cs';
   const page = await getSitePageContent('cookies', lang);
-  if (page?.content_html) {
-    return <DbContentPage title={page.title || (lang === 'en' ? 'Cookies' : 'Cookies')} html={page.content_html} />;
+  if (page?.content_blocks || page?.content_html) {
+    return <DbContentPage title={page.title || (lang === 'en' ? 'Cookies' : 'Cookies')} html={page?.content_html} blocks={page?.content_blocks} />;
   }
   const dict = (await getDictionary(lang)).cookiesPage;
 

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getClientIp, rateLimit } from '@/lib/rate-limit';
 import { isSameSiteRequest } from '@/lib/request-origin';
+import { isRequestBanned } from '@/lib/security/bans';
 
 type GuardOptions = {
   keyPrefix: string;
@@ -30,6 +31,9 @@ function parseFormBody(raw: string) {
 
 export async function guardPublicJsonPost(req: Request, opts: GuardOptions): Promise<GuardOk | GuardFail> {
   const ip = getClientIp(req) || 'unknown';
+  if (await isRequestBanned({ ip })) {
+    return { ok: false, response: NextResponse.json({ error: 'Banned' }, { status: 403 }) };
+  }
   const rl = await rateLimit({ bucket: opts.keyPrefix, key: ip, windowMs: opts.windowMs, max: opts.max });
   if (!rl.ok) {
     return {
@@ -68,6 +72,9 @@ export async function guardPublicJsonPost(req: Request, opts: GuardOptions): Pro
 
 export async function guardPublicPostAny(req: Request, opts: GuardOptions): Promise<GuardOk | GuardFail> {
   const ip = getClientIp(req) || 'unknown';
+  if (await isRequestBanned({ ip })) {
+    return { ok: false, response: NextResponse.json({ error: 'Banned' }, { status: 403 }) };
+  }
   const rl = await rateLimit({ bucket: opts.keyPrefix, key: ip, windowMs: opts.windowMs, max: opts.max });
   if (!rl.ok) {
     return {
@@ -109,6 +116,9 @@ type GuardNoBodyFail = { ok: false; response: NextResponse };
 
 export async function guardPublicPostNoBody(req: Request, opts: Omit<GuardOptions, 'honeypot' | 'honeypotResponse'>): Promise<GuardNoBodyOk | GuardNoBodyFail> {
   const ip = getClientIp(req) || 'unknown';
+  if (await isRequestBanned({ ip })) {
+    return { ok: false, response: NextResponse.json({ error: 'Banned' }, { status: 403 }) };
+  }
   const rl = await rateLimit({ bucket: opts.keyPrefix, key: ip, windowMs: opts.windowMs, max: opts.max });
   if (!rl.ok) {
     return {
@@ -164,6 +174,9 @@ type GuardGetOptions = {
 
 export async function guardPublicGet(req: Request, opts: GuardGetOptions): Promise<GuardGetOk | GuardGetFail> {
   const ip = getClientIp(req) || 'unknown';
+  if (await isRequestBanned({ ip })) {
+    return { ok: false, response: NextResponse.json({ error: 'Banned' }, { status: 403 }) };
+  }
   const rl = await rateLimit({ bucket: opts.keyPrefix, key: ip, windowMs: opts.windowMs, max: opts.max });
   if (!rl.ok) {
     return {
@@ -196,6 +209,9 @@ export async function guardPublicGetRaw(
   },
 ): Promise<GuardGetOk | GuardGetFail> {
   const ip = getClientIp(req) || 'unknown';
+  if (await isRequestBanned({ ip })) {
+    return { ok: false, response: new NextResponse(null, { status: typeof opts.forbiddenStatus === 'number' ? opts.forbiddenStatus : 403 }) };
+  }
   const rl = await rateLimit({ bucket: opts.keyPrefix, key: ip, windowMs: opts.windowMs, max: opts.max });
   if (!rl.ok) {
     return { ok: false, response: new NextResponse(null, { status: typeof opts.tooManyStatus === 'number' ? opts.tooManyStatus : 429 }) };

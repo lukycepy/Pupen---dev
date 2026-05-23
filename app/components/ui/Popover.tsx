@@ -15,7 +15,7 @@ export default function Popover({
   offset = 8,
   matchWidth = false,
   zIndex = 10001,
-  panelClassName = 'bg-white border border-stone-100 shadow-2xl rounded-2xl max-w-[90vw]',
+  panelClassName = 'bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 shadow-2xl rounded-2xl max-w-[90vw]',
   onPanelMouseEnter,
   onPanelMouseLeave,
 }: {

@@ -13,6 +13,7 @@ import { supabase } from '@/lib/supabase';
 import { useToast } from '@/app/context/ToastContext';
 import GlobalAuditDialog from './GlobalAuditDialog';
 import { useParams } from 'next/navigation';
+import type { Dictionary } from '@/lib/dictionary-types';
 
 function fmtDate(value: any) {
   try {
@@ -43,10 +44,10 @@ async function authFetch(url: string, init?: RequestInit) {
   return json;
 }
 
-export default function TrustBoxTab({ dict }: { dict: any }) {
+export default function TrustBoxTab({ dict }: { dict: Dictionary }) {
   const params = useParams();
   const lang = (params?.lang as string) === 'en' ? 'en' : 'cs';
-  const tb = (dict?.admin?.trustbox || {}) as any;
+  const tb = dict.admin.trustbox;
   const { showToast } = useToast();
   const qc = useQueryClient();
 
@@ -521,13 +522,13 @@ export default function TrustBoxTab({ dict }: { dict: any }) {
                     <div className="font-black text-stone-900 truncate">{t.subject}</div>
                     <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-widest text-stone-400">
                       <span className={`px-2 py-1 rounded-lg border ${chipClass(String(t.status))}`}>
-                        {String(tb?.status?.[String(t.status)] || (lang === 'en' ? String(t.status) : String(t.status)))}
+                        {String((tb.status as any)?.[String(t.status)] || String(t.status))}
                       </span>
                       <span className={`px-2 py-1 rounded-lg border ${chipClass(String(t.priority))}`}>
-                        {String(tb?.priority?.[String(t.priority)] || (lang === 'en' ? String(t.priority) : String(t.priority)))}
+                        {String((tb.priority as any)?.[String(t.priority)] || String(t.priority))}
                       </span>
                       <span className="px-2 py-1 rounded-lg border border-stone-200 bg-stone-50 text-stone-700">
-                        {String(tb?.category?.[String(t.category)] || (lang === 'en' ? String(t.category) : String(t.category)))}
+                        {String((tb.category as any)?.[String(t.category)] || String(t.category))}
                       </span>
                       <span className="flex items-center gap-1"><Clock size={12} /> {fmtDate(t.last_activity_at || t.created_at)}</span>
                     </div>
@@ -536,7 +537,7 @@ export default function TrustBoxTab({ dict }: { dict: any }) {
                     </div>
                     {t?.owner ? (
                       <div className="mt-1 text-[10px] font-black uppercase tracking-widest text-stone-400">
-                        {lang === 'en' ? 'Owner' : 'Owner'}: {String(t.owner?.name || t.owner?.email || '—')}
+                        {tb.labels.owner}: {String(t.owner?.name || t.owner?.email || '—')}
                       </div>
                     ) : null}
                   </div>
@@ -643,32 +644,32 @@ export default function TrustBoxTab({ dict }: { dict: any }) {
               <AdminPanel className="p-5">
                 <div className="grid md:grid-cols-3 gap-4">
                   <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{lang === 'en' ? 'Status' : 'Stav'}</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{tb.labels.status}</label>
                     <select
                       value={String(threadDetail.data?.thread?.status || 'new')}
                       onChange={(e) => patchMutation.mutate({ status: e.target.value })}
                       className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 outline-none"
                     >
-                      <option value="new">{String(tb?.status?.new || (lang === 'en' ? 'New' : 'Nové'))}</option>
-                      <option value="in_review">{String(tb?.status?.in_review || (lang === 'en' ? 'In review' : 'V řešení'))}</option>
-                      <option value="waiting_for_info">{String(tb?.status?.waiting_for_info || (lang === 'en' ? 'Waiting for info' : 'Čeká na doplnění'))}</option>
-                      <option value="resolved">{String(tb?.status?.resolved || (lang === 'en' ? 'Resolved' : 'Vyřešeno'))}</option>
-                      <option value="archived">{String(tb?.status?.archived || (lang === 'en' ? 'Archived' : 'Archivováno'))}</option>
+                      <option value="new">{String(tb.status.new)}</option>
+                      <option value="in_review">{String(tb.status.in_review)}</option>
+                      <option value="waiting_for_info">{String(tb.status.waiting_for_info)}</option>
+                      <option value="resolved">{String(tb.status.resolved)}</option>
+                      <option value="archived">{String(tb.status.archived)}</option>
                     </select>
                   </div>
                   <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{lang === 'en' ? 'Priority' : 'Priorita'}</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{tb.labels.priority}</label>
                     <select
                       value={String(threadDetail.data?.thread?.priority || 'normal')}
                       onChange={(e) => patchMutation.mutate({ priority: e.target.value })}
                       className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 outline-none"
                     >
-                      <option value="normal">{String(tb?.priority?.normal || (lang === 'en' ? 'Normal' : 'Normální'))}</option>
-                      <option value="urgent">{String(tb?.priority?.urgent || (lang === 'en' ? 'Urgent' : 'Urgentní'))}</option>
+                      <option value="normal">{String(tb.priority.normal)}</option>
+                      <option value="urgent">{String(tb.priority.urgent)}</option>
                     </select>
                   </div>
                   <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{lang === 'en' ? 'Category' : 'Kategorie'}</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{tb.labels.category}</label>
                     <input
                       defaultValue={String(threadDetail.data?.thread?.category || '')}
                       onBlur={(e) => {
@@ -679,13 +680,13 @@ export default function TrustBoxTab({ dict }: { dict: any }) {
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{lang === 'en' ? 'Owner' : 'Owner'}</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{tb.labels.owner}</label>
                     <select
                       value={String(threadDetail.data?.thread?.owner_user_id || '')}
                       onChange={(e) => patchMutation.mutate({ owner_user_id: e.target.value || null })}
                       className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 outline-none"
                     >
-                      <option value="">{lang === 'en' ? 'Unassigned' : 'Nepřiřazeno'}</option>
+                      <option value="">{tb.ownerUnassigned}</option>
                       {(adminsQuery.data?.items || []).map((a: any) => (
                         <option key={String(a.user_id)} value={String(a.user_id)}>
                           {String(a?.profiles?.email || a?.profiles?.first_name || a.user_id)}
@@ -703,7 +704,7 @@ export default function TrustBoxTab({ dict }: { dict: any }) {
                     <div className="flex items-center justify-between gap-4">
                       <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">
                         {String(m.author_type || '').toLowerCase() === 'reporter'
-                          ? (lang === 'en' ? 'reporter' : 'nahlašující')
+                          ? tb.reporter
                           : `${String(m.author_type || '')}${m.author_name ? ` (${String(m.author_name)})` : ''}`}
                       </div>
                       <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{fmtDate(m.created_at)}</div>
@@ -721,7 +722,7 @@ export default function TrustBoxTab({ dict }: { dict: any }) {
                     onChange={(e) => setReplyTemplateId(e.target.value)}
                     className="w-full md:w-auto bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 outline-none"
                   >
-                    <option value="">{lang === 'en' ? 'Template…' : 'Šablona…'}</option>
+                    <option value="">{tb.templatePlaceholder}</option>
                     {replyTemplates.map((t: any) => (
                       <option key={t.id} value={t.id}>
                         {t.label}
@@ -738,7 +739,7 @@ export default function TrustBoxTab({ dict }: { dict: any }) {
                     disabled={!replyTemplateId}
                     className="px-4 py-3 rounded-xl bg-stone-100 text-stone-800 text-[10px] font-black uppercase tracking-widest hover:bg-stone-200 transition disabled:opacity-50"
                   >
-                    {lang === 'en' ? 'Insert' : 'Vložit'}
+                    {tb.insert}
                   </button>
                 </div>
                 <textarea

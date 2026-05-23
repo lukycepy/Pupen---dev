@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { QrCode, Download } from 'lucide-react';
 import CopyButton from '@/app/components/CopyButton';
 import Image from 'next/image';
+import { useDictionary } from '@/app/context/DictionaryContext';
 
 export default function MemberCard({
   lang,
@@ -14,6 +15,10 @@ export default function MemberCard({
   user: any;
   profile: any;
 }) {
+  const dict = useDictionary();
+  const locale = lang === 'en' ? 'en' : 'cs';
+  const dateLocale = ({ cs: 'cs-CZ', en: 'en-US' } as const)[locale];
+  const t = dict.memberComponents.memberCard;
   const payload = useMemo(() => {
     const name = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim();
     return JSON.stringify({
@@ -55,23 +60,17 @@ export default function MemberCard({
     a.remove();
   };
 
-  const title = lang === 'en' ? 'Member card' : 'Členská karta';
-
   return (
     <div className="bg-white p-8 rounded-[3rem] border border-stone-100 shadow-sm">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
         <div>
           <h2 className="text-2xl font-black text-stone-900 tracking-tight flex items-center gap-3">
-            <QrCode className="text-green-600" /> {title}
+            <QrCode className="text-green-600" /> {t.title}
           </h2>
-          <p className="text-stone-500 font-medium mt-2">
-            {lang === 'en'
-              ? 'Show this QR code when needed.'
-              : 'Ukažte tento QR kód, když je potřeba rychlá identifikace.'}
-          </p>
+          <p className="text-stone-500 font-medium mt-2">{t.subtitle}</p>
         </div>
         <div className="flex items-center gap-3">
-          <CopyButton value={user?.id || ''} idleLabel={lang === 'en' ? 'Copy ID' : 'Kopírovat ID'} className="border-stone-200 bg-white text-stone-700 hover:bg-stone-50" />
+          <CopyButton value={user?.id || ''} idleLabel={t.copyId} className="border-stone-200 bg-white text-stone-700 hover:bg-stone-50" />
           <button
             type="button"
             onClick={downloadQr}
@@ -79,7 +78,7 @@ export default function MemberCard({
             className="inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
           >
             <Download size={16} />
-            {lang === 'en' ? 'Download' : 'Stáhnout'}
+            {t.download}
           </button>
         </div>
       </div>
@@ -106,7 +105,7 @@ export default function MemberCard({
         <div className="lg:col-span-7 space-y-4">
           <div className="bg-stone-50 border border-stone-100 rounded-[2.5rem] p-8">
             <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">
-              {lang === 'en' ? 'Member' : 'Člen'}
+              {t.member}
             </div>
             <div className="text-2xl font-black text-stone-900">
               {[profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || user?.email}
@@ -115,7 +114,7 @@ export default function MemberCard({
               {profile?.member_no ? (
                 <div className="bg-white border border-stone-100 rounded-2xl p-4 sm:col-span-2">
                   <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">
-                    {lang === 'en' ? 'Member number' : 'Členské číslo'}
+                    {t.memberNumber}
                   </div>
                   <div className="text-sm font-bold text-stone-700 truncate">{String(profile.member_no)}</div>
                 </div>
@@ -123,10 +122,10 @@ export default function MemberCard({
               {profile?.member_expires_at ? (
                 <div className="bg-white border border-stone-100 rounded-2xl p-4 sm:col-span-2">
                   <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">
-                    {lang === 'en' ? 'Valid until' : 'Platnost do'}
+                    {t.validUntil}
                   </div>
                   <div className="text-sm font-bold text-stone-700 truncate">
-                    {new Date(String(profile.member_expires_at)).toLocaleDateString(lang === 'en' ? 'en-US' : 'cs-CZ')}
+                    {new Date(String(profile.member_expires_at)).toLocaleDateString(dateLocale)}
                   </div>
                 </div>
               ) : null}
@@ -140,7 +139,7 @@ export default function MemberCard({
               </div>
             </div>
             <div className="mt-4 text-[10px] font-bold text-stone-400 uppercase tracking-widest">
-              {lang === 'en' ? 'This QR contains basic identification data.' : 'QR obsahuje základní identifikační údaje.'}
+              {t.qrNote}
             </div>
           </div>
         </div>

@@ -7,6 +7,7 @@ import { richTextToClientHtml } from '@/lib/richtext-client';
 import { useToast } from '@/app/context/ToastContext';
 import { FileText, Gavel, ScrollText } from 'lucide-react';
 import { useSitePageContent } from '@/app/[lang]/components/useSitePageContent';
+import { useDictionary } from '@/app/context/DictionaryContext';
 
 type Policy = {
   id: string;
@@ -29,6 +30,10 @@ type Decision = {
 };
 
 export default function MemberGovernanceTab({ lang }: { lang: string }) {
+  const dict = useDictionary();
+  const locale = lang === 'en' ? 'en' : 'cs';
+  const dateLocale = ({ cs: 'cs-CZ', en: 'en-US' } as const)[locale];
+  const t = dict.memberComponents.memberGovernanceTab;
   const { showToast } = useToast();
   const { title: pageTitle, html: pageHtml } = useSitePageContent('governance', lang);
   const [mode, setMode] = useState<'policies' | 'decisions'>('policies');
@@ -40,9 +45,9 @@ export default function MemberGovernanceTab({ lang }: { lang: string }) {
   const getToken = useCallback(async () => {
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
-    if (!token) throw new Error(lang === 'en' ? 'Unauthorized' : 'Nepřihlášen');
+    if (!token) throw new Error(dict.common.unauthorized);
     return token;
-  }, [lang]);
+  }, [dict.common.unauthorized]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -54,18 +59,18 @@ export default function MemberGovernanceTab({ lang }: { lang: string }) {
       ]);
 
       const polJson = await polRes.json().catch(() => ({}));
-      if (!polRes.ok) throw new Error(polJson?.error || 'Request failed');
+      if (!polRes.ok) throw new Error(polJson?.error || dict.common.requestFailed);
       const decJson = await decRes.json().catch(() => ({}));
-      if (!decRes.ok) throw new Error(decJson?.error || 'Request failed');
+      if (!decRes.ok) throw new Error(decJson?.error || dict.common.requestFailed);
 
       setPolicies(polJson.policies || []);
       setDecisions(decJson.decisions || []);
     } catch (e: any) {
-      showToast(e?.message || 'Chyba', 'error');
+      showToast(e?.message || dict.common.errorGeneric, 'error');
     } finally {
       setLoading(false);
     }
-  }, [getToken, showToast]);
+  }, [dict.common.errorGeneric, dict.common.requestFailed, getToken, showToast]);
 
   useEffect(() => {
     load();
@@ -75,12 +80,12 @@ export default function MemberGovernanceTab({ lang }: { lang: string }) {
     const groups = new Map<string, { title: string; items: Decision[] }>();
     for (const d of decisions) {
       const key = d.meeting_id ? String(d.meeting_id) : 'no_meeting';
-      const label = d.meeting_title ? String(d.meeting_title) : (lang === 'en' ? 'Other' : 'Ostatní');
+      const label = d.meeting_title ? String(d.meeting_title) : t.other;
       if (!groups.has(key)) groups.set(key, { title: label, items: [] });
       groups.get(key)!.items.push(d);
     }
     return Array.from(groups.values());
-  }, [decisions, lang]);
+  }, [decisions, t.other]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -89,13 +94,9 @@ export default function MemberGovernanceTab({ lang }: { lang: string }) {
           <div>
             <h2 className="text-2xl font-black text-stone-900 tracking-tight flex items-center gap-3">
               <ScrollText className="text-green-600" />
-              {lang === 'en' ? 'Governance' : 'Governance'}
+              {t.headerTitle}
             </h2>
-            <p className="text-stone-500 font-medium mt-2">
-              {lang === 'en'
-                ? 'Decisions and internal policies for members.'
-                : 'Rozhodnutí a interní policy dostupné členům.'}
-            </p>
+            <p className="text-stone-500 font-medium mt-2">{t.headerSubtitle}</p>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -106,7 +107,7 @@ export default function MemberGovernanceTab({ lang }: { lang: string }) {
               }`}
             >
               <FileText size={16} />
-              {lang === 'en' ? 'Policies' : 'Policy'}
+              {t.policies}
             </button>
             <button
               type="button"
@@ -116,7 +117,7 @@ export default function MemberGovernanceTab({ lang }: { lang: string }) {
               }`}
             >
               <Gavel size={16} />
-              {lang === 'en' ? 'Decisions' : 'Rozhodnutí'}
+              {t.decisions}
             </button>
           </div>
         </div>
@@ -137,7 +138,7 @@ export default function MemberGovernanceTab({ lang }: { lang: string }) {
         <div className="space-y-4">
           {policies.length === 0 ? (
             <div className="bg-white p-20 rounded-[3rem] border border-dashed border-stone-200 text-center">
-              <p className="text-stone-400 font-bold uppercase tracking-widest text-xs">{lang === 'en' ? 'No policies yet.' : 'Zatím žádné policy.'}</p>
+              <p className="text-stone-400 font-bold uppercase tracking-widest text-xs">{t.emptyPolicies}</p>
             </div>
           ) : (
             policies.map((p) => (
@@ -152,8 +153,8 @@ export default function MemberGovernanceTab({ lang }: { lang: string }) {
                       <div className="text-xl font-black text-stone-900 truncate">{p.title}</div>
                       {p.description ? <div className="text-stone-500 font-medium mt-2">{p.description}</div> : null}
                       <div className="text-[10px] font-black uppercase tracking-widest text-stone-300 mt-3">
-                        {lang === 'en' ? 'Updated' : 'Aktualizováno'}:{' '}
-                        {p.updated_at ? new Date(p.updated_at).toLocaleDateString(lang === 'en' ? 'en-US' : 'cs-CZ') : '—'}
+                        {t.updated}:{' '}
+                        {p.updated_at ? new Date(p.updated_at).toLocaleDateString(dateLocale) : '—'}
                       </div>
                     </div>
                     <div className="shrink-0 text-[10px] font-black uppercase tracking-widest text-green-700 bg-green-50 border border-green-100 px-3 py-1.5 rounded-full">
@@ -166,7 +167,7 @@ export default function MemberGovernanceTab({ lang }: { lang: string }) {
                     {p.version?.content_html ? (
                       <div className="prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: richTextToClientHtml(String(p.version.content_html)) }} />
                     ) : (
-                      <div className="text-stone-400 italic">{lang === 'en' ? 'Missing content.' : 'Chybí obsah.'}</div>
+                      <div className="text-stone-400 italic">{t.missingContent}</div>
                     )}
                   </div>
                 )}
@@ -178,7 +179,7 @@ export default function MemberGovernanceTab({ lang }: { lang: string }) {
         <div className="space-y-6">
           {decisions.length === 0 ? (
             <div className="bg-white p-20 rounded-[3rem] border border-dashed border-stone-200 text-center">
-              <p className="text-stone-400 font-bold uppercase tracking-widest text-xs">{lang === 'en' ? 'No decisions yet.' : 'Zatím žádná rozhodnutí.'}</p>
+              <p className="text-stone-400 font-bold uppercase tracking-widest text-xs">{t.emptyDecisions}</p>
             </div>
           ) : (
             decisionsByMeeting.map((g) => (
@@ -190,7 +191,7 @@ export default function MemberGovernanceTab({ lang }: { lang: string }) {
                       <div className="flex items-center justify-between gap-4">
                         <div className="text-lg font-black text-stone-900">{d.title}</div>
                         <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">
-                          {d.decided_at ? new Date(d.decided_at).toLocaleDateString(lang === 'en' ? 'en-US' : 'cs-CZ') : ''}
+                          {d.decided_at ? new Date(d.decided_at).toLocaleDateString(dateLocale) : ''}
                         </div>
                       </div>
                       <div className="mt-4 prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: richTextToClientHtml(String(d.summary_html || '')) }} />

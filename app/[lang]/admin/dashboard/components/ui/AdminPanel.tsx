@@ -12,7 +12,7 @@ export default function AdminPanel({
   return (
     <div
       className={[
-        'rounded-[2rem] border border-stone-200 bg-white/80 backdrop-blur shadow-[0_1px_0_rgba(0,0,0,0.03),0_16px_50px_rgba(0,0,0,0.06)]',
+        'rounded-[2rem] border border-stone-200 bg-white/80 backdrop-blur shadow-[0_1px_0_rgba(0,0,0,0.03),0_16px_50px_rgba(0,0,0,0.06)] dark:border-stone-800 dark:bg-stone-950/60',
         className,
       ]
         .filter(Boolean)
