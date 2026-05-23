@@ -57,3 +57,4 @@ next-env.d.ts
 # Automigrace
 /Automigrace/logs/
 Migrace_databaze.log
+/Automigrace/.db_password.dpapi

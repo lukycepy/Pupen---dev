@@ -1,5 +1,9 @@
 $ErrorActionPreference = 'Stop'
 
+function Get-DefaultSupabaseProjectUrl {
+  return 'https://ojnpqxfaiuyfpsogthhx.supabase.co'
+}
+
 function Ensure-NodeInPath {
   if (Get-Command node -ErrorAction SilentlyContinue) { return }
   $nodeDir = 'C:\Program Files\nodejs'
@@ -14,6 +18,44 @@ function Read-FileText {
   $raw = Get-Content -Path $Path -Raw -ErrorAction SilentlyContinue
   if (-not $raw) { return $null }
   return $raw.TrimStart([char]0xFEFF)
+}
+
+function Load-DotEnvIntoProcess {
+  param([Parameter(Mandatory)] [string] $RepoRoot)
+
+  $envPath = Join-Path $RepoRoot '.env'
+  $raw = Read-FileText -Path $envPath
+  if (-not $raw) { return }
+
+  foreach ($line in ($raw -split "`r?`n")) {
+    $t = $line.Trim()
+    if (-not $t) { continue }
+    if ($t.StartsWith('#')) { continue }
+    $m = [regex]::Match($t, '^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$')
+    if (-not $m.Success) { continue }
+    $k = $m.Groups[1].Value
+    if (Test-Path "Env:$k") { continue }
+    $v = $m.Groups[2].Value.Trim()
+    if (($v.StartsWith('"') -and $v.EndsWith('"')) -or ($v.StartsWith("'") -and $v.EndsWith("'"))) {
+      $v = $v.Substring(1, $v.Length - 2)
+    }
+    if ($k -and $v -ne $null) { Set-Item -Path "Env:$k" -Value $v }
+  }
+}
+
+function Get-ProjectRefFromUrl {
+  param([Parameter(Mandatory)] [string] $Url)
+  try {
+    $u = [Uri]$Url
+    $h = $u.Host
+    if (-not $h) { return $null }
+    $first = ($h -split '\.')[0]
+    if ($first) { return $first }
+  } catch {
+  }
+  $m = [regex]::Match($Url, 'https?://([a-z0-9]+)\.supabase\.co', [Text.RegularExpressions.RegexOptions]::IgnoreCase)
+  if ($m.Success) { return $m.Groups[1].Value }
+  return $null
 }
 
 function Get-ProjectRefFromDotEnv {
@@ -45,9 +87,47 @@ function Get-ProjectRefFromDotEnv {
 
 function Get-DbPassword {
   $dbPassword = $env:SUPABASE_DB_PASSWORD
-  if ($dbPassword) { return $dbPassword }
+  if ($dbPassword) {
+    Write-Host 'DB heslo: pouzivam SUPABASE_DB_PASSWORD z prostredi/.env.'
+    return $dbPassword
+  }
+
+  $dbPasswordAlt = $env:Supabase_database_password
+  if ($dbPasswordAlt) {
+    Write-Host 'DB heslo: pouzivam Supabase_database_password z prostredi/.env.'
+    return $dbPasswordAlt
+  }
+
+  $secretsPath = Join-Path $PSScriptRoot '.db_password.dpapi'
+  if (Test-Path $secretsPath) {
+    try {
+      $enc = ((Get-Content -LiteralPath $secretsPath -Raw -ErrorAction SilentlyContinue) | ForEach-Object { $_.Trim() })
+      if ($enc) {
+        $sec = ConvertTo-SecureString $enc -ErrorAction Stop
+        $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($sec)
+        try {
+          $plain = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+          if ($plain) {
+            Write-Host "DB heslo: nacteno z $secretsPath."
+            return $plain
+          }
+        } finally {
+          [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+        }
+      }
+    } catch {
+      Write-Host "DB heslo: nepodarilo se nacist z $secretsPath ($($_.Exception.Message))."
+      try { Remove-Item -LiteralPath $secretsPath -Force -ErrorAction SilentlyContinue } catch { }
+    }
+  }
 
   $secure = Read-Host 'Zadej DB heslo (nezobrazuje se)' -AsSecureString
+  try {
+    $secure | ConvertFrom-SecureString | Set-Content -LiteralPath $secretsPath -Encoding ascii -NoNewline
+    Write-Host "DB heslo: ulozeno do $secretsPath."
+  } catch {
+    Write-Host "DB heslo: nepodarilo se ulozit do $secretsPath ($($_.Exception.Message))."
+  }
   $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
   try {
     return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
@@ -69,8 +149,28 @@ function Invoke-Supabase {
 
   try {
     try {
-      $lines = & npx supabase @allArgs 2>&1
+      $safeArgs = @()
+      for ($i = 0; $i -lt $allArgs.Count; $i++) {
+        $a = [string]$allArgs[$i]
+        if (($a -eq '-p' -or $a -eq '--password' -or $a -eq '--db-url') -and ($i + 1) -lt $allArgs.Count) {
+          $safeArgs += $a
+          $safeArgs += '***'
+          $i++
+          continue
+        }
+        $safeArgs += $a
+      }
+
+      Write-Host ''
+      Write-Host ('> npx supabase ' + ($safeArgs -join ' '))
+
+      $out = New-Object System.Collections.Generic.List[string]
+      & npx supabase @allArgs 2>&1 | ForEach-Object {
+        $s = [string]$_
+        if ($s) { Write-Host $s; $out.Add($s) }
+      }
       $exitCode = $LASTEXITCODE
+      $lines = $out.ToArray()
     } catch {
       $lines = @("Invoke-Supabase failed: $($_.Exception.Message)")
       $exitCode = 1
@@ -102,6 +202,17 @@ function Get-MissingRemoteMigrationsFromTable {
   return $missing | Select-Object -Unique | Sort-Object
 }
 
+function Get-EncodedRemoteDbUrl {
+  param(
+    [Parameter(Mandatory)] [string] $ProjectRef,
+    [Parameter(Mandatory)] [string] $DbPassword
+  )
+
+  $dbHost = "db.$ProjectRef.supabase.co"
+  $pwdEscapedForUri = [Uri]::EscapeDataString($DbPassword)
+  return "postgresql://postgres:$pwdEscapedForUri@$($dbHost):5432/postgres?sslmode=require"
+}
+
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
 $supabaseDir = Join-Path $repoRoot 'supabase'
 if (-not (Test-Path $supabaseDir)) {
@@ -123,9 +234,15 @@ if (-not (Get-Command npx -ErrorAction SilentlyContinue)) {
   throw 'npx nebylo nalezeno. Nainstaluj Node.js (obsahuje npm/npx) nebo pridej do PATH.'
 }
 
+$repoRootStr = [string]$repoRoot
+Load-DotEnvIntoProcess -RepoRoot $repoRootStr
+
 $projectRef = $env:SUPABASE_PROJECT_REF
 if (-not $projectRef) {
-  $projectRef = Get-ProjectRefFromDotEnv -RepoRoot $repoRoot
+  $projectRef = Get-ProjectRefFromDotEnv -RepoRoot $repoRootStr
+}
+if (-not $projectRef) {
+  $projectRef = Get-ProjectRefFromUrl -Url (Get-DefaultSupabaseProjectUrl)
 }
 if (-not $projectRef) {
   $projectRef = Read-Host 'Zadej Supabase project ref (napr. ojnpqxfaiuyfpsogthhx)'
@@ -143,6 +260,7 @@ $transcriptStarted = $false
 try {
   Start-Transcript -Path $logFile -Force | Out-Null
   $transcriptStarted = $true
+  Write-Host "Log: $logFile"
 
   Write-Host "Repo: $repoRoot"
   Write-Host "Supabase dir: $supabaseDir"
@@ -153,15 +271,22 @@ try {
     throw "Supabase link selhal.`n$($link.Output)"
   }
 
+  Write-Host ''
+  Write-Host 'Overuji pripojeni na DB (db query --linked select 1)...'
+  $ping = Invoke-Supabase -Workdir $repoRoot -Args @('db', 'query', '--linked', '--debug', '--log-level', 'debug', 'select 1 as ok;')
+  if ($ping.ExitCode -ne 0) {
+    throw "Nepodarilo se pripojit na DB pres --linked (chybi login/token nebo problem s projektem).`n$($ping.Output)"
+  }
+
   Write-Host 'Aplikuji migrace na remote DB (db push)...'
-  $push = Invoke-Supabase -Workdir $repoRoot -Args @('db', 'push', '--linked', '--include-all', '-p', $dbPassword, '--yes')
+  $push = Invoke-Supabase -Workdir $repoRoot -Args @('db', 'push', '--linked', '--include-all', '-p', $dbPassword, '--yes', '--debug', '--log-level', 'debug')
   if ($push.ExitCode -ne 0) {
     throw "db push selhal (ExitCode=$($push.ExitCode)).`n$($push.Output)"
   }
 
   Write-Host ''
   Write-Host 'Kontroluji stav migraci (migration list --linked)...'
-  $list = Invoke-Supabase -Workdir $repoRoot -Args @('migration', 'list', '--linked', '-p', $dbPassword)
+  $list = Invoke-Supabase -Workdir $repoRoot -Args @('migration', 'list', '--linked', '-p', $dbPassword, '--log-level', 'none')
   if ($list.ExitCode -ne 0) {
     throw "migration list selhal.`n$($list.Output)"
   }
@@ -189,4 +314,3 @@ try {
     Copy-Item -Path $logFile -Destination $latestLog -Force
   }
 }
-
