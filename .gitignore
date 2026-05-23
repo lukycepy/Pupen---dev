@@ -54,5 +54,6 @@ next-env.d.ts
 /ops/backup-artifacts/
 /.trae/
 
-# Local-only tools
-/AUTOMIGRACE/
+# Automigrace
+/Automigrace/logs/
+Migrace_databaze.log
