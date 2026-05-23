@@ -1,4 +1,6 @@
 $ErrorActionPreference = 'Stop'
+$OutputEncoding = [System.Text.Encoding]::UTF8
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }
 
 function Get-DefaultSupabaseProjectUrl {
   return 'https://ojnpqxfaiuyfpsogthhx.supabase.co'
@@ -164,25 +166,30 @@ function Invoke-Supabase {
       Write-Host ''
       Write-Host ('> npx supabase ' + ($safeArgs -join ' '))
 
-      $out = New-Object System.Collections.Generic.List[string]
-      & npx supabase @allArgs 2>&1 | ForEach-Object {
-        $s = [string]$_
-        if ($s) { Write-Host $s; $out.Add($s) }
-      }
+      $lines = & npx supabase @allArgs 2>&1
       $exitCode = $LASTEXITCODE
-      $lines = $out.ToArray()
+      foreach ($l in $lines) { if ($l -ne $null) { Write-Host $l } }
     } catch {
       $lines = @("Invoke-Supabase failed: $($_.Exception.Message)")
       $exitCode = 1
     }
   } finally {
     $ErrorActionPreference = $prevEap
-    while ($global:Error.Count -gt $errCountBefore) {
-      $global:Error.RemoveAt(0)
+    $added = $global:Error.Count - $errCountBefore
+    if ($added -gt 0) {
+      $nativeErrors = @()
+      for ($i = 0; $i -lt $added; $i++) {
+        $nativeErrors += [string]$global:Error[$i]
+      }
+      foreach ($ne in $nativeErrors) {
+        if ($ne) { Write-Host $ne }
+      }
+      $lines = @($lines) + $nativeErrors
     }
+
+    while ($global:Error.Count -gt $errCountBefore) { $global:Error.RemoveAt(0) }
   }
 
-  foreach ($l in $lines) { Write-Host $l }
   return @{
     ExitCode = $exitCode
     Output = ($lines -join "`n")
@@ -279,7 +286,7 @@ try {
   }
 
   Write-Host 'Aplikuji migrace na remote DB (db push)...'
-  $push = Invoke-Supabase -Workdir $repoRoot -Args @('db', 'push', '--linked', '--include-all', '-p', $dbPassword, '--yes', '--debug', '--log-level', 'debug')
+  $push = Invoke-Supabase -Workdir $repoRoot -Args @('db', 'push', '--linked', '--include-all', '-p', $dbPassword, '--yes', '--debug', '--log-level', 'debug', '--output-format', 'json')
   if ($push.ExitCode -ne 0) {
     throw "db push selhal (ExitCode=$($push.ExitCode)).`n$($push.Output)"
   }

@@ -94,8 +94,6 @@ export default function LogsTab({ readOnly }: { readOnly?: boolean }) {
     return json as any;
   };
 
-  if (isLoading) return <SkeletonTabContent />;
-
   const norm = (s: any) => String(s || '').toLowerCase();
   const qq = norm(q);
 
@@ -133,6 +131,8 @@ export default function LogsTab({ readOnly }: { readOnly?: boolean }) {
       return hay.includes(qq);
     });
   }, [items, qq, source, type]);
+
+  if (isLoading) return <SkeletonTabContent />;
 
   const escapeCsv = (value: any) => {
     const s = String(value ?? '');

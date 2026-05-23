@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Bell, Calendar, Clock, FileCheck, Settings } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
@@ -114,7 +114,7 @@ export default function NotificationsTab({
     },
   });
 
-  const notifications = useMemo(() => {
+  const notifications = (() => {
     const now = new Date();
     const items: Array<{
       id: string;
@@ -188,11 +188,11 @@ export default function NotificationsTab({
     }
 
     return items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [data?.application, data?.rsvps, lang, applicationStatusLabel]);
+  })();
 
-  const filtered = useMemo(() => notifications.filter((n) => prefs.categories[n.category] !== false), [notifications, prefs]);
+  const filtered = notifications.filter((n) => prefs.categories[n.category] !== false);
 
-  const unreadCount = useMemo(() => filtered.filter((n) => !readIds[n.id]).length, [filtered, readIds]);
+  const unreadCount = filtered.filter((n) => !readIds[n.id]).length;
 
   const markAllRead = () => {
     const next = { ...readIds };
