@@ -325,8 +325,9 @@ export default function LoginPage() {
           setLoading(false);
           return;
         }
+        const retryAfterSecRaw = Number(guard.headers.get('Retry-After') || 0);
         const retryAfterMs = Number(j?.retryAfterMs || 0);
-        const sec = retryAfterMs ? Math.ceil(retryAfterMs / 1000) : 60;
+        const sec = retryAfterSecRaw || (retryAfterMs ? Math.ceil(retryAfterMs / 1000) : 60);
         setError(lang === 'cs' ? `Příliš mnoho pokusů. Zkuste to za ${sec}s.` : `Too many attempts. Try again in ${sec}s.`);
         setLoading(false);
         return;
@@ -413,8 +414,9 @@ export default function LoginPage() {
             return;
           }
           const j = await guard.json().catch(() => ({}));
+          const retryAfterSecRaw = Number(guard.headers.get('Retry-After') || 0);
           const retryAfterMs = Number(j?.retryAfterMs || 0);
-          const sec = retryAfterMs ? Math.ceil(retryAfterMs / 1000) : 60;
+          const sec = retryAfterSecRaw || (retryAfterMs ? Math.ceil(retryAfterMs / 1000) : 60);
           setError(lang === 'cs' ? `Příliš mnoho pokusů. Zkuste to za ${sec}s.` : `Too many attempts. Try again in ${sec}s.`);
           setLoading(false);
           return;

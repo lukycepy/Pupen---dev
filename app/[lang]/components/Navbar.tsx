@@ -12,6 +12,7 @@ import { supabase } from '@/lib/supabase';
 import InlinePulse from '@/app/components/InlinePulse';
 import Drawer from '@/app/components/ui/Drawer';
 import Popover from '@/app/components/ui/Popover';
+import ThemeToggleButton from '@/app/components/ThemeToggleButton';
 
 interface NavbarProps {
   lang: string;
@@ -500,6 +501,8 @@ export default function Navbar({ lang, dict }: NavbarProps) {
               )}
             </div>
 
+            <ThemeToggleButton />
+
             {/* PŘEPÍNAČ JAZYKA */}
             <div className="flex items-center gap-1 bg-stone-50 p-1 rounded-xl border border-stone-100">
               <Link 
@@ -622,6 +625,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
 
           {/* MOBILNÍ HAMBURGER */}
           <div className="lg:hidden flex items-center gap-3">
+            <ThemeToggleButton />
             <div className="flex items-center gap-1 bg-stone-100 p-1 rounded-xl border border-stone-200">
               <Link href={getTransliteratedPath('cs')} className={`px-2 py-1 rounded-lg text-[9px] font-black transition focus:ring-2 focus:ring-green-500 focus:outline-none ${lang === 'cs' ? 'bg-white text-green-600 shadow-sm' : 'text-stone-400'}`}>CZ</Link>
               <Link href={getTransliteratedPath('en')} className={`px-2 py-1 rounded-lg text-[9px] font-black transition focus:ring-2 focus:ring-green-500 focus:outline-none ${lang === 'en' ? 'bg-white text-green-600 shadow-sm' : 'text-stone-400'}`}>EN</Link>

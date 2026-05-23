@@ -41,16 +41,106 @@ ALTER TABLE public.gallery_albums ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.gallery_photos ENABLE ROW LEVEL SECURITY;
 
 -- Policies for team_members
-CREATE POLICY "Public read team_members" ON public.team_members FOR SELECT USING (is_active = true);
-CREATE POLICY "Admin all team_members" ON public.team_members FOR ALL TO authenticated
-    USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND (profiles.is_admin = true OR profiles.can_manage_admins = true)));
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public' AND tablename = 'team_members' AND policyname = 'Public read team_members'
+    ) THEN
+        EXECUTE 'CREATE POLICY "Public read team_members" ON public.team_members FOR SELECT USING (is_active = true)';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public' AND tablename = 'team_members' AND policyname = 'Admin all team_members'
+    ) THEN
+        EXECUTE '
+            CREATE POLICY "Admin all team_members"
+                ON public.team_members FOR ALL
+                TO authenticated
+                USING (
+                    EXISTS (
+                        SELECT 1 FROM public.profiles
+                        WHERE profiles.id = auth.uid() AND (profiles.is_admin = true OR profiles.can_manage_admins = true)
+                    )
+                )
+                WITH CHECK (
+                    EXISTS (
+                        SELECT 1 FROM public.profiles
+                        WHERE profiles.id = auth.uid() AND (profiles.is_admin = true OR profiles.can_manage_admins = true)
+                    )
+                )
+        ';
+    END IF;
+END $$;
 
 -- Policies for gallery
-CREATE POLICY "Public read gallery_albums" ON public.gallery_albums FOR SELECT USING (is_public = true);
-CREATE POLICY "Admin all gallery_albums" ON public.gallery_albums FOR ALL TO authenticated
-    USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND (profiles.is_admin = true OR profiles.can_manage_admins = true)));
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public' AND tablename = 'gallery_albums' AND policyname = 'Public read gallery_albums'
+    ) THEN
+        EXECUTE 'CREATE POLICY "Public read gallery_albums" ON public.gallery_albums FOR SELECT USING (is_public = true)';
+    END IF;
 
-CREATE POLICY "Public read gallery_photos" ON public.gallery_photos FOR SELECT 
-    USING (EXISTS (SELECT 1 FROM public.gallery_albums WHERE id = album_id AND is_public = true));
-CREATE POLICY "Admin all gallery_photos" ON public.gallery_photos FOR ALL TO authenticated
-    USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND (profiles.is_admin = true OR profiles.can_manage_admins = true)));
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public' AND tablename = 'gallery_albums' AND policyname = 'Admin all gallery_albums'
+    ) THEN
+        EXECUTE '
+            CREATE POLICY "Admin all gallery_albums"
+                ON public.gallery_albums FOR ALL
+                TO authenticated
+                USING (
+                    EXISTS (
+                        SELECT 1 FROM public.profiles
+                        WHERE profiles.id = auth.uid() AND (profiles.is_admin = true OR profiles.can_manage_admins = true)
+                    )
+                )
+                WITH CHECK (
+                    EXISTS (
+                        SELECT 1 FROM public.profiles
+                        WHERE profiles.id = auth.uid() AND (profiles.is_admin = true OR profiles.can_manage_admins = true)
+                    )
+                )
+        ';
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public' AND tablename = 'gallery_photos' AND policyname = 'Public read gallery_photos'
+    ) THEN
+        EXECUTE '
+            CREATE POLICY "Public read gallery_photos"
+                ON public.gallery_photos FOR SELECT
+                USING (EXISTS (SELECT 1 FROM public.gallery_albums WHERE id = album_id AND is_public = true))
+        ';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public' AND tablename = 'gallery_photos' AND policyname = 'Admin all gallery_photos'
+    ) THEN
+        EXECUTE '
+            CREATE POLICY "Admin all gallery_photos"
+                ON public.gallery_photos FOR ALL
+                TO authenticated
+                USING (
+                    EXISTS (
+                        SELECT 1 FROM public.profiles
+                        WHERE profiles.id = auth.uid() AND (profiles.is_admin = true OR profiles.can_manage_admins = true)
+                    )
+                )
+                WITH CHECK (
+                    EXISTS (
+                        SELECT 1 FROM public.profiles
+                        WHERE profiles.id = auth.uid() AND (profiles.is_admin = true OR profiles.can_manage_admins = true)
+                    )
+                )
+        ';
+    END IF;
+END $$;

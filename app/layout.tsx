@@ -3,7 +3,6 @@ import { Inter, Montserrat } from 'next/font/google'
 import type { Viewport } from 'next'
 import Providers from './providers'
 import ServiceWorker from './components/ServiceWorker'
-import AccessibilityControls from './components/AccessibilityControls'
 import { ErrorReporter } from '@/components/ErrorReporter';
 import { WebVitalsReporter } from '@/components/WebVitalsReporter';
 import SelfHostedAnalytics from './components/SelfHostedAnalytics';
@@ -47,7 +46,6 @@ export default function RootLayout({
           <WebVitalsReporter />
           <SelfHostedAnalytics />
           {children}
-          <AccessibilityControls />
           <ServiceWorker />
         </Providers>
       </body>

@@ -5,7 +5,7 @@ export async function POST(req: Request) {
   const g = await guardPublicJsonPost(req, {
     keyPrefix: 'login',
     windowMs: 60_000,
-    max: 10,
+    max: 30,
     honeypot: false,
     tooManyMessage: 'Too many login attempts',
     tooManyPayload: { retryAfterMs: 0 },
