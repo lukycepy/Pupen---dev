@@ -157,6 +157,35 @@ function escapeHtml(input: any) {
     .replaceAll("'", '&#39;');
 }
 
+function csVocativeFirstName(input: any) {
+  const raw = String(input || '').trim();
+  if (!raw) return '';
+  const parts = raw.split(/\s+/);
+  const first = parts[0] || '';
+  const rest = parts.slice(1).join(' ');
+  const lower = first.toLowerCase();
+
+  const irregular: Record<string, string> = {
+    petr: 'Petře',
+    pavel: 'Pavle',
+    lukáš: 'Lukáši',
+    tomáš: 'Tomáši',
+    ondřej: 'Ondřeji',
+    matěj: 'Matěji',
+  };
+  let v = irregular[lower];
+  if (!v) {
+    if (lower.endsWith('š') || lower.endsWith('j') || lower.endsWith('č') || lower.endsWith('ž')) v = `${first}i`;
+    else if (lower.endsWith('a')) v = `${first.slice(0, -1)}o`;
+    else if (lower.endsWith('ek')) v = `${first.slice(0, -2)}ku`;
+    else if (lower.endsWith('el')) v = `${first.slice(0, -2)}le`;
+    else if (lower.endsWith('r') || lower.endsWith('n') || lower.endsWith('m') || lower.endsWith('l')) v = `${first}e`;
+    else v = `${first}e`;
+  }
+
+  return [v, rest].filter(Boolean).join(' ');
+}
+
 function section(label: string, value: any) {
   return `<p style="margin: 8px 0;"><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}</p>`;
 }
@@ -409,6 +438,7 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
 
   if (key === 'admin_password') {
     const firstName = vars?.firstName ? String(vars.firstName) : '';
+    const firstNameVoc = csVocativeFirstName(firstName);
     const password = String(vars?.password || '');
     const subject = 'Pupen — Přístup do administrace';
     const html = emailDoc({
@@ -416,7 +446,7 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
       title: 'Přístup do administrace',
       badge: 'Admin',
       preheader: 'V e‑mailu je dočasné heslo pro přihlášení.',
-      introHtml: `<p style="margin:0;">Ahoj${firstName ? ` ${escapeHtml(firstName)}` : ''}! Níže je dočasné heslo pro přístup do administrace.</p>`,
+      introHtml: `<p style="margin:0;">Ahoj${firstNameVoc ? ` ${escapeHtml(firstNameVoc)}` : ''}! Níže je dočasné heslo pro přístup do administrace.</p>`,
       contentHtml: `
         <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px; text-align:center;">
           <div style="font-weight:900; margin-bottom:10px;">Dočasné heslo</div>
@@ -460,6 +490,7 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
   if (key === 'member_access') {
     const lang = vars?.lang === 'en' ? 'en' : 'cs';
     const firstName = vars?.firstName ? String(vars.firstName) : '';
+    const firstNameCs = lang === 'cs' ? csVocativeFirstName(firstName) : firstName;
     const toEmail = String(vars?.toEmail || vars?.email || '');
     const actionUrl = String(vars?.actionUrl || '');
 
@@ -468,7 +499,7 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
     const intro =
       lang === 'en'
         ? `Hello${firstName ? ` ${escapeHtml(firstName)}` : ''}, your access to Pupen has been approved.`
-        : `Ahoj${firstName ? ` ${escapeHtml(firstName)}` : ''}, tvůj přístup do systému Pupen byl schválen.`;
+        : `Ahoj${firstNameCs ? ` ${escapeHtml(firstNameCs)}` : ''}, tvůj přístup do systému Pupen byl schválen.`;
     const cta = lang === 'en' ? 'Set password and sign in' : 'Nastavit heslo a přihlásit se';
     const note =
       lang === 'en'
@@ -492,6 +523,7 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
   if (key === 'member_welcome') {
     const lang = vars?.lang === 'en' ? 'en' : 'cs';
     const firstName = vars?.firstName ? String(vars.firstName) : '';
+    const firstNameCs = lang === 'cs' ? csVocativeFirstName(firstName) : firstName;
     const toEmail = String(vars?.toEmail || vars?.email || '');
 
     const subject = lang === 'en' ? 'Pupen — Welcome' : 'Pupen — Vítej';
@@ -499,7 +531,7 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
     const intro =
       lang === 'en'
         ? `Hello${firstName ? ` ${escapeHtml(firstName)}` : ''}! Your membership was approved.`
-        : `Ahoj${firstName ? ` ${escapeHtml(firstName)}` : ''}! Tvoje členství bylo schváleno.`;
+        : `Ahoj${firstNameCs ? ` ${escapeHtml(firstNameCs)}` : ''}! Tvoje členství bylo schváleno.`;
     const body =
       lang === 'en'
         ? 'You can now access the member portal and stay updated.'
@@ -521,6 +553,7 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
   if (key === 'application_received') {
     const lang = vars?.lang === 'en' ? 'en' : 'cs';
     const firstName = vars?.firstName ? String(vars.firstName) : '';
+    const firstNameCs = lang === 'cs' ? csVocativeFirstName(firstName) : firstName;
     const toEmail = String(vars?.toEmail || vars?.email || '');
 
     const subject = lang === 'en' ? 'Pupen — Application received' : 'Pupen — Přihláška přijata';
@@ -528,7 +561,7 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
     const intro =
       lang === 'en'
         ? `Hello${firstName ? ` ${escapeHtml(firstName)}` : ''}, thank you! We received your application.`
-        : `Ahoj${firstName ? ` ${escapeHtml(firstName)}` : ''}, díky! Přihláška k nám dorazila.`;
+        : `Ahoj${firstNameCs ? ` ${escapeHtml(firstNameCs)}` : ''}, díky! Přihláška k nám dorazila.`;
     const body =
       lang === 'en'
         ? 'We will review it and then email you the result. After approval you will get access to the member portal.'
@@ -580,6 +613,7 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
   if (key === 'application_approved_access') {
     const lang = vars?.lang === 'en' ? 'en' : 'cs';
     const firstName = vars?.firstName ? String(vars.firstName) : '';
+    const firstNameCs = lang === 'cs' ? csVocativeFirstName(firstName) : firstName;
     const toEmail = String(vars?.toEmail || vars?.email || '');
     const actionUrl = String(vars?.actionUrl || '');
     const pdfUrl = String(vars?.pdfUrl || '');
@@ -589,7 +623,7 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
     const intro =
       lang === 'en'
         ? `Hello${firstName ? ` ${escapeHtml(firstName)}` : ''}, your application was approved.`
-        : `Ahoj${firstName ? ` ${escapeHtml(firstName)}` : ''}, tvoje přihláška byla schválena.`;
+        : `Ahoj${firstNameCs ? ` ${escapeHtml(firstNameCs)}` : ''}, tvoje přihláška byla schválena.`;
     const cta = lang === 'en' ? 'Set password and sign in' : 'Nastavit heslo a přihlásit se';
     const pdfLabel = lang === 'en' ? 'Download application PDF' : 'Stáhnout PDF přihlášky';
 
@@ -610,6 +644,7 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
   if (key === 'application_status') {
     const lang = vars?.lang === 'en' ? 'en' : 'cs';
     const firstName = vars?.firstName ? String(vars.firstName) : '';
+    const firstNameCs = lang === 'cs' ? csVocativeFirstName(firstName) : firstName;
     const toEmail = String(vars?.toEmail || vars?.email || '');
     const status = String(vars?.status || 'pending').trim();
     const reason = String(vars?.reason || '').trim();
@@ -644,7 +679,7 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
     const intro =
       lang === 'en'
         ? `Hello${firstName ? ` ${escapeHtml(firstName)}` : ''}, the status of your application has changed.`
-        : `Ahoj${firstName ? ` ${escapeHtml(firstName)}` : ''}, změnil se stav tvé přihlášky.`;
+        : `Ahoj${firstNameCs ? ` ${escapeHtml(firstNameCs)}` : ''}, změnil se stav tvé přihlášky.`;
     const hint =
       status === 'approved'
         ? lang === 'en'
@@ -725,6 +760,7 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
   if (key === 'membership_expiry') {
     const lang = vars?.lang === 'en' ? 'en' : 'cs';
     const firstName = vars?.firstName ? String(vars.firstName) : '';
+    const firstNameCs = lang === 'cs' ? csVocativeFirstName(firstName) : firstName;
     const toEmail = String(vars?.toEmail || vars?.email || '');
     const daysLeft = typeof vars?.daysLeft === 'number' ? vars.daysLeft : Number(vars?.daysLeft || 0);
     const dateStr = vars?.expiresAt ? formatDatePrague(String(vars.expiresAt), lang) : '';
@@ -741,10 +777,10 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
     const intro = isExpired
       ? lang === 'en'
         ? `Hello${firstName ? ` ${escapeHtml(firstName)}` : ''}, your membership has expired.`
-        : `Ahoj${firstName ? ` ${escapeHtml(firstName)}` : ''}, tvoje členství vypršelo.`
+        : `Ahoj${firstNameCs ? ` ${escapeHtml(firstNameCs)}` : ''}, tvoje členství vypršelo.`
       : lang === 'en'
         ? `Hello${firstName ? ` ${escapeHtml(firstName)}` : ''}, your membership will expire soon.`
-        : `Ahoj${firstName ? ` ${escapeHtml(firstName)}` : ''}, tvoje členství brzy vyprší.`;
+        : `Ahoj${firstNameCs ? ` ${escapeHtml(firstNameCs)}` : ''}, tvoje členství brzy vyprší.`;
     const body = dateStr
       ? isExpired
         ? lang === 'en'
