@@ -53,3 +53,6 @@ next-env.d.ts
 /playwright/.auth/
 /ops/backup-artifacts/
 /.trae/
+
+# Local-only tools
+/AUTOMIGRACE/
