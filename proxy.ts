@@ -58,9 +58,14 @@ async function isBanned(ip: string | null, identityId: string | null) {
     body: JSON.stringify({ ip_text: ip, identity_id: identityId }),
   }).catch(() => null);
 
-  if (!res) return false;
+  if (!res || !res.ok) return false;
   const json: any = await res.json().catch(() => null);
-  const banned = Array.isArray(json) ? !!json[0] : !!json;
+  const banned =
+    typeof json === 'boolean'
+      ? json
+      : Array.isArray(json) && typeof json[0] === 'boolean'
+        ? json[0]
+        : false;
   cache.set(k, { banned, atMs: now });
   return banned;
 }
