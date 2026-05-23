@@ -17,6 +17,8 @@ export type EmailTemplateKey =
   | 'application_status'
   | 'application_status_admin'
   | 'invoice_request'
+  | 'billing_invoice_sent'
+  | 'invoice_paid'
   | 'refund_request'
   | 'refund_status'
   | 'contact_message'
@@ -107,6 +109,16 @@ export function listEmailTemplates() {
       key: 'invoice_request' as const,
       label: 'Žádost o fakturu (interní)',
       variables: ['toEmail', 'replyTo', 'rsvpId', 'eventId', 'eventTitle', 'email', 'buyerType', 'buyerName', 'buyerAddress', 'ico', 'dic', 'note'],
+    },
+    {
+      key: 'invoice_paid' as const,
+      label: 'Faktura – uhrazeno',
+      variables: ['toEmail', 'buyerName', 'invoiceNumber', 'vs', 'total', 'currency', 'lang'],
+    },
+    {
+      key: 'billing_invoice_sent' as const,
+      label: 'Faktury – odeslání faktury',
+      variables: ['toEmail', 'buyerName', 'invoiceNumber', 'vs', 'total', 'currency', 'dueDate', 'pdfUrl', 'lang'],
     },
     {
       key: 'refund_request' as const,
@@ -758,6 +770,80 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
           ${body ? `<div style="font-weight:900;">${body}</div>` : ''}
           ${daysLeft >= 0 ? `<div style="margin-top:10px; font-size:12px; color:#78716c; font-weight:900;">${escapeHtml(lang === 'en' ? `Days left: ${Math.ceil(daysLeft)}` : `Zbývá dní: ${Math.ceil(daysLeft)}`)}</div>` : ''}
           <div style="margin-top:12px; font-size:12px; color:#78716c; font-weight:800;">${escapeHtml(hint)}</div>
+        </div>
+      `,
+      toEmail,
+      lang,
+    });
+    return { subject, html };
+  }
+
+  if (key === 'billing_invoice_sent') {
+    const lang = vars?.lang === 'en' ? 'en' : 'cs';
+    const toEmail = String(vars?.toEmail || '').trim();
+    const buyerName = String(vars?.buyerName || '').trim();
+    const invoiceNumber = String(vars?.invoiceNumber || '').trim();
+    const vs = String(vars?.vs || '').trim();
+    const currency = String(vars?.currency || 'CZK').trim() || 'CZK';
+    const total = vars?.total != null && vars?.total !== '' ? String(vars.total) : '';
+    const dueDate = String(vars?.dueDate || '').trim();
+    const pdfUrl = String(vars?.pdfUrl || '').trim();
+
+    const subject = lang === 'en' ? 'Pupen — Invoice' : 'Pupen — Faktura';
+    const title = lang === 'en' ? 'Invoice' : 'Faktura';
+
+    const html = emailDoc({
+      subject,
+      title,
+      badge: lang === 'en' ? 'Invoice' : 'Faktura',
+      preheader: invoiceNumber ? `${lang === 'en' ? 'Invoice' : 'Faktura'} ${invoiceNumber}` : title,
+      introHtml: `<p style="margin:0;">${
+        lang === 'en'
+          ? `Hello${buyerName ? ` ${escapeHtml(buyerName)}` : ''}, your invoice is ready.`
+          : `Dobrý den${buyerName ? ` ${escapeHtml(buyerName)}` : ''}, vaše faktura je připravena.`
+      }</p>`,
+      contentHtml: `
+        <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px;">
+          ${invoiceNumber ? section(lang === 'en' ? 'Invoice number' : 'Číslo faktury', invoiceNumber) : ''}
+          ${vs ? section('VS', vs) : ''}
+          ${total ? section(lang === 'en' ? 'Total' : 'Celkem', `${total} ${currency}`) : ''}
+          ${dueDate ? section(lang === 'en' ? 'Due date' : 'Splatnost', dueDate) : ''}
+          ${pdfUrl ? `<p style="margin: 14px 0 0 0; font-weight:900;"><a href="${escapeHtml(pdfUrl)}" style="color:#16a34a;text-decoration:underline;">${escapeHtml(lang === 'en' ? 'Download PDF' : 'Stáhnout PDF')}</a></p>` : ''}
+        </div>
+      `,
+      toEmail,
+      lang,
+    });
+    return { subject, html };
+  }
+
+  if (key === 'invoice_paid') {
+    const lang = vars?.lang === 'en' ? 'en' : 'cs';
+    const toEmail = String(vars?.toEmail || '').trim();
+    const buyerName = String(vars?.buyerName || '').trim();
+    const invoiceNumber = String(vars?.invoiceNumber || '').trim();
+    const vs = String(vars?.vs || '').trim();
+    const currency = String(vars?.currency || 'CZK').trim() || 'CZK';
+    const total = vars?.total != null && vars?.total !== '' ? String(vars.total) : '';
+
+    const subject = lang === 'en' ? 'Pupen — Invoice paid' : 'Pupen — Faktura uhrazena';
+    const title = lang === 'en' ? 'Invoice paid' : 'Faktura uhrazena';
+
+    const html = emailDoc({
+      subject,
+      title,
+      badge: lang === 'en' ? 'Invoice' : 'Faktura',
+      preheader: invoiceNumber ? `${lang === 'en' ? 'Invoice' : 'Faktura'} ${invoiceNumber}` : title,
+      introHtml: `<p style="margin:0;">${
+        lang === 'en'
+          ? `Hello${buyerName ? ` ${escapeHtml(buyerName)}` : ''}, your invoice has been paid.`
+          : `Dobrý den${buyerName ? ` ${escapeHtml(buyerName)}` : ''}, vaše faktura byla uhrazena.`
+      }</p>`,
+      contentHtml: `
+        <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px;">
+          ${invoiceNumber ? section(lang === 'en' ? 'Invoice number' : 'Číslo faktury', invoiceNumber) : ''}
+          ${vs ? section('VS', vs) : ''}
+          ${total ? section(lang === 'en' ? 'Total' : 'Celkem', `${total} ${currency}`) : ''}
         </div>
       `,
       toEmail,

@@ -83,7 +83,7 @@ const SidebarContent = ({
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
       if (!token) return 0;
-      const res = await fetch('/api/admin/applications?pendingCount=1', { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch('/api/admin/membership-applications?pendingCount=1', { headers: { Authorization: `Bearer ${token}` } });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error || t.errors.generic);
       return Number(json?.count || 0);

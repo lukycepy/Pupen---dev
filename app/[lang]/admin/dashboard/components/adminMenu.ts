@@ -115,6 +115,7 @@ export function buildAdminMenuGroups(dict: Dictionary, permissions: any): AdminM
       items: [
         { id: 'budget', label: dict.admin.tabBudget, icon: Wallet, visible: canView('budget') },
         { id: 'invoices', label: dict.admin.tabInvoices, icon: FileText, visible: canViewFinance },
+        { id: 'billing', label: dict.admin.tabBilling, icon: FileText, visible: canViewFinance },
         { id: 'refunds', label: dict.admin.tabRefunds, icon: RefreshCcw, visible: canView('refunds') },
         { id: 'promo_rules', label: dict.admin.tabPromoRules, icon: Tag, visible: canView('events') },
         { id: 'tickets', label: dict.admin.tabTickets, icon: QrCode, visible: canView('events') },

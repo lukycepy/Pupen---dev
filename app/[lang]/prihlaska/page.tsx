@@ -98,7 +98,7 @@ export default function PrihlaskaPage() {
         });
         const json = await res.json().catch(() => ({}));
         if (!res.ok || !json?.ok) {
-          showToast(lang === 'en' ? 'Please enter a valid address.' : 'Zadejte prosím platnou adresu.', 'error');
+          showToast(dict.errorInvalidAddress, 'error');
           setLoading(false);
           return;
         }
@@ -106,7 +106,7 @@ export default function PrihlaskaPage() {
         validatedMeta = json?.meta || validatedMeta;
       }
 
-      const submitRes = await fetch('/api/applications/submit', {
+      const submitRes = await fetch('/api/membership-applications/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -134,20 +134,6 @@ export default function PrihlaskaPage() {
 
       const applicationId = String(submitJson?.applicationId || '').trim();
       if (!applicationId) throw new Error('Odeslání přihlášky selhalo.');
-
-      // Notify about new application
-      try {
-        await fetch('/api/applications/notify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            applicationId,
-            lang,
-          })
-        });
-      } catch (e) {
-        console.error('Failed to notify admins:', e);
-      }
       
       setSuccess(true);
       showToast(dict.successTitle, 'success');
@@ -172,28 +158,20 @@ export default function PrihlaskaPage() {
           <p className="text-stone-500 mb-8 font-medium">{dict.successDesc}</p>
           <div className="bg-stone-50 border border-stone-100 rounded-[2rem] p-6 text-left mb-6">
             <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-3">
-              {lang === 'en' ? 'What happens next' : 'Co bude dál'}
+              {dict.nextStepsTitle}
             </div>
             <div className="space-y-2 text-sm font-medium text-stone-700">
               <div className="flex items-start gap-3">
                 <div className="w-6 h-6 rounded-xl bg-white border border-stone-100 flex items-center justify-center font-black text-stone-400 shrink-0">1</div>
-                <div>{lang === 'en' ? 'Admins will review your application.' : 'Administrátoři přihlášku zkontrolují.'}</div>
+                <div>{dict.nextStep1}</div>
               </div>
               <div className="flex items-start gap-3">
                 <div className="w-6 h-6 rounded-xl bg-white border border-stone-100 flex items-center justify-center font-black text-stone-400 shrink-0">2</div>
-                <div>
-                  {lang === 'en'
-                    ? 'After approval you will receive an email with access to the member portal.'
-                    : 'Po schválení přijde e-mail s přístupem do členské sekce.'}
-                </div>
+                <div>{dict.nextStep2}</div>
               </div>
               <div className="flex items-start gap-3">
                 <div className="w-6 h-6 rounded-xl bg-white border border-stone-100 flex items-center justify-center font-black text-stone-400 shrink-0">3</div>
-                <div>
-                  {lang === 'en'
-                    ? 'You can check your application status in the member portal after you sign in.'
-                    : 'Stav přihlášky uvidíte po přihlášení v členské sekci.'}
-                </div>
+                <div>{dict.nextStep3}</div>
               </div>
             </div>
             <div className="mt-5 grid grid-cols-2 gap-3">
@@ -201,13 +179,13 @@ export default function PrihlaskaPage() {
                 href={`/${lang}/login`}
                 className="inline-flex items-center justify-center bg-white text-stone-700 px-4 py-3 rounded-2xl font-bold hover:bg-stone-100 transition border border-stone-200 text-xs"
               >
-                {lang === 'en' ? 'Sign in' : 'Přihlásit se'}
+                {dict.btnSignIn}
               </Link>
               <Link
                 href={`/${lang}/clen`}
                 className="inline-flex items-center justify-center bg-stone-900 text-white px-4 py-3 rounded-2xl font-bold hover:bg-green-600 transition text-xs"
               >
-                {lang === 'en' ? 'Member portal' : 'Členská sekce'}
+                {dict.btnMemberPortal}
               </Link>
             </div>
           </div>
@@ -309,6 +287,7 @@ export default function PrihlaskaPage() {
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.labelPhone}</label>
               <input 
+                required
                 type="tel" 
                 value={formData.phone}
                 onChange={e => setFormData({...formData, phone: e.target.value})}

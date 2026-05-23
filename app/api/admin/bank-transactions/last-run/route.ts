@@ -1,0 +1,26 @@
+import { NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/server-auth';
+import { getServerSupabase } from '@/lib/supabase-server';
+
+export const runtime = 'nodejs';
+
+export async function GET(req: Request) {
+  try {
+    await requireAdmin(req);
+    const supabase = getServerSupabase();
+
+    const { data, error } = await supabase
+      .from('bank_transactions_runs')
+      .select('id, provider, status, started_at, finished_at, fetched_count, upserted_count, skipped_count, error, meta')
+      .order('started_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    return NextResponse.json({ ok: true, run: data || null }, { status: 200 });
+  } catch (e: any) {
+    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  }
+}

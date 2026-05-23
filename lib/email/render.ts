@@ -1,5 +1,5 @@
 import { getServerSupabase } from '@/lib/supabase-server';
-import { renderEmailTemplate, type EmailTemplateKey } from '@/lib/email/templates';
+import { listEmailTemplates, renderEmailTemplate, type EmailTemplateKey } from '@/lib/email/templates';
 
 function isSchemaCacheMissingTable(e: any) {
   const msg = String(e?.message || '');
@@ -26,15 +26,55 @@ function toStringValue(v: any) {
   }
 }
 
-function renderTokens(template: string, vars: any) {
+function allowedTokenKeys(templateKey: EmailTemplateKey) {
+  const t = listEmailTemplates().find((x) => x.key === templateKey);
+  const keys = Array.isArray((t as any)?.variables) ? (t as any).variables : [];
+  return new Set(keys.map((k: any) => String(k)));
+}
+
+function allowedRawTokenKeys(templateKey: EmailTemplateKey) {
+  if (templateKey === 'newsletter') return new Set(['html']);
+  return new Set<string>();
+}
+
+function isSafePathSegment(s: string) {
+  if (!s) return false;
+  const lower = s.toLowerCase();
+  if (lower === '__proto__' || lower === 'prototype' || lower === 'constructor') return false;
+  return true;
+}
+
+function getPathValue(vars: any, path: string) {
+  const p = String(path || '').trim();
+  if (!p) return undefined;
+  const parts = p.split('.').filter(Boolean);
+  if (!parts.length) return undefined;
+  let cur: any = vars;
+  for (const seg of parts) {
+    if (!isSafePathSegment(seg)) return undefined;
+    if (cur == null) return undefined;
+    if (typeof cur !== 'object') return undefined;
+    cur = (cur as any)[seg];
+  }
+  return cur;
+}
+
+function renderTokens(templateKey: EmailTemplateKey, template: string, vars: any) {
   const src = String(template ?? '');
+  const allowed = allowedTokenKeys(templateKey);
+  const rawAllowed = allowedRawTokenKeys(templateKey);
   return src
     .replace(/\{\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}\}/g, (_m, key) => {
-      const v = vars?.[key];
+      const k = String(key || '');
+      if (!allowed.has(k)) return '';
+      const v = getPathValue(vars || {}, k);
+      if (!rawAllowed.has(k)) return escapeHtml(toStringValue(v));
       return toStringValue(v);
     })
     .replace(/\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/g, (_m, key) => {
-      const v = vars?.[key];
+      const k = String(key || '');
+      if (!allowed.has(k)) return '';
+      const v = getPathValue(vars || {}, k);
       return escapeHtml(toStringValue(v));
     });
 }
@@ -51,8 +91,8 @@ export async function renderEmailTemplateWithDbOverride(templateKey: EmailTempla
     const row: any = res.data;
     if (row?.is_enabled && (row?.subject || row?.html)) {
       return {
-        subject: renderTokens(String(row.subject || ''), vars || {}),
-        html: renderTokens(String(row.html || ''), vars || {}),
+        subject: renderTokens(templateKey, String(row.subject || ''), vars || {}),
+        html: renderTokens(templateKey, String(row.html || ''), vars || {}),
       };
     }
   } catch (e: any) {
@@ -62,4 +102,3 @@ export async function renderEmailTemplateWithDbOverride(templateKey: EmailTempla
   }
   return renderEmailTemplate(templateKey, vars || {});
 }
-

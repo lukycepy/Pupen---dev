@@ -130,6 +130,19 @@ export async function GET(req: Request) {
             updated_at: new Date().toISOString(),
           })
           .eq('id', id);
+        try {
+          await supabase.from('email_audit_logs').insert([
+            {
+              queue_id: id,
+              to_email: to,
+              from_email: from,
+              subject,
+              status: 'retry',
+              meta: meta2,
+              error: info,
+            },
+          ]);
+        } catch {}
         retried += 1;
       }
 
@@ -236,6 +249,19 @@ export async function GET(req: Request) {
             updated_at: new Date().toISOString(),
           })
           .eq('id', id);
+        try {
+          await supabase.from('email_audit_logs').insert([
+            {
+              queue_id: id,
+              to_email: to,
+              from_email: from,
+              subject,
+              status: 'retry',
+              meta: meta2,
+              error: info,
+            },
+          ]);
+        } catch {}
         retried += 1;
       }
     }

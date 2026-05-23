@@ -2,900 +2,977 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { CheckCircle, XCircle, Clock, FileText, User, Mail, Phone, GraduationCap, Quote, FileCheck } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { CheckCircle, Clock, FileText, FileCheck, Pencil, Save, Search, Upload, XCircle } from 'lucide-react';
 import { useToast } from '../../../../context/ToastContext';
-import SignaturePad from '../../../components/SignaturePad';
 import Image from 'next/image';
 import { SkeletonTabContent } from '../../../components/Skeleton';
 import AdminModuleHeader from './ui/AdminModuleHeader';
 import AdminEmptyState from './ui/AdminEmptyState';
-import { Download } from 'lucide-react';
-import Dialog from '@/app/components/ui/Dialog';
+import Drawer from '@/app/components/ui/Drawer';
+import InlinePulse from '@/app/components/InlinePulse';
+import SignaturePad from '../../../components/SignaturePad';
 import { formatDatePrague, formatDateTimePrague } from '@/lib/time/prague';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { membershipApplicationAdminUpdateSchema } from '@/lib/validations/membership-applications-admin';
 
-export default function ApplicationsTab({ dict }: { dict: any }) {
-  const queryClient = useQueryClient();
+type MembershipApplicationRow = {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  status: 'pending' | 'approved' | 'rejected' | string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  decisionReason: string | null;
+  meta: any;
+};
+
+type DetailResponse = {
+  application: any;
+  files: any[];
+};
+
+const PAGE_SIZE = 50;
+
+function statusBadge(status: string) {
+  if (status === 'approved') return 'bg-green-100 text-green-700';
+  if (status === 'rejected') return 'bg-red-100 text-red-700';
+  return 'bg-amber-100 text-amber-700';
+}
+
+function safeJsonParse(s: string) {
+  const raw = String(s || '').trim();
+  if (!raw) return { ok: true, value: undefined };
+  try {
+    return { ok: true, value: JSON.parse(raw) };
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'Invalid JSON' };
+  }
+}
+
+export default function ApplicationsTab({ dict, readOnly }: { dict: any; readOnly?: boolean }) {
+  const qc = useQueryClient();
   const { showToast } = useToast();
-  const [selectedApp, setSelectedApp] = useState<any>(null);
-  const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
-  const [chairSignature, setChairSignature] = useState('');
-  const [storedSignature, setStoredSignature] = useState<string>('');
-  const [useStoredSignature, setUseStoredSignature] = useState(true);
-  const [saveAsDefaultSignature, setSaveAsDefaultSignature] = useState(true);
-  const [rejectionReason, setRejectionReason] = useState('');
-  const [decisionMembershipType, setDecisionMembershipType] = useState<'regular' | 'external'>('regular');
-  const [showExcluded, setShowExcluded] = useState(false);
-  const [excludedReason, setExcludedReason] = useState('');
-
   const isEn = (dict?.lang || 'cs') === 'en';
 
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase.auth.getSession();
-      const userId = data.session?.user?.id;
-      if (!userId) return;
-      const res = await supabase.from('profiles').select('admin_signature_data_url').eq('id', userId).single();
-      if (!res.error) {
-        const val = String((res.data as any)?.admin_signature_data_url || '');
-        setStoredSignature(val);
-      }
-    })();
-  }, []);
+  const [q, setQ] = useState('');
+  const [status, setStatus] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
+  const [page, setPage] = useState(0);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!selectedApp) return;
-    const mt = selectedApp.membership_type === 'external' ? 'external' : 'regular';
-    setDecisionMembershipType(mt);
-    setRejectionReason(selectedApp.rejection_reason || '');
-    setExcludedReason(selectedApp.excluded_reason || '');
-    setChairSignature('');
-    setUseStoredSignature(true);
-  }, [selectedApp]);
+  const [chairAuthKind, setChairAuthKind] = useState<'signature' | 'stamp'>('signature');
+  const [chairAuthFileId, setChairAuthFileId] = useState<string>('');
+  const [chairSignatureDataUrl, setChairSignatureDataUrl] = useState('');
+  const [stampFile, setStampFile] = useState<File | null>(null);
 
-  const effectiveSignature = useMemo(() => {
-    if (useStoredSignature && storedSignature) return storedSignature;
-    return chairSignature;
-  }, [chairSignature, storedSignature, useStoredSignature]);
+  const [decisionStatus, setDecisionStatus] = useState<'approved' | 'rejected'>('approved');
+  const [decisionMembershipType, setDecisionMembershipType] = useState<'regular' | 'external'>('regular');
+  const [decisionReason, setDecisionReason] = useState('');
 
-  const { data: applications = [], isLoading } = useQuery({
-    queryKey: ['applications', showExcluded],
+  const listQuery = useQuery({
+    queryKey: ['membership_applications_v2', q, status, page],
     queryFn: async () => {
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
       if (!token) throw new Error('Unauthorized');
-      const res = await fetch(`/api/admin/applications?includeExcluded=${showExcluded ? '1' : '0'}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+
+      const params = new URLSearchParams();
+      params.set('limit', String(PAGE_SIZE));
+      params.set('offset', String(page * PAGE_SIZE));
+      if (q.trim()) params.set('q', q.trim());
+      if (status !== 'all') params.set('status', status);
+
+      const res = await fetch(`/api/admin/membership-applications?${params.toString()}`, { headers: { Authorization: `Bearer ${token}` } });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error || 'Chyba');
-      return Array.isArray(json?.applications) ? json.applications : [];
-    }
+      if (!res.ok) throw new Error(json?.error || 'Request failed');
+      return { rows: (json?.rows || []) as MembershipApplicationRow[], count: json?.count as number | null };
+    },
   });
 
-  const visibleApplications = useMemo(() => {
-    return applications;
-  }, [applications]);
-
-  const selectedPendingIds = useMemo(() => {
-    return visibleApplications
-      .filter((a: any) => a?.__source !== 'manual_scan' && !a?.excluded_at && a?.status === 'pending' && selectedIds[String(a.id)])
-      .map((a: any) => String(a.id));
-  }, [selectedIds, visibleApplications]);
-
-  const toggleSelected = (id: string) => {
-    setSelectedIds((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status, signature, reason, decisionType }: any) => {
+  const detailQuery = useQuery({
+    queryKey: ['membership_application_v2_detail', selectedId],
+    enabled: !!selectedId,
+    queryFn: async () => {
       const { data } = await supabase.auth.getSession();
-      const decidedByEmail = data.session?.user?.email || null;
-      const token = data.session?.access_token || null;
-      const shouldPersistSignature =
-        saveAsDefaultSignature && signature && (!storedSignature || (!useStoredSignature && signature !== storedSignature));
-      if (shouldPersistSignature) {
-        const userId = data.session?.user?.id;
-        if (userId) {
-          await supabase.from('profiles').update({ admin_signature_data_url: signature }).eq('id', userId);
-          setStoredSignature(signature);
-        }
-      }
+      const token = data.session?.access_token;
       if (!token) throw new Error('Unauthorized');
-      const res = await fetch('/api/admin/applications', {
+      const res = await fetch(`/api/admin/membership-applications/${selectedId}`, { headers: { Authorization: `Bearer ${token}` } });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Request failed');
+      return json as DetailResponse;
+    },
+  });
+
+  const selectedApplication = detailQuery.data?.application || null;
+  const selectedMeta = selectedApplication?.meta && typeof selectedApplication.meta === 'object' ? selectedApplication.meta : {};
+  const selectedDecision = selectedMeta?.decision && typeof selectedMeta.decision === 'object' ? selectedMeta.decision : {};
+
+  const isPending = String(selectedApplication?.status || '') === 'pending';
+  const isEditable = isPending && !readOnly;
+
+  const applicantSignatureQuery = useQuery({
+    queryKey: ['membership_application_v2_applicant_signature', selectedId],
+    enabled: !!selectedId,
+    queryFn: async () => {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
+      const res = await fetch(`/api/admin/membership-applications/${selectedId}/signature/signed-url`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ expiresIn: 600 }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Request failed');
+      return String(json?.signedUrl || '');
+    },
+  });
+
+  const chairAuthSignedUrlQuery = useQuery({
+    queryKey: ['membership_application_v2_chair_auth', selectedId, selectedDecision?.chair_auth_kind, selectedDecision?.chair_auth_file_id],
+    enabled: !!selectedId && !!selectedDecision?.chair_auth_kind,
+    queryFn: async () => {
+      const kind = String(selectedDecision?.chair_auth_kind || '').trim();
+      if (kind !== 'signature' && kind !== 'stamp') return '';
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
+      const res = await fetch(`/api/admin/membership-applications/${selectedId}/chair-auth/signed-url`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ kind, expiresIn: 600 }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Request failed');
+      return String(json?.signedUrl || '');
+    },
+  });
+
+  const form = useForm<any>({
+    resolver: zodResolver(membershipApplicationAdminUpdateSchema as any),
+    defaultValues: {
+      application: {
+        email: '',
+        phone: '',
+        address: '',
+        motivation: '',
+        meta: {
+          lang: 'cs',
+          membership_type: 'regular',
+          first_name: '',
+          last_name: '',
+          university_email: '',
+          field_of_study: '',
+          study_year: '',
+          signed_on: '',
+          gdpr_consent: false,
+          address_meta_json: '',
+          pdf_snapshot_cs_json: '',
+          pdf_snapshot_en_json: '',
+        },
+      },
+    },
+    mode: 'onSubmit',
+  });
+
+  const { register, handleSubmit, reset, watch } = form;
+
+  useEffect(() => {
+    if (!selectedApplication) return;
+    const m = selectedMeta;
+    const snap = m?.pdf_snapshot && typeof m.pdf_snapshot === 'object' ? m.pdf_snapshot : {};
+
+    reset({
+      application: {
+        email: selectedApplication?.email || '',
+        phone: selectedApplication?.phone || '',
+        address: selectedApplication?.address || '',
+        motivation: selectedApplication?.motivation || '',
+        meta: {
+          lang: m?.lang === 'en' ? 'en' : 'cs',
+          membership_type: m?.membership_type === 'external' ? 'external' : 'regular',
+          first_name: m?.first_name || '',
+          last_name: m?.last_name || '',
+          university_email: m?.university_email || '',
+          field_of_study: m?.field_of_study || '',
+          study_year: m?.study_year || '',
+          signed_on: m?.signed_on || '',
+          gdpr_consent: !!m?.gdpr_consent,
+          address_meta_json: m?.address_meta ? JSON.stringify(m.address_meta, null, 2) : '',
+          pdf_snapshot_cs_json: snap?.cs ? JSON.stringify(snap.cs, null, 2) : '',
+          pdf_snapshot_en_json: snap?.en ? JSON.stringify(snap.en, null, 2) : '',
+        },
+      },
+    });
+
+    setChairAuthKind('signature');
+    setChairAuthFileId('');
+    setChairSignatureDataUrl('');
+    setStampFile(null);
+    setDecisionStatus('approved');
+    setDecisionReason(String(selectedApplication?.decision_reason || ''));
+    const mt = String(selectedDecision?.membership_type || m?.membership_type || '');
+    setDecisionMembershipType(mt === 'external' ? 'external' : 'regular');
+  }, [reset, selectedApplication, selectedDecision, selectedMeta]);
+
+  const updateMutation = useMutation({
+    mutationFn: async (values: any) => {
+      if (!selectedId) throw new Error('Missing id');
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
+
+      const meta = values?.application?.meta || {};
+      const addressMeta = safeJsonParse(meta.address_meta_json || '');
+      if (!addressMeta.ok) throw new Error(addressMeta.error || 'Invalid JSON');
+
+      const snapCs = safeJsonParse(meta.pdf_snapshot_cs_json || '');
+      if (!snapCs.ok) throw new Error(snapCs.error || 'Invalid JSON');
+      const snapEn = safeJsonParse(meta.pdf_snapshot_en_json || '');
+      if (!snapEn.ok) throw new Error(snapEn.error || 'Invalid JSON');
+
+      const patch: any = {
+        application: {
+          email: values?.application?.email,
+          phone: values?.application?.phone,
+          address: values?.application?.address || null,
+          motivation: values?.application?.motivation || null,
+          meta: {
+            lang: meta.lang === 'en' ? 'en' : 'cs',
+            membership_type: meta.membership_type === 'external' ? 'external' : 'regular',
+            first_name: meta.first_name,
+            last_name: meta.last_name,
+            university_email: meta.membership_type === 'regular' ? (meta.university_email || null) : null,
+            field_of_study: meta.membership_type === 'regular' ? (meta.field_of_study || null) : null,
+            study_year: meta.membership_type === 'regular' ? (meta.study_year || null) : null,
+            signed_on: meta.signed_on || null,
+            gdpr_consent: !!meta.gdpr_consent,
+            address_meta: addressMeta.value || {},
+            pdf_snapshot: {
+              cs: snapCs.value,
+              en: snapEn.value,
+            },
+          },
+        },
+      };
+
+      const res = await fetch(`/api/admin/membership-applications/${selectedId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(patch),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Request failed');
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['membership_applications_v2'] }),
+        qc.invalidateQueries({ queryKey: ['membership_application_v2_detail', selectedId] }),
+      ]);
+      showToast(dict?.admin?.alertUpdated || (isEn ? 'Saved.' : 'Uloženo.'), 'success');
+    },
+    onError: (e: any) => showToast(e?.message || (isEn ? 'Error' : 'Chyba'), 'error'),
+  });
+
+  const chairAuthUploadMutation = useMutation({
+    mutationFn: async (payload: { kind: 'signature' | 'stamp'; dataUrl?: string; file?: File }) => {
+      if (!selectedId) throw new Error('Missing id');
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
+
+      const form = new FormData();
+      form.set('kind', payload.kind);
+      if (payload.kind === 'signature') {
+        form.set('dataUrl', String(payload.dataUrl || '').trim());
+      } else {
+        if (!payload.file) throw new Error('Missing file');
+        form.set('file', payload.file);
+      }
+
+      const res = await fetch(`/api/admin/membership-applications/${selectedId}/chair-auth`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Request failed');
+      return { fileId: String(json?.fileId || ''), kind: String(json?.kind || '') };
+    },
+    onSuccess: async (d) => {
+      setChairAuthFileId(d.fileId);
+      await qc.invalidateQueries({ queryKey: ['membership_application_v2_detail', selectedId] });
+      showToast(dict?.admin?.appsChairAuthUploaded || (isEn ? 'Uploaded.' : 'Nahráno.'), 'success');
+    },
+    onError: (e: any) => showToast(e?.message || (isEn ? 'Error' : 'Chyba'), 'error'),
+  });
+
+  const decisionMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedId) throw new Error('Missing id');
+      if (!chairAuthFileId) throw new Error(dict?.admin?.appsChairAuthMissing || (isEn ? 'Missing chair auth.' : 'Chybí podpis/razítko předsedy.'));
+
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
+
+      const res = await fetch(`/api/admin/membership-applications/${selectedId}/decision`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          id,
-          status,
-          chairwoman_signature: signature,
-          rejection_reason: reason,
-          decision_membership_type: decisionType,
-          decided_at: new Date().toISOString(),
-          decided_by_email: decidedByEmail,
+          decision: {
+            status: decisionStatus,
+            membershipType: decisionMembershipType,
+            reason: decisionStatus === 'rejected' ? (decisionReason || null) : null,
+            chairAuthKind,
+            chairAuthFileId,
+          },
         }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error || 'Chyba');
-
-      if (status === 'approved') {
-        const prev = applications.find((a: any) => a.id === id);
-        const wasApproved = prev?.status === 'approved';
-        if (!wasApproved) {
-          if (!token) throw new Error('Unauthorized');
-          const res = await fetch('/api/admin/applications/approve', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ applicationId: id, lang: isEn ? 'en' : 'cs' }),
-          });
-          const json = await res.json().catch(() => ({}));
-          if (!res.ok) throw new Error(json?.error || 'Chyba');
-        }
-      }
-
-      try {
-        const prev = applications.find((a: any) => a.id === id);
-        const prevStatus = String(prev?.status || '');
-        if (token && prevStatus !== String(status)) {
-          await fetch('/api/admin/applications/status-email', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ applicationId: id, lang: isEn ? 'en' : 'cs' }),
-          });
-        }
-      } catch {}
+      if (!res.ok) throw new Error(json?.error || 'Request failed');
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['applications'] });
-      setSelectedApp(null);
-      setChairSignature('');
-      setRejectionReason('');
-      showToast(dict.admin.alertStatusUpdated || 'Status aktualizován', 'success');
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['membership_applications_v2'] }),
+        qc.invalidateQueries({ queryKey: ['membership_application_v2_detail', selectedId] }),
+      ]);
+      showToast(dict?.admin?.alertStatusUpdated || (isEn ? 'Updated.' : 'Hotovo.'), 'success');
     },
-    onError: (err: any) => showToast(err.message, 'error')
+    onError: (e: any) => showToast(e?.message || (isEn ? 'Error' : 'Chyba'), 'error'),
   });
 
-  const excludeMutation = useMutation({
-    mutationFn: async ({ id, exclude, reason }: any) => {
-      const { data } = await supabase.auth.getSession();
-      const byEmail = data.session?.user?.email || null;
-      if (!byEmail) throw new Error('Unauthorized');
-      const token = data.session?.access_token || null;
-      if (!token) throw new Error('Unauthorized');
-      const payload = exclude
-        ? { excluded_at: new Date().toISOString(), excluded_by_email: byEmail, excluded_reason: String(reason || '').trim() || null }
-        : { excluded_at: null, excluded_by_email: null, excluded_reason: null };
-      const res = await fetch('/api/admin/applications', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ id, ...payload }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error || 'Chyba');
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['applications'] });
-      setSelectedIds({});
-      showToast(isEn ? 'Updated.' : 'Hotovo.', 'success');
-    },
-    onError: (err: any) => showToast(err.message, 'error')
+  const submitEdit = handleSubmit((values) => {
+    if (!isEditable) return;
+    updateMutation.mutate(values);
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: async ({ id }: { id: string }) => {
-      const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token || null;
-      if (!token) throw new Error('Unauthorized');
-      const res = await fetch('/api/admin/applications', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ id }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error || 'Chyba');
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['applications'] });
-      setSelectedApp(null);
-      showToast(isEn ? 'Deleted.' : 'Smazáno.', 'success');
-    },
-    onError: (err: any) => showToast(err.message, 'error'),
-  });
-
-  if (isLoading) return <SkeletonTabContent />;
-
-  const bulkApprove = async () => {
-    try {
-      if (!storedSignature) {
-        showToast(isEn ? 'Missing stored signature.' : 'Chybí uložený podpis.', 'error');
-        return;
-      }
-      for (const id of selectedPendingIds) {
-        const app = applications.find((a: any) => String(a.id) === String(id));
-        const decisionType = app?.membership_type === 'external' ? 'external' : 'regular';
-        await updateStatusMutation.mutateAsync({ id, status: 'approved', signature: storedSignature, decisionType });
-      }
-      setSelectedIds({});
-    } catch (e: any) {
-      showToast(e?.message || 'Chyba', 'error');
-    }
-  };
-
-  const bulkReject = async () => {
-    if (!confirm('Opravdu odmítnout vybrané přihlášky?')) return;
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token || null;
-      if (!token) throw new Error('Unauthorized');
-      const res = await fetch('/api/admin/applications/bulk-reject', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ ids: selectedPendingIds })
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error || 'Chyba');
-      queryClient.invalidateQueries({ queryKey: ['applications'] });
-      setSelectedIds({});
-      showToast(`Odmítnuto ${Number(json?.count || 0)} přihlášek`, 'success');
-    } catch (e: any) {
-      showToast(e.message, 'error');
-    }
-  };
-
-  const openManualScan = async (app: any) => {
-    try {
-      const bucket = String(app?.__scan?.bucket || '');
-      const path = String(app?.__scan?.path || '');
-      if (!bucket || !path) throw new Error(isEn ? 'Missing scan file.' : 'Chybí sken.');
-      const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token || null;
-      if (!token) throw new Error('Unauthorized');
-      const res = await fetch('/api/admin/storage/signed-url', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ bucket, path, expiresIn: 300 }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error || 'Chyba');
-      const url = String(json?.signedUrl || '');
-      if (!url) throw new Error(isEn ? 'Missing URL.' : 'Chybí URL.');
-      window.open(url, '_blank', 'noopener,noreferrer');
-    } catch (e: any) {
-      showToast(e?.message || 'Chyba', 'error');
-    }
-  };
-
-  const openApplicationPdf = async (applicationId: string) => {
-    try {
-      const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token || null;
-      if (!token) throw new Error('Unauthorized');
-      const res = await fetch(`/api/admin/applications/export-pdf?id=${encodeURIComponent(applicationId)}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        throw new Error(j?.error || 'Chyba');
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank', 'noopener,noreferrer');
-      setTimeout(() => URL.revokeObjectURL(url), 10_000);
-    } catch (e: any) {
-      showToast(e?.message || 'Chyba', 'error');
-    }
-  };
+  const rows = listQuery.data?.rows || [];
+  const count = listQuery.data?.count;
+  const canPrev = page > 0;
+  const canNext = typeof count === 'number' ? (page + 1) * PAGE_SIZE < count : rows.length === PAGE_SIZE;
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <AdminModuleHeader
-        title={dict.admin.tabApplications}
-        description="Správa a schvalování členských přihlášek"
-        actions={
-          <div className="flex items-center gap-2">
-            {selectedPendingIds.length ? (
-              <>
-                <button
-                  type="button"
-                  onClick={bulkReject}
-                  className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-red-100 text-red-600 hover:bg-red-200 transition"
-                >
-                  {isEn ? 'Bulk reject' : 'Hromadně zamítnout'} ({selectedPendingIds.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={bulkApprove}
-                  disabled={updateStatusMutation.isPending}
-                  className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-green-600 text-white hover:bg-green-700 transition disabled:opacity-50"
-                >
-                  {isEn ? 'Bulk approve' : 'Hromadně schválit'} ({selectedPendingIds.length})
-                </button>
-              </>
-            ) : null}
-            <button
-              type="button"
-              onClick={() => setShowExcluded((v) => !v)}
-              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition ${
-                showExcluded ? 'bg-stone-900 text-white border-stone-900' : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-50'
-              }`}
+        title={dict?.admin?.tabApplications || (isEn ? 'Applications' : 'Přihlášky')}
+        description={dict?.admin?.appsSubtitle || (isEn ? 'Membership applications review' : 'Správa a schvalování členských přihlášek (v2)')}
+      />
+
+      <div className="bg-white p-8 rounded-[2.5rem] border shadow-sm space-y-5">
+        <div className="grid lg:grid-cols-12 gap-4 items-end">
+          <div className="lg:col-span-7 relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-300" size={18} />
+            <input
+              value={q}
+              onChange={(e) => {
+                setQ(e.target.value);
+                setPage(0);
+              }}
+              placeholder={dict?.admin?.appsSearchPlaceholder || (isEn ? 'Search name / email / phone…' : 'Hledat jméno / e‑mail / telefon…')}
+              className="w-full bg-stone-50 border-none rounded-2xl pl-12 pr-4 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none"
+            />
+          </div>
+
+          <div className="lg:col-span-3">
+            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict?.admin?.common?.status || (isEn ? 'Status' : 'Stav')}</div>
+            <select
+              value={status}
+              onChange={(e) => {
+                setStatus(e.target.value as any);
+                setPage(0);
+              }}
+              className="w-full bg-stone-50 border border-stone-200 rounded-2xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition"
             >
-              {isEn ? (showExcluded ? 'Hide excluded' : 'Show excluded') : (showExcluded ? 'Skrýt vyloučené' : 'Zobrazit vyloučené')}
-            </button>
-            <div className="flex items-center gap-2 px-4 py-2 bg-stone-50 rounded-xl border border-stone-100">
+              <option value="pending">{dict?.admin?.appsStatusPending || (isEn ? 'Pending' : 'Čeká')}</option>
+              <option value="approved">{dict?.admin?.appsStatusApproved || (isEn ? 'Approved' : 'Schváleno')}</option>
+              <option value="rejected">{dict?.admin?.appsStatusRejected || (isEn ? 'Rejected' : 'Zamítnuto')}</option>
+              <option value="all">{dict?.admin?.appsStatusAll || (isEn ? 'All' : 'Vše')}</option>
+            </select>
+          </div>
+
+          <div className="lg:col-span-2 flex items-center justify-end gap-3">
+            <div className="flex items-center gap-2 px-4 py-3 bg-stone-50 rounded-2xl border border-stone-100">
               <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
               <span className="text-[10px] font-black uppercase tracking-widest text-stone-500">
-                {visibleApplications.filter((a: any) => a?.__source !== 'manual_scan' && !a?.excluded_at && a.status === 'pending').length} k vyřízení
+                {typeof count === 'number' ? count : rows.length}
               </span>
             </div>
           </div>
-        }
-      />
+        </div>
+      </div>
 
-      {visibleApplications.length === 0 ? (
+      {listQuery.isLoading ? (
+        <SkeletonTabContent />
+      ) : listQuery.error ? (
+        <div className="py-16 text-center text-stone-400 font-bold uppercase tracking-widest text-xs">{dict?.admin?.appsLoadFailed || (isEn ? 'Failed to load.' : 'Nelze načíst přihlášky.')}</div>
+      ) : rows.length === 0 ? (
         <AdminEmptyState
           icon={FileText}
-          title={dict.admin.emptyApplications || 'Žádné přihlášky'}
-          description="Až někdo odešle přihlášku do členství, zobrazí se tady."
+          title={dict?.admin?.emptyApplications || (isEn ? 'No applications' : 'Žádné přihlášky')}
+          description={dict?.admin?.appsEmptyDesc || (isEn ? 'New applications will appear here.' : 'Až někdo odešle přihlášku, zobrazí se tady.')}
         />
       ) : (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {visibleApplications.map((app: any) => (
-          <div 
-            key={app.id} 
-            onClick={() => setSelectedApp(app)}
-            className={`group bg-white p-6 rounded-[2.5rem] border transition-all cursor-pointer hover:shadow-xl hover:-translate-y-1 ${
-              selectedApp?.id === app.id 
-                ? 'border-green-500 ring-4 ring-green-50' 
-                : 'border-stone-100 shadow-sm'
-            }`}
-          >
-            <div className="flex justify-between items-start mb-6">
-              <div className="w-14 h-14 bg-stone-50 rounded-2xl flex items-center justify-center text-stone-400 font-black text-xl border border-stone-100 group-hover:bg-white group-hover:scale-110 transition-all">
-                {String(app.full_name || app.name || '').split(' ').filter(Boolean).map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() || '—'}
-              </div>
-              <div className="flex items-center gap-2">
-                {app.__source !== 'manual_scan' && !app.excluded_at && app.status === 'pending' ? (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleSelected(String(app.id));
-                    }}
-                    className="w-7 h-7 rounded-xl border border-stone-200 bg-white flex items-center justify-center"
-                  >
-                    <div className={`w-4 h-4 rounded-md ${selectedIds[String(app.id)] ? 'bg-green-600' : 'bg-stone-100'}`} />
-                  </button>
-                ) : null}
-                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm ${
-                  app.excluded_at ? 'bg-stone-200 text-stone-700' :
-                  app.status === 'approved' ? 'bg-green-100 text-green-700' : 
-                  app.status === 'rejected' ? 'bg-red-100 text-red-700' : 
-                  app.status === 'manual' ? 'bg-stone-100 text-stone-700' :
-                  'bg-amber-100 text-amber-700'
-                }`}>
-                  {app.excluded_at
-                    ? (isEn ? 'Excluded' : 'Vyloučeno')
-                    : app.status === 'approved'
-                      ? 'Schváleno'
-                      : app.status === 'rejected'
-                        ? 'Odmítnuto'
-                        : app.status === 'manual'
-                          ? (isEn ? 'Manual' : 'Ruční')
-                          : 'Čeká'}
-                </span>
-              </div>
-            </div>
-            <h3 className="font-black text-stone-900 text-lg mb-1 group-hover:text-green-600 transition-colors">{app.full_name || app.name}</h3>
-            <div className="flex items-center gap-3 mb-6">
-              <p className="text-[10px] text-stone-400 font-black uppercase tracking-widest flex items-center gap-1"><Clock size={12} /> {new Date(app.created_at).toLocaleDateString()}</p>
-              <span className="w-1 h-1 bg-stone-200 rounded-full"></span>
-              <p className="text-[10px] text-stone-400 font-black uppercase tracking-widest truncate max-w-[100px]">{String(app.email || '').split('@')[0] || '—'}</p>
-            </div>
-            {(app.membership_type || app.university_email || app.field_of_study || app.study_year) ? (
-              <div className="bg-stone-50/50 p-4 rounded-2xl border border-stone-50 group-hover:bg-white transition-all">
-                <p className="text-stone-500 text-xs font-medium line-clamp-2 leading-relaxed">
-                  {(app.membership_type === 'external' ? 'Externí' : 'Řádné')}{app.field_of_study ? ` • ${app.field_of_study}` : ''}{app.study_year ? ` • ${app.study_year}` : ''}
-                </p>
-              </div>
-            ) : app.motivation ? (
-              <div className="bg-stone-50/50 p-4 rounded-2xl border border-stone-50 group-hover:bg-white transition-all">
-                <p className="text-stone-500 text-xs font-medium line-clamp-2 italic leading-relaxed">"{app.motivation}"</p>
-              </div>
-            ) : null}
+        <div className="bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="text-[10px] font-black uppercase tracking-widest text-stone-400">
+                  <th className="py-4 px-4">{dict?.admin?.appsColApplicant || (isEn ? 'Applicant' : 'Žadatel')}</th>
+                  <th className="py-4 px-4">{dict?.admin?.appsColStatus || (isEn ? 'Status' : 'Stav')}</th>
+                  <th className="py-4 px-4">{dict?.admin?.appsColSubmitted || (isEn ? 'Submitted' : 'Podáno')}</th>
+                  <th className="py-4 px-4 text-right"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => {
+                  const active = selectedId === r.id;
+                  return (
+                    <tr
+                      key={r.id}
+                      className={`border-t border-stone-100 transition cursor-pointer ${active ? 'bg-green-50/30' : 'hover:bg-stone-50'}`}
+                      onClick={() => setSelectedId(r.id)}
+                    >
+                      <td className="py-4 px-4">
+                        <div className="font-black tracking-tight text-stone-900">{r?.meta?.first_name || r?.name || '—'} {r?.meta?.last_name || ''}</div>
+                        <div className="text-xs text-stone-500 font-medium truncate max-w-[520px]">{r.email || ''}</div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${statusBadge(String(r.status || ''))}`}>
+                          {String(r.status || '')}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-300 flex items-center gap-2">
+                          <Clock size={14} />
+                          {r.createdAt ? formatDatePrague(r.createdAt, isEn ? 'en' : 'cs') : '—'}
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 text-right">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedId(r.id);
+                          }}
+                          className="inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
+                        >
+                          <Pencil size={16} />
+                          {dict?.admin?.appsOpenDetail || (isEn ? 'Detail' : 'Detail')}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-          ))}
+
+          <div className="pt-6 flex items-center justify-between gap-3">
+            <div className="text-xs text-stone-500 font-bold">
+              {typeof count === 'number' ? (
+                <>
+                  {dict?.admin?.appsShowing || (isEn ? 'Showing' : 'Zobrazeno')} {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, count)} {dict?.admin?.appsOf || (isEn ? 'of' : 'z')} {count}
+                </>
+              ) : (
+                <>
+                  {dict?.admin?.appsShowing || (isEn ? 'Showing' : 'Zobrazeno')} {rows.length}
+                </>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={!canPrev}
+                onClick={() => setPage((p) => Math.max(p - 1, 0))}
+                className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
+              >
+                {dict?.admin?.pagination?.previous || (isEn ? 'Previous' : 'Předchozí')}
+              </button>
+              <button
+                type="button"
+                disabled={!canNext}
+                onClick={() => setPage((p) => p + 1)}
+                className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
+              >
+                {dict?.admin?.pagination?.next || (isEn ? 'Next' : 'Další')}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
-      {selectedApp && (
-        <Dialog
-          open={!!selectedApp}
-          onClose={() => setSelectedApp(null)}
-          overlayClassName="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[30000] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-300"
-          panelClassName="bg-white w-full max-w-5xl max-h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-500"
-        >
-          <div className="p-8 border-b border-stone-100 flex justify-between items-center bg-stone-50/30">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-green-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-green-600/20">
-                  <FileText size={24} />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-black text-stone-900 tracking-tight">{dict.admin.appDetail || 'Detail přihlášky'}</h2>
-                  <p className="text-stone-400 text-[10px] font-black uppercase tracking-widest mt-0.5">ID: {String(selectedApp.id || '').slice(0, 8)}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                {selectedApp.__source === 'manual_scan' ? (
-                  <button
-                    type="button"
-                    onClick={() => openManualScan(selectedApp)}
-                    className="flex items-center gap-2 px-4 py-3 bg-white border border-stone-200 text-stone-700 rounded-xl hover:bg-stone-50 transition text-[10px] font-black uppercase tracking-widest shadow-sm"
-                  >
-                    <Download size={14} /> {isEn ? 'Open scan' : 'Otevřít sken'}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => openApplicationPdf(String(selectedApp.id || ''))}
-                    className="flex items-center gap-2 px-4 py-3 bg-white border border-stone-200 text-stone-700 rounded-xl hover:bg-stone-50 transition text-[10px] font-black uppercase tracking-widest shadow-sm"
-                  >
-                    <Download size={14} /> Export PDF
-                  </button>
-                )}
-                {selectedApp.__source !== 'manual_scan' && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!confirm(isEn ? 'Really delete this application?' : 'Opravdu smazat tuto přihlášku?')) return;
-                      deleteMutation.mutate({ id: String(selectedApp.id) });
-                    }}
-                    disabled={deleteMutation.isPending}
-                    className="flex items-center gap-2 px-4 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition text-[10px] font-black uppercase tracking-widest shadow-sm disabled:opacity-50"
-                  >
-                    {isEn ? 'Delete' : 'Smazat'}
-                  </button>
-                )}
-                <button onClick={() => setSelectedApp(null)} className="p-3 hover:bg-stone-100 rounded-2xl transition text-stone-400 hover:text-stone-900">
-                  <XCircle size={28} />
-                </button>
-              </div>
+      <Drawer
+        open={!!selectedId}
+        onClose={() => setSelectedId(null)}
+        side="right"
+        overlayClassName="fixed inset-0 z-[25000] flex"
+        panelClassName="relative h-full w-[980px] max-w-[95vw] bg-white border-l border-stone-100 overflow-y-auto"
+      >
+        <div className="p-8 border-b border-stone-100 flex items-start justify-between gap-6 sticky top-0 bg-white z-10">
+          <div className="min-w-0">
+            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{dict?.admin?.appDetail || (isEn ? 'Application detail' : 'Detail přihlášky')}</div>
+            <div className="text-2xl font-black text-stone-900 truncate">
+              {selectedMeta?.first_name || ''} {selectedMeta?.last_name || ''}{!selectedMeta?.first_name && !selectedMeta?.last_name ? (selectedApplication?.name || '—') : ''}
             </div>
-            
-            <div className="flex-grow min-h-0 overflow-y-auto p-8 lg:p-12 custom-scrollbar">
-              <div className="grid lg:grid-cols-12 gap-12">
-                <div className="lg:col-span-7 space-y-10">
-                  <section className="rounded-[2.5rem] border border-stone-100 bg-white shadow-sm p-8">
-                    <div className="flex items-center gap-3 text-stone-900 mb-6">
-                      <User size={20} className="text-green-600" />
-                      <h3 className="text-sm font-black uppercase tracking-widest">{dict.admin.personalData || 'Osobní údaje'}</h3>
-                    </div>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${statusBadge(String(selectedApplication?.status || 'pending'))}`}>
+                {String(selectedApplication?.status || 'pending')}
+              </span>
+              <span className="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-stone-100 text-stone-700">
+                ID: {String(selectedId || '').slice(0, 8)}
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSelectedId(null)}
+            className="p-2 hover:bg-stone-50 rounded-full transition text-stone-400"
+            title={dict?.common?.close || (isEn ? 'Close' : 'Zavřít')}
+          >
+            <XCircle size={22} />
+          </button>
+        </div>
 
-                    <div className="grid sm:grid-cols-2 gap-8">
-                      <div className="space-y-1">
-                        <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest">{dict.admin.labelFirstName || 'Jméno'}</p>
-                        <p className="text-xl font-black text-stone-900">{selectedApp.first_name || String(selectedApp.full_name || selectedApp.name || '').split(' ')[0] || '—'}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest">{dict.admin.labelLastName || 'Příjmení'}</p>
-                        <p className="text-xl font-black text-stone-900">{selectedApp.last_name || String(selectedApp.full_name || selectedApp.name || '').split(' ').slice(1).join(' ') || '—'}</p>
-                      </div>
-
-                      <div className="space-y-1">
-                        <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest">Email</p>
-                        <p className="text-sm font-bold text-stone-700 flex items-center gap-2 break-all">
-                          <Mail size={14} className="text-stone-400" /> {selectedApp.email}
-                        </p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest">Telefon</p>
-                        <p className="text-sm font-bold text-stone-700 flex items-center gap-2">
-                          <Phone size={14} className="text-stone-400" /> {selectedApp.phone || '-'}
-                        </p>
-                      </div>
-
-                      <div className="space-y-1 sm:col-span-2">
-                        <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest">{isEn ? 'Address' : 'Adresa'}</p>
-                        <p className="text-sm font-bold text-stone-700">{selectedApp.address || '-'}</p>
-                      </div>
-
-                      <div className="space-y-1">
-                        <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest">{isEn ? 'GDPR consent' : 'GDPR souhlas'}</p>
-                        <p className={`text-sm font-black ${selectedApp.gdpr_consent ? 'text-green-700' : 'text-red-700'}`}>
-                          {selectedApp.gdpr_consent ? (isEn ? 'Yes' : 'Ano') : (isEn ? 'No' : 'Ne')}
-                        </p>
-                      </div>
-
-                      <div className="space-y-1">
-                        <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest">{dict.recruitment?.membershipTypeLabel || 'Typ členství'}</p>
-                        <p className="text-sm font-bold text-stone-700">{selectedApp.membership_type === 'external' ? 'Externí' : 'Řádné'}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest">{dict.recruitment?.labelSubmittedAt || 'Datum podání'}</p>
-                        <p className="text-sm font-bold text-stone-700">{selectedApp.created_at ? formatDatePrague(selectedApp.created_at, isEn ? 'en' : 'cs') : '-'}</p>
-                      </div>
-                    </div>
-
-                    <div className="mt-10 border-t border-stone-100 pt-8">
-                      <div className="flex items-center gap-3 text-stone-900 mb-6">
-                        <GraduationCap size={20} className="text-blue-600" />
-                        <h3 className="text-sm font-black uppercase tracking-widest">{dict.recruitment?.labelFieldOfStudy || 'Studium'}</h3>
-                      </div>
-                      {selectedApp.membership_type !== 'external' ? (
-                        <div className="grid sm:grid-cols-2 gap-8">
-                          <div className="space-y-1">
-                            <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest">
-                              {dict.recruitment?.labelUniversityEmail || 'Univerzitní email (v případě žádného členství)'}
-                            </p>
-                            <p className="font-black text-blue-700 text-sm break-all">{selectedApp.university_email || '—'}</p>
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest">{dict.recruitment?.labelStudyYear || 'Ročník'}</p>
-                            <p className="font-black text-stone-900 text-sm">{selectedApp.study_year || '—'}</p>
-                          </div>
-                          <div className="sm:col-span-2 space-y-1">
-                            <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest">{dict.recruitment?.labelFieldOfStudy || 'Obor'}</p>
-                            <p className="font-black text-blue-700 text-sm">{selectedApp.field_of_study || selectedApp.faculty || '—'}</p>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="bg-blue-50/40 rounded-[1.75rem] border border-blue-100 p-6">
-                          <p className="font-black text-blue-900 text-sm">{dict.recruitment?.membershipExternalDesc || 'Externí členství'}</p>
-                        </div>
-                      )}
-                    </div>
-                  </section>
-
-                  {selectedApp.motivation && (
-                    <section className="rounded-[2.5rem] border border-stone-100 bg-white shadow-sm p-8 space-y-6">
-                      <div className="flex items-center gap-3 text-stone-900">
-                        <Quote size={20} className="text-amber-600" />
-                        <h3 className="text-sm font-black uppercase tracking-widest">{dict.admin.motivation || (isEn ? 'Note' : 'Poznámka')}</h3>
-                      </div>
-                      <div className="bg-amber-50/30 p-8 rounded-[2rem] border border-amber-100 relative">
-                        <Quote className="absolute top-4 left-4 text-amber-200" size={32} />
-                        <p className="text-stone-700 leading-relaxed italic font-medium relative z-10 pl-4 text-lg">"{selectedApp.motivation}"</p>
-                      </div>
-                    </section>
-                  )}
-
-                  <section className="space-y-6">
-                    <div className="flex items-center gap-3 text-stone-900">
-                      <FileCheck size={20} className="text-stone-700" />
-                      <h3 className="text-sm font-black uppercase tracking-widest">{dict.admin.applicantSignature || 'Podpis žadatele'}</h3>
-                    </div>
-                    <div className="rounded-[2.5rem] border border-stone-100 bg-white shadow-sm p-8 flex items-center justify-center">
-                      {(() => {
-                        const src = selectedApp.applicant_signature || selectedApp.signature_data_url;
-                        return typeof src === 'string' && src ? (
-                          <Image
-                            src={src}
-                            alt="Podpis"
-                            width={640}
-                            height={220}
-                            className="max-w-full h-auto mix-blend-multiply"
-                            unoptimized
-                          />
-                        ) : (
-                          <div className="text-stone-400 font-bold text-sm">{dict.admin.missingSignature || (isEn ? 'Missing signature' : 'Chybí podpis')}</div>
-                        );
-                      })()}
-                    </div>
-                  </section>
+        {detailQuery.isLoading ? (
+          <div className="py-16 flex items-center justify-center">
+            <InlinePulse className="bg-stone-200" size={18} />
+          </div>
+        ) : detailQuery.error ? (
+          <div className="py-16 text-center text-stone-400 font-bold uppercase tracking-widest text-xs">{dict?.admin?.appsDetailLoadFailed || (isEn ? 'Failed to load detail.' : 'Nelze načíst detail.')}</div>
+        ) : selectedApplication ? (
+          <div className="p-8 space-y-10">
+            <div className="grid lg:grid-cols-12 gap-8 items-start">
+              <div className="lg:col-span-7 space-y-8">
+                <div className="rounded-[2.5rem] border border-stone-100 bg-white shadow-sm p-8 space-y-6">
+                  <div className="flex items-center gap-3 text-stone-900">
+                    <FileCheck size={20} className="text-stone-700" />
+                    <h3 className="text-sm font-black uppercase tracking-widest">{dict?.admin?.applicantSignature || (isEn ? 'Applicant signature' : 'Podpis žadatele')}</h3>
+                  </div>
+                  <div className="rounded-[2rem] border border-stone-100 bg-stone-50 p-6 flex items-center justify-center min-h-[140px]">
+                    {applicantSignatureQuery.isLoading ? (
+                      <InlinePulse className="bg-stone-200" size={16} />
+                    ) : applicantSignatureQuery.data ? (
+                      <Image
+                        src={applicantSignatureQuery.data}
+                        alt={dict?.admin?.applicantSignature || 'Signature'}
+                        width={640}
+                        height={220}
+                        className="max-w-full h-auto mix-blend-multiply"
+                        unoptimized
+                      />
+                    ) : (
+                      <div className="text-stone-400 font-bold text-sm">{dict?.admin?.missingSignature || (isEn ? 'Missing signature' : 'Chybí podpis')}</div>
+                    )}
+                  </div>
                 </div>
 
-                <div className="lg:col-span-5 space-y-8">
-                  <div className="relative bg-stone-900 text-white p-10 rounded-[3rem] shadow-xl sticky top-0 overflow-hidden">
-                    <div className="absolute right-0 top-0 h-full w-2 bg-green-600/90" />
-                    {selectedApp.__source === 'manual_scan' ? (
-                      <div className="text-center py-6 space-y-6">
-                        <div>
-                          <h3 className="text-2xl font-black mb-1">{isEn ? 'Manual application' : 'Ruční přihláška'}</h3>
-                          <p className="text-stone-400 text-xs font-medium">{isEn ? 'This record comes from a manually uploaded scan.' : 'Tento záznam pochází z ručně nahraného skenu.'}</p>
-                        </div>
+                <form onSubmit={submitEdit} className="rounded-[2.5rem] border border-stone-100 bg-white shadow-sm p-8 space-y-6">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 text-stone-900">
+                      <Pencil size={20} className="text-green-600" />
+                      <h3 className="text-sm font-black uppercase tracking-widest">{dict?.admin?.appsEditTitle || (isEn ? 'Edit (before decision)' : 'Editace (před rozhodnutím)')}</h3>
+                    </div>
+                    {!isPending ? (
+                      <span className="px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-stone-100 text-stone-700">
+                        {dict?.admin?.appsReadOnlyAfterDecision || (isEn ? 'Read-only after decision' : 'Po rozhodnutí jen pro čtení')}
+                      </span>
+                    ) : readOnly ? (
+                      <span className="px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-stone-100 text-stone-700">
+                        {dict?.admin?.readOnly || (isEn ? 'Read-only' : 'Pouze pro čtení')}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict?.admin?.appsLang || (isEn ? 'Language' : 'Jazyk')}</label>
+                      <select
+                        {...register('application.meta.lang')}
+                        disabled={!isEditable}
+                        className="w-full bg-stone-50 border border-stone-200 rounded-2xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition disabled:opacity-60"
+                      >
+                        <option value="cs">cs</option>
+                        <option value="en">en</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict?.admin?.appsMembershipType || (isEn ? 'Membership type' : 'Typ členství')}</label>
+                      <select
+                        {...register('application.meta.membership_type')}
+                        disabled={!isEditable}
+                        className="w-full bg-stone-50 border border-stone-200 rounded-2xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition disabled:opacity-60"
+                      >
+                        <option value="regular">{dict?.admin?.decisionTypeRegular || (isEn ? 'Regular' : 'Řádné')}</option>
+                        <option value="external">{dict?.admin?.decisionTypeExternal || (isEn ? 'External' : 'Externí')}</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict?.admin?.labelFirstName || (isEn ? 'First name' : 'Jméno')}</label>
+                      <input
+                        {...register('application.meta.first_name')}
+                        disabled={!isEditable}
+                        className="w-full bg-stone-50 border border-stone-200 rounded-2xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition disabled:opacity-60"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict?.admin?.labelLastName || (isEn ? 'Last name' : 'Příjmení')}</label>
+                      <input
+                        {...register('application.meta.last_name')}
+                        disabled={!isEditable}
+                        className="w-full bg-stone-50 border border-stone-200 rounded-2xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition disabled:opacity-60"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Email</label>
+                      <input
+                        {...register('application.email')}
+                        disabled={!isEditable}
+                        className="w-full bg-stone-50 border border-stone-200 rounded-2xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition disabled:opacity-60"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict?.recruitment?.labelPhone || (isEn ? 'Phone' : 'Telefon')}</label>
+                      <input
+                        {...register('application.phone')}
+                        disabled={!isEditable}
+                        className="w-full bg-stone-50 border border-stone-200 rounded-2xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition disabled:opacity-60"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict?.recruitment?.labelAddress || (isEn ? 'Address' : 'Adresa')}</label>
+                    <textarea
+                      {...register('application.address')}
+                      disabled={!isEditable}
+                      className="w-full min-h-[90px] bg-stone-50 border border-stone-200 rounded-2xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition disabled:opacity-60"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict?.admin?.motivation || (isEn ? 'Motivation' : 'Motivace')}</label>
+                    <textarea
+                      {...register('application.motivation')}
+                      disabled={!isEditable}
+                      className="w-full min-h-[90px] bg-stone-50 border border-stone-200 rounded-2xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition disabled:opacity-60"
+                    />
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict?.recruitment?.labelUniversityEmail || (isEn ? 'University email' : 'Univerzitní e‑mail')}</label>
+                      <input
+                        {...register('application.meta.university_email')}
+                        disabled={!isEditable || watch('application.meta.membership_type') !== 'regular'}
+                        className="w-full bg-stone-50 border border-stone-200 rounded-2xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition disabled:opacity-60"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict?.recruitment?.labelStudyYear || (isEn ? 'Study year' : 'Ročník')}</label>
+                      <input
+                        {...register('application.meta.study_year')}
+                        disabled={!isEditable || watch('application.meta.membership_type') !== 'regular'}
+                        className="w-full bg-stone-50 border border-stone-200 rounded-2xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition disabled:opacity-60"
+                      />
+                    </div>
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict?.recruitment?.labelFieldOfStudy || (isEn ? 'Field of study' : 'Obor')}</label>
+                      <input
+                        {...register('application.meta.field_of_study')}
+                        disabled={!isEditable || watch('application.meta.membership_type') !== 'regular'}
+                        className="w-full bg-stone-50 border border-stone-200 rounded-2xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition disabled:opacity-60"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict?.recruitment?.labelSignedOn || (isEn ? 'Signed on' : 'Podepsáno dne')}</label>
+                      <input
+                        {...register('application.meta.signed_on')}
+                        disabled={!isEditable}
+                        className="w-full bg-stone-50 border border-stone-200 rounded-2xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition disabled:opacity-60"
+                      />
+                    </div>
+                    <div className="flex items-end">
+                      <label className="flex items-center gap-3 cursor-pointer select-none">
+                        <input type="checkbox" {...register('application.meta.gdpr_consent')} disabled={!isEditable} className="w-4 h-4 accent-green-600" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-stone-500">{dict?.recruitment?.labelGdprConsent || (isEn ? 'GDPR consent' : 'GDPR souhlas')}</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict?.admin?.appsAddressMeta || (isEn ? 'Address meta (JSON)' : 'Adresa meta (JSON)')}</label>
+                    <textarea
+                      {...register('application.meta.address_meta_json')}
+                      disabled={!isEditable}
+                      className="w-full min-h-[120px] bg-stone-50 border border-stone-200 rounded-2xl px-4 py-3 font-mono text-xs text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition disabled:opacity-60"
+                    />
+                  </div>
+
+                  <div className="grid lg:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict?.admin?.appsPdfSnapshotCs || (isEn ? 'PDF snapshot (CS) JSON' : 'PDF snapshot (CS) JSON')}</label>
+                      <textarea
+                        {...register('application.meta.pdf_snapshot_cs_json')}
+                        disabled={!isEditable}
+                        className="w-full min-h-[140px] bg-stone-50 border border-stone-200 rounded-2xl px-4 py-3 font-mono text-xs text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition disabled:opacity-60"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict?.admin?.appsPdfSnapshotEn || (isEn ? 'PDF snapshot (EN) JSON' : 'PDF snapshot (EN) JSON')}</label>
+                      <textarea
+                        {...register('application.meta.pdf_snapshot_en_json')}
+                        disabled={!isEditable}
+                        className="w-full min-h-[140px] bg-stone-50 border border-stone-200 rounded-2xl px-4 py-3 font-mono text-xs text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition disabled:opacity-60"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-stone-100">
+                    <button
+                      type="submit"
+                      disabled={!isEditable || updateMutation.isPending}
+                      className="w-full bg-green-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {updateMutation.isPending ? <InlinePulse className="bg-white/80" size={14} /> : <Save size={16} />}
+                      {dict?.common?.saveChanges || (isEn ? 'Save' : 'Uložit')}
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <div className="lg:col-span-5 space-y-8">
+                <div className="rounded-[2.5rem] border border-stone-100 bg-white shadow-sm p-8 space-y-6">
+                  <div className="flex items-center gap-3 text-stone-900">
+                    <FileText size={20} className="text-stone-700" />
+                    <h3 className="text-sm font-black uppercase tracking-widest">{dict?.admin?.appsDecisionTitle || (isEn ? 'Decision' : 'Rozhodnutí')}</h3>
+                  </div>
+
+                  {isPending ? (
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-2 gap-3">
                         <button
                           type="button"
-                          onClick={() => openManualScan(selectedApp)}
-                          className="w-full bg-white text-stone-900 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-stone-100 transition"
+                          disabled={!isEditable}
+                          onClick={() => setDecisionStatus('approved')}
+                          className={`rounded-2xl px-4 py-4 text-[10px] font-black uppercase tracking-widest border transition ${
+                            decisionStatus === 'approved'
+                              ? 'bg-green-600 text-white border-green-600 shadow-lg shadow-green-900/20'
+                              : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-50'
+                          }`}
                         >
-                          {isEn ? 'Open scan' : 'Otevřít sken'}
+                          <CheckCircle className="inline-block mr-2" size={14} />
+                          {dict?.admin?.btnApprove || (isEn ? 'Approve' : 'Schválit')}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!isEditable}
+                          onClick={() => setDecisionStatus('rejected')}
+                          className={`rounded-2xl px-4 py-4 text-[10px] font-black uppercase tracking-widest border transition ${
+                            decisionStatus === 'rejected'
+                              ? 'bg-red-600 text-white border-red-600 shadow-lg shadow-red-900/20'
+                              : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-50'
+                          }`}
+                        >
+                          <XCircle className="inline-block mr-2" size={14} />
+                          {dict?.admin?.btnReject || (isEn ? 'Reject' : 'Odmítnout')}
                         </button>
                       </div>
-                    ) : selectedApp.status === 'pending' ? (
-                      <div className="space-y-8">
-                        <div>
-                          <h3 className="text-2xl font-black mb-1">{dict.admin.decision || 'Rozhodnutí'}</h3>
-                          <p className="text-stone-400 text-xs font-medium">Posouzení přihlášky a aktivace členství</p>
-                        </div>
 
-                        <div className="space-y-3">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-stone-500 px-1">{dict.admin.decisionMembershipType || 'Typ členství (rozhodnutí)'}</label>
-                          <div className="grid grid-cols-2 gap-3">
-                            <button
-                              type="button"
-                              onClick={() => setDecisionMembershipType('regular')}
-                                    className={`rounded-2xl px-4 py-4 text-[10px] font-black uppercase tracking-widest border transition ${
-                                decisionMembershipType === 'regular'
-                                  ? 'bg-green-600 text-white border-green-600 shadow-lg shadow-green-900/40'
-                                        : 'bg-stone-800 text-stone-200 border-stone-700 hover:bg-stone-700'
-                              }`}
-                            >
-                              {dict.admin.decisionTypeRegular || 'Řádné'}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setDecisionMembershipType('external')}
-                                    className={`rounded-2xl px-4 py-4 text-[10px] font-black uppercase tracking-widest border transition ${
-                                decisionMembershipType === 'external'
-                                  ? 'bg-green-600 text-white border-green-600 shadow-lg shadow-green-900/40'
-                                        : 'bg-stone-800 text-stone-200 border-stone-700 hover:bg-stone-700'
-                              }`}
-                            >
-                              {dict.admin.decisionTypeExternal || 'Externí'}
-                            </button>
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-stone-500 px-1">{dict.admin.rejectionReason || 'Důvod odmítnutí (volitelné)'}</label>
-                          <textarea 
-                            value={rejectionReason}
-                            onChange={e => setRejectionReason(e.target.value)}
-                            className="w-full bg-stone-800 border-none rounded-2xl p-5 text-sm font-bold focus:ring-2 focus:ring-red-500 transition placeholder:text-stone-600 text-white"
-                            placeholder={dict.admin.rejectionPlaceholder || 'Proč byla přihláška zamítnuta?'}
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-stone-500 px-1">{isEn ? 'Exclusion (internal)' : 'Vyloučení (interní)'}</label>
-                          <textarea
-                            value={excludedReason}
-                            onChange={(e) => setExcludedReason(e.target.value)}
-                            className="w-full bg-stone-800 border-none rounded-2xl p-5 text-sm font-bold focus:ring-2 focus:ring-stone-400 transition placeholder:text-stone-600 text-white"
-                            placeholder={isEn ? 'Reason (optional)' : 'Důvod (volitelné)'}
-                          />
-                          {selectedApp.excluded_at ? (
-                            <button
-                              type="button"
-                              disabled={excludeMutation.isPending}
-                              onClick={() => excludeMutation.mutate({ id: selectedApp.id, exclude: false })}
-                              className="w-full rounded-2xl px-5 py-4 text-[10px] font-black uppercase tracking-widest border border-stone-700 bg-stone-800 text-stone-200 hover:bg-stone-700 transition disabled:opacity-50"
-                            >
-                              {isEn ? 'Restore' : 'Zrušit vyloučení'}
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              disabled={excludeMutation.isPending}
-                              onClick={() => excludeMutation.mutate({ id: selectedApp.id, exclude: true, reason: excludedReason })}
-                              className="w-full rounded-2xl px-5 py-4 text-[10px] font-black uppercase tracking-widest border border-stone-700 bg-stone-800 text-stone-200 hover:bg-stone-700 transition disabled:opacity-50"
-                            >
-                              {isEn ? 'Exclude' : 'Vyloučit'}
-                            </button>
-                          )}
-                        </div>
-
-                        <div className="space-y-3">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-stone-500 px-1">{dict.admin.chairwomanSignature || 'Podpis předsedy'}</label>
-                          {storedSignature ? (
-                            <div className="space-y-3">
-                              <label className="flex items-center gap-3 cursor-pointer select-none">
-                                <input
-                                  type="checkbox"
-                                  checked={useStoredSignature}
-                                  onChange={(e) => setUseStoredSignature(e.target.checked)}
-                                  className="w-4 h-4 accent-green-600"
-                                />
-                                <span className="text-[10px] font-black uppercase tracking-widest text-stone-400">
-                                  {dict.admin.useStoredSignature || 'Použít uložený podpis'}
-                                </span>
-                              </label>
-                              {useStoredSignature ? (
-                                <div className="bg-white rounded-[2rem] p-6 border-4 border-stone-800 shadow-inner">
-                                  <Image
-                                    src={storedSignature}
-                                    alt="Podpis"
-                                    width={640}
-                                    height={180}
-                                    unoptimized
-                                    className="w-full h-auto max-h-40 object-contain mix-blend-multiply"
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setUseStoredSignature(false);
-                                      setChairSignature('');
-                                    }}
-                                    className="mt-4 w-full rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-700 bg-stone-800 text-stone-200 hover:bg-stone-700 transition"
-                                  >
-                                    {dict.admin.editSignature || 'Změnit podpis'}
-                                  </button>
-                                </div>
-                              ) : (
-                                <div className="space-y-3">
-                                  <div className="bg-white rounded-[2rem] overflow-hidden border-4 border-stone-800">
-                                    <SignaturePad
-                                      onSave={(dataUrl) => setChairSignature(dataUrl)}
-                                      onClear={() => setChairSignature('')}
-                                      clearLabel={dict.recruitment?.btnClear || 'Smazat'}
-                                    />
-                                  </div>
-                                  <label className="flex items-center gap-3 cursor-pointer select-none">
-                                    <input
-                                      type="checkbox"
-                                      checked={saveAsDefaultSignature}
-                                      onChange={(e) => setSaveAsDefaultSignature(e.target.checked)}
-                                      className="w-4 h-4 accent-green-600"
-                                    />
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-stone-400">
-                                      {dict.admin.saveSignatureForLater || 'Uložit podpis pro příště'}
-                                    </span>
-                                  </label>
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <div className="space-y-3">
-                              <div className="bg-white rounded-[2rem] overflow-hidden border-4 border-stone-800">
-                                <SignaturePad
-                                  onSave={(dataUrl) => setChairSignature(dataUrl)}
-                                  onClear={() => setChairSignature('')}
-                                  clearLabel={dict.recruitment?.btnClear || 'Smazat'}
-                                />
-                              </div>
-                              <label className="flex items-center gap-3 cursor-pointer select-none">
-                                <input
-                                  type="checkbox"
-                                  checked={saveAsDefaultSignature}
-                                  onChange={(e) => setSaveAsDefaultSignature(e.target.checked)}
-                                  className="w-4 h-4 accent-green-600"
-                                />
-                                <span className="text-[10px] font-black uppercase tracking-widest text-stone-400">
-                                  {dict.admin.saveSignatureForLater || 'Uložit podpis pro příště'}
-                                </span>
-                              </label>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4 pt-4">
-                          <button 
-                            onClick={() => updateStatusMutation.mutate({ id: selectedApp.id, status: 'approved', signature: effectiveSignature, decisionType: decisionMembershipType })}
-                            disabled={!effectiveSignature || updateStatusMutation.isPending || !!selectedApp.excluded_at}
-                            className="bg-green-600 text-white py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-green-500 disabled:opacity-50 transition-all flex flex-col items-center justify-center gap-2 shadow-lg shadow-green-900/40"
+                      <div className="space-y-2">
+                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict?.admin?.decisionMembershipType || (isEn ? 'Membership (decision)' : 'Typ členství (rozhodnutí)')}</div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <button
+                            type="button"
+                            disabled={!isEditable}
+                            onClick={() => setDecisionMembershipType('regular')}
+                            className={`rounded-2xl px-4 py-4 text-[10px] font-black uppercase tracking-widest border transition ${
+                              decisionMembershipType === 'regular'
+                                ? 'bg-stone-900 text-white border-stone-900'
+                                : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-50'
+                            }`}
                           >
-                            <CheckCircle size={24} />
-                            {dict.admin.btnApprove || 'Schválit'}
+                            {dict?.admin?.decisionTypeRegular || (isEn ? 'Regular' : 'Řádné')}
                           </button>
-                          <button 
-                            onClick={() => updateStatusMutation.mutate({ id: selectedApp.id, status: 'rejected', signature: effectiveSignature, reason: rejectionReason, decisionType: decisionMembershipType })}
-                            disabled={!effectiveSignature || updateStatusMutation.isPending || !!selectedApp.excluded_at}
-                            className="bg-red-600 text-white py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-red-500 disabled:opacity-50 transition-all flex flex-col items-center justify-center gap-2 shadow-lg shadow-red-900/40"
+                          <button
+                            type="button"
+                            disabled={!isEditable}
+                            onClick={() => setDecisionMembershipType('external')}
+                            className={`rounded-2xl px-4 py-4 text-[10px] font-black uppercase tracking-widest border transition ${
+                              decisionMembershipType === 'external'
+                                ? 'bg-stone-900 text-white border-stone-900'
+                                : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-50'
+                            }`}
                           >
-                            <XCircle size={24} />
-                            {dict.admin.btnReject || 'Odmítnout'}
+                            {dict?.admin?.decisionTypeExternal || (isEn ? 'External' : 'Externí')}
                           </button>
                         </div>
                       </div>
-                    ) : (
-                      <div className="text-center py-6 space-y-8">
-                        <div className="relative inline-block">
-                          <div className={`w-24 h-24 mx-auto rounded-3xl flex items-center justify-center shadow-2xl rotate-3 ${
-                            selectedApp.status === 'approved' ? 'bg-green-600' : 'bg-red-600'
-                          }`}>
-                            {selectedApp.status === 'approved' ? <CheckCircle size={48} /> : <XCircle size={48} />}
-                          </div>
-                          <div className="absolute -bottom-2 -right-2 bg-white text-stone-900 rounded-full p-2 shadow-lg">
-                            <FileCheck size={16} />
-                          </div>
-                        </div>
 
-                        <div>
-                          <h3 className="text-3xl font-black uppercase tracking-tighter mb-1">{dict.admin.decided || 'Rozhodnuto'}</h3>
-                          <p className={`font-black uppercase tracking-[0.2em] text-xs ${
-                            selectedApp.status === 'approved' ? 'text-green-500' : 'text-red-500'
-                          }`}>
-                            {selectedApp.status === 'approved' ? (dict.admin.appApproved || 'Přihláška schválena') : (dict.admin.appRejected || 'Přihláška zamítnuta')}
-                          </p>
+                      <div className="space-y-2">
+                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict?.admin?.appsChairAuthTitle || (isEn ? 'Chair authorization' : 'Autorizace předsedy')}</div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <button
+                            type="button"
+                            disabled={!isEditable}
+                            onClick={() => setChairAuthKind('signature')}
+                            className={`rounded-2xl px-4 py-4 text-[10px] font-black uppercase tracking-widest border transition ${
+                              chairAuthKind === 'signature'
+                                ? 'bg-stone-900 text-white border-stone-900'
+                                : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-50'
+                            }`}
+                          >
+                            {dict?.admin?.appsChairAuthSignature || (isEn ? 'Signature' : 'Podpis')}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={!isEditable}
+                            onClick={() => setChairAuthKind('stamp')}
+                            className={`rounded-2xl px-4 py-4 text-[10px] font-black uppercase tracking-widest border transition ${
+                              chairAuthKind === 'stamp'
+                                ? 'bg-stone-900 text-white border-stone-900'
+                                : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-50'
+                            }`}
+                          >
+                            {dict?.admin?.appsChairAuthStamp || (isEn ? 'Stamp' : 'Razítko')}
+                          </button>
                         </div>
+                      </div>
 
-                        <div className="rounded-[2rem] border border-stone-800/70 bg-black/30 px-6 py-5 text-left">
-                          <div className="grid gap-3">
-                            <div className="flex items-center justify-between gap-4">
-                              <span className="text-[10px] font-black uppercase tracking-widest text-stone-500">{isEn ? 'Decided at' : 'Rozhodnuto dne'}</span>
-                              <span className="text-xs font-black text-white/90">
-                                {selectedApp.decided_at ? formatDateTimePrague(selectedApp.decided_at, isEn ? 'en' : 'cs') : '—'}
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between gap-4">
-                              <span className="text-[10px] font-black uppercase tracking-widest text-stone-500">{isEn ? 'Decided by' : 'Rozhodl jménem'}</span>
-                              <span className="text-xs font-black text-white/90 break-all text-right">{selectedApp.decided_by_email || '—'}</span>
-                            </div>
-                            <div className="flex items-center justify-between gap-4">
-                              <span className="text-[10px] font-black uppercase tracking-widest text-stone-500">{isEn ? 'Membership' : 'Typ členství'}</span>
-                              <span className="text-xs font-black text-white/90">
-                                {selectedApp.decision_membership_type
-                                  ? selectedApp.decision_membership_type === 'external'
-                                    ? isEn
-                                      ? 'External'
-                                      : 'Externí'
-                                    : isEn
-                                      ? 'Regular'
-                                      : 'Řádné'
-                                  : '—'}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {selectedApp.rejection_reason && (
-                          <div className="p-6 bg-red-900/30 text-red-200 rounded-[2rem] text-sm italic font-medium border border-red-800/50">
-                            "{selectedApp.rejection_reason}"
-                          </div>
-                        )}
-
-                        <div className="p-6 bg-black/30 rounded-[2rem] border border-stone-800/70">
-                          <div className="text-[10px] font-black uppercase tracking-widest text-stone-500">{isEn ? 'Exclusion (internal)' : 'Vyloučení (interní)'}</div>
-                          {selectedApp.excluded_at ? (
-                            <div className="mt-3 text-xs font-black text-white/90">
-                              {isEn ? 'Excluded' : 'Vyloučeno'} • {new Date(selectedApp.excluded_at).toLocaleString(isEn ? 'en-GB' : 'cs-CZ')}
-                            </div>
-                          ) : (
-                            <div className="mt-3 text-xs font-black text-white/70">{isEn ? 'Not excluded' : 'Nevyloučeno'}</div>
-                          )}
-                          <div className="mt-4 space-y-3">
-                            <textarea
-                              value={excludedReason}
-                              onChange={(e) => setExcludedReason(e.target.value)}
-                              className="w-full bg-stone-800 border-none rounded-2xl p-5 text-sm font-bold focus:ring-2 focus:ring-stone-400 transition placeholder:text-stone-600 text-white"
-                              placeholder={isEn ? 'Reason (optional)' : 'Důvod (volitelné)'}
+                      {chairAuthKind === 'signature' ? (
+                        <div className="space-y-3">
+                          <div className="bg-white rounded-[2rem] overflow-hidden border border-stone-200">
+                            <SignaturePad
+                              onSave={(dataUrl) => setChairSignatureDataUrl(dataUrl)}
+                              onClear={() => setChairSignatureDataUrl('')}
+                              clearLabel={dict?.recruitment?.btnClear || (isEn ? 'Clear' : 'Smazat')}
                             />
-                            {selectedApp.excluded_at ? (
-                              <button
-                                type="button"
-                                disabled={excludeMutation.isPending}
-                                onClick={() => excludeMutation.mutate({ id: selectedApp.id, exclude: false })}
-                                className="w-full rounded-2xl px-5 py-4 text-[10px] font-black uppercase tracking-widest border border-stone-700 bg-stone-800 text-stone-200 hover:bg-stone-700 transition disabled:opacity-50"
-                              >
-                                {isEn ? 'Restore' : 'Zrušit vyloučení'}
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                disabled={excludeMutation.isPending}
-                                onClick={() => excludeMutation.mutate({ id: selectedApp.id, exclude: true, reason: excludedReason })}
-                                className="w-full rounded-2xl px-5 py-4 text-[10px] font-black uppercase tracking-widest border border-stone-700 bg-stone-800 text-stone-200 hover:bg-stone-700 transition disabled:opacity-50"
-                              >
-                                {isEn ? 'Exclude' : 'Vyloučit'}
-                              </button>
-                            )}
                           </div>
+                          <button
+                            type="button"
+                            disabled={!isEditable || chairAuthUploadMutation.isPending || !chairSignatureDataUrl}
+                            onClick={() => chairAuthUploadMutation.mutate({ kind: 'signature', dataUrl: chairSignatureDataUrl })}
+                            className="w-full bg-white text-stone-700 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-stone-200 hover:bg-stone-50 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                          >
+                            {chairAuthUploadMutation.isPending ? <InlinePulse className="bg-stone-200" size={14} /> : <Upload size={16} />}
+                            {dict?.admin?.appsUploadChairAuth || (isEn ? 'Upload' : 'Nahrát')}
+                          </button>
                         </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            disabled={!isEditable}
+                            onChange={(e) => setStampFile(e.target.files?.[0] || null)}
+                            className="w-full text-sm"
+                          />
+                          <button
+                            type="button"
+                            disabled={!isEditable || chairAuthUploadMutation.isPending || !stampFile}
+                            onClick={() => {
+                              if (!stampFile) return;
+                              chairAuthUploadMutation.mutate({ kind: 'stamp', file: stampFile });
+                            }}
+                            className="w-full bg-white text-stone-700 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-stone-200 hover:bg-stone-50 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                          >
+                            {chairAuthUploadMutation.isPending ? <InlinePulse className="bg-stone-200" size={14} /> : <Upload size={16} />}
+                            {dict?.admin?.appsUploadChairAuth || (isEn ? 'Upload' : 'Nahrát')}
+                          </button>
+                        </div>
+                      )}
 
-                        <div className="pt-8 border-t border-stone-800">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-stone-500 block mb-4">{dict.admin.chairwomanSignature || 'Podpis předsedy'}</span>
-                          <div className="bg-white rounded-[2rem] p-6 shadow-inner">
-                            {typeof selectedApp.chairwoman_signature === 'string' && selectedApp.chairwoman_signature ? (
-                              <Image 
-                                src={selectedApp.chairwoman_signature} 
-                                alt={isEn ? 'Chair signature' : 'Podpis předsedy'} 
-                                width={400} 
-                                height={150} 
-                                className="w-full h-auto mix-blend-multiply" 
-                                unoptimized
-                              />
-                            ) : (
-                              <div className="text-stone-500 font-bold text-sm">{dict.admin.missingSignature || (isEn ? 'Missing signature' : 'Chybí podpis')}</div>
-                            )}
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict?.admin?.rejectionReason || (isEn ? 'Reason (optional)' : 'Důvod odmítnutí (volitelné)')}</label>
+                        <textarea
+                          value={decisionReason}
+                          onChange={(e) => setDecisionReason(e.target.value)}
+                          disabled={!isEditable || decisionStatus !== 'rejected'}
+                          className="w-full min-h-[80px] bg-stone-50 border border-stone-200 rounded-2xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition disabled:opacity-60"
+                          placeholder={dict?.admin?.rejectionPlaceholder || (isEn ? 'Optional…' : 'Volitelné…')}
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={!isEditable || decisionMutation.isPending}
+                        onClick={() => decisionMutation.mutate()}
+                        className="w-full bg-stone-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-stone-800 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {decisionMutation.isPending ? <InlinePulse className="bg-white/80" size={14} /> : <Save size={16} />}
+                        {dict?.admin?.appsFinalizeDecision || (isEn ? 'Finalize decision' : 'Uzavřít rozhodnutí')}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      <div className="rounded-2xl bg-stone-50 border border-stone-100 p-6">
+                        <div className="grid gap-3">
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-stone-500">{dict?.admin?.appsDecidedAt || (isEn ? 'Decided at' : 'Rozhodnuto dne')}</span>
+                            <span className="text-xs font-black text-stone-900">
+                              {selectedDecision?.decided_at ? formatDateTimePrague(selectedDecision.decided_at, isEn ? 'en' : 'cs') : '—'}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-stone-500">{dict?.admin?.appsDecidedBy || (isEn ? 'Decided by' : 'Rozhodl')}</span>
+                            <span className="text-xs font-black text-stone-900 break-all text-right">{selectedDecision?.decided_by_email || '—'}</span>
+                          </div>
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-stone-500">{dict?.admin?.decisionMembershipType || (isEn ? 'Membership' : 'Typ členství')}</span>
+                            <span className="text-xs font-black text-stone-900">{selectedDecision?.membership_type || '—'}</span>
                           </div>
                         </div>
                       </div>
-                    )}
+
+                      {selectedApplication?.decision_reason ? (
+                        <div className="rounded-2xl bg-red-50 border border-red-100 p-6 text-sm font-bold text-red-800">
+                          {String(selectedApplication.decision_reason)}
+                        </div>
+                      ) : null}
+
+                      <div className="space-y-3">
+                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{dict?.admin?.appsChairAuthTitle || (isEn ? 'Chair authorization' : 'Autorizace předsedy')}</div>
+                        <div className="rounded-[2rem] border border-stone-100 bg-stone-50 p-6 flex items-center justify-center min-h-[140px]">
+                          {chairAuthSignedUrlQuery.isLoading ? (
+                            <InlinePulse className="bg-stone-200" size={16} />
+                          ) : chairAuthSignedUrlQuery.data ? (
+                            <Image
+                              src={chairAuthSignedUrlQuery.data}
+                              alt={dict?.admin?.appsChairAuthTitle || 'Chair auth'}
+                              width={640}
+                              height={220}
+                              className="max-w-full h-auto mix-blend-multiply"
+                              unoptimized
+                            />
+                          ) : (
+                            <div className="text-stone-400 font-bold text-sm">{dict?.admin?.appsChairAuthMissing || (isEn ? 'Missing chair auth' : 'Chybí podpis/razítko')}</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="rounded-[2.5rem] border border-stone-100 bg-white shadow-sm p-8 space-y-4">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{dict?.admin?.appsMetaTitle || (isEn ? 'Meta' : 'Meta')}</div>
+                  <div className="grid gap-2 text-xs font-bold text-stone-700">
+                    <div>{dict?.admin?.appsSubmittedAt || (isEn ? 'Submitted at' : 'Podáno')}: {selectedApplication?.created_at ? formatDateTimePrague(selectedApplication.created_at, isEn ? 'en' : 'cs') : '—'}</div>
+                    <div>{dict?.admin?.appsUpdatedAt || (isEn ? 'Updated at' : 'Změněno')}: {selectedApplication?.updated_at ? formatDateTimePrague(selectedApplication.updated_at, isEn ? 'en' : 'cs') : '—'}</div>
                   </div>
                 </div>
               </div>
             </div>
-        </Dialog>
-      )}
+          </div>
+        ) : null}
+      </Drawer>
     </div>
   );
 }

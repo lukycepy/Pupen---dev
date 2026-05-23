@@ -48,6 +48,7 @@ const NewsletterTab = dynamic<any>(() => import('./components/NewsletterTab'), {
 const QueueTab = dynamic<any>(() => import('./components/QueueTab'), { loading: () => <SkeletonTabContent /> });
 const ContentLibraryTab = dynamic<any>(() => import('./components/ContentLibraryTab'), { loading: () => <SkeletonTabContent /> });
 const InvoicesTab = dynamic<any>(() => import('./components/InvoicesTab'), { loading: () => <SkeletonTabContent /> });
+const BillingTab = dynamic<any>(() => import('./components/BillingTab'), { loading: () => <SkeletonTabContent /> });
 const OgPreviewTab = dynamic<any>(() => import('./components/OgPreviewTab'), { loading: () => <SkeletonTabContent /> });
 const ModerationTab = dynamic<any>(() => import('./components/ModerationTab'), { loading: () => <SkeletonTabContent /> });
 const ProjectsTab = dynamic<any>(() => import('./components/ProjectsTab'), { loading: () => <SkeletonTabContent /> });
@@ -638,6 +639,10 @@ export default function AdminDashboard() {
 
             {activeTab === 'invoices' && canViewFinance && (
               <InvoicesTab />
+            )}
+
+            {activeTab === 'billing' && canViewFinance && (
+              <BillingTab dict={dict} />
             )}
 
             {activeTab === 'refunds' && canView('refunds') && (

@@ -32,7 +32,7 @@ export async function GET(req: Request) {
         supabase.from('admin_logs').select('id', { count: 'exact', head: true }).gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
       ),
       withSchemaCacheRetry(supabase, () =>
-        supabase.from('applications').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('membership_applications_v2').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
       ),
       withSchemaCacheRetry(supabase, () =>
         supabase

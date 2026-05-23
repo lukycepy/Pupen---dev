@@ -60,12 +60,16 @@ export async function enqueueEmailSend(input: EnqueueEmailInput, supabase?: any)
       next_attempt_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
-    let res = await sb.from('email_send_queue').insert([{ ...base, text: input.text || null, headers: input.headers || {} }]);
+    let res = await sb
+      .from('email_send_queue')
+      .insert([{ ...base, text: input.text || null, headers: input.headers || {} }])
+      .select('id')
+      .single();
     if (res.error && isSchemaCacheMissingColumn(res.error)) {
-      res = await sb.from('email_send_queue').insert([base]);
+      res = await sb.from('email_send_queue').insert([base]).select('id').single();
     }
     if (res.error) throw res.error;
-    return { ok: true as const };
+    return { ok: true as const, queueId: res.data?.id ? String(res.data.id) : null };
   } catch (e: any) {
     if (isSchemaCacheMissingTable(e)) return { ok: false as const, skipped: 'missing_table' as const };
     return { ok: false as const, error: e };

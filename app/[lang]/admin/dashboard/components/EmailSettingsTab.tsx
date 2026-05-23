@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Mail, Save, Loader2, Server, User, ShieldCheck } from 'lucide-react';
 import { useToast } from '@/app/context/ToastContext';
@@ -8,11 +8,13 @@ import { SkeletonTabContent } from '@/app/[lang]/components/Skeleton';
 import AdminModuleHeader from './ui/AdminModuleHeader';
 import AdminPanel from './ui/AdminPanel';
 import { useParams } from 'next/navigation';
+import { listEmailTemplates, type EmailTemplateKey } from '@/lib/email/templates';
 
 export default function EmailSettingsTab({ dict }: { dict: any }) {
   const { showToast } = useToast();
   const params = useParams();
   const lang = (params?.lang as string) === 'en' ? 'en' : 'cs';
+  const templates = useMemo(() => listEmailTemplates(), []);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState({
@@ -41,6 +43,10 @@ export default function EmailSettingsTab({ dict }: { dict: any }) {
 
   const [testStatusLoading, setTestStatusLoading] = useState(false);
   const [testStatusResult, setTestStatusResult] = useState<any>(null);
+
+  const [triggersLoading, setTriggersLoading] = useState(false);
+  const [triggers, setTriggers] = useState<any[]>([]);
+  const [triggerSavingKey, setTriggerSavingKey] = useState<string | null>(null);
 
   const senderDomain = String(settings.sender_email || '').includes('@') ? String(settings.sender_email).split('@').pop() : '';
 
@@ -81,8 +87,6 @@ export default function EmailSettingsTab({ dict }: { dict: any }) {
     }
   };
 
-  if (loading) return <SkeletonTabContent />;
-
   const getToken = async () => {
     let { data: sessionData } = await supabase.auth.getSession();
     let token = sessionData.session?.access_token || '';
@@ -94,6 +98,57 @@ export default function EmailSettingsTab({ dict }: { dict: any }) {
     if (!token) throw new Error('Přihlášení vypršelo. Obnovte stránku nebo se přihlaste znovu.');
     return token;
   };
+
+  const loadTriggers = async () => {
+    setTriggersLoading(true);
+    try {
+      const token = await getToken();
+      const res = await fetch('/api/admin/email/triggers', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j?.error || 'Načtení triggerů selhalo');
+      setTriggers(Array.isArray(j?.triggers) ? j.triggers : []);
+    } catch (e: any) {
+      showToast(String(e?.message || e), 'error');
+    } finally {
+      setTriggersLoading(false);
+    }
+  };
+
+  const saveTrigger = async (t: any) => {
+    const key = String(t?.trigger_key || '');
+    if (!key) return;
+    setTriggerSavingKey(key);
+    try {
+      const token = await getToken();
+      const res = await fetch('/api/admin/email/triggers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          trigger_key: key,
+          enabled: t?.enabled !== false,
+          template_cs: t?.template_cs || '',
+          template_en: t?.template_en || '',
+        }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j?.error || 'Uložení triggeru selhalo');
+      showToast('Uloženo', 'success');
+      await loadTriggers();
+    } catch (e: any) {
+      showToast(String(e?.message || e), 'error');
+    } finally {
+      setTriggerSavingKey(null);
+    }
+  };
+
+  useEffect(() => {
+    if (!loading) loadTriggers();
+  }, [loading]);
+
+  if (loading) return <SkeletonTabContent />;
 
   const checkDns = async () => {
     setDnsLoading(true);
@@ -415,6 +470,99 @@ export default function EmailSettingsTab({ dict }: { dict: any }) {
               <div className="text-xs font-black text-red-700">{String(testStatusResult.error)}</div>
             ) : null}
           </div>
+        </AdminPanel>
+
+        <AdminPanel className="p-8 space-y-5 md:col-span-2">
+          <h3 className="text-lg font-bold flex items-center gap-2 text-stone-900">
+            <Mail className="text-green-600" size={20} />
+            Triggery (faktury / přihlášky)
+          </h3>
+          <div className="text-xs font-bold text-stone-500">
+            Mapování eventů na e‑mailové šablony. Jazyk se řídí kontextem události (CS/EN).
+          </div>
+
+          {triggersLoading ? (
+            <div className="text-xs font-bold text-stone-500">Načítám…</div>
+          ) : triggers.length === 0 ? (
+            <div className="text-xs font-bold text-stone-500">Žádné triggery.</div>
+          ) : (
+            <div className="space-y-4">
+              {triggers.map((t) => {
+                const key = String(t?.trigger_key || '');
+                const savingThis = triggerSavingKey === key;
+                return (
+                  <div key={key} className="bg-stone-50 border border-stone-100 rounded-2xl p-5 space-y-3">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{key}</div>
+                        <div className="text-sm font-bold text-stone-800 truncate">{String(t?.label || '')}</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTriggers((prev) => prev.map((x) => (String((x as any)?.trigger_key || '') === key ? { ...x, enabled: !(x as any)?.enabled } : x)));
+                        }}
+                        className={`shrink-0 rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-widest border transition ${
+                          t?.enabled !== false ? 'bg-green-600 text-white border-green-600' : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-100'
+                        }`}
+                      >
+                        {t?.enabled !== false ? 'Zapnuto' : 'Vypnuto'}
+                      </button>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-3">
+                      <div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Šablona (CS)</div>
+                        <select
+                          value={String(t?.template_cs || '')}
+                          onChange={(e) =>
+                            setTriggers((prev) =>
+                              prev.map((x) => (String((x as any)?.trigger_key || '') === key ? { ...x, template_cs: e.target.value as EmailTemplateKey } : x)),
+                            )
+                          }
+                          className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition"
+                        >
+                          {templates.map((tpl) => (
+                            <option key={tpl.key} value={tpl.key}>
+                              {tpl.label} ({tpl.key})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Šablona (EN)</div>
+                        <select
+                          value={String(t?.template_en || '')}
+                          onChange={(e) =>
+                            setTriggers((prev) =>
+                              prev.map((x) => (String((x as any)?.trigger_key || '') === key ? { ...x, template_en: e.target.value as EmailTemplateKey } : x)),
+                            )
+                          }
+                          className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition"
+                        >
+                          {templates.map((tpl) => (
+                            <option key={tpl.key} value={tpl.key}>
+                              {tpl.label} ({tpl.key})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => saveTrigger(t)}
+                      disabled={savingThis}
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
+                    >
+                      {savingThis ? <Loader2 className="animate-spin" size={14} /> : <Save size={14} />}
+                      Uložit
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </AdminPanel>
 
         <AdminPanel className="p-8 space-y-5 md:col-span-2">
