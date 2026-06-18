@@ -8,7 +8,6 @@ import SignaturePad from '../components/SignaturePad';
 import { UserPlus, CheckCircle, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import InlinePulse from '@/app/components/InlinePulse';
-import AddressAutocomplete from '@/app/components/AddressAutocomplete';
 import PageBlocksRenderer from '@/app/[lang]/components/PageBlocksRenderer';
 import { parsePageBlocks } from '@/lib/site/page-blocks';
 
@@ -29,7 +28,6 @@ export default function PrihlaskaPage() {
     last_name: '',
     email: '',
     phone: '',
-    address: '',
     university_email: '',
     field_of_study: '',
     study_year: '',
@@ -37,7 +35,6 @@ export default function PrihlaskaPage() {
     gdpr_consent: false,
     applicant_signature: '',
   });
-  const [addressMeta, setAddressMeta] = useState<any>(null);
 
   useEffect(() => {
     getDictionary(lang).then(d => setDict(d.recruitment));
@@ -88,24 +85,6 @@ export default function PrihlaskaPage() {
 
     setLoading(true);
     try {
-      let validatedAddress = String(formData.address || '').trim();
-      let validatedMeta: any = addressMeta;
-      if (validatedAddress) {
-        const res = await fetch('/api/address/validate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ q: validatedAddress, lang }),
-        });
-        const json = await res.json().catch(() => ({}));
-        if (!res.ok || !json?.ok) {
-          showToast(dict.errorInvalidAddress, 'error');
-          setLoading(false);
-          return;
-        }
-        validatedAddress = String(json?.address || validatedAddress);
-        validatedMeta = json?.meta || validatedMeta;
-      }
-
       const submitRes = await fetch('/api/membership-applications/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -115,8 +94,8 @@ export default function PrihlaskaPage() {
           last_name: formData.last_name,
           email: formData.email,
           phone: formData.phone,
-          address: validatedAddress || null,
-          address_meta: validatedMeta || {},
+          address: null,
+          address_meta: {},
           university_email: formData.membership_type === 'regular' ? formData.university_email : null,
           field_of_study: formData.membership_type === 'regular' ? formData.field_of_study : null,
           study_year: formData.membership_type === 'regular' ? formData.study_year : null,
@@ -146,6 +125,11 @@ export default function PrihlaskaPage() {
 
   if (!dict) return null;
   const blocks = parsePageBlocks(pageBlocks);
+  const legalSection = blocks?.length ? (
+    <PageBlocksRenderer blocks={blocks} />
+  ) : pageHtml ? (
+    <div className="prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: pageHtml }} />
+  ) : null;
 
   if (success) {
     return (
@@ -208,13 +192,6 @@ export default function PrihlaskaPage() {
           <p className="text-stone-500 text-lg font-medium">{dict.subtitle}</p>
         </header>
 
-        {blocks?.length || pageHtml ? (
-          <div className="bg-white border border-stone-100 rounded-[2.5rem] p-8 md:p-10 shadow-sm mb-8">
-            {pageTitle ? <div className="text-2xl font-black text-stone-900 mb-4">{pageTitle}</div> : null}
-            {blocks?.length ? <PageBlocksRenderer blocks={blocks} /> : <div className="prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: pageHtml }} />}
-          </div>
-        ) : null}
-
         <form onSubmit={handleSubmit} className="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-xl border border-stone-100 space-y-8">
           <div className="space-y-3">
             <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.membershipTypeLabel}</div>
@@ -274,6 +251,18 @@ export default function PrihlaskaPage() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">
+            {formData.membership_type === 'regular' && (
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.labelUniversityEmail}</label>
+                <input 
+                  required
+                  type="email"
+                  value={formData.university_email}
+                  onChange={e => setFormData({...formData, university_email: e.target.value})}
+                  className="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 focus:ring-2 focus:ring-green-500 transition font-bold"
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.labelEmail}</label>
               <input 
@@ -294,27 +283,17 @@ export default function PrihlaskaPage() {
                 className="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 focus:ring-2 focus:ring-green-500 transition font-bold"
               />
             </div>
-            <div className="md:col-span-2 space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.labelAddress}</label>
-              <AddressAutocomplete
-                lang={lang}
-                value={formData.address}
-                onChange={(v) => setFormData({ ...formData, address: v })}
-                onSelect={(it) => setAddressMeta(it)}
-                inputClassName="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 focus:ring-2 focus:ring-green-500 transition font-bold"
-              />
-            </div>
           </div>
 
           {formData.membership_type === 'regular' && (
             <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.labelUniversityEmail}</label>
+              <div className="md:col-span-2 space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.labelFieldOfStudy}</label>
                 <input 
                   required
-                  type="email"
-                  value={formData.university_email}
-                  onChange={e => setFormData({...formData, university_email: e.target.value})}
+                  type="text"
+                  value={formData.field_of_study}
+                  onChange={e => setFormData({...formData, field_of_study: e.target.value})}
                   className="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 focus:ring-2 focus:ring-green-500 transition font-bold"
                 />
               </div>
@@ -328,18 +307,15 @@ export default function PrihlaskaPage() {
                   className="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 focus:ring-2 focus:ring-green-500 transition font-bold"
                 />
               </div>
-              <div className="md:col-span-2 space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.labelFieldOfStudy}</label>
-                <input 
-                  required
-                  type="text"
-                  value={formData.field_of_study}
-                  onChange={e => setFormData({...formData, field_of_study: e.target.value})}
-                  className="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 focus:ring-2 focus:ring-green-500 transition font-bold"
-                />
-              </div>
             </div>
           )}
+
+          {legalSection ? (
+            <div className="bg-stone-50 border border-stone-100 rounded-[2rem] p-6 md:p-8">
+              {pageTitle ? <div className="text-xl md:text-2xl font-black text-stone-900 mb-4">{pageTitle}</div> : null}
+              {legalSection}
+            </div>
+          ) : null}
 
           <div className="space-y-2">
             <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.labelSignedOn}</label>
