@@ -13,7 +13,7 @@ import Drawer from '@/app/components/ui/Drawer';
 import InlinePulse from '@/app/components/InlinePulse';
 import SignaturePad from '../../../components/SignaturePad';
 import { formatDatePrague, formatDateTimePrague } from '@/lib/time/prague';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { membershipApplicationAdminUpdateSchema } from '@/lib/validations/membership-applications-admin';
 
@@ -47,8 +47,9 @@ function safeJsonParse(s: string) {
   if (!raw) return { ok: true, value: undefined };
   try {
     return { ok: true, value: JSON.parse(raw) };
-  } catch (e: any) {
-    return { ok: false, error: e?.message || 'Invalid JSON' };
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : 'Invalid JSON';
+    return { ok: false, error: message };
   }
 }
 
@@ -106,8 +107,14 @@ export default function ApplicationsTab({ dict, readOnly }: { dict: any; readOnl
   });
 
   const selectedApplication = detailQuery.data?.application || null;
-  const selectedMeta = selectedApplication?.meta && typeof selectedApplication.meta === 'object' ? selectedApplication.meta : {};
-  const selectedDecision = selectedMeta?.decision && typeof selectedMeta.decision === 'object' ? selectedMeta.decision : {};
+  const selectedMeta = useMemo(
+    () => (selectedApplication?.meta && typeof selectedApplication.meta === 'object' ? selectedApplication.meta : {}),
+    [selectedApplication],
+  );
+  const selectedDecision = useMemo(
+    () => (selectedMeta?.decision && typeof selectedMeta.decision === 'object' ? selectedMeta.decision : {}),
+    [selectedMeta],
+  );
 
   const isPending = String(selectedApplication?.status || '') === 'pending';
   const isEditable = isPending && !readOnly;
@@ -177,7 +184,11 @@ export default function ApplicationsTab({ dict, readOnly }: { dict: any; readOnl
     mode: 'onSubmit',
   });
 
-  const { register, handleSubmit, reset, watch } = form;
+  const { register, handleSubmit, reset } = form;
+  const membershipType = useWatch({
+    control: form.control,
+    name: 'application.meta.membership_type',
+  });
 
   useEffect(() => {
     if (!selectedApplication) return;
@@ -669,7 +680,7 @@ export default function ApplicationsTab({ dict, readOnly }: { dict: any; readOnl
                       <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict?.recruitment?.labelUniversityEmail || (isEn ? 'University email' : 'Univerzitní e‑mail')}</label>
                       <input
                         {...register('application.meta.university_email')}
-                        disabled={!isEditable || watch('application.meta.membership_type') !== 'regular'}
+                        disabled={!isEditable || membershipType !== 'regular'}
                         className="w-full bg-stone-50 border border-stone-200 rounded-2xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition disabled:opacity-60"
                       />
                     </div>
@@ -677,7 +688,7 @@ export default function ApplicationsTab({ dict, readOnly }: { dict: any; readOnl
                       <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict?.recruitment?.labelStudyYear || (isEn ? 'Study year' : 'Ročník')}</label>
                       <input
                         {...register('application.meta.study_year')}
-                        disabled={!isEditable || watch('application.meta.membership_type') !== 'regular'}
+                        disabled={!isEditable || membershipType !== 'regular'}
                         className="w-full bg-stone-50 border border-stone-200 rounded-2xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition disabled:opacity-60"
                       />
                     </div>
@@ -685,7 +696,7 @@ export default function ApplicationsTab({ dict, readOnly }: { dict: any; readOnl
                       <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict?.recruitment?.labelFieldOfStudy || (isEn ? 'Field of study' : 'Obor')}</label>
                       <input
                         {...register('application.meta.field_of_study')}
-                        disabled={!isEditable || watch('application.meta.membership_type') !== 'regular'}
+                        disabled={!isEditable || membershipType !== 'regular'}
                         className="w-full bg-stone-50 border border-stone-200 rounded-2xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition disabled:opacity-60"
                       />
                     </div>

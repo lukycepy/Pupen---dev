@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
@@ -42,8 +41,6 @@ function LocationPicker({ onLocationSelect, currentPos }: { onLocationSelect: (l
 }
 
 export default function MapTab({ dict }: { dict: any }) {
-  const params = useParams();
-  const lang = (params?.lang as string) || 'cs';
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [isAdding, setIsAdding] = useState(false);

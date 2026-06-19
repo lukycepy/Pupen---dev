@@ -10,21 +10,15 @@ import {
   formatMembershipApplicationPdfFileName,
   MEMBERSHIP_APPLICATION_PDF_BUCKET,
 } from '@/lib/membership-applications/pdf';
+import { readFile } from 'node:fs/promises';
 
 export const runtime = 'nodejs';
 
-async function loadTemplatePdfBytes() {
-  const fs = await import('node:fs/promises');
-  const path = await import('node:path');
+const TEMPLATE_PDF_URL = new URL('../../../../../../../assets/pdf-templates/prihlaska.pdf', import.meta.url);
 
-  const candidates = ['PUPEN-prihlaska.pdf', 'prihlaska.pdf'];
-  for (const name of candidates) {
-    try {
-      const p = path.join(process.cwd(), name);
-      const buf = await fs.readFile(p);
-      if (buf?.length) return new Uint8Array(buf);
-    } catch {}
-  }
+async function loadTemplatePdfBytes() {
+  const buf = await readFile(TEMPLATE_PDF_URL);
+  if (buf?.length) return new Uint8Array(buf);
   throw new Error('Missing template PDF');
 }
 

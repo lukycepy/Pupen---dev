@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/app/context/ToastContext';
 import InlinePulse from '@/app/components/InlinePulse';
@@ -82,7 +82,7 @@ export default function GodModeTab() {
     }
   };
 
-  const loadBans = async () => {
+  const loadBans = useCallback(async () => {
     setLoadingBans(true);
     try {
       const { data } = await supabase.auth.getSession();
@@ -97,11 +97,11 @@ export default function GodModeTab() {
     } finally {
       setLoadingBans(false);
     }
-  };
+  }, [showToast]);
 
   useEffect(() => {
     loadBans();
-  }, []);
+  }, [loadBans]);
 
   const activeBans = useMemo(() => {
     const now = Date.now();

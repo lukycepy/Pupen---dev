@@ -3,6 +3,15 @@ import { getBearerToken, requireAdmin } from '@/lib/server-auth';
 import { getRlsSupabase } from '@/lib/supabase-rls';
 import { getServerSupabase } from '@/lib/supabase-server';
 
+interface StoredFileRow {
+  storage_bucket?: string | null;
+  storage_path?: string | null;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function POST(req: Request, ctx: { params: Promise<{ applicationId: string }> }) {
   try {
     await requireAdmin(req);
@@ -24,12 +33,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
       .contains('meta', { kind: 'applicant_signature' })
       .order('created_at', { ascending: false })
       .limit(1)
-      .maybeSingle();
+      .maybeSingle<StoredFileRow>();
     if (fileRes.error) throw fileRes.error;
     if (!fileRes.data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    const bucket = String((fileRes.data as any)?.storage_bucket || '').trim();
-    const path = String((fileRes.data as any)?.storage_path || '').trim();
+    const bucket = String(fileRes.data?.storage_bucket || '').trim();
+    const path = String(fileRes.data?.storage_path || '').trim();
     if (!bucket || !path) return NextResponse.json({ error: 'Missing file' }, { status: 409 });
 
     const srv = getServerSupabase();
@@ -37,8 +46,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
     if (signed.error) throw signed.error;
 
     return NextResponse.json({ ok: true, signedUrl: signed.data?.signedUrl || null, expiresIn });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

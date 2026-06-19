@@ -6,6 +6,14 @@ import { isEmailBlacklisted } from '@/lib/tickets/blacklist';
 import { sendMailWithQueueFallback } from '@/lib/email/queue';
 import { guardPublicJsonPost } from '@/lib/public-post-guard';
 
+function asTrimmedString(value: unknown) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function POST(req: Request) {
   try {
     const g = await guardPublicJsonPost(req, {
@@ -17,18 +25,16 @@ export async function POST(req: Request) {
     });
     if (!g.ok) return g.response;
     const body = g.body;
-    const {
-      rsvpId,
-      eventId,
-      eventTitle,
-      email,
-      buyerType,
-      buyerName,
-      buyerAddress,
-      ico,
-      dic,
-      note,
-    } = body || {};
+    const rsvpId = asTrimmedString(body.rsvpId);
+    const eventId = asTrimmedString(body.eventId);
+    const eventTitle = asTrimmedString(body.eventTitle);
+    const email = asTrimmedString(body.email);
+    const buyerType = asTrimmedString(body.buyerType);
+    const buyerName = asTrimmedString(body.buyerName);
+    const buyerAddress = asTrimmedString(body.buyerAddress);
+    const ico = asTrimmedString(body.ico);
+    const dic = asTrimmedString(body.dic);
+    const note = asTrimmedString(body.note);
 
     if (!rsvpId || !eventTitle || !email || !buyerType || !buyerName || !buyerAddress) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
@@ -44,7 +50,7 @@ export async function POST(req: Request) {
       .limit(1)
       .maybeSingle();
     const entries = Array.isArray(bl.data?.details?.entries) ? bl.data?.details?.entries : [];
-    const requesterEmail = String(email || '').trim().toLowerCase();
+    const requesterEmail = email.toLowerCase();
     if (requesterEmail && isEmailBlacklisted(requesterEmail, entries)) {
       try {
         await supabase.from('admin_logs').insert([
@@ -113,7 +119,7 @@ export async function POST(req: Request) {
     } catch {}
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

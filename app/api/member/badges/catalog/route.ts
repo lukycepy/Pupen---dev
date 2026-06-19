@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server';
 import { requireMember } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function GET(req: Request) {
   try {
     const { user } = await requireMember(req);
@@ -24,8 +28,7 @@ export async function GET(req: Request) {
       badges: allBadgesRes.data || [],
       earned: Array.from(earned.entries()).map(([badgeId, awardedAt]) => ({ badgeId, awardedAt })),
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error?.message || 'Error' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }
-

@@ -8,16 +8,13 @@ import { useToast } from '@/app/context/ToastContext';
 import Image from 'next/image';
 import { useDictionary } from '@/app/context/DictionaryContext';
 
-export default function AvatarUploader({
-  lang,
-  currentUrl,
-  onUploaded,
-}: {
+export default function AvatarUploader(props: {
   lang: string;
   userId: string;
   currentUrl?: string | null;
   onUploaded: (url: string) => void;
 }) {
+  const { currentUrl, onUploaded } = props;
   const dict = useDictionary();
   const t = dict.memberComponents.avatarUploader;
   const { showToast } = useToast();

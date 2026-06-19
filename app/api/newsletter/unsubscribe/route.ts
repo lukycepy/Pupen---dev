@@ -2,27 +2,31 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { guardPublicGet, guardPublicPostAny } from '@/lib/public-post-guard';
 
-function normalizeEmail(input: string) {
+function normalizeEmail(input: unknown) {
   return String(input || '').trim().toLowerCase();
 }
 
-function normalizeReason(input: any) {
+function normalizeReason(input: unknown) {
   const s = String(input || '').trim();
   return s.slice(0, 80);
 }
 
-function normalizeDetail(input: any) {
+function normalizeDetail(input: unknown) {
   const s = String(input || '').trim();
   return s.slice(0, 400);
 }
 
-function normalizeSmall(input: any) {
+function normalizeSmall(input: unknown) {
   const s = String(input || '').trim();
   return s.slice(0, 80);
 }
 
-function isMissingColumn(e: any) {
-  const msg = String(e?.message || '');
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
+function isMissingColumn(error: unknown) {
+  const msg = getErrorMessage(error);
   return /(schema cache|does not exist|column)/i.test(msg);
 }
 
@@ -67,8 +71,8 @@ export async function GET(req: Request) {
 
     if (res.error) throw res.error;
     return NextResponse.json({ ok: true, status: 'unsubscribed' });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }
 
@@ -85,7 +89,7 @@ export async function POST(req: Request) {
     const body = g.body;
 
     const url = new URL(req.url);
-    const email = normalizeEmail(url.searchParams.get('email') || body?.email || '');
+    const email = normalizeEmail(url.searchParams.get('email') || body.email || '');
     const fromQuery = {
       reason: normalizeReason(url.searchParams.get('reason') || ''),
       detail: normalizeDetail(url.searchParams.get('detail') || ''),
@@ -124,7 +128,7 @@ export async function POST(req: Request) {
     if (res.error) throw res.error;
 
     return NextResponse.json({ ok: true, status: 'unsubscribed' });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

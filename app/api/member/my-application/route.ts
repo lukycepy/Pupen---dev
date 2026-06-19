@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server';
 import { requireMember } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function GET(req: Request) {
   try {
     const { user } = await requireMember(req);
@@ -18,10 +22,9 @@ export async function GET(req: Request) {
     if (res.error) throw res.error;
 
     return NextResponse.json({ ok: true, application: (res.data || [])[0] || null });
-  } catch (e: any) {
-    const msg = String(e?.message || 'Error');
+  } catch (error: unknown) {
+    const msg = getErrorMessage(error);
     const status = msg === 'Unauthorized' ? 401 : msg === 'Forbidden' ? 403 : 500;
     return NextResponse.json({ error: msg }, { status });
   }
 }
-

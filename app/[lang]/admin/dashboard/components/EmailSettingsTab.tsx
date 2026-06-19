@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Mail, Save, Loader2, Server, User, ShieldCheck } from 'lucide-react';
 import { useToast } from '@/app/context/ToastContext';
@@ -10,7 +10,7 @@ import AdminPanel from './ui/AdminPanel';
 import { useParams } from 'next/navigation';
 import { listEmailTemplates, type EmailTemplateKey } from '@/lib/email/templates';
 
-export default function EmailSettingsTab({ dict }: { dict: any }) {
+export default function EmailSettingsTab() {
   const { showToast } = useToast();
   const params = useParams();
   const lang = (params?.lang as string) === 'en' ? 'en' : 'cs';
@@ -61,8 +61,6 @@ export default function EmailSettingsTab({ dict }: { dict: any }) {
         if (data && !error) {
           setSettings(data);
         }
-      } catch (err) {
-        console.error('Failed to fetch email settings:', err);
       } finally {
         setLoading(false);
       }
@@ -99,7 +97,7 @@ export default function EmailSettingsTab({ dict }: { dict: any }) {
     return token;
   };
 
-  const loadTriggers = async () => {
+  const loadTriggers = useCallback(async () => {
     setTriggersLoading(true);
     try {
       const token = await getToken();
@@ -115,7 +113,7 @@ export default function EmailSettingsTab({ dict }: { dict: any }) {
     } finally {
       setTriggersLoading(false);
     }
-  };
+  }, [showToast]);
 
   const saveTrigger = async (t: any) => {
     const key = String(t?.trigger_key || '');
@@ -146,7 +144,7 @@ export default function EmailSettingsTab({ dict }: { dict: any }) {
 
   useEffect(() => {
     if (!loading) loadTriggers();
-  }, [loading]);
+  }, [loading, loadTriggers]);
 
   if (loading) return <SkeletonTabContent />;
 

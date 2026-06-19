@@ -4,14 +4,29 @@ import { guardPublicJsonPost } from '@/lib/public-post-guard';
 import { DEFAULT_WAITLIST_CONFIG, getWaitlistConfigFromAdminLogs } from '@/lib/rsvp/waitlistConfig';
 import { advanceWaitlistForEvent } from '@/lib/rsvp/waitlist';
 
-function normalizeToken(raw: string) {
+interface RsvpRow {
+  id?: string | null;
+  status?: string | null;
+  expires_at?: string | null;
+  checked_in?: boolean | null;
+}
+
+function asTrimmedString(value: unknown) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
+function normalizeToken(raw: unknown) {
   const t = String(raw || '').trim();
   if (!t) return '';
   if (t.startsWith('PUPEN-TICKET:')) return t.replace('PUPEN-TICKET:', '').trim();
   return t;
 }
 
-function normalizeEmail(input: string) {
+function normalizeEmail(input: unknown) {
   return String(input || '').trim().toLowerCase().slice(0, 240);
 }
 
@@ -25,11 +40,11 @@ export async function POST(req: Request) {
       tooManyMessage: 'Příliš mnoho požadavků, zkuste to později.',
     });
     if (!g.ok) return g.response;
-    const body = g.body || {};
+    const body = g.body;
 
-    const eventId = String(body?.eventId || '').trim();
-    const email = normalizeEmail(body?.email || '');
-    const token = normalizeToken(body?.token || body?.qrToken || '');
+    const eventId = asTrimmedString(body.eventId);
+    const email = normalizeEmail(body.email);
+    const token = normalizeToken(body.token || body.qrToken);
     if (!eventId || !email || !token) return NextResponse.json({ error: 'Missing eventId/email/token' }, { status: 400 });
 
     const supabase = getServerSupabase();
@@ -43,7 +58,7 @@ export async function POST(req: Request) {
       .or(`qr_code.eq.${token},qr_token.eq.${token}`)
       .maybeSingle();
     if (rsvpRes.error) throw rsvpRes.error;
-    const r: any = rsvpRes.data;
+    const r = rsvpRes.data as RsvpRow | null;
     if (!r?.id) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     if (r.status === 'cancelled') return NextResponse.json({ ok: true, status: 'already_cancelled' });
     if (r.checked_in) return NextResponse.json({ error: 'Already checked in' }, { status: 400 });
@@ -80,7 +95,7 @@ export async function POST(req: Request) {
     } catch {}
 
     return NextResponse.json({ ok: true, status: 'cancelled' });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

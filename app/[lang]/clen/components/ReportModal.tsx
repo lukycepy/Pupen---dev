@@ -8,15 +8,7 @@ import { useToast } from '@/app/context/ToastContext';
 import Dialog from '@/app/components/ui/Dialog';
 import { useDictionary } from '@/app/context/DictionaryContext';
 
-export default function ReportModal({
-  open,
-  onClose,
-  lang,
-  targetType,
-  targetId,
-  targetLabel,
-  sourceUrl,
-}: {
+export default function ReportModal(props: {
   open: boolean;
   onClose: () => void;
   lang: string;
@@ -25,6 +17,7 @@ export default function ReportModal({
   targetLabel?: string | null;
   sourceUrl?: string | null;
 }) {
+  const { open, onClose, targetType, targetId, targetLabel, sourceUrl } = props;
   const dict = useDictionary();
   const t = dict.memberComponents.reportModal;
   const { showToast } = useToast();

@@ -13,6 +13,21 @@ const DEFAULT_PREFS = {
   },
 };
 
+function toRecord(value: unknown): Record<string, unknown> {
+  if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return {};
+}
+
+function isExplicitFalse(value: unknown) {
+  return value === false;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function GET(req: Request) {
   try {
     const user = await requireUser(req);
@@ -29,9 +44,10 @@ export async function GET(req: Request) {
 
     const prefs = res.data?.details?.prefs && typeof res.data.details.prefs === 'object' ? res.data.details.prefs : {};
     return NextResponse.json({ ok: true, updatedAt: res.data?.created_at || null, prefs: { ...DEFAULT_PREFS, ...prefs } });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
@@ -47,15 +63,16 @@ export async function POST(req: Request) {
     });
     if (!g.ok) return g.response;
     const body = g.body;
-    const input = body?.prefs || {};
+    const input = toRecord(body.prefs);
+    const categories = toRecord(input.categories);
 
     const prefs = {
-      digestWeekly: input?.digestWeekly === false ? false : true,
+      digestWeekly: isExplicitFalse(input.digestWeekly) ? false : true,
       categories: {
-        events: input?.categories?.events === false ? false : true,
-        community: input?.categories?.community === false ? false : true,
-        finance: input?.categories?.finance === false ? false : true,
-        news: input?.categories?.news === false ? false : true,
+        events: isExplicitFalse(categories.events) ? false : true,
+        community: isExplicitFalse(categories.community) ? false : true,
+        finance: isExplicitFalse(categories.finance) ? false : true,
+        news: isExplicitFalse(categories.news) ? false : true,
       },
     };
 
@@ -72,8 +89,9 @@ export async function POST(req: Request) {
     if (res.error) throw res.error;
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

@@ -5,12 +5,12 @@ import { guardPublicGet } from '@/lib/public-post-guard';
 import { PDFDocument, rgb } from 'pdf-lib';
 import { getPdfFonts } from '@/lib/pdf/fonts';
 
+const LOGO_PNG_URL = new URL('../../../../public/logo.png', import.meta.url);
+
 async function loadLogoPngBytes(): Promise<Uint8Array | null> {
   try {
     const fs = await import('node:fs/promises');
-    const path = await import('node:path');
-    const p = path.join(process.cwd(), 'public', 'logo.png');
-    const buf = await fs.readFile(p);
+    const buf = await fs.readFile(LOGO_PNG_URL);
     return new Uint8Array(buf);
   } catch {
     try {

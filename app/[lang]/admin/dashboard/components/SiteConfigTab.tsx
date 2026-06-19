@@ -12,7 +12,6 @@ import SitePageBlocksEditor from '@/app/[lang]/admin/dashboard/components/SitePa
 import { pageBlocksToHtml, parsePageBlocks, type PageBlocks } from '@/lib/site/page-blocks';
 import Popover from '@/app/components/ui/Popover';
 import type { Dictionary } from '@/lib/dictionary-types';
-import { useLang } from '@/app/context/DictionaryContext';
 
 type PageCfg = { enabled?: boolean; navbar?: boolean; tools?: boolean };
 type SiteCfg = {
@@ -75,9 +74,11 @@ function newId() {
 
 export default function SiteConfigTab({ dict, permissions }: Props) {
   const { showToast } = useToast();
-  const lang = useLang();
   const t = dict.admin.siteConfig;
   const mpDict = dict.memberPortalConfig;
+  const notSignedInError = t.errors.notSignedIn;
+  const requestFailedError = t.errors.requestFailed;
+  const genericError = t.errors.generic;
   const isSuperadmin = !!permissions?.can_manage_admins;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -211,10 +212,10 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
         }
         const { data } = await supabase.auth.getSession();
         const token = data.session?.access_token;
-        if (!token) throw new Error(t.errors.notSignedIn);
+        if (!token) throw new Error(notSignedInError);
         const res = await fetch('/api/admin/site-config', { headers: { Authorization: `Bearer ${token}` } });
         const json = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(json?.error || t.errors.requestFailed);
+        if (!res.ok) throw new Error(json?.error || requestFailedError);
         const row = json?.config || {};
         const next: SiteCfg = {
           maintenance_enabled: !!row.maintenance_enabled,
@@ -230,7 +231,7 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
         };
         if (mounted) setConfig(next);
       } catch (e: any) {
-        showToast(e?.message || t.errors.generic, 'error');
+        showToast(e?.message || genericError, 'error');
       } finally {
         if (mounted) setLoading(false);
       }
@@ -238,7 +239,7 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
     return () => {
       mounted = false;
     };
-  }, [canEditSiteHome, canEditSiteMaintenance, canEditSiteMember, canEditSiteNav, isSuperadmin, showToast]);
+  }, [canEditSiteHome, canEditSiteMaintenance, canEditSiteMember, canEditSiteNav, genericError, isSuperadmin, notSignedInError, requestFailedError, showToast]);
 
   const updatePage = (slug: string, patch: Partial<PageCfg>) => {
     setConfig((prev) => ({
@@ -313,11 +314,11 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
       try {
         const { data } = await supabase.auth.getSession();
         const token = data.session?.access_token;
-        if (!token) throw new Error(t.errors.notSignedIn);
+        if (!token) throw new Error(notSignedInError);
         const res = await fetch('/api/admin/site-pages/allowed', { headers: { Authorization: `Bearer ${token}` } });
         const json = await res.json().catch(() => ({}));
         if (!alive) return;
-        if (!res.ok) throw new Error(json?.error || t.errors.generic);
+        if (!res.ok) throw new Error(json?.error || genericError);
         setPageAccess({
           loaded: true,
           allView: !!json?.allView,
@@ -333,7 +334,7 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [genericError, notSignedInError]);
 
   useEffect(() => {
     if (isSuperadmin) return;
@@ -352,7 +353,7 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
     try {
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
-      if (!token) throw new Error(t.errors.notSignedIn);
+      if (!token) throw new Error(notSignedInError);
 
       const [permsRes, rolesRes] = await Promise.all([
         fetch('/api/admin/site-pages/permissions', { headers: { Authorization: `Bearer ${token}` } }),
@@ -360,7 +361,7 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
       ]);
 
       const permsJson = await permsRes.json().catch(() => ({}));
-      if (!permsRes.ok) throw new Error(permsJson?.error || t.errors.generic);
+      if (!permsRes.ok) throw new Error(permsJson?.error || genericError);
       setPermItems(Array.isArray(permsJson?.items) ? permsJson.items : []);
 
       const rolesJson = await rolesRes.json().catch(() => ({}));
@@ -372,7 +373,7 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
     } finally {
       setPermLoading(false);
     }
-  }, []);
+  }, [genericError, notSignedInError]);
 
   useEffect(() => {
     if (!isSuperadmin) return;
@@ -397,12 +398,12 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
       try {
         const { data } = await supabase.auth.getSession();
         const token = data.session?.access_token;
-        if (!token) throw new Error(t.errors.notSignedIn);
+        if (!token) throw new Error(notSignedInError);
         const res = await fetch(`/api/admin/users/search?query=${encodeURIComponent(q)}&limit=10`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const json = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(json?.error || t.errors.generic);
+        if (!res.ok) throw new Error(json?.error || genericError);
         if (cancelled) return;
         setPermUserResults(Array.isArray(json?.users) ? json.users : []);
       } catch {
@@ -417,7 +418,7 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
       cancelled = true;
       clearTimeout(tmr);
     };
-  }, [isSuperadmin, permSelectedUser, permTarget, permUserQuery, section]);
+  }, [genericError, isSuperadmin, notSignedInError, permSelectedUser, permTarget, permUserQuery, section]);
 
   const savePerm = useCallback(async () => {
     if (!isSuperadmin) return;
@@ -430,7 +431,7 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
     try {
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
-      if (!token) throw new Error(t.errors.notSignedIn);
+      if (!token) throw new Error(notSignedInError);
       const res = await fetch('/api/admin/site-pages/permissions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -443,12 +444,12 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
         }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error || t.errors.generic);
+      if (!res.ok) throw new Error(json?.error || genericError);
       await loadPerms();
     } finally {
       setPermSaving(false);
     }
-  }, [isSuperadmin, loadPerms, permCanEdit, permCanView, permRoleId, permSelectedUser, permSlug, permTarget]);
+  }, [genericError, isSuperadmin, loadPerms, notSignedInError, permCanEdit, permCanView, permRoleId, permSelectedUser, permSlug, permTarget]);
 
   const removePerm = useCallback(
     async (row: any) => {
@@ -462,20 +463,20 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
       try {
         const { data } = await supabase.auth.getSession();
         const token = data.session?.access_token;
-        if (!token) throw new Error(t.errors.notSignedIn);
+        if (!token) throw new Error(notSignedInError);
         const res = await fetch('/api/admin/site-pages/permissions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ slug, userId, roleId, canView: false, canEdit: false }),
         });
         const json = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(json?.error || t.errors.generic);
+        if (!res.ok) throw new Error(json?.error || genericError);
         await loadPerms();
       } finally {
         setPermSaving(false);
       }
     },
-    [isSuperadmin, loadPerms],
+    [genericError, isSuperadmin, loadPerms, notSignedInError],
   );
 
   useEffect(() => {
@@ -487,12 +488,12 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
       try {
         const { data } = await supabase.auth.getSession();
         const token = data.session?.access_token;
-        if (!token) throw new Error(t.errors.notSignedIn);
+        if (!token) throw new Error(notSignedInError);
         const res = await fetch(`/api/admin/site-pages/${encodeURIComponent(pageEditorSlug)}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const json = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(json?.error || t.errors.generic);
+        if (!res.ok) throw new Error(json?.error || genericError);
         const items = Array.isArray(json?.items) ? json.items : [];
         const cs = items.find((x: any) => x?.lang === 'cs') || null;
         const en = items.find((x: any) => x?.lang === 'en') || null;
@@ -507,7 +508,7 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
         setPageContentMode(hasBlocks ? 'blocks' : 'html');
       } catch (e: any) {
         if (!alive) return;
-        showToast(e?.message || t.errors.generic, 'error');
+        showToast(e?.message || genericError, 'error');
       } finally {
         if (alive) setPageEditorLoading(false);
       }
@@ -515,7 +516,7 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
     return () => {
       alive = false;
     };
-  }, [canViewAnyContent, isSuperadmin, pageEditorSlug, section, showToast]);
+  }, [canViewAnyContent, genericError, isSuperadmin, notSignedInError, pageEditorSlug, section, showToast]);
 
   const savePageContent = async () => {
     setPageEditorSaving(true);

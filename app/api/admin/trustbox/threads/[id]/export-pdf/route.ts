@@ -6,6 +6,8 @@ import { getPdfFonts } from '@/lib/pdf/fonts';
 import { logTrustBoxAudit } from '@/lib/trustbox/audit';
 import { getPublicBaseUrl } from '@/lib/public-base-url';
 
+const LOGO_PNG_URL = new URL('../../../../../../../public/logo.png', import.meta.url);
+
 function cleanText(input: any, fallback = '—') {
   const s = String(input ?? '').replace(/\u0000/g, '').trim();
   if (!s) return fallback;
@@ -58,9 +60,7 @@ function fmt(value: any) {
 async function loadLogoPngBytes(): Promise<Uint8Array | null> {
   try {
     const fs = await import('node:fs/promises');
-    const path = await import('node:path');
-    const p = path.join(process.cwd(), 'public', 'logo.png');
-    const buf = await fs.readFile(p);
+    const buf = await fs.readFile(LOGO_PNG_URL);
     return new Uint8Array(buf);
   } catch {
     try {

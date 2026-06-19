@@ -27,6 +27,9 @@ export default function RefundRequestModal({
   const [reason, setReason] = useState('changed_mind');
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
+  const unauthorizedMessage = dict.common.unauthorized;
+  const requestFailedMessage = dict.common.requestFailed;
+  const errorGenericMessage = dict.common.errorGeneric;
 
   useEffect(() => {
     if (!open) return;
@@ -42,10 +45,10 @@ export default function RefundRequestModal({
       try {
         const { data } = await supabase.auth.getSession();
         const token = data.session?.access_token;
-        if (!token) throw new Error(dict.common.unauthorized);
+        if (!token) throw new Error(unauthorizedMessage);
         const res = await fetch('/api/governance/refund-policy', { headers: { Authorization: `Bearer ${token}` } });
         const json = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(json?.error || dict.common.requestFailed);
+        if (!res.ok) throw new Error(json?.error || requestFailedMessage);
         setPolicy(String(json?.text || ''));
       } catch {
         setPolicy('');
@@ -53,7 +56,7 @@ export default function RefundRequestModal({
         setPolicyLoading(false);
       }
     })();
-  }, [lang, open]);
+  }, [lang, open, requestFailedMessage, unauthorizedMessage]);
 
   const submit = async () => {
     if (!rsvp) return;
@@ -61,7 +64,7 @@ export default function RefundRequestModal({
     try {
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
-      if (!token) throw new Error(dict.common.unauthorized);
+      if (!token) throw new Error(unauthorizedMessage);
 
       const res = await fetch('/api/refunds/request', {
         method: 'POST',
@@ -75,11 +78,11 @@ export default function RefundRequestModal({
         }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error || dict.common.requestFailed);
+      if (!res.ok) throw new Error(json?.error || requestFailedMessage);
       showToast(t.toastSent, 'success');
       onClose();
     } catch (e: any) {
-      showToast(e?.message || dict.common.errorGeneric, 'error');
+      showToast(e?.message || errorGenericMessage, 'error');
     } finally {
       setLoading(false);
     }

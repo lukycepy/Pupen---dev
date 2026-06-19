@@ -2,12 +2,14 @@ import { PDFDocument, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import { getPublicBaseUrl } from '@/lib/public-base-url';
 
+const NOTO_SANS_REGULAR_URL = new URL('../../public/fonts/noto-sans/NotoSans-Regular.ttf', import.meta.url);
+const NOTO_SANS_BOLD_URL = new URL('../../public/fonts/noto-sans/NotoSans-Bold.ttf', import.meta.url);
+
 async function readFontFile(relPath: string) {
   try {
     const fs = await import('node:fs/promises');
-    const path = await import('node:path');
-    const p = path.join(process.cwd(), relPath);
-    const buf = await fs.readFile(p);
+    const fileUrl = relPath.includes('NotoSans-Bold.ttf') ? NOTO_SANS_BOLD_URL : NOTO_SANS_REGULAR_URL;
+    const buf = await fs.readFile(fileUrl);
     return new Uint8Array(buf);
   } catch {
     const base = getPublicBaseUrl();

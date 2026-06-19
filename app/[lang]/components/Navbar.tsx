@@ -13,17 +13,34 @@ import InlinePulse from '@/app/components/InlinePulse';
 import Drawer from '@/app/components/ui/Drawer';
 import Popover from '@/app/components/ui/Popover';
 import ThemeToggleButton from '@/app/components/ThemeToggleButton';
+import type { Dictionary } from '@/lib/dictionary-types';
+import type {
+  NavbarUserProfile,
+  SearchResponse,
+  SearchResults,
+  SitePageVisibilityConfig,
+} from '@/types/search';
 
 interface NavbarProps {
   lang: string;
-  dict: any;
+  dict: Dictionary['nav'];
 }
 
+type NavToolCopy = {
+  title?: string;
+  sub?: string;
+};
+
+type NavToolsDictionary = Partial<Record<string, NavToolCopy>> & {
+  dropdownTitle?: string;
+};
+
 export default function Navbar({ lang, dict }: NavbarProps) {
-  const t = dict && typeof dict === 'object' ? (dict as any) : {};
-  const navTools = t?.tools && typeof t.tools === 'object' ? t.tools : {};
+  const t = dict;
+  const navTools = (t?.tools && typeof t.tools === 'object' ? t.tools : {}) as NavToolsDictionary;
   const toolsTitle = navTools?.dropdownTitle || (lang === 'en' ? 'Tools' : 'Nástroje');
-  const searchPlaceholder = t?.common?.searchPlaceholder || (lang === 'en' ? 'Search…' : 'Vyhledat…');
+  const searchPlaceholder = lang === 'en' ? 'Search…' : 'Vyhledat…';
+  const searchNoResults = lang === 'en' ? 'No results found.' : 'Nic nenalezeno';
   const navHome = t?.home || (lang === 'en' ? 'Home' : 'Domů');
   const navEvents = t?.events || (lang === 'en' ? 'Events' : 'Akce');
   const navNews = t?.news || (lang === 'en' ? 'News' : 'Novinky');
@@ -33,12 +50,21 @@ export default function Navbar({ lang, dict }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<{pages: any[], events: any[], posts: any[], faqs: any[], books: any[], discounts: any[], guide: any[], archive: any[]}>({pages: [], events: [], posts: [], faqs: [], books: [], discounts: [], guide: [], archive: []});
+  const [searchResults, setSearchResults] = useState<SearchResults>({
+    pages: [],
+    events: [],
+    posts: [],
+    faqs: [],
+    books: [],
+    discounts: [],
+    guide: [],
+    archive: [],
+  });
   const [isSearching, setIsSearching] = useState(false);
   const [isToolsOpen, setIsToolsOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [userProfile, setUserProfile] = useState<any>(null);
-  const [sitePages, setSitePages] = useState<Record<string, any> | null>(null);
+  const [userProfile, setUserProfile] = useState<NavbarUserProfile | null>(null);
+  const [sitePages, setSitePages] = useState<Record<string, SitePageVisibilityConfig> | null>(null);
 
   useEffect(() => {
     async function getProfile() {
@@ -117,7 +143,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
   // Search logic
   useEffect(() => {
     if (searchQuery.length < 2) {
-      setSearchResults({pages: [], events: [], posts: [], faqs: [], books: [], discounts: [], guide: [], archive: []});
+      setSearchResults({ pages: [], events: [], posts: [], faqs: [], books: [], discounts: [], guide: [], archive: [] });
       return;
     }
 
@@ -129,11 +155,10 @@ export default function Navbar({ lang, dict }: NavbarProps) {
         url.searchParams.set('lang', lang);
         url.searchParams.set('limit', '3');
         const res = await fetch(url.toString());
-        const json = await res.json().catch(() => ({}));
+        const json = (await res.json().catch(() => ({}))) as Partial<SearchResponse> & { error?: string };
         if (!res.ok) throw new Error(json?.error || 'Chyba');
         setSearchResults(json?.results || { pages: [], events: [], posts: [], faqs: [], books: [], discounts: [], guide: [], archive: [] });
-      } catch (err) {
-        console.error(err);
+      } catch {
         setSearchResults({ pages: [], events: [], posts: [], faqs: [], books: [], discounts: [], guide: [], archive: [] });
       } finally {
         setIsSearching(false);
@@ -366,7 +391,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                         <div>
                           <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-3 px-2">{lang === 'en' ? 'Pages' : 'Stránky'}</p>
                           <div className="space-y-1">
-                            {searchResults.pages.map((p: any) => (
+                            {searchResults.pages.map((p) => (
                               <Link
                                 key={p.id || p.href}
                                 href={String(p.href || `/${lang}`)}
@@ -514,7 +539,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                     </div>
                   ) : searchQuery.length >= 2 && !isSearching && (
                     <div className="text-center py-8">
-                      <p className="text-sm text-stone-400 font-bold">{dict?.searchNoResults || "Nic nenalezeno"}</p>
+                      <p className="text-sm text-stone-400 font-bold">{searchNoResults}</p>
                     </div>
                   )}
                 </Popover>
@@ -712,7 +737,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                       <div>
                         <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">{lang === 'en' ? 'Pages' : 'Stránky'}</div>
                         <div className="space-y-1">
-                          {searchResults.pages.slice(0, 3).map((p: any) => (
+                          {searchResults.pages.slice(0, 3).map((p) => (
                             <Link
                               key={p.id || p.href}
                               href={String(p.href || `/${lang}`)}
@@ -734,7 +759,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                       <div>
                         <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">Akce</div>
                         <div className="space-y-1">
-                          {searchResults.events.slice(0, 3).map((ev: any) => (
+                          {searchResults.events.slice(0, 3).map((ev) => (
                             <Link
                               key={ev.id}
                               href={`/${lang}/akce/${ev.id}`}
@@ -751,7 +776,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                       <div>
                         <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">Novinky</div>
                         <div className="space-y-1">
-                          {searchResults.posts.slice(0, 3).map((po: any) => (
+                          {searchResults.posts.slice(0, 3).map((po) => (
                             <Link
                               key={po.id}
                               href={`/${lang}/novinky/${po.id}`}
@@ -768,7 +793,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                       <div>
                         <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">FAQ</div>
                         <div className="space-y-1">
-                          {searchResults.faqs.slice(0, 3).map((f: any) => (
+                          {searchResults.faqs.slice(0, 3).map((f) => (
                             <Link
                               key={f.id}
                               href={`/${lang}/faq?q=${encodeURIComponent(searchQuery.trim())}`}
@@ -791,7 +816,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                   </div>
                 ) : (
                   <div className="text-center text-xs font-bold text-stone-400 uppercase tracking-widest py-2">
-                    {dict?.searchNoResults || (lang === 'en' ? 'No results' : 'Nic nenalezeno')}
+                    {searchNoResults}
                   </div>
                 )}
               </div>

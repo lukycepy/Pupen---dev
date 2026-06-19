@@ -11,7 +11,53 @@ import { sendMailWithQueueFallback } from '@/lib/email/queue';
 import { stripHtmlToText } from '@/lib/richtext-shared';
 import { DEFAULT_WAITLIST_CONFIG, getWaitlistConfigFromAdminLogs } from '@/lib/rsvp/waitlistConfig';
 
-function err(code: string, status: number, payload?: Record<string, any>) {
+interface EventRow {
+  id?: string | null;
+  title?: string | null;
+  capacity?: number | null;
+  ticket_sale_end?: string | null;
+  is_member_only?: boolean | null;
+}
+
+interface ProfileRow {
+  is_member?: boolean | null;
+  email?: string | null;
+}
+
+interface RsvpExistingRow {
+  status?: string | null;
+  expires_at?: string | null;
+  attendees?: Array<{ name?: string }> | null;
+}
+
+interface RsvpInsertRow {
+  event_id: string;
+  name: string;
+  email: string;
+  status: string;
+  payment_method: string;
+  attendees: Array<{ name: string }>;
+  qr_token?: string;
+  qr_code?: string;
+  expires_at: string | null;
+}
+
+function asTrimmedString(value: unknown) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return {};
+}
+
+function err(code: string, status: number, payload?: Record<string, unknown>) {
   return NextResponse.json({ ok: false, error: code, error_code: code, ...(payload || {}) }, { status });
 }
 
@@ -41,13 +87,16 @@ export async function POST(req: Request) {
     if (!g.ok) return g.response;
     const body = g.body;
     const ip = g.ip === 'unknown' ? null : g.ip;
-    const { eventId, name, email, attendees, attendeesCount, payment_method, promoCode, subscribeNewsletter, lang } = body || {};
-
-    const cleanName = String(name || '').trim();
-    const cleanEmail = String(email || '').trim().toLowerCase();
-    const method = String(payment_method || 'hotove');
-    const promo = promoCode ? normalizePromoCode(String(promoCode)) : '';
-    const userLang = lang === 'en' ? 'en' : 'cs';
+    const eventId = asTrimmedString(body.eventId);
+    const cleanName = asTrimmedString(body.name);
+    const cleanEmail = asTrimmedString(body.email).toLowerCase();
+    const method = asTrimmedString(body.payment_method) || 'hotove';
+    const promoCode = asTrimmedString(body.promoCode);
+    const promo = promoCode ? normalizePromoCode(promoCode) : '';
+    const userLang = body.lang === 'en' ? 'en' : 'cs';
+    const subscribeNewsletter = body.subscribeNewsletter;
+    const attendees = Array.isArray(body.attendees) ? body.attendees : [];
+    const attendeesCount = body.attendeesCount;
 
     if (cleanName.length > 100 || cleanEmail.length > 150) {
       return err('RSVP_PAYLOAD_TOO_LARGE', 400);
@@ -57,7 +106,7 @@ export async function POST(req: Request) {
     if (!eventId || !cleanName || !emailOk) return err('RSVP_BAD_INPUT', 400);
     if (promo && promo.length > 60) return err('PROMO_TOO_LONG', 400);
 
-    const provided = Array.isArray(attendees) ? attendees.map((a: any) => String(a?.name || '').trim()).filter(Boolean) : [];
+    const provided = attendees.map((attendee) => asTrimmedString(toRecord(attendee).name)).filter(Boolean);
     const desiredCountRaw = attendeesCount != null ? Number(attendeesCount) : provided.length || 1;
     const desiredCount = Number.isFinite(desiredCountRaw) ? Math.max(1, Math.min(3, Math.floor(desiredCountRaw))) : 1;
     const attendeeNames = Array.from({ length: desiredCount }).map((_, idx) => ({
@@ -107,16 +156,16 @@ export async function POST(req: Request) {
         : 'id, title, capacity, is_member_only';
       return supabase.from('events').select(select).eq('id', eventId).single();
     };
-    const first: any = await loadEvent(true);
-    let event: any = first.data;
-    let evErr: any = first.error;
+    const first = await loadEvent(true);
+    let event = first.data as EventRow | null;
+    let evErr = first.error;
     if (
       evErr &&
       /ticket_sale_end/i.test(evErr.message) &&
       /(schema cache|does not exist|column)/i.test(evErr.message)
     ) {
-      const retry: any = await loadEvent(false);
-      event = retry.data;
+      const retry = await loadEvent(false);
+      event = retry.data as EventRow | null;
       evErr = retry.error;
     }
     if (evErr || !event) return err('RSVP_EVENT_NOT_FOUND', 404);
@@ -194,12 +243,13 @@ export async function POST(req: Request) {
         .limit(1)
         .maybeSingle();
       if (pr.error) throw pr.error;
-      const rules = Array.isArray(pr.data?.details?.rules) ? pr.data!.details.rules : [];
+      const rules: unknown[] = Array.isArray(pr.data?.details?.rules) ? pr.data!.details.rules : [];
       const rule =
-        rules.find((r: any) => normalizePromoCode(String(r?.code || '')) === promo) || null;
+        rules.find((ruleValue: unknown) => normalizePromoCode(String(toRecord(ruleValue).code || '')) === promo) || null;
+      const ruleRecord = toRecord(rule);
 
       const nowMs = Date.now();
-      const mode = rule?.mode === 'per_attendee' ? 'per_attendee' : 'per_rsvp';
+      const mode = ruleRecord.mode === 'per_attendee' ? 'per_attendee' : 'per_rsvp';
       const consumed = mode === 'per_attendee' ? attendeeNames.length : 1;
       const reject = async (reason: string) => {
         try {
@@ -227,22 +277,22 @@ export async function POST(req: Request) {
       };
 
       if (!rule) return await reject('PROMO_INVALID');
-      if (!rule.active) return await reject('PROMO_INACTIVE');
-      if (rule.startsAt && Number.isFinite(new Date(rule.startsAt).getTime()) && nowMs < new Date(rule.startsAt).getTime()) {
+      if (!ruleRecord.active) return await reject('PROMO_INACTIVE');
+      if (ruleRecord.startsAt && Number.isFinite(new Date(String(ruleRecord.startsAt)).getTime()) && nowMs < new Date(String(ruleRecord.startsAt)).getTime()) {
         return await reject('PROMO_NOT_STARTED');
       }
-      if (rule.endsAt && Number.isFinite(new Date(rule.endsAt).getTime()) && nowMs > new Date(rule.endsAt).getTime()) {
+      if (ruleRecord.endsAt && Number.isFinite(new Date(String(ruleRecord.endsAt)).getTime()) && nowMs > new Date(String(ruleRecord.endsAt)).getTime()) {
         return await reject('PROMO_ENDED');
       }
-      if (Array.isArray(rule.eventIds) && rule.eventIds.length > 0 && !rule.eventIds.map(String).includes(String(eventId))) {
+      if (Array.isArray(ruleRecord.eventIds) && ruleRecord.eventIds.length > 0 && !ruleRecord.eventIds.map(String).includes(String(eventId))) {
         return await reject('PROMO_NOT_FOR_EVENT');
       }
-      if (Array.isArray(rule.whitelistEmails) && rule.whitelistEmails.length > 0) {
-        const wl = rule.whitelistEmails.map((x: any) => String(x).trim().toLowerCase()).filter(Boolean);
+      if (Array.isArray(ruleRecord.whitelistEmails) && ruleRecord.whitelistEmails.length > 0) {
+        const wl = ruleRecord.whitelistEmails.map((x: unknown) => String(x).trim().toLowerCase()).filter(Boolean);
         if (wl.length > 0 && !wl.includes(cleanEmail)) return await reject('PROMO_NOT_ALLOWED_EMAIL');
       }
 
-      const maxUses = rule.maxUses == null || rule.maxUses === '' ? null : Number(rule.maxUses);
+      const maxUses = ruleRecord.maxUses == null || ruleRecord.maxUses === '' ? null : Number(ruleRecord.maxUses);
       if (Number.isFinite(maxUses) && maxUses! >= 1) {
         const usedRes = await supabase
           .from('admin_logs')
@@ -252,14 +302,15 @@ export async function POST(req: Request) {
           .order('created_at', { ascending: false })
           .limit(5000);
         if (usedRes.error) throw usedRes.error;
-        const used = (usedRes.data || []).reduce((acc: number, row: any) => {
-          const n = Number(row?.details?.consumed ?? 1);
+        const used = (usedRes.data || []).reduce((acc: number, row) => {
+          const details = toRecord(row.details);
+          const n = Number(details.consumed ?? 1);
           return acc + (Number.isFinite(n) && n > 0 ? n : 1);
         }, 0);
         if (used + consumed > Math.floor(maxUses!)) return await reject('PROMO_EXHAUSTED');
       }
 
-      const perEmail = rule.maxUsesPerEmail == null || rule.maxUsesPerEmail === '' ? null : Number(rule.maxUsesPerEmail);
+      const perEmail = ruleRecord.maxUsesPerEmail == null || ruleRecord.maxUsesPerEmail === '' ? null : Number(ruleRecord.maxUsesPerEmail);
       if (Number.isFinite(perEmail) && perEmail! >= 1) {
         const usedEmailRes = await supabase
           .from('admin_logs')
@@ -270,14 +321,15 @@ export async function POST(req: Request) {
           .order('created_at', { ascending: false })
           .limit(5000);
         if (usedEmailRes.error) throw usedEmailRes.error;
-        const used = (usedEmailRes.data || []).reduce((acc: number, row: any) => {
-          const n = Number(row?.details?.consumed ?? 1);
+        const used = (usedEmailRes.data || []).reduce((acc: number, row) => {
+          const details = toRecord(row.details);
+          const n = Number(details.consumed ?? 1);
           return acc + (Number.isFinite(n) && n > 0 ? n : 1);
         }, 0);
         if (used + consumed > Math.floor(perEmail!)) return await reject('PROMO_LIMIT_EMAIL');
       }
 
-      promoTitle = rule.title ? String(rule.title).trim() : '';
+      promoTitle = ruleRecord.title ? String(ruleRecord.title).trim() : '';
     }
 
     const sinceWindow = new Date(Date.now() - cfg.rsvp.windowMinutes * 60 * 1000).toISOString();
@@ -362,7 +414,7 @@ export async function POST(req: Request) {
     if (existingRes.error) throw existingRes.error;
 
     const hasActiveExisting =
-      (existingRes.data || []).some((r: any) => {
+      (existingRes.data || []).some((r: RsvpExistingRow) => {
         if (r.status === 'cancelled') return false;
         if (!r.expires_at) return true;
         return new Date(r.expires_at) > now;
@@ -387,7 +439,7 @@ export async function POST(req: Request) {
     if (capacity) {
       const activeRes = await supabase.from('rsvp').select('status, expires_at, attendees').eq('event_id', eventId).in('status', ['confirmed', 'reserved']);
       if (activeRes.error) throw activeRes.error;
-      taken = (activeRes.data || []).reduce((acc: number, r: any) => {
+      taken = (activeRes.data || []).reduce((acc: number, r: RsvpExistingRow) => {
         if (r.status === 'cancelled') return acc;
         if (r.expires_at && new Date(r.expires_at) <= now) return acc;
         const n = Array.isArray(r.attendees) ? r.attendees.length : 1;
@@ -411,7 +463,7 @@ export async function POST(req: Request) {
     const expiresAt =
       status === 'reserved' ? new Date(now.getTime() + reservationExpiresHours * 60 * 60 * 1000).toISOString() : null;
 
-    const baseRow: any = {
+    const baseRow: RsvpInsertRow = {
       event_id: eventId,
       name: cleanName,
       email: cleanEmail,
@@ -423,14 +475,14 @@ export async function POST(req: Request) {
       expires_at: expiresAt,
     };
 
-    const tryInsert = async (row: any) => supabase.from('rsvp').insert([row]).select('id').single();
-    let ins: any = await tryInsert(baseRow);
+    const tryInsert = async (row: RsvpInsertRow) => supabase.from('rsvp').insert([row]).select('id').single();
+    let ins = await tryInsert(baseRow);
     if (
       ins?.error &&
       /(qr_code|qr_token)/i.test(ins.error.message) &&
       /(schema cache|does not exist|column)/i.test(ins.error.message)
     ) {
-      const row2: any = { ...baseRow };
+      const row2 = { ...baseRow };
       if (/qr_code/i.test(ins.error.message)) delete row2.qr_code;
       if (/qr_token/i.test(ins.error.message)) delete row2.qr_token;
       ins = await tryInsert(row2);
@@ -447,9 +499,10 @@ export async function POST(req: Request) {
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
-        const rules = Array.isArray(pr.data?.details?.rules) ? pr.data!.details.rules : [];
-        const rule = rules.find((r: any) => normalizePromoCode(String(r?.code || '')) === promo) || null;
-        const mode = rule?.mode === 'per_attendee' ? 'per_attendee' : 'per_rsvp';
+        const rules: unknown[] = Array.isArray(pr.data?.details?.rules) ? pr.data!.details.rules : [];
+        const rule = rules.find((ruleValue: unknown) => normalizePromoCode(String(toRecord(ruleValue).code || '')) === promo) || null;
+        const ruleRecord = toRecord(rule);
+        const mode = ruleRecord.mode === 'per_attendee' ? 'per_attendee' : 'per_rsvp';
         const consumed = mode === 'per_attendee' ? attendeeNames.length : 1;
         await supabase.from('admin_logs').insert([
           {
@@ -516,7 +569,7 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ ok: true, status, qrToken, expiresAt, eventId: String(eventId) });
-  } catch (e: any) {
-    return err('RSVP_ERROR', 500, { message: e?.message || 'Error' });
+  } catch (error: unknown) {
+    return err('RSVP_ERROR', 500, { message: getErrorMessage(error) });
   }
 }

@@ -2,8 +2,12 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 
-function isMissingRpcFunction(e: any, fn: string) {
-  const msg = String(e?.message || '');
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
+function isMissingRpcFunction(error: unknown, fn: string) {
+  const msg = getErrorMessage(error);
   return msg.includes('Could not find the function') && msg.includes(fn);
 }
 
@@ -17,8 +21,8 @@ export async function POST(req: Request) {
     if (error) throw error;
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    if (isMissingRpcFunction(e, 'admin_reload_schema_cache')) {
+  } catch (error: unknown) {
+    if (isMissingRpcFunction(error, 'admin_reload_schema_cache')) {
       return NextResponse.json(
         {
           error:
@@ -27,6 +31,6 @@ export async function POST(req: Request) {
         { status: 501 },
       );
     }
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

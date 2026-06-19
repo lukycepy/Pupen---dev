@@ -1,7 +1,11 @@
 import React from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
 import type { PageBlocks } from '@/lib/site/page-blocks';
 
 export default function PageBlocksRenderer({ blocks }: { blocks: PageBlocks }) {
+  const isInternalHref = (href: string) => href.startsWith('/');
+
   return (
     <div className="space-y-10">
       {blocks.map((b) => {
@@ -13,7 +17,14 @@ export default function PageBlocksRenderer({ blocks }: { blocks: PageBlocks }) {
         if (b.type === 'image') {
           return (
             <figure key={b.id} className="space-y-3">
-              <img src={b.url} alt={String(b.alt || '')} className="w-full rounded-2xl border border-stone-200 bg-white" />
+              <Image
+                src={b.url}
+                alt={String(b.alt || '')}
+                width={1600}
+                height={900}
+                sizes="(min-width: 1024px) 1024px, 100vw"
+                className="h-auto w-full rounded-2xl border border-stone-200 bg-white object-cover"
+              />
               {b.caption ? <figcaption className="text-sm font-medium text-stone-500">{b.caption}</figcaption> : null}
             </figure>
           );
@@ -35,20 +46,42 @@ export default function PageBlocksRenderer({ blocks }: { blocks: PageBlocks }) {
               {(primaryLabel && primaryHref) || (secondaryLabel && secondaryHref) ? (
                 <div className="mt-6 flex flex-wrap gap-3">
                   {primaryLabel && primaryHref ? (
-                    <a
-                      href={primaryHref}
-                      className="inline-flex items-center justify-center rounded-2xl px-6 py-3 text-[11px] font-black uppercase tracking-widest bg-green-600 text-white hover:bg-green-700 transition"
-                    >
-                      {primaryLabel}
-                    </a>
+                    isInternalHref(primaryHref) ? (
+                      <Link
+                        href={primaryHref}
+                        className="inline-flex items-center justify-center rounded-2xl px-6 py-3 text-[11px] font-black uppercase tracking-widest bg-green-600 text-white hover:bg-green-700 transition"
+                      >
+                        {primaryLabel}
+                      </Link>
+                    ) : (
+                      <a
+                        href={primaryHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center rounded-2xl px-6 py-3 text-[11px] font-black uppercase tracking-widest bg-green-600 text-white hover:bg-green-700 transition"
+                      >
+                        {primaryLabel}
+                      </a>
+                    )
                   ) : null}
                   {secondaryLabel && secondaryHref ? (
-                    <a
-                      href={secondaryHref}
-                      className="inline-flex items-center justify-center rounded-2xl px-6 py-3 text-[11px] font-black uppercase tracking-widest bg-white text-stone-800 border border-stone-200 hover:bg-stone-100 transition"
-                    >
-                      {secondaryLabel}
-                    </a>
+                    isInternalHref(secondaryHref) ? (
+                      <Link
+                        href={secondaryHref}
+                        className="inline-flex items-center justify-center rounded-2xl px-6 py-3 text-[11px] font-black uppercase tracking-widest bg-white text-stone-800 border border-stone-200 hover:bg-stone-100 transition"
+                      >
+                        {secondaryLabel}
+                      </Link>
+                    ) : (
+                      <a
+                        href={secondaryHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center rounded-2xl px-6 py-3 text-[11px] font-black uppercase tracking-widest bg-white text-stone-800 border border-stone-200 hover:bg-stone-100 transition"
+                      >
+                        {secondaryLabel}
+                      </a>
+                    )
                   ) : null}
                 </div>
               ) : null}
@@ -60,4 +93,3 @@ export default function PageBlocksRenderer({ blocks }: { blocks: PageBlocks }) {
     </div>
   );
 }
-

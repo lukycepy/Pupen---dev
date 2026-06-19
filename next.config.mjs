@@ -1,14 +1,29 @@
 /** @type {import('next').NextConfig} */
 import { withSentryConfig } from '@sentry/nextjs';
 
+const configuredImageHosts = (process.env.NEXT_IMAGE_REMOTE_HOSTS || '')
+  .split(',')
+  .map((value) => value.trim())
+  .filter(Boolean)
+  .map((hostname) => ({
+    protocol: 'https',
+    hostname,
+  }));
+
 const nextConfig = {
   images: {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 86400,
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: '**',
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '3000',
+      },
+      {
+        protocol: 'http',
+        hostname: '127.0.0.1',
+        port: '3000',
       },
       {
         protocol: 'https',
@@ -21,7 +36,16 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: '**.supabase.co', // For user uploaded images
-      }
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.ctfassets.net',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.public.blob.vercel-storage.com',
+      },
+      ...configuredImageHosts,
     ],
   },
   async headers() {

@@ -9,24 +9,33 @@ type GuardOptions = {
   max: number;
   sameSite?: boolean;
   honeypot?: boolean;
-  honeypotResponse?: any;
-  tooManyPayload?: any;
-  forbiddenPayload?: any;
+  honeypotResponse?: Record<string, unknown>;
+  tooManyPayload?: Record<string, unknown>;
+  forbiddenPayload?: Record<string, unknown>;
   tooManyMessage?: string;
   forbiddenMessage?: string;
 };
 
-type GuardOk = { ok: true; ip: string; body: any };
+type GuardBody = Record<string, unknown>;
+
+type GuardOk = { ok: true; ip: string; body: GuardBody };
 type GuardFail = { ok: false; response: NextResponse };
 
 function parseFormBody(raw: string) {
   const sp = new URLSearchParams(raw);
-  const out: any = {};
+  const out: GuardBody = {};
   for (const [k, v] of sp.entries()) {
     if (k in out) continue;
     out[k] = v;
   }
   return out;
+}
+
+function toRecord(value: unknown): GuardBody {
+  if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+    return value as GuardBody;
+  }
+  return {};
 }
 
 export async function guardPublicJsonPost(req: Request, opts: GuardOptions): Promise<GuardOk | GuardFail> {
@@ -55,7 +64,7 @@ export async function guardPublicJsonPost(req: Request, opts: GuardOptions): Pro
     };
   }
 
-  const body = await req.json().catch(() => ({}));
+  const body = toRecord(await req.json().catch(() => ({})));
 
   if (opts.honeypot !== false) {
     const hp = String(body?.hp || body?.website || '').trim();
@@ -98,11 +107,11 @@ export async function guardPublicPostAny(req: Request, opts: GuardOptions): Prom
 
   const ct = String(req.headers.get('content-type') || '').toLowerCase();
   const body = ct.includes('application/json')
-    ? await req.json().catch(() => ({}))
+    ? toRecord(await req.json().catch(() => ({})))
     : parseFormBody(await req.text().catch(() => ''));
 
   if (opts.honeypot !== false) {
-    const hp = String((body as any)?.hp || (body as any)?.website || '').trim();
+    const hp = String(body.hp || body.website || '').trim();
     if (hp) {
       return { ok: false, response: NextResponse.json(opts.honeypotResponse ?? { ok: true }) };
     }
@@ -144,7 +153,7 @@ export async function guardPublicPostNoBody(req: Request, opts: Omit<GuardOption
 }
 
 type SilentOkOptions = GuardOptions & {
-  okPayload?: any;
+  okPayload?: Record<string, unknown>;
   okStatus?: number;
 };
 
@@ -166,8 +175,8 @@ type GuardGetOptions = {
   windowMs: number;
   max: number;
   sameSite?: boolean;
-  tooManyPayload?: any;
-  forbiddenPayload?: any;
+  tooManyPayload?: Record<string, unknown>;
+  forbiddenPayload?: Record<string, unknown>;
   tooManyMessage?: string;
   forbiddenMessage?: string;
 };

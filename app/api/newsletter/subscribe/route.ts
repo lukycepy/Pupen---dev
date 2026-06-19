@@ -8,20 +8,28 @@ import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
 import { sendMailWithQueueFallback } from '@/lib/email/queue';
 import { stripHtmlToText } from '@/lib/richtext-shared';
 
+function asTrimmedString(value: unknown) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
 function sha256Hex(input: string) {
   return createHash('sha256').update(input).digest('hex');
 }
 
-function normalizeLang(input: any) {
-  return String(input || '').trim() === 'en' ? 'en' : 'cs';
+function normalizeLang(input: unknown) {
+  return asTrimmedString(input) === 'en' ? 'en' : 'cs';
 }
 
-function isMissingColumn(e: any) {
-  const msg = String(e?.message || '');
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
+function isMissingColumn(error: unknown) {
+  const msg = getErrorMessage(error);
   return /(schema cache|does not exist|column)/i.test(msg);
 }
 
-function normalizeEmail(input: string) {
+function normalizeEmail(input: unknown) {
   const v = String(input || '').trim().toLowerCase();
   if (v.length > 200) return '';
   return v;
@@ -52,10 +60,10 @@ export async function POST(req: Request) {
     if (!g.ok) return g.response;
     const body = g.body;
 
-    const email = normalizeEmail(body?.email || '');
+    const email = normalizeEmail(body.email);
     const categories = normalizeCategories(body?.categories);
-    const source = body?.source != null ? String(body.source).slice(0, 80) : 'web';
-    const lang = normalizeLang(body?.lang || 'cs');
+    const source = body.source != null ? String(body.source).slice(0, 80) : 'web';
+    const lang = normalizeLang(body.lang);
 
     if (!email) return NextResponse.json({ error: 'Chybí e-mail.' }, { status: 400 });
     if (!isEmail(email)) return NextResponse.json({ error: 'Neplatný e-mail.' }, { status: 400 });
@@ -76,9 +84,9 @@ export async function POST(req: Request) {
     if (existing.error) throw existing.error;
 
     // Pokud uživatel už existuje, ale neposlal nové kategorie, zachováme původní
-    const finalCategories = body?.categories ? categories : (existing.data?.categories || ['all']);
+    const finalCategories = body.categories ? categories : (existing.data?.categories || ['all']);
     // Preference: "marketing" a "transactional"
-    const prefs = body?.preferences || existing.data?.preferences || { marketing: true, transactional: true };
+    const prefs = (typeof body.preferences === 'object' && body.preferences !== null ? body.preferences : null) || existing.data?.preferences || { marketing: true, transactional: true };
     const existingId = existing.data?.id ? String((existing.data as any).id) : null;
 
     if (doiCfg.enabled) {
@@ -208,7 +216,7 @@ export async function POST(req: Request) {
       throw ins.error;
     }
     return NextResponse.json({ ok: true, status: 'created' });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

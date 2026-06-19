@@ -4,6 +4,10 @@ import { getServerSupabase } from '@/lib/supabase-server';
 import { buildApplicationPdfBytes } from '@/lib/applications/pdf';
 import { formatApplicationPdfFileName } from '@/lib/applications/pdfFilename';
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function GET(req: Request) {
   try {
     const { user } = await requireMember(req);
@@ -31,8 +35,8 @@ export async function GET(req: Request) {
         'Content-Disposition': `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(utf8)}`,
       },
     });
-  } catch (e: any) {
-    const msg = String(e?.message || 'Error');
+  } catch (error: unknown) {
+    const msg = getErrorMessage(error);
     const status = msg === 'Unauthorized' ? 401 : msg === 'Forbidden' ? 403 : 500;
     return NextResponse.json({ error: msg }, { status });
   }

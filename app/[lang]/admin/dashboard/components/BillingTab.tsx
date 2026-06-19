@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useFieldArray, useForm } from 'react-hook-form';
+import { useFieldArray, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2, Receipt, Search, RefreshCcw, Save, FilePlus2, ArrowRightLeft, XCircle, BadgeCheck, Mail } from 'lucide-react';
@@ -100,11 +100,10 @@ export default function BillingTab({ dict }: any) {
     mode: 'onSubmit',
   });
 
-  const { register, handleSubmit, reset, watch, formState } = form;
+  const { register, handleSubmit, reset, formState } = form;
   const { fields, append, remove, replace } = useFieldArray({ control: form.control, name: 'items' });
-
-  const invoiceWatch = watch('invoice');
-  const itemsWatch = watch('items');
+  const invoiceWatch = useWatch({ control: form.control, name: 'invoice' });
+  const itemsWatch = useWatch({ control: form.control, name: 'items' });
 
   const computedTotal = useMemo(() => {
     const rows = Array.isArray(itemsWatch) ? itemsWatch : [];
@@ -150,7 +149,7 @@ export default function BillingTab({ dict }: any) {
   });
 
   const selectedInvoice = detailQuery.data?.invoice || null;
-  const selectedItems = detailQuery.data?.items || [];
+  const selectedItems = useMemo(() => detailQuery.data?.items || [], [detailQuery.data?.items]);
   const isEditable = selectedInvoice ? selectedInvoice.status === 'draft' : true;
 
   useEffect(() => {

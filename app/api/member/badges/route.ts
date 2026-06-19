@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server';
 import { requireMember } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function GET(req: Request) {
   try {
     const { user } = await requireMember(req);
@@ -15,8 +19,7 @@ export async function GET(req: Request) {
 
     if (error) throw error;
     return NextResponse.json({ badges: data });
-  } catch (error: any) {
-    console.error('GET user badges error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

@@ -1,6 +1,16 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { guardPublicGet } from '@/lib/public-post-guard';
+import type {
+  SearchArchiveResult,
+  SearchDiscountResult,
+  SearchEventResult,
+  SearchFaqResult,
+  SearchGuideResult,
+  SearchPageResult,
+  SearchPostResult,
+  SearchResults,
+} from '@/types/search';
 
 function getAnonServerSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -8,6 +18,30 @@ function getAnonServerSupabase() {
   if (!url || !key) throw new Error('Missing Supabase env');
   return createClient(url, key);
 }
+
+type SearchRow =
+  | SearchEventResult
+  | SearchPostResult
+  | SearchFaqResult
+  | SearchDiscountResult
+  | SearchGuideResult
+  | SearchArchiveResult;
+
+type QueryResult<T> = {
+  data?: T[] | null;
+  error?: { message?: string } | null;
+};
+
+const EMPTY_RESULTS: SearchResults = {
+  pages: [],
+  events: [],
+  posts: [],
+  faqs: [],
+  books: [],
+  discounts: [],
+  guide: [],
+  archive: [],
+};
 
 export async function GET(req: Request) {
   try {
@@ -20,13 +54,13 @@ export async function GET(req: Request) {
     const lang = (url.searchParams.get('lang') || 'cs') === 'en' ? 'en' : 'cs';
     const limit = Math.max(1, Math.min(10, Number(url.searchParams.get('limit') || 5)));
 
-    const norm = (s: any) =>
+    const norm = (s: unknown) =>
       String(s || '')
         .toLowerCase()
         .normalize('NFKD')
         .replace(/[\u0300-\u036f]/g, '');
 
-    const pagesAll = [
+    const pagesAll: Array<{ id: string; href: string; titleCs: string; titleEn: string }> = [
       { id: 'prihlaska', href: '/prihlaska', titleCs: 'Přihláška', titleEn: 'Application' },
       { id: 'login', href: '/login', titleCs: 'Přihlášení členů', titleEn: 'Member login' },
       { id: 'akce', href: '/akce', titleCs: 'Akce', titleEn: 'Events' },
@@ -43,7 +77,7 @@ export async function GET(req: Request) {
       { id: 'podpora', href: '/support', titleCs: 'Podpora', titleEn: 'Support' },
     ];
 
-    const pages = pagesAll
+    const pages: SearchPageResult[] = pagesAll
       .map((p) => ({
         id: p.id,
         href: `/${lang}${p.href}`,
@@ -58,26 +92,26 @@ export async function GET(req: Request) {
     if (q.length < 2) {
       return NextResponse.json({
         ok: true,
-        results: { pages: [], events: [], posts: [], faqs: [], books: [], discounts: [], guide: [], archive: [] },
+        results: EMPTY_RESULTS,
       });
     }
 
     const nowIso = new Date().toISOString();
     const supabase = getAnonServerSupabase();
 
-    const safe = async (p: any) => {
+    const safe = async <T extends SearchRow>(p: unknown): Promise<QueryResult<T>> => {
       try {
-        const res = await p;
+        const res = (await p) as QueryResult<T>;
         if (res?.error) {
           const msg = String(res.error.message || '');
           if (/does not exist|schema cache|Could not find the table|Could not find the function|column .* does not exist/i.test(msg)) {
-            return { data: [] };
+            return { data: [] as T[] };
           }
-          return { data: [] };
+          return { data: [] as T[] };
         }
         return res;
       } catch {
-        return { data: [] };
+        return { data: [] as T[] };
       }
     };
 
@@ -166,16 +200,16 @@ export async function GET(req: Request) {
     const archiveRes =
       (archiveResPrimary?.data || []).length > 0 ? archiveResPrimary : await archiveFallback();
 
-    const normalize = (row: any) => {
+    const normalize = <T extends SearchRow>(row: T): T => {
       if (!row || typeof row !== 'object') return row;
       if (lang !== 'en') return row;
-      const copy: any = { ...row };
+      const copy = { ...row } as T & Record<string, unknown>;
       if (copy.title_en) copy.title = copy.title_en;
       if (copy.excerpt_en) copy.excerpt = copy.excerpt_en;
       if (copy.question_en) copy.question = copy.question_en;
       if (copy.answer_en) copy.answer = copy.answer_en;
       if (copy.description_en) copy.description = copy.description_en;
-      return copy;
+      return copy as T;
     };
 
     return NextResponse.json({
@@ -191,7 +225,8 @@ export async function GET(req: Request) {
         archive: (archiveRes.data || []).map(normalize),
       },
     });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : 'Error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

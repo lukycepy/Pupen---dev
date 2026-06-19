@@ -4,6 +4,10 @@ import { getServerSupabase } from '@/lib/supabase-server';
 
 export const runtime = 'nodejs';
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function GET(req: Request) {
   try {
     await requireAdmin(req);
@@ -19,8 +23,9 @@ export async function GET(req: Request) {
     if (error) throw error;
 
     return NextResponse.json({ ok: true, run: data || null }, { status: 200 });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

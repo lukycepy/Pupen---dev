@@ -9,16 +9,7 @@ import { useDictionary } from '@/app/context/DictionaryContext';
 
 type BuyerType = 'person' | 'company';
 
-export default function InvoiceRequestModal({
-  open,
-  onClose,
-  lang,
-  rsvpId,
-  eventId,
-  eventTitle,
-  email,
-  defaultName,
-}: {
+export default function InvoiceRequestModal(props: {
   open: boolean;
   onClose: () => void;
   lang: string;
@@ -28,6 +19,7 @@ export default function InvoiceRequestModal({
   email: string;
   defaultName: string;
 }) {
+  const { open, onClose, rsvpId, eventId, eventTitle, email, defaultName } = props;
   const dict = useDictionary();
   const t = dict.memberComponents.invoiceRequestModal;
   const { showToast } = useToast();

@@ -4,6 +4,21 @@ import { guardPublicJsonPost } from "@/lib/public-post-guard";
 import { requireUser } from "@/lib/server-auth";
 import { getServerSupabase } from "@/lib/supabase-server";
 
+interface OcrProfileRow {
+  is_admin?: boolean | null;
+  can_manage_admins?: boolean | null;
+  can_view_budget?: boolean | null;
+  can_edit_budget?: boolean | null;
+}
+
+function asTrimmedString(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Error";
+}
+
 export async function POST(req: Request) {
   try {
     const g = await guardPublicJsonPost(req, { keyPrefix: "ocr", windowMs: 60_000, max: 5, honeypot: false });
@@ -16,16 +31,17 @@ export async function POST(req: Request) {
       .from("profiles")
       .select("is_admin, can_manage_admins, can_view_budget, can_edit_budget")
       .eq("id", user.id)
-      .maybeSingle();
+      .maybeSingle<OcrProfileRow>();
     if (profRes.error) throw profRes.error;
-    const p: any = profRes.data || {};
+    const p = profRes.data;
     const canUse = p?.can_manage_admins === true || p?.is_admin === true || p?.can_view_budget === true || p?.can_edit_budget === true;
     if (!canUse) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const apiKey = process.env.GOOGLE_AI_API_KEY || "";
     if (!apiKey) return NextResponse.json({ error: "OCR není nakonfigurované." }, { status: 501 });
 
-    const { imageBase64, mimeType = "image/jpeg" } = body || {};
+    const imageBase64 = asTrimmedString(body.imageBase64);
+    const mimeType = asTrimmedString(body.mimeType) || "image/jpeg";
 
     if (!imageBase64) {
       return NextResponse.json({ error: "Missing image data" }, { status: 400 });
@@ -64,8 +80,7 @@ export async function POST(req: Request) {
     const data = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(text);
 
     return NextResponse.json(data);
-  } catch (error: any) {
-    console.error("OCR Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

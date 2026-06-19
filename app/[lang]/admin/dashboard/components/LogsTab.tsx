@@ -62,7 +62,7 @@ export default function LogsTab({ readOnly }: { readOnly?: boolean }) {
     getNextPageParam: (lastPage) => lastPage.nextFrom,
   });
 
-  const items = data?.pages.flatMap((p) => p.items) || [];
+  const items = React.useMemo(() => data?.pages.flatMap((p) => p.items) || [], [data?.pages]);
 
   const runPurgeDry = async () => {
     const token = await getToken();
@@ -97,7 +97,7 @@ export default function LogsTab({ readOnly }: { readOnly?: boolean }) {
   const norm = (s: any) => String(s || '').toLowerCase();
   const qq = norm(q);
 
-  const getActorType = (log: any) => {
+  const getActorType = React.useCallback((log: any) => {
     const email = norm(log?.admin_email);
     const name = norm(log?.admin_name);
     if (!email && !name) return 'system';
@@ -105,7 +105,7 @@ export default function LogsTab({ readOnly }: { readOnly?: boolean }) {
     if (name.includes('emailprefs')) return 'member';
     if (email === 'member') return 'member';
     return 'admin';
-  };
+  }, []);
 
   const getBadge = (log: any) => {
     const action = norm(log?.action);
@@ -130,7 +130,7 @@ export default function LogsTab({ readOnly }: { readOnly?: boolean }) {
         .join(' ');
       return hay.includes(qq);
     });
-  }, [items, qq, source, type]);
+  }, [getActorType, items, qq, source, type]);
 
   if (isLoading) return <SkeletonTabContent />;
 
