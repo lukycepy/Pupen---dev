@@ -1,16 +1,43 @@
-import { PDFDocument, rgb } from 'pdf-lib';
+import { PDFDocument, PDFFont, rgb } from 'pdf-lib';
 import { getPdfFonts } from '@/lib/pdf/fonts';
 import { formatDatePrague } from '@/lib/time/prague';
 
 const LOGO_PNG_URL = new URL('../../public/logo.png', import.meta.url);
 
-function cleanText(input: any, fallback = '-') {
+interface ApplicationPdfRow {
+  first_name?: string | null;
+  last_name?: string | null;
+  full_name?: string | null;
+  name?: string | null;
+  created_at?: string | null;
+  submitted_on?: string | null;
+  decision_membership_type?: string | null;
+  membership_type?: string | null;
+  gdpr_consent?: boolean | null;
+  email?: string | null;
+  phone?: string | null;
+  university_email?: string | null;
+  field_of_study?: string | null;
+  study_year?: string | null;
+  address?: string | null;
+  status?: string | null;
+  decided_at?: string | null;
+  decided_by_email?: string | null;
+  rejection_reason?: string | null;
+  decision_reason?: string | null;
+  applicant_signature?: string | null;
+  signature_data_url?: string | null;
+  chairwoman_signature?: string | null;
+  admin_signature_data_url?: string | null;
+}
+
+function cleanText(input: unknown, fallback = '-') {
   const s = String(input ?? '').replace(/\u0000/g, '').trim();
   if (!s) return fallback;
   return s.replace(/\s+/g, ' ').trim();
 }
 
-function asciiFallbackText(input: any, fallback = '-') {
+function asciiFallbackText(input: unknown, fallback = '-') {
   const s = String(input ?? '').trim();
   if (!s) return fallback;
   return s
@@ -22,14 +49,14 @@ function asciiFallbackText(input: any, fallback = '-') {
     .trim();
 }
 
-function labelMembershipType(input: any) {
+function labelMembershipType(input: unknown) {
   const v = String(input || '').trim().toLowerCase();
   if (v === 'external') return 'Externí';
   if (v === 'regular') return 'Řádné';
   return cleanText(input, '-');
 }
 
-function labelStatus(input: any) {
+function labelStatus(input: unknown) {
   const v = String(input || '').trim().toLowerCase();
   if (v === 'approved') return 'Schváleno';
   if (v === 'rejected') return 'Zamítnuto';
@@ -37,7 +64,7 @@ function labelStatus(input: any) {
   return cleanText(input, '-');
 }
 
-function formatDateCs(input: any) {
+function formatDateCs(input: unknown) {
   return formatDatePrague(input, 'cs');
 }
 
@@ -62,7 +89,7 @@ async function embedDataUrlImage(pdf: PDFDocument, dataUrl: string) {
   return pdf.embedJpg(bytes);
 }
 
-function wrapLines(font: any, text: string, size: number, maxWidth: number) {
+function wrapLines(font: Pick<PDFFont, 'widthOfTextAtSize'>, text: string, size: number, maxWidth: number) {
   const words = String(text || '').split(/\s+/).filter(Boolean);
   const lines: string[] = [];
   let current = '';
@@ -85,7 +112,7 @@ function wrapLines(font: any, text: string, size: number, maxWidth: number) {
   return lines.length ? lines : [''];
 }
 
-export async function buildApplicationPdfBytes(app: any) {
+export async function buildApplicationPdfBytes(app: ApplicationPdfRow) {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([595.28, 841.89]);
   const { font, fontBold } = await getPdfFonts(pdfDoc);
@@ -100,7 +127,10 @@ export async function buildApplicationPdfBytes(app: any) {
   const green = rgb(0.08, 0.6, 0.26);
   const paper = rgb(0.98, 0.98, 0.97);
 
-  const drawSafe = (text: any, opts: { x: number; y: number; size: number; font: any; color: any }) => {
+  const drawSafe = (
+    text: unknown,
+    opts: { x: number; y: number; size: number; font: PDFFont; color: ReturnType<typeof rgb> },
+  ) => {
     const primary = cleanText(text, '');
     if (!primary) return;
     try {
@@ -140,7 +170,7 @@ export async function buildApplicationPdfBytes(app: any) {
     y -= 14;
   };
 
-  const row = (label: string, value: any) => {
+  const row = (label: string, value: unknown) => {
     drawSafe(label, { x: margin, y, size: 9, font: fontBold, color: gray });
     const valueX = margin + 180;
     const valueWidth = width - margin - valueX;
@@ -155,7 +185,7 @@ export async function buildApplicationPdfBytes(app: any) {
   const firstName = cleanText(app?.first_name || '', '');
   const lastName = cleanText(app?.last_name || '', '');
   const fullName = cleanText(`${firstName} ${lastName}`.trim() || app?.name || '', '-');
-  const submittedAt = (app as any)?.created_at || app?.submitted_on || '';
+  const submittedAt = app?.created_at || app?.submitted_on || '';
   const membershipType = labelMembershipType(app?.decision_membership_type || app?.membership_type);
   const gdprConsent = app?.gdpr_consent === true ? 'Ano' : app?.gdpr_consent === false ? 'Ne' : '-';
 

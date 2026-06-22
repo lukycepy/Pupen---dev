@@ -13,6 +13,8 @@ import MonthlyCalendar from '../components/MonthlyCalendar';
 import InlinePulse from '@/app/components/InlinePulse';
 import SocialShareMenu from '@/app/components/SocialShareMenu';
 import CopyButton from '@/app/components/CopyButton';
+import { trackAnalyticsEvent } from '@/lib/analytics-client';
+import { normalizeRsvpSharedDraft, readRsvpSharedDraft, writeRsvpSharedDraft, type RsvpSharedDraft } from '@/lib/client-preferences';
 
 const RSVP_DRAFT_KEY = 'pupen_rsvp_draft_v1';
 const passthroughLoader = ({ src }: { src: string }) => src;
@@ -34,6 +36,39 @@ function getEventExcerpt(ev: any, lang: string) {
 
 interface AkcePageClientProps {
   lang: string;
+}
+
+type RsvpFormState = RsvpSharedDraft & {
+  promo_code: string;
+};
+
+const EMPTY_RSVP_FORM: RsvpFormState = {
+  name: '',
+  email: '',
+  promo_code: '',
+  subscribe_newsletter: false,
+  payment_method: 'hotove',
+  attendeesCount: 1,
+  attendees: [{ name: '' }],
+};
+
+function normalizeRsvpForm(value: Partial<RsvpFormState> | null | undefined): RsvpFormState {
+  const shared = normalizeRsvpSharedDraft(value || {});
+  return {
+    ...shared,
+    promo_code: typeof value?.promo_code === 'string' ? value.promo_code.slice(0, 60) : '',
+  };
+}
+
+function toSharedDraft(value: RsvpFormState): RsvpSharedDraft {
+  return {
+    name: value.name,
+    email: value.email,
+    payment_method: value.payment_method,
+    subscribe_newsletter: value.subscribe_newsletter,
+    attendeesCount: value.attendeesCount,
+    attendees: value.attendees,
+  };
 }
 
 export default function AkcePageClient({ lang }: AkcePageClientProps) {
@@ -68,13 +103,7 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
     attendeesCount: number;
   }>(null);
   const [rsvpForm, setRsvpForm] = useState({ 
-    name: '', 
-    email: '',
-    promo_code: '',
-    subscribe_newsletter: false,
-    payment_method: 'hotove',
-    attendeesCount: 1,
-    attendees: [{ name: '' }],
+    ...EMPTY_RSVP_FORM,
   });
 
   const readDrafts = useCallback(() => {
@@ -86,12 +115,13 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
     }
   }, []);
 
-  const writeDraft = useCallback((eventId: string, draft: any) => {
+  const writeDraft = useCallback((eventId: string, draft: RsvpFormState) => {
     try {
       const drafts = readDrafts();
-      drafts[eventId] = draft;
+      drafts[eventId] = normalizeRsvpForm(draft);
       window.localStorage.setItem(RSVP_DRAFT_KEY, JSON.stringify(drafts));
     } catch {}
+    writeRsvpSharedDraft(toSharedDraft(normalizeRsvpForm(draft)));
   }, [readDrafts]);
 
   const clearDraft = (eventId: string) => {
@@ -102,9 +132,11 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
     } catch {}
   };
 
-  const setRsvpFormWithDraft = (next: any, eventId: string | null) => {
-    setRsvpForm(next);
-    if (eventId) writeDraft(eventId, next);
+  const setRsvpFormWithDraft = (next: Partial<RsvpFormState>, eventId: string | null) => {
+    const normalized = normalizeRsvpForm(next);
+    setRsvpForm(normalized);
+    if (eventId) writeDraft(eventId, normalized);
+    else writeRsvpSharedDraft(toSharedDraft(normalized));
   };
 
   const setAttendeesCount = (count: number) => {
@@ -128,36 +160,64 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
     setRsvpResult(null);
     const drafts = readDrafts();
     const draft = drafts[rsvpOpen];
-    if (draft && typeof draft === 'object') {
-      setRsvpForm(draft);
-    }
+    const sharedDraft = readRsvpSharedDraft();
+    const initialForm = normalizeRsvpForm({
+      ...EMPTY_RSVP_FORM,
+      ...(sharedDraft || {}),
+      ...(draft && typeof draft === 'object' ? draft : {}),
+    });
+    setRsvpForm(initialForm);
+
     supabase.auth
       .getSession()
       .then(async ({ data }) => {
         const session = data.session;
         if (!session?.user) return;
-        const email = session.user.email;
-        if (email) {
-          setRsvpForm((prev) => {
-            if (prev.email) return prev;
-            const next = { ...prev, email };
-            writeDraft(rsvpOpen, next);
-            return next;
+
+        let memberName = '';
+        let memberEmail = '';
+
+        try {
+          const profileRes = await fetch('/api/auth/me-profile', {
+            headers: { Authorization: `Bearer ${session.access_token}` },
           });
-        }
-        const meta: any = session.user.user_metadata || {};
-        const metaName = String(meta.full_name || meta.name || '').trim();
-        const metaFirst = String(meta.first_name || meta.given_name || '').trim();
-        const metaLast = String(meta.last_name || meta.family_name || '').trim();
-        const name = metaName || [metaFirst, metaLast].filter(Boolean).join(' ').trim();
-        if (name && name.length <= 120) {
-          setRsvpForm((prev) => {
-            if (prev.name) return prev;
-            const next = { ...prev, name };
-            writeDraft(rsvpOpen, next);
-            return next;
+          if (profileRes.ok) {
+            const profileJson = await profileRes.json().catch(() => ({}));
+            const profile = profileJson?.profile && typeof profileJson.profile === 'object' ? profileJson.profile : null;
+            if (profile?.is_member === true) {
+              const firstName = String(profile.first_name || '').trim();
+              const lastName = String(profile.last_name || '').trim();
+              memberName = [firstName, lastName].filter(Boolean).join(' ').trim().slice(0, 120);
+              memberEmail = String(profile.email || session.user.email || '').trim().toLowerCase();
+            }
+          }
+        } catch {}
+
+        const meta: Record<string, unknown> =
+          typeof session.user.user_metadata === 'object' && session.user.user_metadata !== null
+            ? (session.user.user_metadata as Record<string, unknown>)
+            : {};
+        const fallbackName =
+          String(meta.full_name || meta.name || '').trim() ||
+          [String(meta.first_name || meta.given_name || '').trim(), String(meta.last_name || meta.family_name || '').trim()]
+            .filter(Boolean)
+            .join(' ')
+            .trim();
+        const fallbackEmail = String(session.user.email || '').trim().toLowerCase();
+
+        setRsvpForm((prev) => {
+          const next = normalizeRsvpForm({
+            ...prev,
+            name: memberName || prev.name || fallbackName,
+            email: memberEmail || prev.email || fallbackEmail,
+            attendees:
+              prev.attendees[0]?.name?.trim() || !(memberName || fallbackName)
+                ? prev.attendees
+                : [{ name: memberName || fallbackName }, ...prev.attendees.slice(1)],
           });
-        }
+          writeDraft(rsvpOpen, next);
+          return next;
+        });
       })
       .catch(() => {});
   }, [rsvpOpen, readDrafts, writeDraft]);
@@ -360,10 +420,30 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
 
       if (status === 'waitlist') {
         showToast(lang === 'cs' ? 'Kapacita naplněna. Jste na čekací listině!' : 'Capacity full. You are on the waitlist!', 'warning');
+        trackAnalyticsEvent('registration_waitlist_joined', {
+          event_id: eventId,
+          payment_method: rsvpForm.payment_method,
+          attendees_count: requestedCount,
+          lang,
+        });
       } else if (status === 'reserved') {
         showToast(lang === 'cs' ? 'Rezervace vytvořena. Čeká na platbu.' : 'Reservation created. Waiting for payment.', 'info');
+        trackAnalyticsEvent('registration_completed', {
+          event_id: eventId,
+          payment_method: rsvpForm.payment_method,
+          registration_status: status,
+          attendees_count: requestedCount,
+          lang,
+        });
       } else {
         showToast(globalDict?.eventsPage?.rsvpSuccess || 'Díky! Těšíme se.', 'success');
+        trackAnalyticsEvent('registration_completed', {
+          event_id: eventId,
+          payment_method: rsvpForm.payment_method,
+          registration_status: status,
+          attendees_count: requestedCount,
+          lang,
+        });
       }
 
       setEvents((prev) =>
@@ -771,7 +851,7 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
                         setRsvpOpen(null);
                         setRsvpView('form');
                         setRsvpResult(null);
-                        setRsvpForm({ name: '', email: '', promo_code: '', subscribe_newsletter: false, payment_method: 'hotove', attendeesCount: 1, attendees: [{ name: '' }] });
+                        setRsvpForm(EMPTY_RSVP_FORM);
                       }}
                       className="w-full bg-green-600 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-green-100 outline-none focus:ring-2 focus:ring-green-500"
                     >

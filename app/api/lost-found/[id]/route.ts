@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await ctx.params;
@@ -18,8 +22,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     if (!res.data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     return NextResponse.json({ ok: true, item: res.data });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }
-

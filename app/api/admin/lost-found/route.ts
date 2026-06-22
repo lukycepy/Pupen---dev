@@ -3,9 +3,35 @@ import { getServerSupabase } from '@/lib/supabase-server';
 import { requireAdmin } from '@/lib/server-auth';
 
 const ITEM_STATUS = new Set(['open', 'claimed', 'in_progress', 'returned', 'archived']);
-function normalizeStatus(input: any) {
+interface LostFoundAdminBody {
+  item?: unknown;
+}
+
+interface LostFoundItemPayload {
+  updated_at: string;
+  title: string;
+  description: string | null;
+  category: string | null;
+  location: string | null;
+  contact: string | null;
+  status: string;
+  is_public: boolean;
+  photo_url: string | null;
+  location_lat: number | null;
+  location_lng: number | null;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function normalizeStatus(input: unknown) {
   const s = String(input || '').trim();
   return ITEM_STATUS.has(s) ? s : 'open';
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
 }
 
 export async function GET(req: Request) {
@@ -19,19 +45,20 @@ export async function GET(req: Request) {
       .limit(500);
     if (res.error) throw res.error;
     return NextResponse.json({ ok: true, items: res.data || [] });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
 export async function POST(req: Request) {
   try {
     const { user } = await requireAdmin(req);
-    const body = await req.json().catch(() => ({}));
-    const item = body?.item || {};
+    const body = toRecord(await req.json().catch(() => ({}))) as LostFoundAdminBody;
+    const item = toRecord(body.item);
 
-    const payload: any = {
+    const payload: LostFoundItemPayload = {
       updated_at: new Date().toISOString(),
       title: String(item.title || '').slice(0, 120),
       description: item.description ? String(item.description).slice(0, 2000) : null,
@@ -63,8 +90,9 @@ export async function POST(req: Request) {
       .throwOnError();
 
     return NextResponse.json({ ok: true, item: ins.data });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

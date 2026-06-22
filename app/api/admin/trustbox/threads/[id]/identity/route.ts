@@ -3,6 +3,25 @@ import { getServerSupabase } from '@/lib/supabase-server';
 import { requireTrustBoxAdmin } from '@/lib/server-auth';
 import { logTrustBoxAudit } from '@/lib/trustbox/audit';
 
+interface TrustBoxThreadIdentityRow {
+  id?: string | number | null;
+  anonymized_at?: string | null;
+}
+
+interface TrustBoxIdentityRow {
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const auth = await requireTrustBoxAdmin(req);
@@ -12,12 +31,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const threadId = String(id || '').trim();
     if (!threadId) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
 
-    const body = await req.json().catch(() => ({}));
-    const reason = String(body?.reason || '').trim();
+    const body = toRecord(await req.json().catch(() => ({})));
+    const reason = String(body.reason || '').trim();
     if (reason.length < 10) return NextResponse.json({ error: 'Reason required' }, { status: 400 });
 
     const supabase = getServerSupabase();
-    const thr = await supabase.from('trust_box_threads').select('id, anonymized_at').eq('id', threadId).maybeSingle();
+    const thr = await supabase
+      .from('trust_box_threads')
+      .select('id, anonymized_at')
+      .eq('id', threadId)
+      .maybeSingle<TrustBoxThreadIdentityRow>();
     if (thr.error) throw thr.error;
     if (!thr.data?.id) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     if (thr.data?.anonymized_at) return NextResponse.json({ error: 'Anonymized' }, { status: 400 });
@@ -26,7 +49,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       .from('trust_box_identities')
       .select('first_name,last_name,email')
       .eq('thread_id', threadId)
-      .maybeSingle();
+      .maybeSingle<TrustBoxIdentityRow>();
     if (ident.error) throw ident.error;
     if (!ident.data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
@@ -41,7 +64,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     });
 
     return NextResponse.json({ ok: true, identity: ident.data });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

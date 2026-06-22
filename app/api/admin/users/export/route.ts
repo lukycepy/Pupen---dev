@@ -2,13 +2,32 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 
-function csvEscape(v: any) {
-  const s = String(v ?? '');
+interface UserExportRow {
+  email?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  phone?: string | null;
+  is_member?: boolean | null;
+  is_admin?: boolean | null;
+  is_blocked?: boolean | null;
+  can_manage_admins?: boolean | null;
+}
+
+interface ContactExportItem {
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  phone: string | null;
+  note: string;
+}
+
+function csvEscape(value: unknown) {
+  const s = String(value ?? '');
   if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
   return s;
 }
 
-function toVcf(items: Array<{ email: string; first_name?: string | null; last_name?: string | null; phone?: string | null; note?: string }>) {
+function toVcf(items: ContactExportItem[]) {
   return items
     .map((c) => {
       const fn = String([c.first_name, c.last_name].filter(Boolean).join(' ') || c.email).replace(/\n/g, ' ');
@@ -60,22 +79,23 @@ export async function GET(req: Request) {
     if (res.error) throw res.error;
 
     const items = (res.data || [])
-      .map((r: any) => {
-        const email = String(r.email || '').trim().toLowerCase();
+      .map((r) => {
+        const row = r as UserExportRow;
+        const email = String(row.email || '').trim().toLowerCase();
         if (!email) return null;
         const noteParts = [];
-        if (r.is_admin || r.can_manage_admins) noteParts.push('admin');
-        if (r.is_member) noteParts.push('member');
-        if (r.is_blocked) noteParts.push('blocked');
+        if (row.is_admin || row.can_manage_admins) noteParts.push('admin');
+        if (row.is_member) noteParts.push('member');
+        if (row.is_blocked) noteParts.push('blocked');
         return {
           email,
-          first_name: r.first_name || null,
-          last_name: r.last_name || null,
-          phone: r.phone || null,
+          first_name: row.first_name || null,
+          last_name: row.last_name || null,
+          phone: row.phone || null,
           note: noteParts.length ? noteParts.join(', ') : '',
         };
       })
-      .filter(Boolean) as Array<{ email: string; first_name?: string | null; last_name?: string | null; phone?: string | null; note?: string }>;
+      .filter((item): item is ContactExportItem => item !== null);
 
     if (format === 'vcf') {
       const out = toVcf(items);
@@ -110,9 +130,9 @@ export async function GET(req: Request) {
         'Content-Disposition': 'attachment; filename="pupen-contacts-outlook.csv"',
       },
     });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Error';
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
-

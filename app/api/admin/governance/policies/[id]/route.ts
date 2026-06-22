@@ -2,6 +2,27 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { requireAdmin } from '@/lib/server-auth';
 
+interface UpdatePolicyBody {
+  title?: unknown;
+  description?: unknown;
+  slug?: unknown;
+}
+
+interface PolicyPatch {
+  title?: string;
+  description?: string | null;
+  slug?: string;
+  updated_at?: string;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 function slugify(input: string) {
   const s = String(input || '')
     .toLowerCase()
@@ -20,12 +41,12 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     const policyId = String(id || '').trim();
     if (!policyId) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
 
-    const body = await req.json().catch(() => ({}));
-    const patch: any = {};
+    const body = toRecord(await req.json().catch(() => ({}))) as UpdatePolicyBody;
+    const patch: PolicyPatch = {};
 
-    if (body?.title != null) patch.title = String(body.title).trim();
-    if (body?.description !== undefined) patch.description = body.description != null ? String(body.description) : null;
-    if (body?.slug != null) patch.slug = slugify(String(body.slug));
+    if (body.title != null) patch.title = String(body.title).trim();
+    if (body.description !== undefined) patch.description = body.description != null ? String(body.description) : null;
+    if (body.slug != null) patch.slug = slugify(String(body.slug));
 
     if (patch.title !== undefined && !patch.title) return NextResponse.json({ error: 'Invalid title' }, { status: 400 });
     if (patch.title && patch.title.length > 200) return NextResponse.json({ error: 'Title too long' }, { status: 400 });
@@ -53,9 +74,10 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     ]);
 
     return NextResponse.json({ ok: true, policy: upd.data });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
@@ -81,8 +103,9 @@ export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }
     ]);
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

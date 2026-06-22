@@ -3,6 +3,24 @@ import { getServerSupabase } from '@/lib/supabase-server';
 import { requireMember } from '@/lib/server-auth';
 import { guardPublicJsonPost } from '@/lib/public-post-guard';
 
+interface DmBlockBody {
+  threadId?: unknown;
+  action?: unknown;
+}
+
+interface DmBlockThreadRow {
+  participant1_id?: string | null;
+  participant2_id?: string | null;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function POST(req: Request) {
   try {
     const { user } = await requireMember(req);
@@ -14,8 +32,8 @@ export async function POST(req: Request) {
       tooManyMessage: 'Příliš mnoho požadavků. Zkuste to prosím později.',
     });
     if (!g.ok) return g.response;
-    const body = g.body;
-    const { threadId, action } = body || {};
+    const body = toRecord(g.body) as DmBlockBody;
+    const { threadId, action } = body;
 
     if (!threadId || !action) {
       return NextResponse.json({ error: 'Missing threadId or action' }, { status: 400 });
@@ -27,7 +45,6 @@ export async function POST(req: Request) {
 
     const supabase = getServerSupabase();
 
-    // Zkontrolujeme, že vlákno existuje a uživatel je účastníkem
     const { data: threadData, error: threadErr } = await supabase
       .from('dm_threads')
       .select('*')
@@ -35,18 +52,17 @@ export async function POST(req: Request) {
       .single();
 
     if (threadErr || !threadData) {
-      // Pokud tabulka neexistuje nebo vlákno nenalezeno
       return NextResponse.json({ error: 'Thread not found or tables not migrated yet' }, { status: 404 });
     }
 
-    const isP1 = threadData.participant1_id === user.id;
-    const isP2 = threadData.participant2_id === user.id;
+    const thread = threadData as DmBlockThreadRow;
+    const isP1 = thread.participant1_id === user.id;
+    const isP2 = thread.participant2_id === user.id;
 
     if (!isP1 && !isP2) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Aplikujeme blokaci
     const isBlocked = action === 'block';
     const blockedBy = isBlocked ? user.id : null;
 
@@ -57,7 +73,6 @@ export async function POST(req: Request) {
 
     if (updateErr) throw updateErr;
 
-    // Záznam do audit logu
     await supabase.from('admin_logs').insert([{
       admin_email: user.email || 'member',
       admin_name: 'System',
@@ -67,8 +82,9 @@ export async function POST(req: Request) {
     }]);
 
     return NextResponse.json({ ok: true, isBlocked });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

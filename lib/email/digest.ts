@@ -1,7 +1,25 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { formatDatePrague, formatDateTimePrague } from '@/lib/time/prague';
 
-function esc(input: any) {
+interface DigestCountRow {
+  id?: string | number | null;
+}
+
+interface DigestEventRow {
+  id?: string | number | null;
+  title?: string | null;
+  date?: string | null;
+  location?: string | null;
+}
+
+interface DigestPollRow {
+  id?: string | number | null;
+  question?: string | null;
+  is_active?: boolean | null;
+  created_at?: string | null;
+}
+
+function esc(input: unknown) {
   return String(input ?? '')
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
@@ -10,7 +28,7 @@ function esc(input: any) {
     .replaceAll("'", '&#39;');
 }
 
-function section(title: string, rows: Array<{ label: string; value: any }>) {
+function section(title: string, rows: Array<{ label: string; value: unknown }>) {
   return `
     <div style="margin: 16px 0; padding: 16px; border: 1px solid #e7e5e4; border-radius: 16px; background: #fafaf9;">
       <div style="font-weight: 800; margin-bottom: 10px; color: #1c1917;">${esc(title)}</div>
@@ -34,12 +52,12 @@ export async function buildWeeklyDigest(supabase: SupabaseClient) {
     supabase.from('polls').select('id, question, is_active, created_at').eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle(),
   ]);
 
-  const apps = appsRes.data || [];
-  const rsvps = rsvpRes.data || [];
-  const reports = reportsRes.data || [];
-  const joins = joinsRes.data || [];
-  const events = eventsRes.data || [];
-  const activePoll = pollsRes.data || null;
+  const apps: DigestCountRow[] = Array.isArray(appsRes.data) ? appsRes.data : [];
+  const rsvps: DigestCountRow[] = Array.isArray(rsvpRes.data) ? rsvpRes.data : [];
+  const reports: DigestCountRow[] = Array.isArray(reportsRes.data) ? reportsRes.data : [];
+  const joins: DigestCountRow[] = Array.isArray(joinsRes.data) ? joinsRes.data : [];
+  const events: DigestEventRow[] = Array.isArray(eventsRes.data) ? eventsRes.data : [];
+  const activePoll: DigestPollRow | null = pollsRes.data || null;
 
   const html = `
     <div style="font-family: sans-serif; padding: 20px; color: #1c1917; max-width: 720px; margin: auto;">
@@ -54,9 +72,9 @@ export async function buildWeeklyDigest(supabase: SupabaseClient) {
       ${section(
         'Nadcházející akce (14 dní)',
         events.length
-          ? events.map((e: any) => ({
-              label: e.title || 'Akce',
-              value: `${e.date ? formatDatePrague(e.date, 'cs') : ''}${e.location ? ` • ${e.location}` : ''}`,
+          ? events.map((event) => ({
+              label: event.title || 'Akce',
+              value: `${event.date ? formatDatePrague(event.date, 'cs') : ''}${event.location ? ` • ${event.location}` : ''}`,
             }))
           : [{ label: 'Akce', value: '—' }]
       )}

@@ -1,8 +1,23 @@
 import { getServerSupabase } from '@/lib/supabase-server';
 import { listEmailTemplates, renderEmailTemplate, type EmailTemplateKey } from '@/lib/email/templates';
 
-function isSchemaCacheMissingTable(e: any) {
-  const msg = String(e?.message || '');
+interface EmailTemplateDefinition {
+  key: EmailTemplateKey;
+  variables?: string[] | null;
+}
+
+interface EmailTemplateOverrideRow {
+  subject?: string | null;
+  html?: string | null;
+  is_enabled?: boolean | null;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error || '');
+}
+
+function isSchemaCacheMissingTable(error: unknown) {
+  const msg = getErrorMessage(error);
   return msg.includes('Could not find the table') && msg.includes('in the schema cache');
 }
 
@@ -15,20 +30,24 @@ function escapeHtml(s: string) {
     .replace(/'/g, '&#039;');
 }
 
-function toStringValue(v: any) {
-  if (v == null) return '';
-  if (typeof v === 'string') return v;
-  if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function toStringValue(value: unknown) {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
   try {
-    return JSON.stringify(v, null, 2);
+    return JSON.stringify(value, null, 2);
   } catch {
-    return String(v);
+    return String(value);
   }
 }
 
 function allowedTokenKeys(templateKey: EmailTemplateKey) {
-  const t = listEmailTemplates().find((x) => x.key === templateKey);
-  const keys = Array.isArray((t as any)?.variables) ? (t as any).variables : [];
+  const t = listEmailTemplates().find((x) => x.key === templateKey) as EmailTemplateDefinition | undefined;
+  const keys = Array.isArray(t?.variables) ? t.variables : [];
   return new Set(keys.map((k: any) => String(k)));
 }
 
@@ -44,22 +63,22 @@ function isSafePathSegment(s: string) {
   return true;
 }
 
-function getPathValue(vars: any, path: string) {
+function getPathValue(vars: Record<string, unknown>, path: string) {
   const p = String(path || '').trim();
   if (!p) return undefined;
   const parts = p.split('.').filter(Boolean);
   if (!parts.length) return undefined;
-  let cur: any = vars;
+  let cur: unknown = vars;
   for (const seg of parts) {
     if (!isSafePathSegment(seg)) return undefined;
     if (cur == null) return undefined;
     if (typeof cur !== 'object') return undefined;
-    cur = (cur as any)[seg];
+    cur = (cur as Record<string, unknown>)[seg];
   }
   return cur;
 }
 
-function renderTokens(templateKey: EmailTemplateKey, template: string, vars: any) {
+function renderTokens(templateKey: EmailTemplateKey, template: string, vars: Record<string, unknown>) {
   const src = String(template ?? '');
   const allowed = allowedTokenKeys(templateKey);
   const rawAllowed = allowedRawTokenKeys(templateKey);
@@ -67,38 +86,39 @@ function renderTokens(templateKey: EmailTemplateKey, template: string, vars: any
     .replace(/\{\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}\}/g, (_m, key) => {
       const k = String(key || '');
       if (!allowed.has(k)) return '';
-      const v = getPathValue(vars || {}, k);
+      const v = getPathValue(vars, k);
       if (!rawAllowed.has(k)) return escapeHtml(toStringValue(v));
       return toStringValue(v);
     })
     .replace(/\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/g, (_m, key) => {
       const k = String(key || '');
       if (!allowed.has(k)) return '';
-      const v = getPathValue(vars || {}, k);
+      const v = getPathValue(vars, k);
       return escapeHtml(toStringValue(v));
     });
 }
 
-export async function renderEmailTemplateWithDbOverride(templateKey: EmailTemplateKey, vars: any) {
+export async function renderEmailTemplateWithDbOverride(templateKey: EmailTemplateKey, vars: Record<string, unknown>) {
+  const templateVars = toRecord(vars);
   try {
     const supabase = getServerSupabase();
     const res = await supabase
       .from('email_template_overrides')
       .select('subject, html, is_enabled')
       .eq('template_key', templateKey)
-      .maybeSingle();
+      .maybeSingle<EmailTemplateOverrideRow>();
     if (res.error) throw res.error;
-    const row: any = res.data;
+    const row = res.data;
     if (row?.is_enabled && (row?.subject || row?.html)) {
       return {
-        subject: renderTokens(templateKey, String(row.subject || ''), vars || {}),
-        html: renderTokens(templateKey, String(row.html || ''), vars || {}),
+        subject: renderTokens(templateKey, String(row.subject || ''), templateVars),
+        html: renderTokens(templateKey, String(row.html || ''), templateVars),
       };
     }
-  } catch (e: any) {
-    if (!isSchemaCacheMissingTable(e)) {
-      return renderEmailTemplate(templateKey, vars || {});
+  } catch (error: unknown) {
+    if (!isSchemaCacheMissingTable(error)) {
+      return renderEmailTemplate(templateKey, templateVars);
     }
   }
-  return renderEmailTemplate(templateKey, vars || {});
+  return renderEmailTemplate(templateKey, templateVars);
 }

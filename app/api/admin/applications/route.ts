@@ -2,10 +2,69 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 
-function toBool(v: any) {
+type JsonRecord = Record<string, unknown>;
+
+interface ApplicationRow extends JsonRecord {
+  id?: string | number | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  status?: string | null;
+  membership_type?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  full_name?: string | null;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  excluded_at?: string | null;
+}
+
+interface MemberDocumentRow {
+  id?: string | number | null;
+  member_id?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  bucket?: string | null;
+  path?: string | null;
+  original_name?: string | null;
+}
+
+interface ProfileRow {
+  id?: string | null;
+  email?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+}
+
+interface MemberAdminProfileRow {
+  member_id?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  application_received_at?: string | null;
+}
+
+type ManualApplicationRow = ApplicationRow & {
+  __source: 'manual_scan';
+  __scan: {
+    bucket: string;
+    path: string;
+    original_name: string;
+  };
+};
+
+function toBool(v: unknown) {
   if (typeof v === 'boolean') return v;
   if (typeof v === 'string') return v === '1' || v.toLowerCase() === 'true';
   return false;
+}
+
+function toRecord(value: unknown): JsonRecord {
+  return value && typeof value === 'object' ? (value as JsonRecord) : {};
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
 }
 
 export async function GET(req: Request) {
@@ -31,9 +90,9 @@ export async function GET(req: Request) {
 
     const appsRes = await supabase.from('applications').select('*').order('created_at', { ascending: false });
     if (appsRes.error) throw appsRes.error;
-    const apps = appsRes.data || [];
+    const apps: ApplicationRow[] = Array.isArray(appsRes.data) ? appsRes.data : [];
 
-    let manual: any[] = [];
+    let manual: ManualApplicationRow[] = [];
     try {
       const docsRes = await supabase
         .from('member_documents')
@@ -42,20 +101,20 @@ export async function GET(req: Request) {
         .order('updated_at', { ascending: false });
       if (docsRes.error) throw docsRes.error;
 
-      const docs = Array.isArray(docsRes.data) ? docsRes.data : [];
-      const memberIds = Array.from(new Set(docs.map((d: any) => String(d.member_id || '')).filter(Boolean)));
+      const docs: MemberDocumentRow[] = Array.isArray(docsRes.data) ? docsRes.data : [];
+      const memberIds = Array.from(new Set(docs.map((d) => String(d.member_id || '')).filter(Boolean)));
 
       if (memberIds.length) {
         const [profRes, adminRes] = await Promise.all([
-          supabase.from('profiles').select('id,email,first_name,last_name').in('id', memberIds as any),
-          supabase.from('member_admin_profile').select('member_id,phone,address,application_received_at').in('member_id', memberIds as any),
+          supabase.from('profiles').select('id,email,first_name,last_name').in('id', memberIds),
+          supabase.from('member_admin_profile').select('member_id,phone,address,application_received_at').in('member_id', memberIds),
         ]);
-        const profiles = Array.isArray(profRes.data) ? profRes.data : [];
-        const adminProfiles = Array.isArray(adminRes.data) ? adminRes.data : [];
-        const profileById = new Map<string, any>(profiles.map((p: any) => [String(p.id), p]));
-        const adminById = new Map<string, any>(adminProfiles.map((p: any) => [String(p.member_id), p]));
+        const profiles: ProfileRow[] = Array.isArray(profRes.data) ? profRes.data : [];
+        const adminProfiles: MemberAdminProfileRow[] = Array.isArray(adminRes.data) ? adminRes.data : [];
+        const profileById = new Map<string, ProfileRow>(profiles.map((p) => [String(p.id), p]));
+        const adminById = new Map<string, MemberAdminProfileRow>(adminProfiles.map((p) => [String(p.member_id), p]));
 
-        manual = docs.map((d: any) => {
+        manual = docs.map((d) => {
           const memberId = String(d.member_id || '');
           const p = profileById.get(memberId) || {};
           const ap = adminById.get(memberId) || {};
@@ -103,16 +162,16 @@ export async function GET(req: Request) {
     }
 
     const merged = [...manual, ...apps]
-      .filter((a: any) => {
-        if (a?.__source === 'manual_scan') return true;
+      .filter((application) => {
+        if ('__source' in application && application.__source === 'manual_scan') return true;
         if (includeExcluded) return true;
-        return !a?.excluded_at;
+        return !application.excluded_at;
       })
-      .sort((a: any, b: any) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+      .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
 
     return NextResponse.json({ ok: true, applications: merged });
-  } catch (e: any) {
-    const msg = String(e?.message || 'Error');
+  } catch (error: unknown) {
+    const msg = getErrorMessage(error);
     const status = msg === 'Unauthorized' ? 401 : msg === 'Forbidden' ? 403 : 500;
     return NextResponse.json({ error: msg }, { status });
   }
@@ -125,11 +184,11 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const body = await req.json().catch(() => ({}));
-    const id = String(body?.id || '').trim();
+    const body = toRecord(await req.json().catch(() => ({})));
+    const id = String(body.id || '').trim();
     if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
 
-    const patch: any = {};
+    const patch: JsonRecord = {};
     const allow = [
       'status',
       'chairwoman_signature',
@@ -142,7 +201,7 @@ export async function PATCH(req: Request) {
       'excluded_reason',
     ];
     for (const k of allow) {
-      if (Object.prototype.hasOwnProperty.call(body, k)) patch[k] = (body as any)[k];
+      if (Object.prototype.hasOwnProperty.call(body, k)) patch[k] = body[k];
     }
 
     if (Object.prototype.hasOwnProperty.call(body, 'status')) {
@@ -154,8 +213,8 @@ export async function PATCH(req: Request) {
     const res = await supabase.from('applications').update(patch).eq('id', id);
     if (res.error) throw res.error;
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    const msg = String(e?.message || 'Error');
+  } catch (error: unknown) {
+    const msg = getErrorMessage(error);
     const status = msg === 'Unauthorized' ? 401 : msg === 'Forbidden' ? 403 : 500;
     return NextResponse.json({ error: msg }, { status });
   }
@@ -168,8 +227,8 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const body = await req.json().catch(() => ({}));
-    const id = String(body?.id || '').trim();
+    const body = toRecord(await req.json().catch(() => ({})));
+    const id = String(body.id || '').trim();
     if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
     if (id.startsWith('manual-')) return NextResponse.json({ error: 'Manual application cannot be deleted here' }, { status: 400 });
 
@@ -177,8 +236,8 @@ export async function DELETE(req: Request) {
     const res = await supabase.from('applications').delete().eq('id', id);
     if (res.error) throw res.error;
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    const msg = String(e?.message || 'Error');
+  } catch (error: unknown) {
+    const msg = getErrorMessage(error);
     const status = msg === 'Unauthorized' ? 401 : msg === 'Forbidden' ? 403 : 500;
     return NextResponse.json({ error: msg }, { status });
   }

@@ -989,6 +989,9 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
   const qrToken = String(vars?.qrToken || '');
   const status = String(vars?.status || 'confirmed');
   const bankAccount = String(vars?.bankAccount || '');
+  const priceTotalRaw = Number(vars?.priceTotal ?? 0);
+  const priceTotal = Number.isFinite(priceTotalRaw) ? Math.max(0, Math.round(priceTotalRaw * 100) / 100) : 0;
+  const pricingLabel = String((lang === 'en' ? vars?.pricingLabelEn : vars?.pricingLabel) || vars?.pricingLabel || '').trim();
 
   const isWaitlist = status === 'waitlist';
   const isPrevod = paymentMethod === 'prevod';
@@ -1051,6 +1054,13 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
             ? `<div style="margin-top:12px; font-weight:900;">${escapeHtml(lang === 'en' ? 'Attendees' : 'Účastníci')}:</div><ul style="padding-left:18px; margin:8px 0 0 0;">${attendeeList}</ul>`
             : ''
         }
+        ${
+          priceTotal > 0
+            ? `<div style="margin-top:12px; font-size:13px; color:#44403c; font-weight:900;">${escapeHtml(
+                lang === 'en' ? 'Total price' : 'Celková cena',
+              )}: ${escapeHtml(priceTotal.toFixed(2))} CZK${pricingLabel ? ` • ${escapeHtml(pricingLabel)}` : ''}</div>`
+            : ''
+        }
         <hr style="border:none; border-top:1px solid #e7e5e4; margin:14px 0;" />
         <div style="font-weight:900; margin-bottom:8px;">${escapeHtml(lang === 'en' ? 'QR code / token' : 'QR kód / token')}</div>
         <div style="display:inline-block; background:#ffffff; border:1px solid #e7e5e4; border-radius:14px; padding:10px 12px; font-weight:950; letter-spacing:0.22em; font-size:18px;">${escapeHtml(
@@ -1073,8 +1083,15 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
               <div style="margin-top:10px; font-size:12px; color:#78716c; font-weight:900;">${escapeHtml(
                 lang === 'en' ? 'Account' : 'Účet',
               )}: ${escapeHtml(bankAccount || '—')}</div>
+              ${
+                priceTotal > 0
+                  ? `<div style="margin-top:6px; font-size:12px; color:#78716c; font-weight:900;">${escapeHtml(
+                      lang === 'en' ? 'Amount' : 'Částka',
+                    )}: ${escapeHtml(priceTotal.toFixed(2))} CZK</div>`
+                  : ''
+              }
               <div style="margin-top:10px;">
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`SPD:1.0*ACC:${bankAccount}*AM:100.00*CC:CZK*MSG:Pupen ${qrToken}`)}" alt="QR Platba" style="margin:0; border-radius:14px;" />
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`SPD:1.0*ACC:${bankAccount}*AM:${priceTotal.toFixed(2)}*CC:CZK*MSG:Pupen ${qrToken}`)}" alt="QR Platba" style="margin:0; border-radius:14px;" />
               </div>
             </div>`
           : ''

@@ -1,10 +1,29 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 
+interface TrustBoxSettingsRow {
+  retention_days?: number | string | null;
+  auto_anonymize?: boolean | null;
+}
+
+interface TrustBoxIdRow {
+  id?: string | null;
+}
+
+interface TrustBoxAttachmentRow {
+  bucket?: string | null;
+  path?: string | null;
+  thread_id?: string | null;
+}
+
 function chunk<T>(arr: T[], size: number) {
   const out: T[][] = [];
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
   return out;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
 }
 
 export async function GET(req: Request) {
@@ -18,9 +37,9 @@ export async function GET(req: Request) {
   try {
     const settingsRes = await supabase.from('trust_box_settings').select('retention_days, auto_anonymize').eq('id', 1).maybeSingle();
     if (settingsRes.error) throw settingsRes.error;
-    const settings: any = settingsRes.data || {};
-    const retentionDays = Number(settings.retention_days || 365);
-    const auto = settings.auto_anonymize !== false;
+    const settings = (settingsRes.data || null) as TrustBoxSettingsRow | null;
+    const retentionDays = Number(settings?.retention_days || 365);
+    const auto = settings?.auto_anonymize !== false;
     if (!auto) return NextResponse.json({ ok: true, skipped: 'disabled' });
 
     const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60_000).toISOString();
@@ -32,7 +51,7 @@ export async function GET(req: Request) {
       .lt('created_at', cutoff)
       .limit(2000);
     if (thrRes.error) throw thrRes.error;
-    const ids = (thrRes.data || []).map((x: any) => String(x.id));
+    const ids = ((thrRes.data || []) as TrustBoxIdRow[]).map((row) => String(row.id || '')).filter(Boolean);
     if (!ids.length) {
       const oldV = await supabase
         .from('trust_box_verifications')
@@ -45,9 +64,9 @@ export async function GET(req: Request) {
     const attRes = await supabase.from('trust_box_attachments').select('bucket,path,thread_id').in('thread_id', ids);
     if (attRes.error) throw attRes.error;
     const byBucket = new Map<string, string[]>();
-    for (const a of attRes.data || []) {
-      const b = String((a as any).bucket || '');
-      const p = String((a as any).path || '');
+    for (const attachment of (attRes.data || []) as TrustBoxAttachmentRow[]) {
+      const b = String(attachment.bucket || '');
+      const p = String(attachment.path || '');
       if (!b || !p) continue;
       const arr = byBucket.get(b) || [];
       arr.push(p);
@@ -82,8 +101,7 @@ export async function GET(req: Request) {
     if (oldV.error) throw oldV.error;
 
     return NextResponse.json({ ok: true, anonymized: ids.length });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }
-

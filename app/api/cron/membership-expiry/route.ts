@@ -4,6 +4,16 @@ import { getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer
 import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
 import { sendMailWithQueueFallback } from '@/lib/email/queue';
 
+interface MembershipExpiryProfileRow {
+  id?: string | null;
+  email?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  is_member?: boolean | null;
+  member_expires_at?: string | null;
+  member_expiry_notice_stage?: string | null;
+}
+
 function stageForDays(daysLeft: number) {
   if (daysLeft < 0) return 'expired';
   if (daysLeft <= 1) return 'd1';
@@ -42,15 +52,15 @@ export async function GET(req: Request) {
     let queued = 0;
     let skipped = 0;
 
-    for (const p of rows) {
+    for (const p of rows as MembershipExpiryProfileRow[]) {
       processed += 1;
-      const email = String((p as any).email || '').trim().toLowerCase();
+      const email = String(p.email || '').trim().toLowerCase();
       if (!email || !email.includes('@')) {
         skipped += 1;
         continue;
       }
 
-      const exp = (p as any).member_expires_at ? new Date(String((p as any).member_expires_at)) : null;
+      const exp = p.member_expires_at ? new Date(String(p.member_expires_at)) : null;
       if (!exp || Number.isNaN(exp.getTime())) {
         skipped += 1;
         continue;
@@ -63,13 +73,13 @@ export async function GET(req: Request) {
         continue;
       }
 
-      const curStage = (p as any).member_expiry_notice_stage ? String((p as any).member_expiry_notice_stage) : '';
+      const curStage = p.member_expiry_notice_stage ? String(p.member_expiry_notice_stage) : '';
       if (curStage === nextStage) {
         skipped += 1;
         continue;
       }
 
-      const firstName = String((p as any).first_name || '');
+      const firstName = String(p.first_name || '');
       const lang = 'cs';
       const { subject, html } = await renderEmailTemplateWithDbOverride('membership_expiry', {
         toEmail: email,
@@ -94,22 +104,21 @@ export async function GET(req: Request) {
       await supabase
         .from('profiles')
         .update({ member_expiry_notice_stage: nextStage, member_expiry_notice_at: nowIso })
-        .eq('id', (p as any).id);
+        .eq('id', p.id || '');
 
       await supabase.from('admin_logs').insert([
         {
           admin_email: 'cron',
           admin_name: 'membership-expiry',
           action: 'MEMBERSHIP_EXPIRY_NOTICE',
-          target_id: String((p as any).id || ''),
+          target_id: String(p.id || ''),
           details: { email, stage: nextStage, member_expires_at: exp.toISOString(), daysLeft },
         },
       ]);
     }
 
     return NextResponse.json({ ok: true, processed, sent, queued, skipped });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Error' }, { status: 500 });
   }
 }
-

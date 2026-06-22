@@ -16,14 +16,35 @@ const EXCLUDED_ACTIONS = [
   'USER_EMAIL_PREFS',
 ];
 
+interface PurgeLogsBody {
+  source?: unknown;
+  olderThanDays?: unknown;
+  dryRun?: unknown;
+  level?: unknown;
+  category?: unknown;
+}
+
+interface LogPermissionProfileRow {
+  can_manage_admins?: boolean | null;
+  can_edit_logs?: boolean | null;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function POST(req: Request) {
   try {
     const { user } = await requireAdmin(req);
 
-    const body = await req.json().catch(() => ({}));
-    const source = String(body?.source || 'admin');
-    const olderThanDaysRaw = body?.olderThanDays;
-    const dryRun = body?.dryRun !== false;
+    const body = toRecord(await req.json().catch(() => ({}))) as PurgeLogsBody;
+    const source = String(body.source || 'admin');
+    const olderThanDaysRaw = body.olderThanDays;
+    const dryRun = body.dryRun !== false;
 
     const olderThanDays = Math.max(7, Math.min(3650, Number(olderThanDaysRaw || 90) || 90));
     const cutoffMs = Date.now() - olderThanDays * 24 * 60 * 60 * 1000;
@@ -37,7 +58,7 @@ export async function POST(req: Request) {
       .eq('id', user.id)
       .maybeSingle();
     if (profRes.error) throw profRes.error;
-    const profile = profRes.data as any;
+    const profile = (profRes.data || null) as LogPermissionProfileRow | null;
     const canEdit = !!(profile?.can_manage_admins || profile?.can_edit_logs);
     if (!canEdit) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
@@ -106,8 +127,8 @@ export async function POST(req: Request) {
     }
 
     if (source === 'server') {
-      const level = String(body?.level || '').trim();
-      const category = String(body?.category || '').trim();
+      const level = String(body.level || '').trim();
+      const category = String(body.category || '').trim();
 
       let countQ = supabase.from('server_logs').select('id', { count: 'exact', head: true }).lt('created_at', cutoffIso);
       if (level) countQ = countQ.eq('level', level);
@@ -140,8 +161,9 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ error: 'Invalid source' }, { status: 400 });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

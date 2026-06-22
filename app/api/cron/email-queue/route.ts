@@ -4,6 +4,34 @@ import { getMailerWithSettings } from '@/lib/email/mailer';
 
 export const runtime = 'nodejs';
 
+interface EmailQueueJobRow {
+  id?: string | number | null;
+  to_email?: string | null;
+  from_email?: string | null;
+  reply_to?: string | null;
+  subject?: string | null;
+  html?: string | null;
+  text?: string | null;
+  headers?: Record<string, string> | null;
+  meta?: Record<string, unknown> | null;
+  attempt_count?: number | string | null;
+  max_attempts?: number | string | null;
+}
+
+interface NormalizedEmailQueueError {
+  message: string;
+  name: string;
+  code: string;
+  command: string;
+  responseCode: number | null;
+  response: string;
+  stack: string;
+}
+
+type VerifiableTransporter = Awaited<ReturnType<typeof getMailerWithSettings>> & {
+  verify?: () => Promise<unknown>;
+};
+
 function backoffSeconds(attempt: number) {
   if (attempt <= 1) return 60;
   if (attempt === 2) return 5 * 60;
@@ -12,10 +40,14 @@ function backoffSeconds(attempt: number) {
   return 12 * 60 * 60;
 }
 
-function normalizeError(e: any) {
-  const err = e || {};
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function normalizeError(error: unknown): NormalizedEmailQueueError {
+  const err = toRecord(error);
   return {
-    message: String(err.message || err),
+    message: String(err.message || error || ''),
     name: err.name ? String(err.name) : '',
     code: err.code ? String(err.code) : '',
     command: err.command ? String(err.command) : '',
@@ -35,6 +67,18 @@ function isPermanentSmtpError(info: ReturnType<typeof normalizeError>) {
   return false;
 }
 
+function getHeaders(value: unknown) {
+  return value && typeof value === 'object' ? (value as Record<string, string>) : undefined;
+}
+
+function getMeta(value: unknown) {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function hasVerify(transporter: VerifiableTransporter): transporter is VerifiableTransporter & { verify: () => Promise<unknown> } {
+  return typeof transporter.verify === 'function';
+}
+
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const secret = url.searchParams.get('secret') || '';
@@ -46,19 +90,19 @@ export async function GET(req: Request) {
   const supabase = getServerSupabase();
 
   try {
-    const transporter = await getMailerWithSettings();
+    const transporter = await getMailerWithSettings() as VerifiableTransporter;
 
     const claim = await supabase.rpc('email_queue_claim', { max_rows: limit, worker_id: workerId });
     if (claim.error) throw claim.error;
-    const jobs: any[] = Array.isArray(claim.data) ? claim.data : [];
+    const jobs: EmailQueueJobRow[] = Array.isArray(claim.data) ? claim.data : [];
     if (!jobs.length) return NextResponse.json({ ok: true, processed: 0 });
 
     try {
-      if (typeof (transporter as any)?.verify === 'function') {
-        await (transporter as any).verify();
+      if (hasVerify(transporter)) {
+        await transporter.verify();
       }
-    } catch (e: any) {
-      const info = normalizeError(e);
+    } catch (error: unknown) {
+      const info = normalizeError(error);
       const errMsg = info.message;
       let retried = 0;
       let dead = 0;
@@ -71,11 +115,11 @@ export async function GET(req: Request) {
         const subject = String(j.subject || '');
         const html = String(j.html || '');
         const text = j.text ? String(j.text) : '';
-        const headers = j?.headers && typeof j.headers === 'object' ? j.headers : undefined;
+        const headers = getHeaders(j.headers);
         const attemptCount = Number(j.attempt_count || 0);
         const maxAttempts = Number(j.max_attempts || 5);
         const nextAttempt = attemptCount + 1;
-        const meta = j?.meta && typeof j.meta === 'object' ? j.meta : {};
+        const meta = getMeta(j.meta);
         const meta2 = { ...meta, last_error: info };
 
         if (isPermanentSmtpError(info) || nextAttempt >= maxAttempts) {
@@ -161,7 +205,7 @@ export async function GET(req: Request) {
       const subject = String(j.subject || '');
       const html = String(j.html || '');
       const text = j.text ? String(j.text) : '';
-      const headers = j?.headers && typeof j.headers === 'object' ? j.headers : undefined;
+      const headers = getHeaders(j.headers);
       const attemptCount = Number(j.attempt_count || 0);
       const maxAttempts = Number(j.max_attempts || 5);
 
@@ -183,18 +227,18 @@ export async function GET(req: Request) {
               from_email: from,
               subject,
               status: 'sent',
-              meta: j?.meta && typeof j.meta === 'object' ? j.meta : {},
+              meta: getMeta(j.meta),
             },
           ]);
         } catch {}
         const del = await supabase.from('email_send_queue').delete().eq('id', id);
         if (del.error) throw del.error;
         ok += 1;
-      } catch (e: any) {
+      } catch (error: unknown) {
         const nextAttempt = attemptCount + 1;
-        const info = normalizeError(e);
+        const info = normalizeError(error);
         const errMsg = info.message;
-        const meta = j?.meta && typeof j.meta === 'object' ? j.meta : {};
+        const meta = getMeta(j.meta);
         const meta2 = { ...meta, last_error: info };
 
         if (isPermanentSmtpError(info) || nextAttempt >= maxAttempts) {
@@ -267,7 +311,7 @@ export async function GET(req: Request) {
     }
 
     return NextResponse.json({ ok: true, processed: jobs.length, okCount: ok, retried, dead });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Error' }, { status: 500 });
   }
 }

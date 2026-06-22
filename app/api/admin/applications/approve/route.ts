@@ -11,22 +11,76 @@ import { formatApplicationPdfFileName } from '@/lib/applications/pdfFilename';
 
 export const runtime = 'nodejs';
 
-async function findUserIdByEmail(supabase: any, email: string) {
+type JsonRecord = Record<string, unknown>;
+
+interface ApproveBody {
+  applicationId?: unknown;
+  id?: unknown;
+  lang?: unknown;
+}
+
+interface AuthUserListRow {
+  id?: string | null;
+  email?: string | null;
+}
+
+interface GenerateLinkData {
+  user?: { id?: string | null } | null;
+  properties?: { action_link?: string | null } | null;
+}
+
+interface RoleRow {
+  id?: string | number | null;
+  name?: string | null;
+  permissions?: JsonRecord | null;
+  color_hex?: string | null;
+}
+
+interface ApplicationApproveRow {
+  id?: string | number | null;
+  email?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  full_name?: string | null;
+  name?: string | null;
+  created_at?: string | null;
+}
+
+interface ProfileMemberRow {
+  member_since?: string | null;
+  member_expires_at?: string | null;
+}
+
+interface AssignMemberNoResponse {
+  data: number | string | null;
+  error: Error | null;
+}
+
+function toRecord(value: unknown): JsonRecord {
+  return value && typeof value === 'object' ? (value as JsonRecord) : {};
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
+async function findUserIdByEmail(supabase: ReturnType<typeof getServerSupabase>, email: string) {
   const perPage = 200;
   for (let page = 1; page <= 10; page += 1) {
     const res = await supabase.auth.admin.listUsers({ page, perPage });
     if (res.error) throw res.error;
-    const users = res.data?.users || [];
-    const u = users.find((x: any) => String(x?.email || '').toLowerCase() === email.toLowerCase());
+    const users: AuthUserListRow[] = Array.isArray(res.data?.users) ? res.data.users : [];
+    const u = users.find((x) => String(x.email || '').toLowerCase() === email.toLowerCase());
     if (u?.id) return String(u.id);
     if (users.length < perPage) return null;
   }
   return null;
 }
 
-function pickProfilePatch(perms: any) {
-  const out: any = {};
-  for (const [k, v] of Object.entries(perms || {})) {
+function pickProfilePatch(perms: unknown) {
+  const out: JsonRecord = {};
+  const record = toRecord(perms);
+  for (const [k, v] of Object.entries(record)) {
     const key = String(k);
     if (key === 'is_admin' || key === 'is_member' || key === 'can_manage_admins' || key.startsWith('can_view_') || key.startsWith('can_edit_')) {
       out[key] = !!v;
@@ -35,8 +89,8 @@ function pickProfilePatch(perms: any) {
   return out;
 }
 
-async function ensureMemberRole(supabase: any) {
-  const res = await supabase.from('app_roles').select('id,name,permissions,color_hex').eq('name', 'ČLEN').maybeSingle();
+async function ensureMemberRole(supabase: ReturnType<typeof getServerSupabase>) {
+  const res = await supabase.from('app_roles').select('id,name,permissions,color_hex').eq('name', 'ČLEN').maybeSingle<RoleRow>();
   if (!res.error && res.data?.id) return res.data;
 
   const created = await supabase
@@ -50,7 +104,7 @@ async function ensureMemberRole(supabase: any) {
       },
     ])
     .select('id,name,permissions,color_hex')
-    .single();
+    .single<RoleRow>();
   if (created.error) throw created.error;
   return created.data;
 }
@@ -60,16 +114,17 @@ export async function POST(req: Request) {
     const { user, profile } = await requireAdmin(req);
     if (!profile?.is_admin && !profile?.can_manage_admins) throw new Error('Forbidden');
 
-    const body = await req.json().catch(() => ({}));
-    const applicationId = String(body?.applicationId || body?.id || '').trim();
-    const lang = body?.lang === 'en' ? 'en' : 'cs';
+    const body = toRecord(await req.json().catch(() => ({})));
+    const payload = body as ApproveBody;
+    const applicationId = String(payload.applicationId || payload.id || '').trim();
+    const lang = payload.lang === 'en' ? 'en' : 'cs';
     if (!applicationId) return NextResponse.json({ error: 'Missing applicationId' }, { status: 400 });
 
     const supabase = getServerSupabase();
-    const appRes = await supabase.from('applications').select('*').eq('id', applicationId).single();
+    const appRes = await supabase.from('applications').select('*').eq('id', applicationId).single<ApplicationApproveRow>();
     if (appRes.error) throw appRes.error;
 
-    const app: any = appRes.data;
+    const app = appRes.data;
     const email = String(app?.email || '').trim().toLowerCase();
     if (!email || !email.includes('@')) return NextResponse.json({ error: 'Missing email' }, { status: 400 });
 
@@ -80,7 +135,7 @@ export async function POST(req: Request) {
     const redirectTo = `${origin}/${lang}/reset-password`;
 
     const role = await ensureMemberRole(supabase);
-    const rolePerms = role?.permissions && typeof role.permissions === 'object' ? role.permissions : {};
+    const rolePerms = toRecord(role?.permissions);
     const patch = pickProfilePatch(rolePerms);
 
     const existingUserId = await findUserIdByEmail(supabase, email);
@@ -88,14 +143,16 @@ export async function POST(req: Request) {
     let actionUrl = '';
 
     if (!userId) {
-      const invite = await supabase.auth.admin.generateLink({ type: 'invite', email, options: { redirectTo } } as any);
+      const invite = await supabase.auth.admin.generateLink({ type: 'invite', email, options: { redirectTo } });
       if (invite.error) throw invite.error;
-      userId = String((invite.data as any)?.user?.id || '');
-      actionUrl = String((invite.data as any)?.properties?.action_link || '');
+      const inviteData = invite.data as GenerateLinkData | null;
+      userId = String(inviteData?.user?.id || '');
+      actionUrl = String(inviteData?.properties?.action_link || '');
     } else {
-      const rec = await supabase.auth.admin.generateLink({ type: 'recovery', email, options: { redirectTo } } as any);
+      const rec = await supabase.auth.admin.generateLink({ type: 'recovery', email, options: { redirectTo } });
       if (rec.error) throw rec.error;
-      actionUrl = String((rec.data as any)?.properties?.action_link || '');
+      const recoveryData = rec.data as GenerateLinkData | null;
+      actionUrl = String(recoveryData?.properties?.action_link || '');
     }
 
     if (!userId) throw new Error('Chybí userId');
@@ -125,9 +182,9 @@ export async function POST(req: Request) {
       .throwOnError();
 
     try {
-      const prof = await supabase.from('profiles').select('member_since, member_expires_at').eq('id', userId).maybeSingle();
-      const cur: any = prof.data || {};
-      const updates: any = {};
+      const prof = await supabase.from('profiles').select('member_since, member_expires_at').eq('id', userId).maybeSingle<ProfileMemberRow>();
+      const cur: ProfileMemberRow = prof.data || {};
+      const updates: Record<string, string> = {};
       if (!cur.member_since) updates.member_since = new Date().toISOString();
       if (!cur.member_expires_at) {
         const d = new Date();
@@ -141,7 +198,7 @@ export async function POST(req: Request) {
 
     let memberNo: number | null = null;
     try {
-      const m = await supabase.rpc('assign_member_no', { p_user_id: userId });
+      const m = await supabase.rpc('assign_member_no', { p_user_id: userId }) as AssignMemberNoResponse;
       if (!m.error) memberNo = typeof m.data === 'number' ? m.data : Number(m.data);
     } catch {}
 
@@ -206,8 +263,9 @@ export async function POST(req: Request) {
       .throwOnError();
 
     return NextResponse.json({ ok: true, userId, email });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

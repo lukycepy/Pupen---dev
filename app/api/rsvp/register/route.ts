@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { randomBytes } from 'crypto';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { getBearerToken } from '@/lib/server-auth';
 import { isEmailBlacklisted } from '@/lib/tickets/blacklist';
@@ -14,15 +15,57 @@ import { DEFAULT_WAITLIST_CONFIG, getWaitlistConfigFromAdminLogs } from '@/lib/r
 interface EventRow {
   id?: string | null;
   title?: string | null;
+  title_en?: string | null;
   capacity?: number | null;
   ticket_sale_end?: string | null;
   is_member_only?: boolean | null;
+  min_age?: number | null;
+  max_age?: number | null;
+  date?: string | null;
 }
 
 interface RsvpExistingRow {
   status?: string | null;
   expires_at?: string | null;
-  attendees?: Array<{ name?: string }> | null;
+  attendees?: Array<{ name?: string; birth_date?: string | null }> | null;
+}
+
+interface AttendeeRow {
+  name: string;
+  birth_date?: string | null;
+}
+
+interface PriceRuleRow {
+  id?: string | null;
+  sort_order?: number | null;
+  label?: string | null;
+  label_en?: string | null;
+  starts_at?: string | null;
+  ends_at?: string | null;
+  amount_czk?: number | string | null;
+  is_active?: boolean | null;
+}
+
+interface RegistrationFieldOption {
+  value: string;
+  label: string;
+  label_en?: string | null;
+}
+
+interface RegistrationFieldRow {
+  id?: string | null;
+  field_key?: string | null;
+  field_type?: string | null;
+  label?: string | null;
+  label_en?: string | null;
+  placeholder?: string | null;
+  placeholder_en?: string | null;
+  helper_text?: string | null;
+  helper_text_en?: string | null;
+  options?: RegistrationFieldOption[] | null;
+  is_required?: boolean | null;
+  is_active?: boolean | null;
+  sort_order?: number | null;
 }
 
 interface RsvpInsertRow {
@@ -30,8 +73,15 @@ interface RsvpInsertRow {
   name: string;
   email: string;
   status: string;
+  promo_code?: string;
   payment_method: string;
-  attendees: Array<{ name: string }>;
+  attendees: AttendeeRow[];
+  form_answers?: Record<string, string | boolean | null>;
+  price_total?: number;
+  currency?: string;
+  pricing_label?: string | null;
+  pricing_label_en?: string | null;
+  pricing_rule_id?: string | null;
   qr_token?: string;
   qr_code?: string;
   expires_at: string | null;
@@ -43,6 +93,96 @@ function asTrimmedString(value: unknown) {
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Error';
+}
+
+function generateQrToken() {
+  return randomBytes(16).toString('hex').toUpperCase();
+}
+
+function hasMissingColumnError(message: string, field: string) {
+  return new RegExp(field, 'i').test(message) && /(schema cache|does not exist|column)/i.test(message);
+}
+
+function asOptionalDateString(value: unknown) {
+  const input = asTrimmedString(value);
+  if (!input) return null;
+  const parsed = new Date(input);
+  if (!Number.isFinite(parsed.getTime())) return null;
+  return input.length >= 10 ? input.slice(0, 10) : null;
+}
+
+function calculateAgeAtDate(birthDate: string, targetDate: string | null | undefined) {
+  const birth = new Date(`${birthDate}T00:00:00Z`);
+  const target = targetDate ? new Date(targetDate) : new Date();
+  if (!Number.isFinite(birth.getTime()) || !Number.isFinite(target.getTime())) return null;
+  let age = target.getUTCFullYear() - birth.getUTCFullYear();
+  const monthDelta = target.getUTCMonth() - birth.getUTCMonth();
+  const dayDelta = target.getUTCDate() - birth.getUTCDate();
+  if (monthDelta < 0 || (monthDelta === 0 && dayDelta < 0)) age -= 1;
+  return age;
+}
+
+function toMoney(value: number) {
+  return Math.max(0, Math.round(value * 100) / 100);
+}
+
+function normalizeFieldValue(field: RegistrationFieldRow, rawValue: unknown) {
+  const type = String(field.field_type || 'text');
+
+  if (type === 'checkbox') {
+    return rawValue === true;
+  }
+
+  if (type === 'date') {
+    return asOptionalDateString(rawValue);
+  }
+
+  const text = asTrimmedString(rawValue).slice(0, 500);
+  if (!text) return null;
+
+  if (type === 'select') {
+    const options = Array.isArray(field.options) ? field.options : [];
+    const allowed = new Set(options.map((option) => asTrimmedString(option?.value)).filter(Boolean));
+    return allowed.has(text) ? text : null;
+  }
+
+  return text;
+}
+
+async function loadEventPriceRules(supabase: ReturnType<typeof getServerSupabase>, eventId: string) {
+  const res = await supabase
+    .from('event_price_rules')
+    .select('id, sort_order, label, label_en, starts_at, ends_at, amount_czk, is_active')
+    .eq('event_id', eventId)
+    .order('sort_order', { ascending: true })
+    .order('starts_at', { ascending: true });
+
+  if (res.error) {
+    if (/event_price_rules/i.test(res.error.message) && /(schema cache|does not exist|relation)/i.test(res.error.message)) {
+      return [];
+    }
+    throw res.error;
+  }
+
+  return (res.data || []) as PriceRuleRow[];
+}
+
+async function loadRegistrationFields(supabase: ReturnType<typeof getServerSupabase>, eventId: string) {
+  const res = await supabase
+    .from('event_registration_fields')
+    .select('id, field_key, field_type, label, label_en, placeholder, placeholder_en, helper_text, helper_text_en, options, is_required, is_active, sort_order')
+    .eq('event_id', eventId)
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true });
+
+  if (res.error) {
+    if (/event_registration_fields/i.test(res.error.message) && /(schema cache|does not exist|relation)/i.test(res.error.message)) {
+      return [];
+    }
+    throw res.error;
+  }
+
+  return (res.data || []) as RegistrationFieldRow[];
 }
 
 function toRecord(value: unknown): Record<string, unknown> {
@@ -92,6 +232,7 @@ export async function POST(req: Request) {
     const subscribeNewsletter = body.subscribeNewsletter;
     const attendees = Array.isArray(body.attendees) ? body.attendees : [];
     const attendeesCount = body.attendeesCount;
+    const formAnswersInput = toRecord(body.formAnswers);
 
     if (cleanName.length > 100 || cleanEmail.length > 150) {
       return err('RSVP_PAYLOAD_TOO_LARGE', 400);
@@ -101,11 +242,19 @@ export async function POST(req: Request) {
     if (!eventId || !cleanName || !emailOk) return err('RSVP_BAD_INPUT', 400);
     if (promo && promo.length > 60) return err('PROMO_TOO_LONG', 400);
 
-    const provided = attendees.map((attendee) => asTrimmedString(toRecord(attendee).name)).filter(Boolean);
-    const desiredCountRaw = attendeesCount != null ? Number(attendeesCount) : provided.length || 1;
+    const provided = attendees.map((attendee) => {
+      const row = toRecord(attendee);
+      return {
+        name: asTrimmedString(row.name),
+        birth_date: asOptionalDateString(row.birth_date),
+      };
+    });
+    const providedNames = provided.map((attendee) => attendee.name).filter(Boolean);
+    const desiredCountRaw = attendeesCount != null ? Number(attendeesCount) : providedNames.length || 1;
     const desiredCount = Number.isFinite(desiredCountRaw) ? Math.max(1, Math.min(3, Math.floor(desiredCountRaw))) : 1;
     const attendeeNames = Array.from({ length: desiredCount }).map((_, idx) => ({
-      name: (provided[idx] || (idx === 0 ? cleanName : '')).slice(0, 120),
+      name: (provided[idx]?.name || (idx === 0 ? cleanName : '')).slice(0, 120),
+      birth_date: provided[idx]?.birth_date || null,
     }));
 
     const user = await getOptionalUser(req);
@@ -147,8 +296,8 @@ export async function POST(req: Request) {
 
     const loadEvent = async (withTicketSaleEnd: boolean) => {
       const select = withTicketSaleEnd
-        ? 'id, title, capacity, ticket_sale_end, is_member_only'
-        : 'id, title, capacity, is_member_only';
+        ? 'id, title, title_en, date, capacity, ticket_sale_end, is_member_only, min_age, max_age'
+        : 'id, title, title_en, date, capacity, is_member_only';
       return supabase.from('events').select(select).eq('id', eventId).single();
     };
     const first = await loadEvent(true);
@@ -156,8 +305,7 @@ export async function POST(req: Request) {
     let evErr = first.error;
     if (
       evErr &&
-      /ticket_sale_end/i.test(evErr.message) &&
-      /(schema cache|does not exist|column)/i.test(evErr.message)
+      hasMissingColumnError(evErr.message, 'ticket_sale_end')
     ) {
       const retry = await loadEvent(false);
       event = retry.data as EventRow | null;
@@ -228,7 +376,54 @@ export async function POST(req: Request) {
       }
     }
 
+    if (event.min_age != null || event.max_age != null) {
+      const invalidBirthDateIndex = attendeeNames.findIndex((attendee) => !attendee.birth_date);
+      if (invalidBirthDateIndex >= 0) {
+        return err('RSVP_BIRTH_DATE_REQUIRED', 400, { attendeeIndex: invalidBirthDateIndex });
+      }
+
+      for (let index = 0; index < attendeeNames.length; index += 1) {
+        const attendee = attendeeNames[index];
+        const age = attendee.birth_date ? calculateAgeAtDate(attendee.birth_date, event.date) : null;
+        if (age == null) return err('RSVP_BIRTH_DATE_REQUIRED', 400, { attendeeIndex: index });
+        if (typeof event.min_age === 'number' && age < event.min_age) {
+          return err('RSVP_AGE_RESTRICTION', 400, {
+            attendeeIndex: index,
+            minAge: event.min_age,
+            maxAge: event.max_age ?? null,
+            age,
+          });
+        }
+        if (typeof event.max_age === 'number' && age > event.max_age) {
+          return err('RSVP_AGE_RESTRICTION', 400, {
+            attendeeIndex: index,
+            minAge: event.min_age ?? null,
+            maxAge: event.max_age,
+            age,
+          });
+        }
+      }
+    }
+
+    const registrationFields = (await loadRegistrationFields(supabase, eventId)).filter((field) => field.is_active !== false);
+    const normalizedFormAnswers = registrationFields.reduce<Record<string, string | boolean | null>>((acc, field) => {
+      const fieldKey = asTrimmedString(field.field_key);
+      if (!fieldKey) return acc;
+      const value = normalizeFieldValue(field, formAnswersInput[fieldKey]);
+      if (field.is_required && (value == null || value === '')) {
+        throw new Error(`RSVP_FIELD_REQUIRED:${fieldKey}`);
+      }
+      if (String(field.field_type || 'text') === 'select' && formAnswersInput[fieldKey] != null && value == null) {
+        throw new Error(`RSVP_FIELD_INVALID:${fieldKey}`);
+      }
+      acc[fieldKey] = value;
+      return acc;
+    }, {});
+
     let promoTitle = '';
+    let promoMode: 'per_rsvp' | 'per_attendee' = 'per_rsvp';
+    let promoDiscountAmount = 0;
+    let promoDiscountPercentage = 0;
     if (promo) {
       const pr = await supabase
         .from('admin_logs')
@@ -245,6 +440,7 @@ export async function POST(req: Request) {
 
       const nowMs = Date.now();
       const mode = ruleRecord.mode === 'per_attendee' ? 'per_attendee' : 'per_rsvp';
+      promoMode = mode;
       const consumed = mode === 'per_attendee' ? attendeeNames.length : 1;
       const reject = async (reason: string) => {
         try {
@@ -325,7 +521,40 @@ export async function POST(req: Request) {
       }
 
       promoTitle = ruleRecord.title ? String(ruleRecord.title).trim() : '';
+      promoDiscountAmount = Number(ruleRecord.discountAmount);
+      promoDiscountPercentage = Number(ruleRecord.discountPercentage);
     }
+
+    const activePriceRules = (await loadEventPriceRules(supabase, eventId)).filter((rule) => {
+      if (rule.is_active === false) return false;
+      const startsAt = rule.starts_at ? new Date(rule.starts_at).getTime() : null;
+      const endsAt = rule.ends_at ? new Date(rule.ends_at).getTime() : null;
+      const nowMs = now.getTime();
+      if (startsAt != null && Number.isFinite(startsAt) && nowMs < startsAt) return false;
+      if (endsAt != null && Number.isFinite(endsAt) && nowMs > endsAt) return false;
+      return true;
+    });
+
+    const activePriceRule =
+      activePriceRules
+        .slice()
+        .sort((left, right) => {
+          const leftOrder = Number(left.sort_order ?? 0);
+          const rightOrder = Number(right.sort_order ?? 0);
+          if (leftOrder !== rightOrder) return leftOrder - rightOrder;
+          return String(left.starts_at || '').localeCompare(String(right.starts_at || ''));
+        })[0] || null;
+
+    const unitPrice = activePriceRule ? Number(activePriceRule.amount_czk || 0) : 0;
+    const subtotal = toMoney((Number.isFinite(unitPrice) ? unitPrice : 0) * attendeeNames.length);
+    const fixedDiscountUnits = promo ? (promoMode === 'per_attendee' ? attendeeNames.length : 1) : 0;
+    const fixedDiscount = Number.isFinite(promoDiscountAmount) && promoDiscountAmount > 0 ? promoDiscountAmount * fixedDiscountUnits : 0;
+    const percentageDiscount =
+      Number.isFinite(promoDiscountPercentage) && promoDiscountPercentage > 0
+        ? subtotal * (promoDiscountPercentage / 100)
+        : 0;
+    const totalDiscount = toMoney(Math.min(subtotal, fixedDiscount + percentageDiscount));
+    const totalPrice = toMoney(subtotal - totalDiscount);
 
     const sinceWindow = new Date(Date.now() - cfg.rsvp.windowMinutes * 60 * 1000).toISOString();
     if (ip) {
@@ -449,7 +678,7 @@ export async function POST(req: Request) {
       status = method === 'prevod' ? 'reserved' : 'confirmed';
     }
 
-    const qrToken = Math.random().toString(36).substring(2, 15).toUpperCase();
+    const qrToken = generateQrToken();
     let reservationExpiresHours = 24;
     try {
       const { config } = await getWaitlistConfigFromAdminLogs(supabase);
@@ -463,8 +692,15 @@ export async function POST(req: Request) {
       name: cleanName,
       email: cleanEmail,
       status,
+      promo_code: promo || undefined,
       payment_method: method,
       attendees: attendeeNames,
+      form_answers: normalizedFormAnswers,
+      price_total: totalPrice,
+      currency: 'CZK',
+      pricing_label: activePriceRule?.label ? String(activePriceRule.label) : null,
+      pricing_label_en: activePriceRule?.label_en ? String(activePriceRule.label_en) : null,
+      pricing_rule_id: activePriceRule?.id ? String(activePriceRule.id) : null,
       qr_token: qrToken,
       qr_code: qrToken,
       expires_at: expiresAt,
@@ -474,12 +710,18 @@ export async function POST(req: Request) {
     let ins = await tryInsert(baseRow);
     if (
       ins?.error &&
-      /(qr_code|qr_token)/i.test(ins.error.message) &&
+      /(qr_code|qr_token|form_answers|price_total|pricing_label|pricing_rule_id|currency)/i.test(ins.error.message) &&
       /(schema cache|does not exist|column)/i.test(ins.error.message)
     ) {
       const row2 = { ...baseRow };
       if (/qr_code/i.test(ins.error.message)) delete row2.qr_code;
       if (/qr_token/i.test(ins.error.message)) delete row2.qr_token;
+      if (/form_answers/i.test(ins.error.message)) delete row2.form_answers;
+      if (/price_total/i.test(ins.error.message)) delete row2.price_total;
+      if (/currency/i.test(ins.error.message)) delete row2.currency;
+      if (/pricing_label/i.test(ins.error.message)) delete row2.pricing_label;
+      if (/pricing_label_en/i.test(ins.error.message)) delete row2.pricing_label_en;
+      if (/pricing_rule_id/i.test(ins.error.message)) delete row2.pricing_rule_id;
       ins = await tryInsert(row2);
     }
     if (ins.error) throw ins.error;
@@ -515,6 +757,9 @@ export async function POST(req: Request) {
               rsvpId: rsvpId || null,
               email: cleanEmail,
               attendeesCount: attendeeNames.length,
+              subtotal,
+              totalDiscount,
+              totalPrice,
               status,
               ip,
               userId: user?.id || null,
@@ -543,6 +788,9 @@ export async function POST(req: Request) {
         qrToken,
         status,
         bankAccount,
+        priceTotal: totalPrice,
+        pricingLabel: activePriceRule?.label || '',
+        pricingLabelEn: activePriceRule?.label_en || '',
         lang: userLang,
       });
       await sendMailWithQueueFallback({
@@ -563,8 +811,24 @@ export async function POST(req: Request) {
       } catch {}
     }
 
-    return NextResponse.json({ ok: true, status, qrToken, expiresAt, eventId: String(eventId) });
+    return NextResponse.json({
+      ok: true,
+      status,
+      qrToken,
+      expiresAt,
+      eventId: String(eventId),
+      priceTotal: totalPrice,
+      pricingLabel: activePriceRule?.label || null,
+      pricingLabelEn: activePriceRule?.label_en || null,
+      attendeesCount: attendeeNames.length,
+    });
   } catch (error: unknown) {
+    if (error instanceof Error && error.message.startsWith('RSVP_FIELD_REQUIRED:')) {
+      return err('RSVP_FIELD_REQUIRED', 400, { fieldKey: error.message.split(':')[1] || null });
+    }
+    if (error instanceof Error && error.message.startsWith('RSVP_FIELD_INVALID:')) {
+      return err('RSVP_FIELD_INVALID', 400, { fieldKey: error.message.split(':')[1] || null });
+    }
     return err('RSVP_ERROR', 500, { message: getErrorMessage(error) });
   }
 }

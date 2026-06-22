@@ -2,7 +2,40 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { requireAdmin } from '@/lib/server-auth';
 
-const allowedStatuses = new Set(['draft', 'approved', 'rejected', 'archived']);
+const allowedStatuses = ['draft', 'approved', 'rejected', 'archived'] as const;
+type GovernanceDecisionStatus = (typeof allowedStatuses)[number];
+const allowedStatusSet = new Set<string>(allowedStatuses);
+
+interface GovernanceDecisionRow {
+  id?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  meeting_id?: string | null;
+  meeting_title?: string | null;
+  title?: string | null;
+  summary_html?: string | null;
+  status?: GovernanceDecisionStatus | null;
+  decided_at?: string | null;
+  is_published?: boolean | null;
+  created_by_email?: string | null;
+}
+
+interface CreateDecisionBody {
+  title?: unknown;
+  summaryHtml?: unknown;
+  meetingId?: unknown;
+  meetingTitle?: unknown;
+  status?: unknown;
+  isPublished?: unknown;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
 
 export async function GET(req: Request) {
   try {
@@ -25,28 +58,29 @@ export async function GET(req: Request) {
     const res = await q;
     if (res.error) throw res.error;
 
-    return NextResponse.json({ ok: true, decisions: res.data || [] });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+    return NextResponse.json({ ok: true, decisions: (res.data || []) as GovernanceDecisionRow[] });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
 export async function POST(req: Request) {
   try {
     const { user } = await requireAdmin(req);
-    const body = await req.json().catch(() => ({}));
-    const title = String(body?.title || '').trim();
-    const summaryHtml = String(body?.summaryHtml || '').trim();
-    const meetingId = body?.meetingId ? String(body.meetingId) : null;
-    const meetingTitle = body?.meetingTitle ? String(body.meetingTitle) : null;
-    const status = body?.status ? String(body.status) : 'draft';
-    const isPublished = !!body?.isPublished;
+    const body = toRecord(await req.json().catch(() => ({}))) as CreateDecisionBody;
+    const title = String(body.title || '').trim();
+    const summaryHtml = String(body.summaryHtml || '').trim();
+    const meetingId = body.meetingId ? String(body.meetingId) : null;
+    const meetingTitle = body.meetingTitle ? String(body.meetingTitle) : null;
+    const status = body.status ? String(body.status) : 'draft';
+    const isPublished = body.isPublished === true;
 
     if (!title || !summaryHtml) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
-    if (!allowedStatuses.has(status)) {
+    if (!allowedStatusSet.has(status)) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
     }
     if (title.length > 200) {
@@ -96,9 +130,9 @@ export async function POST(req: Request) {
     ]);
 
     return NextResponse.json({ ok: true, decision: ins.data });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
-

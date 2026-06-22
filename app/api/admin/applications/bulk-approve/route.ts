@@ -2,6 +2,22 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 
+interface BulkApplicationsBody {
+  ids?: unknown;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function normalizeIds(input: unknown): string[] {
+  return Array.isArray(input) ? Array.from(new Set(input.map((id) => String(id || '').trim()).filter(Boolean))) : [];
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function POST(req: Request) {
   try {
     const { user, profile } = await requireAdmin(req);
@@ -9,10 +25,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const body = await req.json();
-    const { ids } = body;
+    const body = toRecord(await req.json().catch(() => ({})));
+    const payload = body as BulkApplicationsBody;
+    const ids = normalizeIds(payload.ids);
 
-    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    if (!ids.length) {
       return NextResponse.json({ error: 'No IDs provided' }, { status: 400 });
     }
 
@@ -34,10 +51,7 @@ export async function POST(req: Request) {
       details: { ids, approvedBy: user.id }
     }]);
 
-    // Odesílání schvalovacích emailů (může trvat, v praxi by se mělo hodit do queue)
-    // Pro zjednodušení teď jen nastavíme status a emaily by měly odejít asynchronně nebo cronem,
-    // nebo zavoláme status-email endpoint pro každý z nich asynchronně.
-    ids.forEach((id: string) => {
+    ids.forEach((id) => {
       fetch(new URL('/api/admin/applications/status-email', req.url).toString(), {
         method: 'POST',
         headers: {
@@ -45,12 +59,11 @@ export async function POST(req: Request) {
           'Cookie': req.headers.get('cookie') || ''
         },
         body: JSON.stringify({ applicationId: id, status: 'approved' })
-      }).catch(console.error);
+      }).catch(() => null);
     });
 
     return NextResponse.json({ success: true, count: ids.length });
-  } catch (error: any) {
-    console.error('BULK APPROVE error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

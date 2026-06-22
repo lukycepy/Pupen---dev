@@ -7,6 +7,62 @@ import { sendMailWithQueueFallback } from '@/lib/email/queue';
 import { evaluatePassword } from '@/lib/auth/password-policy';
 import { PROFILE_PERMISSION_KEYS_SET } from '@/lib/rbac/registry';
 
+type JsonRecord = Record<string, unknown>;
+
+interface AuthUserListRow {
+  id?: string | null;
+  email?: string | null;
+}
+
+interface UserUpsertInput extends JsonRecord {
+  email?: unknown;
+  first_name?: unknown;
+  last_name?: unknown;
+  password?: unknown;
+  send_password?: unknown;
+}
+
+interface PasswordErrorDetails {
+  code: string | null;
+  errno: string | null;
+  syscall: string | null;
+  address: string | null;
+  port: string | null;
+  command: string | null;
+  responseCode: number | null;
+}
+
+interface UserUpsertResult {
+  ok: boolean;
+  email: string;
+  id?: string;
+  created?: boolean;
+  passwordSent?: boolean;
+  passwordError?: string | null;
+  error?: string;
+}
+
+function toRecord(value: unknown): JsonRecord {
+  return value && typeof value === 'object' ? (value as JsonRecord) : {};
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
+function getPasswordErrorDetails(error: unknown): PasswordErrorDetails {
+  const err = toRecord(error);
+  return {
+    code: err.code ? String(err.code) : null,
+    errno: err.errno ? String(err.errno) : null,
+    syscall: err.syscall ? String(err.syscall) : null,
+    address: err.address ? String(err.address) : null,
+    port: err.port ? String(err.port) : null,
+    command: err.command ? String(err.command) : null,
+    responseCode: typeof err.responseCode === 'number' ? err.responseCode : null,
+  };
+}
+
 function generatePassword(length = 14) {
   const a = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
   const b = 'abcdefghijkmnopqrstuvwxyz';
@@ -45,9 +101,10 @@ const ALLOWED_PROFILE_FIELDS = new Set([
   ...PROFILE_PERMISSION_KEYS_SET,
 ]);
 
-function pickProfilePatch(input: any) {
-  const out: any = {};
-  for (const [k, v] of Object.entries(input || {})) {
+function pickProfilePatch(input: unknown) {
+  const out: JsonRecord = {};
+  const record = toRecord(input);
+  for (const [k, v] of Object.entries(record)) {
     if (!ALLOWED_PROFILE_FIELDS.has(k)) continue;
     out[k] = v;
   }
@@ -67,13 +124,13 @@ function pickProfilePatch(input: any) {
   return out;
 }
 
-async function findUserIdByEmail(supabase: any, email: string) {
+async function findUserIdByEmail(supabase: ReturnType<typeof getServerSupabase>, email: string) {
   const perPage = 200;
   for (let page = 1; page <= 10; page += 1) {
     const res = await supabase.auth.admin.listUsers({ page, perPage });
     if (res.error) throw res.error;
-    const users = res.data?.users || [];
-    const u = users.find((x: any) => String(x?.email || '').toLowerCase() === email.toLowerCase());
+    const users: AuthUserListRow[] = Array.isArray(res.data?.users) ? res.data.users : [];
+    const u = users.find((x) => String(x.email || '').toLowerCase() === email.toLowerCase());
     if (u?.id) return String(u.id);
     if (users.length < perPage) return null;
   }
@@ -97,15 +154,16 @@ export async function POST(req: Request) {
     if (!adminProfile?.can_manage_admins) throw new Error('Forbidden');
     const supabase = getServerSupabase();
 
-    const body = await req.json().catch(() => ({}));
-    const usersInput = Array.isArray(body?.users) ? body.users : null;
+    const body = toRecord(await req.json().catch(() => ({})));
+    const usersInput = Array.isArray(body.users) ? body.users : null;
 
-    async function upsertOne(input: any) {
-      const email = String(input?.email || '').trim().toLowerCase();
-      const first_name = String(input?.first_name || '').trim();
-      const last_name = String(input?.last_name || '').trim();
-      const providedPassword = typeof input?.password === 'string' ? input.password : '';
-      const shouldSend = input?.send_password === true || (!providedPassword && input?.send_password !== false);
+    async function upsertOne(input: unknown): Promise<UserUpsertResult> {
+      const record = toRecord(input) as UserUpsertInput;
+      const email = String(record.email || '').trim().toLowerCase();
+      const first_name = String(record.first_name || '').trim();
+      const last_name = String(record.last_name || '').trim();
+      const providedPassword = typeof record.password === 'string' ? record.password : '';
+      const shouldSend = record.send_password === true || (!providedPassword && record.send_password !== false);
 
       if (!email || !email.includes('@')) return { ok: false, email, error: 'Missing email' };
 
@@ -126,7 +184,7 @@ export async function POST(req: Request) {
       let userId = await findUserIdByEmail(supabase, email);
       let created = false;
 
-      const userMeta: any = {};
+      const userMeta: JsonRecord = {};
       if (first_name) userMeta.first_name = first_name;
       if (last_name) userMeta.last_name = last_name;
 
@@ -152,7 +210,7 @@ export async function POST(req: Request) {
       if (!userId) throw new Error('User not resolved');
 
       const profilePatch = pickProfilePatch({
-        ...input,
+        ...record,
         email,
         first_name: first_name || null,
         last_name: last_name || null,
@@ -179,9 +237,9 @@ export async function POST(req: Request) {
         try {
           await sendPasswordEmail(email, password, first_name || undefined);
           passwordSent = true;
-        } catch (e: any) {
+        } catch (error: unknown) {
           passwordSent = false;
-          passwordError = e?.message || 'Email send failed';
+          passwordError = getErrorMessage(error);
           const smtp = await getMailerDebugInfoWithSettings().catch(() => null);
           try {
             await supabase.from('admin_logs').insert([
@@ -194,15 +252,7 @@ export async function POST(req: Request) {
                   email,
                   error: passwordError,
                   smtp,
-                  details: {
-                    code: e?.code,
-                    errno: e?.errno,
-                    syscall: e?.syscall,
-                    address: e?.address,
-                    port: e?.port,
-                    command: e?.command,
-                    responseCode: e?.responseCode,
-                  },
+                  details: getPasswordErrorDetails(error),
                 },
               },
             ]);
@@ -214,13 +264,13 @@ export async function POST(req: Request) {
     }
 
     if (usersInput) {
-      const results: any[] = [];
+      const results: UserUpsertResult[] = [];
       for (const u of usersInput.slice(0, 500)) {
         try {
           results.push(await upsertOne(u));
-        } catch (e: any) {
-          const email = String(u?.email || '').trim().toLowerCase();
-          results.push({ ok: false, email, error: e?.message || 'Error' });
+        } catch (error: unknown) {
+          const email = String(toRecord(u).email || '').trim().toLowerCase();
+          results.push({ ok: false, email, error: getErrorMessage(error) });
         }
       }
       return NextResponse.json({ ok: true, results });
@@ -229,8 +279,9 @@ export async function POST(req: Request) {
     const res = await upsertOne(body);
     if (!res.ok) return NextResponse.json({ error: res.error || 'Error' }, { status: 400 });
     return NextResponse.json(res);
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

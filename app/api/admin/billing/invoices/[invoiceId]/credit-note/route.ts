@@ -52,9 +52,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ invoiceId: str
       }),
       p_items: toDbItemsJson(
         items.map((it) => ({
-          position: it.position,
-          title: it.title,
-          quantity: it.quantity,
+          position: typeof it.position === 'number' ? it.position : Number(it.position || 0),
+          title: String(it.title || ''),
+          quantity: typeof it.quantity === 'number' ? it.quantity : Number(it.quantity || 0),
           unitPrice: -Math.abs(Number(it.unit_price || 0)),
         })),
       ),

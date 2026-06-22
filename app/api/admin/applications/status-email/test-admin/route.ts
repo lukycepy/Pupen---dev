@@ -8,7 +8,19 @@ import { stripHtmlToText } from '@/lib/richtext-shared';
 
 export const runtime = 'nodejs';
 
-async function resolveStatusAdminRecipients(supabase: any) {
+interface ProfileEmailRow {
+  email?: string | null;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
+async function resolveStatusAdminRecipients(supabase: ReturnType<typeof getServerSupabase>) {
   const configured = await getApplicationStatusNotificationEmailsFromSettings().catch(() => []);
   const cleaned = Array.isArray(configured) ? configured.map((x) => String(x).trim().toLowerCase()).filter(Boolean) : [];
   if (cleaned.length) return cleaned;
@@ -22,8 +34,8 @@ async function resolveStatusAdminRecipients(supabase: any) {
   if (cleanedLegacy.length) return cleanedLegacy;
 
   const { data } = await supabase.from('profiles').select('email').or('is_admin.eq.true,can_manage_admins.eq.true').limit(200);
-  return (Array.isArray(data) ? data : [])
-    .map((r: any) => String(r?.email || '').trim().toLowerCase())
+  return (Array.isArray(data) ? (data as ProfileEmailRow[]) : [])
+    .map((row) => String(row.email || '').trim().toLowerCase())
     .filter(Boolean);
 }
 
@@ -36,10 +48,10 @@ export async function POST(req: Request) {
     const { user, profile } = await requireAdmin(req);
     if (!profile?.is_admin && !profile?.can_manage_admins) throw new Error('Forbidden');
 
-    const body = await req.json().catch(() => ({}));
-    const lang = body?.lang === 'en' ? 'en' : 'cs';
-    const status = String(body?.status || 'approved');
-    const reason = String(body?.reason || (status === 'rejected' ? 'Ukázkový důvod zamítnutí.' : '')).trim();
+    const body = toRecord(await req.json().catch(() => ({})));
+    const lang = body.lang === 'en' ? 'en' : 'cs';
+    const status = String(body.status || 'approved');
+    const reason = String(body.reason || (status === 'rejected' ? 'Ukázkový důvod zamítnutí.' : '')).trim();
 
     const supabase = getServerSupabase();
     const recipients = await resolveStatusAdminRecipients(supabase);
@@ -90,8 +102,9 @@ export async function POST(req: Request) {
       .throwOnError();
 
     return NextResponse.json({ ok: true, recipients, queued: !r.ok && !!r.queued });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

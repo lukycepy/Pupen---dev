@@ -4,6 +4,17 @@ import { getServerSupabase } from '@/lib/supabase-server';
 import { buildApplicationPdfBytes } from '@/lib/applications/pdf';
 import { formatApplicationPdfFileName } from '@/lib/applications/pdfFilename';
 
+interface ApplicationExportRow {
+  id?: string | number | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  created_at?: string | null;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function GET(req: Request) {
   try {
     const { profile } = await requireAdmin(req);
@@ -16,7 +27,7 @@ export async function GET(req: Request) {
     if (!id) return NextResponse.json({ error: 'Missing ID' }, { status: 400 });
 
     const supabase = getServerSupabase();
-    const { data: app, error } = await supabase.from('applications').select('*').eq('id', id).single();
+    const { data: app, error } = await supabase.from('applications').select('*').eq('id', id).single<ApplicationExportRow>();
     if (error || !app) throw error || new Error('Not found');
 
     const pdfBytes = await buildApplicationPdfBytes(app);
@@ -30,7 +41,9 @@ export async function GET(req: Request) {
       },
     });
 
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : message === 'Not found' ? 404 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

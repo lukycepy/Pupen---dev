@@ -5,6 +5,25 @@ import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
 
 export const runtime = 'nodejs';
 
+interface SmokeApplicationSample {
+  id: string;
+  created_at: string;
+  first_name: string;
+  last_name: string;
+  name: string;
+  full_name: string;
+  email: string;
+  phone: string;
+  address: string;
+  membership_type: string;
+  decision_membership_type: string;
+  gdpr_consent: boolean;
+  status: string;
+  signed_on: string;
+  applicant_signature: string;
+  chairwoman_signature: string;
+}
+
 export async function GET(req: Request) {
   if (process.env.NODE_ENV === 'production') {
     return NextResponse.json({ error: 'Not Found' }, { status: 404 });
@@ -16,7 +35,7 @@ export async function GET(req: Request) {
   if (!expected || secret !== expected) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const createdAt = new Date().toISOString();
-  const sampleApp: any = {
+  const sampleApp: SmokeApplicationSample = {
     id: '00000000-0000-0000-0000-000000000000',
     created_at: createdAt,
     first_name: 'Jan',

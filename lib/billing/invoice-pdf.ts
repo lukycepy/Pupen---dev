@@ -1,17 +1,31 @@
-import { PDFDocument, rgb } from 'pdf-lib';
+import { PDFDocument, PDFFont, rgb } from 'pdf-lib';
 import { getPdfFonts } from '@/lib/pdf/fonts';
 import { formatDatePrague } from '@/lib/time/prague';
+import { type BillingInvoiceItemRowLike, type BillingInvoiceRowLike } from '@/lib/billing/invoices';
 
 export const BILLING_INVOICE_PDF_BUCKET = 'billing_invoices';
 const LOGO_PNG_URL = new URL('../../public/logo.png', import.meta.url);
 
-function cleanText(input: any, fallback = '-') {
+type BillingInvoicePdfRow = BillingInvoiceRowLike & {
+  issueDate?: string | null;
+  dueDate?: string | null;
+  buyerName?: string | null;
+  buyerEmail?: string | null;
+  buyerAddress?: string | null;
+};
+
+interface BillingInvoicePdfInput {
+  invoice: BillingInvoicePdfRow | null;
+  items: BillingInvoiceItemRowLike[];
+}
+
+function cleanText(input: unknown, fallback = '-') {
   const s = String(input ?? '').replace(/\u0000/g, '').trim();
   if (!s) return fallback;
   return s.replace(/\s+/g, ' ').trim();
 }
 
-function asciiFallbackText(input: any, fallback = '-') {
+function asciiFallbackText(input: unknown, fallback = '-') {
   const s = String(input ?? '').trim();
   if (!s) return fallback;
   return s
@@ -23,7 +37,7 @@ function asciiFallbackText(input: any, fallback = '-') {
     .trim();
 }
 
-function formatMoney(value: any, currency: string) {
+function formatMoney(value: unknown, currency: string) {
   const v = typeof value === 'number' ? value : Number(value || 0);
   try {
     return new Intl.NumberFormat('cs-CZ', { style: 'currency', currency: currency || 'CZK', maximumFractionDigits: 2 }).format(v || 0);
@@ -32,14 +46,14 @@ function formatMoney(value: any, currency: string) {
   }
 }
 
-function labelType(type: any) {
+function labelType(type: unknown) {
   const t = String(type || '').trim().toLowerCase();
   if (t === 'deposit') return 'Zálohová faktura';
   if (t === 'credit_note') return 'Dobropis';
   return 'Faktura';
 }
 
-function wrapLines(font: any, text: string, size: number, maxWidth: number) {
+function wrapLines(font: Pick<PDFFont, 'widthOfTextAtSize'>, text: string, size: number, maxWidth: number) {
   const words = String(text || '').split(/\s+/).filter(Boolean);
   const lines: string[] = [];
   let current = '';
@@ -72,7 +86,7 @@ async function loadLogoPngBytes(): Promise<Uint8Array | null> {
   }
 }
 
-function parseYear(invoice: any) {
+function parseYear(invoice: BillingInvoicePdfRow | null) {
   const num = String(invoice?.number || '').trim();
   const m = num.match(/-(\d{4})-/);
   if (m?.[1]) return m[1];
@@ -89,13 +103,13 @@ function sanitizeFileBase(input: string) {
     .slice(0, 120);
 }
 
-export function buildBillingInvoicePdfStoragePath(invoice: any) {
+export function buildBillingInvoicePdfStoragePath(invoice: BillingInvoicePdfRow | null) {
   const base = sanitizeFileBase(String(invoice?.number || invoice?.id || 'invoice'));
   const year = parseYear(invoice);
   return `${year}/${base || 'invoice'}.pdf`;
 }
 
-export async function buildBillingInvoicePdfBytes(input: { invoice: any; items: any[] }) {
+export async function buildBillingInvoicePdfBytes(input: BillingInvoicePdfInput) {
   const invoice = input.invoice || {};
   const items = Array.isArray(input.items) ? input.items : [];
 
@@ -113,7 +127,10 @@ export async function buildBillingInvoicePdfBytes(input: { invoice: any; items: 
   const green = rgb(0.08, 0.6, 0.26);
   const paper = rgb(0.98, 0.98, 0.97);
 
-  const drawSafe = (text: any, opts: { x: number; y: number; size: number; font: any; color: any }) => {
+  const drawSafe = (
+    text: unknown,
+    opts: { x: number; y: number; size: number; font: PDFFont; color: ReturnType<typeof rgb> },
+  ) => {
     const primary = cleanText(text, '');
     if (!primary) return;
     try {
@@ -209,9 +226,9 @@ export async function buildBillingInvoicePdfBytes(input: { invoice: any; items: 
   y -= 14;
 
   const currency = cleanText(invoice?.currency, 'CZK');
-  const toNum = (v: any) => (typeof v === 'number' ? v : Number(v || 0));
-  const fmtNum = (v: any) => {
-    const n = toNum(v);
+  const toNum = (value: unknown) => (typeof value === 'number' ? value : Number(value || 0));
+  const fmtNum = (value: unknown) => {
+    const n = toNum(value);
     try {
       return new Intl.NumberFormat('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(n || 0);
     } catch {
@@ -223,11 +240,11 @@ export async function buildBillingInvoicePdfBytes(input: { invoice: any; items: 
   const titleMaxWidth = (colQtyX - 12) - colTitleX;
 
   for (const it of items) {
-    const pos = cleanText(it?.position, '');
-    const title = cleanText(it?.title, 'Položka');
-    const qty = fmtNum(it?.quantity);
-    const unit = formatMoney(toNum(it?.unit_price ?? it?.unitPrice), currency);
-    const lineTotal = formatMoney(toNum(it?.total), currency);
+    const pos = cleanText(it.position, '');
+    const title = cleanText(it.title, 'Položka');
+    const qty = fmtNum(it.quantity);
+    const unit = formatMoney(toNum(it.unit_price), currency);
+    const lineTotal = formatMoney(toNum(it.total), currency);
     const titleLines = wrapLines(font, title, 10, titleMaxWidth);
     const rowH = Math.max(14, titleLines.length * 12);
 

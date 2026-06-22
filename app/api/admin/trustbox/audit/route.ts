@@ -2,10 +2,28 @@ import { NextResponse } from 'next/server';
 import { requireTrustBoxAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 
-function normalizeLimit(input: any) {
+interface TrustBoxAuditRow {
+  id?: string | number | null;
+  actor_user_id?: string | null;
+  actor_email?: string | null;
+  action?: string | null;
+  thread_id?: string | number | null;
+  attachment_id?: string | number | null;
+  pii_accessed?: boolean | null;
+  reason?: string | null;
+  ip?: string | null;
+  user_agent?: string | null;
+  created_at?: string | null;
+}
+
+function normalizeLimit(input: unknown) {
   const n = Number(input);
   if (!Number.isFinite(n)) return 50;
   return Math.max(1, Math.min(200, Math.floor(n)));
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
 }
 
 export async function GET(req: Request) {
@@ -39,10 +57,10 @@ export async function GET(req: Request) {
 
     const res = await q;
     if (res.error) throw res.error;
-    return NextResponse.json({ ok: true, items: res.data || [] });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });     
+    return NextResponse.json({ ok: true, items: (res.data || []) as TrustBoxAuditRow[] });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });     
   }
 }
-

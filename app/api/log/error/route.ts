@@ -4,6 +4,10 @@ import { getBearerToken } from '@/lib/server-auth';
 import { guardPublicJsonPost } from '@/lib/public-post-guard';
 import { sanitizeLogMessage, sanitizeLogUrl } from '@/lib/logs/sanitize';
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function POST(req: Request) {
   try {
     const g = await guardPublicJsonPost(req, {
@@ -43,14 +47,13 @@ export async function POST(req: Request) {
       }]);
 
     if (error) {
-      console.error('Failed to write to error_logs:', error);
       return NextResponse.json({ error: 'Database error' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    // Failsafe catch so we don't crash when logging an error
-    console.error('Error in log API:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Forbidden' ? 403 : message === 'Too many errors reported' ? 429 : 500;
+    return NextResponse.json({ error: status === 500 ? 'Internal Server Error' : message }, { status });
   }
 }

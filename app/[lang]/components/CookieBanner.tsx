@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { X, Cookie, ShieldCheck, ArrowRight } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import Portal from '@/app/components/ui/Portal';
+import { readCookieConsent, writeCookieConsent } from '@/lib/client-preferences';
 
 export default function CookieBanner({ lang, dict }: { lang: string, dict: any }) {
   const pathname = usePathname();
@@ -13,7 +14,7 @@ export default function CookieBanner({ lang, dict }: { lang: string, dict: any }
 
   useEffect(() => {
     if (hide) return;
-    const consent = localStorage.getItem('cookie-consent');
+    const consent = readCookieConsent();
     if (!consent) {
       const timer = setTimeout(() => setIsVisible(true), 2000);
       return () => clearTimeout(timer);
@@ -21,14 +22,12 @@ export default function CookieBanner({ lang, dict }: { lang: string, dict: any }
   }, [hide]);
 
   const handleAccept = () => {
-    localStorage.setItem('cookie-consent', 'accepted');
-    window.dispatchEvent(new Event('cookie-consent-changed'));
+    writeCookieConsent('accepted');
     setIsVisible(false);
   };
 
   const handleDecline = () => {
-    localStorage.setItem('cookie-consent', 'declined');
-    window.dispatchEvent(new Event('cookie-consent-changed'));
+    writeCookieConsent('declined');
     setIsVisible(false);
   };
 
@@ -76,7 +75,7 @@ export default function CookieBanner({ lang, dict }: { lang: string, dict: any }
                 {dict.cookies?.necessaryOnly || 'Jen nutné'}
               </button>
               <Link 
-                href={`/${lang}/ochrana-soukromi`}
+                href={`/${lang}/cookies`}
                 onClick={() => setIsVisible(false)}
                 className="flex-1 bg-white border border-stone-100 text-stone-400 py-3 rounded-xl font-bold text-xs hover:text-green-600 hover:border-green-100 transition flex items-center justify-center gap-1.5"
               >

@@ -3,6 +3,25 @@ import { getServerSupabase } from '@/lib/supabase-server';
 import { requireMember } from '@/lib/server-auth';
 import { guardPublicJsonPost } from '@/lib/public-post-guard';
 
+interface DmSendBody {
+  toId?: unknown;
+  toEmail?: unknown;
+  toLabel?: unknown;
+  message?: unknown;
+}
+
+interface DmThreadBlockLookupRow {
+  is_blocked?: boolean | null;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 function threadIdFor(a: string, b: string) {
   return [a, b].sort().join(':');
 }
@@ -18,8 +37,8 @@ export async function POST(req: Request) {
       tooManyMessage: 'Příliš mnoho zpráv. Zkuste to prosím později.',
     });
     if (!g.ok) return g.response;
-    const body = g.body;
-    const { toId, toEmail, toLabel, message } = body || {};
+    const body = toRecord(g.body) as DmSendBody;
+    const { toId, toEmail, toLabel, message } = body;
 
     if (!toId || !toEmail || !message) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
@@ -34,26 +53,21 @@ export async function POST(req: Request) {
 
     const supabase = getServerSupabase();
 
-    // 1. Dávka 06: Zápis do nových doménových tabulek (write-new)
-    // Pokud tabulka ještě neexistuje (např. před spuštěním migrace), 
-    // zachytíme chybu, ale nezhroutíme aplikaci díky read-both/write-new konceptu.
     try {
       const [p1, p2] = [String(user.id), String(toId)].sort();
       const p1Email = p1 === String(user.id) ? user.email : toEmail;
       const p2Email = p2 === String(user.id) ? user.email : toEmail;
 
-      // Check for block
       const { data: existingThread } = await supabase
         .from('dm_threads')
         .select('is_blocked')
         .eq('id', threadId)
         .single();
 
-      if (existingThread?.is_blocked) {
+      if ((existingThread as DmThreadBlockLookupRow | null)?.is_blocked) {
         return NextResponse.json({ error: 'Thread is blocked' }, { status: 403 });
       }
       
-      // Upsert thread
       await supabase.from('dm_threads').upsert({
         id: threadId,
         participant1_id: p1,
@@ -69,7 +83,6 @@ export async function POST(req: Request) {
       const rpcRes = await supabase.rpc('increment_unread', { t_id: threadId, p_num: pNum });
       if (rpcRes.error) throw rpcRes.error;
 
-      // Insert message
       await supabase.from('dm_messages').insert({
         thread_id: threadId,
         sender_id: user.id,
@@ -77,11 +90,8 @@ export async function POST(req: Request) {
         content: text,
         created_at: now
       });
-    } catch (dbErr) {
-      console.error('Failed to write to new DM tables (might not exist yet):', dbErr);
-    }
+    } catch {}
 
-    // 2. Fallback / původní zápis (kompatibilita)
     const res = await supabase.from('admin_logs').insert([
       {
         admin_email: user.email || 'member',
@@ -104,8 +114,9 @@ export async function POST(req: Request) {
     if (res.error) throw res.error;
 
     return NextResponse.json({ ok: true, threadId });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

@@ -2,6 +2,25 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { requireUser } from '@/lib/server-auth';
 
+interface BoardDirectoryLogRow {
+  created_at?: string | null;
+  details?: Record<string, unknown> | null;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function normalizeRoles(input: unknown): Record<string, unknown>[] {
+  return Array.isArray(input)
+    ? input.filter((role): role is Record<string, unknown> => !!role && typeof role === 'object')
+    : [];
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function GET(req: Request) {
   try {
     await requireUser(req);
@@ -15,15 +34,16 @@ export async function GET(req: Request) {
       .maybeSingle();
     if (res.error) throw res.error;
 
-    const details = res.data?.details || {};
+    const row = (res.data || null) as BoardDirectoryLogRow | null;
+    const details = toRecord(row?.details);
     return NextResponse.json({
       ok: true,
-      updatedAt: res.data?.created_at || null,
-      roles: Array.isArray(details.roles) ? details.roles : [],
+      updatedAt: row?.created_at || null,
+      roles: normalizeRoles(details.roles),
     });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
-

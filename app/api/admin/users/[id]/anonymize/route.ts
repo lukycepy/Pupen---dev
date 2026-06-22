@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
     const { user, profile } = await requireAdmin(req);
@@ -22,10 +26,17 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     });
 
     if (authError) {
-      console.warn('Could not update auth.users, possibly missing admin privileges:', authError);
+      try {
+        await supabase.from('admin_logs').insert([{
+          admin_email: user.email || 'admin',
+          admin_name: 'Admin API',
+          action: 'USER_ANONYMIZE_AUTH_UPDATE_FAILED',
+          target_id: targetUserId,
+          details: { error: getErrorMessage(authError) }
+        }]);
+      } catch {}
     }
 
-    // 2. Anonymize profile
     const { error: profileError } = await supabase
       .from('profiles')
       .update({
@@ -48,7 +59,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
     if (profileError) throw profileError;
 
-    // Log the action
     await supabase.from('admin_logs').insert([{
       admin_email: user.email || 'admin',
       admin_name: 'Admin API',
@@ -58,8 +68,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     }]);
 
     return NextResponse.json({ success: true, email: anonymizedEmail });
-  } catch (error: any) {
-    console.error('ANONYMIZE user error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

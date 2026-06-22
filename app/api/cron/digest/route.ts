@@ -4,6 +4,35 @@ import { getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer
 import { buildWeeklyDigest } from '@/lib/email/digest';
 import { sendMailWithQueueFallback } from '@/lib/email/queue';
 
+interface DigestConfigLogRow {
+  created_at?: string | null;
+  details?: {
+    config?: Record<string, unknown> | null;
+  } | null;
+}
+
+interface DigestScheduledLogRow {
+  created_at?: string | null;
+}
+
+interface DigestProfileRow {
+  id?: string | null;
+  email?: string | null;
+  is_member?: boolean | null;
+}
+
+interface DigestPrefsLogRow {
+  target_id?: string | null;
+  created_at?: string | null;
+  details?: {
+    prefs?: Record<string, unknown> | null;
+  } | null;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 function weekdayToNum(w: string) {
   const x = String(w || '').toLowerCase();
   if (x.startsWith('mon')) return 1;
@@ -56,7 +85,7 @@ export async function GET(req: Request) {
       windowMinutes: 20,
       maxRecipients: 200,
       minIntervalHours: 72,
-      ...(cfgRes.data?.details?.config && typeof cfgRes.data.details.config === 'object' ? cfgRes.data.details.config : {}),
+      ...((((cfgRes.data || null) as DigestConfigLogRow | null)?.details?.config || {}) as Record<string, unknown>),
     };
 
     if (!config.enabled) return NextResponse.json({ ok: true, skipped: 'disabled' });
@@ -75,8 +104,9 @@ export async function GET(req: Request) {
       .maybeSingle();
     if (lastRes.error) throw lastRes.error;
 
-    if (lastRes.data?.created_at) {
-      const lastMs = new Date(lastRes.data.created_at).getTime();
+    const lastSchedule = (lastRes.data || null) as DigestScheduledLogRow | null;
+    if (lastSchedule?.created_at) {
+      const lastMs = new Date(lastSchedule.created_at).getTime();
       const minIntervalMs = Number(config.minIntervalHours || 72) * 60 * 60 * 1000;
       if (Date.now() - lastMs < minIntervalMs) return NextResponse.json({ ok: true, skipped: 'min_interval' });
     }
@@ -88,10 +118,10 @@ export async function GET(req: Request) {
 
     const profilesRes = await supabase.from('profiles').select('id, email, is_member').eq('is_member', true).not('email', 'is', null).limit(Number(config.maxRecipients || 200));
     if (profilesRes.error) throw profilesRes.error;
-    const profiles = profilesRes.data || [];
+    const profiles = (profilesRes.data || []) as DigestProfileRow[];
 
-    const ids = profiles.map((p: any) => String(p.id));
-    const prefsById = new Map<string, any>();
+    const ids = profiles.map((profile) => String(profile.id || '')).filter(Boolean);
+    const prefsById = new Map<string, Record<string, unknown>>();
     if (ids.length) {
       const prefsRes = await supabase
         .from('admin_logs')
@@ -101,7 +131,7 @@ export async function GET(req: Request) {
         .order('created_at', { ascending: false })
         .limit(5000);
       if (prefsRes.error) throw prefsRes.error;
-      for (const row of prefsRes.data || []) {
+      for (const row of (prefsRes.data || []) as DigestPrefsLogRow[]) {
         const tid = String(row.target_id || '');
         if (!tid || prefsById.has(tid)) continue;
         prefsById.set(tid, row.details?.prefs || {});
@@ -109,8 +139,8 @@ export async function GET(req: Request) {
     }
 
     const recipients = profiles
-      .map((p: any) => ({ id: String(p.id), email: String(p.email || '').toLowerCase() }))
-      .filter((p: any) => p.email && (prefsById.get(p.id)?.digestWeekly === false ? false : true));
+      .map((profile) => ({ id: String(profile.id || ''), email: String(profile.email || '').toLowerCase() }))
+      .filter((profile) => profile.email && (prefsById.get(profile.id)?.digestWeekly === false ? false : true));
 
     const batchId = Math.random().toString(36).slice(2) + '-' + Date.now().toString(36);
 
@@ -149,7 +179,7 @@ export async function GET(req: Request) {
     } catch {}
 
     return NextResponse.json({ ok: true, batchId, recipients: recipients.length });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

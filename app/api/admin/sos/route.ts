@@ -2,6 +2,30 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { requireAdmin } from '@/lib/server-auth';
 
+interface SosAdminBody {
+  item?: unknown;
+}
+
+interface SosContactPayload {
+  updated_at: string;
+  title: string;
+  category: string | null;
+  phone: string | null;
+  email: string | null;
+  url: string | null;
+  note: string | null;
+  is_public: boolean;
+  sort_order: number;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function GET(req: Request) {
   try {
     await requireAdmin(req);
@@ -14,19 +38,20 @@ export async function GET(req: Request) {
       .limit(500);
     if (res.error) throw res.error;
     return NextResponse.json({ ok: true, items: res.data || [] });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
 export async function POST(req: Request) {
   try {
     const { user } = await requireAdmin(req);
-    const body = await req.json().catch(() => ({}));
-    const item = body?.item || {};
+    const body = toRecord(await req.json().catch(() => ({}))) as SosAdminBody;
+    const item = toRecord(body.item);
 
-    const payload: any = {
+    const payload: SosContactPayload = {
       updated_at: new Date().toISOString(),
       title: String(item.title || '').slice(0, 120),
       category: item.category ? String(item.category).slice(0, 80) : null,
@@ -56,9 +81,9 @@ export async function POST(req: Request) {
       .throwOnError();
 
     return NextResponse.json({ ok: true, item: ins.data });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
-

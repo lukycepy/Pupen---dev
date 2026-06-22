@@ -5,14 +5,54 @@ import { writeAuditLog } from '@/lib/audit/audit-log';
 
 export const runtime = 'nodejs';
 
-function normalizeError(e: any) {
-  const err = e || {};
+interface BankTransactionMatchRow {
+  id?: string | null;
+  vs?: string | null;
+  amount?: number | null;
+  currency?: string | null;
+  booked_at?: string | null;
+}
+
+interface BillingInvoiceMatchRow {
+  id?: string | null;
+  status?: string | null;
+  total?: number | null;
+  paid_amount?: number | null;
+  currency?: string | null;
+  buyer_email?: string | null;
+  buyer_name?: string | null;
+  number?: string | null;
+  vs?: string | null;
+}
+
+interface BillingInvoicePaymentLinkRow {
+  bank_transaction_id?: string | null;
+}
+
+interface MatchErrorPayload {
+  bankTransactionId: string;
+  invoiceId?: string;
+  vs: string;
+  error: ReturnType<typeof normalizeError>;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function normalizeError(error: unknown) {
+  const err = toRecord(error);
   return {
-    message: String(err.message || err),
+    message: String(err.message || error || ''),
     name: err.name ? String(err.name) : '',
     code: err.code ? String(err.code) : '',
     stack: err.stack ? String(err.stack) : '',
   };
+}
+
+function getEnqueueFailure(result: unknown) {
+  const record = toRecord(result);
+  return record.error || record.skipped || 'enqueue_failed';
 }
 
 export async function GET(req: Request) {
@@ -33,7 +73,7 @@ export async function GET(req: Request) {
   let skippedNoVs = 0;
   let skippedNoInvoice = 0;
   let skippedMultipleInvoices = 0;
-  const errors: any[] = [];
+  const errors: MatchErrorPayload[] = [];
 
   try {
     const txRes = await supabase
@@ -45,29 +85,29 @@ export async function GET(req: Request) {
       .limit(limit);
     if (txRes.error) throw txRes.error;
 
-    const txs: any[] = Array.isArray(txRes.data) ? txRes.data : [];
-    const txIds = txs.map((t) => String(t?.id || '')).filter(Boolean);
+    const txs = (Array.isArray(txRes.data) ? txRes.data : []) as BankTransactionMatchRow[];
+    const txIds = txs.map((transaction) => String(transaction.id || '')).filter(Boolean);
     const paired = new Set<string>();
 
     if (txIds.length) {
       const payRes = await supabase.from('billing_invoice_payments').select('bank_transaction_id').in('bank_transaction_id', txIds);
       if (payRes.error) throw payRes.error;
-      for (const row of Array.isArray(payRes.data) ? payRes.data : []) {
-        const id = row?.bank_transaction_id ? String(row.bank_transaction_id) : '';
+      for (const row of (Array.isArray(payRes.data) ? payRes.data : []) as BillingInvoicePaymentLinkRow[]) {
+        const id = row.bank_transaction_id ? String(row.bank_transaction_id) : '';
         if (id) paired.add(id);
       }
     }
 
     for (const tx of txs) {
       processed += 1;
-      const bankTransactionId = String(tx?.id || '');
+      const bankTransactionId = String(tx.id || '');
       if (!bankTransactionId) continue;
       if (paired.has(bankTransactionId)) {
         skippedAlreadyPaired += 1;
         continue;
       }
 
-      const vs = String(tx?.vs || '').trim();
+      const vs = String(tx.vs || '').trim();
       if (!vs) {
         skippedNoVs += 1;
         continue;
@@ -80,7 +120,7 @@ export async function GET(req: Request) {
         .in('status', ['issued', 'sent', 'partially_paid'])
         .limit(2);
       if (invRes.error) throw invRes.error;
-      const candidates: any[] = Array.isArray(invRes.data) ? invRes.data : [];
+      const candidates = (Array.isArray(invRes.data) ? invRes.data : []) as BillingInvoiceMatchRow[];
 
       if (!candidates.length) {
         skippedNoInvoice += 1;
@@ -91,10 +131,10 @@ export async function GET(req: Request) {
         continue;
       }
 
-      const invoice = candidates[0] as any;
-      const invoiceId = String(invoice?.id || '');
+      const invoice = candidates[0];
+      const invoiceId = String(invoice.id || '');
       if (!invoiceId) continue;
-      const beforeStatus = String(invoice?.status || '');
+      const beforeStatus = String(invoice.status || '');
 
       if (dryRun) {
         matched += 1;
@@ -125,8 +165,8 @@ export async function GET(req: Request) {
         .eq('id', invoiceId)
         .maybeSingle();
       if (afterRes.error) throw afterRes.error;
-      const after: any = afterRes.data || invoice;
-      const afterStatus = String(after?.status || beforeStatus);
+      const after = ((afterRes.data || invoice) as BillingInvoiceMatchRow);
+      const afterStatus = String(after.status || beforeStatus);
 
       await writeAuditLog({
         req,
@@ -142,13 +182,13 @@ export async function GET(req: Request) {
           bank_transaction_id: bankTransactionId,
           payment_id: paymentId,
           vs,
-          amount: tx?.amount ?? null,
-          currency: tx?.currency ?? null,
+          amount: tx.amount ?? null,
+          currency: tx.currency ?? null,
         },
       });
 
       if (afterStatus === 'paid' && beforeStatus !== 'paid') {
-        const toEmail = String(after?.buyer_email || '').trim();
+        const toEmail = String(after.buyer_email || '').trim();
         if (toEmail) {
           const enq = await enqueueEmailTrigger({
             triggerKey: 'billing_invoice_paid',
@@ -156,11 +196,11 @@ export async function GET(req: Request) {
             lang: 'cs',
             vars: {
               toEmail,
-              buyerName: after?.buyer_name ? String(after.buyer_name) : '',
-              invoiceNumber: after?.number ? String(after.number) : '',
-              vs: after?.vs ? String(after.vs) : '',
-              total: after?.total ?? null,
-              currency: after?.currency ? String(after.currency) : 'CZK',
+              buyerName: after.buyer_name ? String(after.buyer_name) : '',
+              invoiceNumber: after.number ? String(after.number) : '',
+              vs: after.vs ? String(after.vs) : '',
+              total: after.total ?? null,
+              currency: after.currency ? String(after.currency) : 'CZK',
             },
             meta: { invoice_id: invoiceId, bank_transaction_id: bankTransactionId },
             headers: { 'X-Pupen-Category': 'billing', 'X-Pupen-Trigger': 'billing_invoice_paid' },
@@ -184,7 +224,7 @@ export async function GET(req: Request) {
               bankTransactionId,
               invoiceId,
               vs,
-              error: normalizeError((enq as any)?.error || (enq as any)?.skipped || 'enqueue_failed'),
+              error: normalizeError(getEnqueueFailure(enq)),
             });
           }
         }
@@ -205,7 +245,7 @@ export async function GET(req: Request) {
       skippedMultipleInvoices,
       errors,
     });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Error' }, { status: 500 });
   }
 }

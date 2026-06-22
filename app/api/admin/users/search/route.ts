@@ -2,6 +2,19 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 
+interface UserSearchRow {
+  id?: string | null;
+  email?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  is_member?: boolean | null;
+  is_admin?: boolean | null;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function GET(req: Request) {
   try {
     const { profile } = await requireAdmin(req);
@@ -39,9 +52,8 @@ export async function GET(req: Request) {
     const res = await queryBuilder;
 
     if (res.error) throw res.error;
-    return NextResponse.json({ ok: true, users: res.data || [] });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+    return NextResponse.json({ ok: true, users: (res.data || []) as UserSearchRow[] });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }
-

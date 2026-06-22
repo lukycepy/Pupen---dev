@@ -1,13 +1,22 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { getBankTransactionsProvider } from '@/lib/bank-transactions/provider';
+import type { BankTransaction } from '@/lib/bank-transactions/provider';
 
 export const runtime = 'nodejs';
 
-function normalizeError(e: any) {
-  const err = e || {};
+interface BankTransactionsRunIdRow {
+  id?: string | number | null;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function normalizeError(error: unknown) {
+  const err = toRecord(error);
   return {
-    message: String(err.message || err),
+    message: String(err.message || error || ''),
     name: err.name ? String(err.name) : '',
     code: err.code ? String(err.code) : '',
     stack: err.stack ? String(err.stack) : '',
@@ -64,7 +73,8 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: runRes.error.message || 'Failed to start run' }, { status: 500 });
   }
 
-  const runId = String((runRes.data as any)?.id || '');
+  const runData = (runRes.data || null) as BankTransactionsRunIdRow | null;
+  const runId = String(runData?.id || '');
   if (!runId) return NextResponse.json({ error: 'Failed to start run' }, { status: 500 });
 
   try {
@@ -72,32 +82,32 @@ export async function GET(req: Request) {
 
     const unique = new Map<string, (typeof txs)[number]>();
     for (const t of txs) {
-      const id = String((t as any)?.providerTxId || '').trim();
+      const id = String(t.providerTxId || '').trim();
       if (!id) continue;
       unique.set(id, t);
     }
 
-    const rows = Array.from(unique.values()).map((t) => ({
+    const rows = Array.from(unique.values()).map((transaction: BankTransaction) => ({
       provider: provider.id,
-      provider_tx_id: String(t.providerTxId),
-      booked_at: new Date(String(t.bookedAt)).toISOString(),
-      amount: Number(t.amount),
-      currency: String(t.currency || 'CZK'),
-      account_iban: t.accountIban ? String(t.accountIban) : null,
-      counterparty_iban: t.counterpartyIban ? String(t.counterpartyIban) : null,
-      counterparty_name: t.counterpartyName ? String(t.counterpartyName) : null,
-      vs: t.vs ? String(t.vs) : null,
-      ks: t.ks ? String(t.ks) : null,
-      ss: t.ss ? String(t.ss) : null,
-      message: t.message ? String(t.message) : null,
-      raw: t.raw && typeof t.raw === 'object' ? t.raw : {},
+      provider_tx_id: String(transaction.providerTxId),
+      booked_at: new Date(String(transaction.bookedAt)).toISOString(),
+      amount: Number(transaction.amount),
+      currency: String(transaction.currency || 'CZK'),
+      account_iban: transaction.accountIban ? String(transaction.accountIban) : null,
+      counterparty_iban: transaction.counterpartyIban ? String(transaction.counterpartyIban) : null,
+      counterparty_name: transaction.counterpartyName ? String(transaction.counterpartyName) : null,
+      vs: transaction.vs ? String(transaction.vs) : null,
+      ks: transaction.ks ? String(transaction.ks) : null,
+      ss: transaction.ss ? String(transaction.ss) : null,
+      message: transaction.message ? String(transaction.message) : null,
+      raw: toRecord(transaction.raw),
       updated_at: new Date().toISOString(),
     }));
 
     let upserted = 0;
     for (let i = 0; i < rows.length; i += 200) {
       const batch = rows.slice(i, i + 200);
-      const up = await supabase.from('bank_transactions').upsert(batch as any, { onConflict: 'provider,provider_tx_id' });
+      const up = await supabase.from('bank_transactions').upsert(batch, { onConflict: 'provider,provider_tx_id' });
       if (up.error) throw up.error;
       upserted += batch.length;
     }
@@ -125,9 +135,9 @@ export async function GET(req: Request) {
       startedAt: startedAt.toISOString(),
       finishedAt: finishedAt.toISOString(),
     });
-  } catch (e: any) {
+  } catch (error: unknown) {
     const finishedAt = new Date();
-    const info = normalizeError(e);
+    const info = normalizeError(error);
     await supabase
       .from('bank_transactions_runs')
       .update({

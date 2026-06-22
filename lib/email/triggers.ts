@@ -66,7 +66,34 @@ function findTriggerDef(triggerKey: string) {
   return EMAIL_TRIGGER_DEFS.find((d) => d.triggerKey === triggerKey) || null;
 }
 
-export async function getEmailTriggerSettings(triggerKey: EmailTriggerKey, supabase?: any) {
+interface EmailTriggerSettingsRow {
+  enabled?: boolean | null;
+  settings?: Record<string, unknown> | null;
+}
+
+interface EnqueueEmailTriggerOptions {
+  triggerKey: EmailTriggerKey;
+  toEmail: string;
+  lang: 'cs' | 'en';
+  vars: Record<string, unknown>;
+  meta?: Record<string, unknown>;
+  headers?: Record<string, string>;
+  replyTo?: string;
+  supabase?: ReturnType<typeof getServerSupabase>;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function getEnqueueError(result: unknown) {
+  if (result && typeof result === 'object' && 'error' in result) {
+    return (result as { error?: unknown }).error || null;
+  }
+  return null;
+}
+
+export async function getEmailTriggerSettings(triggerKey: EmailTriggerKey, supabase?: ReturnType<typeof getServerSupabase>) {
   const sb = supabase || getServerSupabase();
   const def = findTriggerDef(triggerKey);
   if (!def) {
@@ -78,14 +105,14 @@ export async function getEmailTriggerSettings(triggerKey: EmailTriggerKey, supab
   }
 
   try {
-    const res = await sb.from('email_trigger_settings').select('enabled, settings').eq('trigger_key', triggerKey).maybeSingle();
+    const res = await sb.from('email_trigger_settings').select('enabled, settings').eq('trigger_key', triggerKey).maybeSingle<EmailTriggerSettingsRow>();
     if (res.error) throw res.error;
-    const row: any = res.data;
+    const row = res.data;
     const enabled = row?.enabled !== false;
-    const settings = row?.settings && typeof row.settings === 'object' ? row.settings : {};
+    const settings = toRecord(row?.settings);
     const allowed = allowedTemplateKeySet();
-    const cs = String(settings?.template_cs || '').trim();
-    const en = String(settings?.template_en || '').trim();
+    const cs = String(settings.template_cs || '').trim();
+    const en = String(settings.template_en || '').trim();
     const templateCs = (allowed.has(cs) ? (cs as EmailTemplateKey) : def.defaultTemplateCs) as EmailTemplateKey;
     const templateEn = (allowed.has(en) ? (en as EmailTemplateKey) : def.defaultTemplateEn) as EmailTemplateKey;
     return { enabled, templateCs, templateEn };
@@ -94,7 +121,11 @@ export async function getEmailTriggerSettings(triggerKey: EmailTriggerKey, supab
   }
 }
 
-export async function resolveEmailTriggerTemplateKey(triggerKey: EmailTriggerKey, lang: 'cs' | 'en', supabase?: any) {
+export async function resolveEmailTriggerTemplateKey(
+  triggerKey: EmailTriggerKey,
+  lang: 'cs' | 'en',
+  supabase?: ReturnType<typeof getServerSupabase>,
+) {
   const def = findTriggerDef(triggerKey);
   if (!def) return null;
   const s = await getEmailTriggerSettings(triggerKey, supabase);
@@ -102,21 +133,12 @@ export async function resolveEmailTriggerTemplateKey(triggerKey: EmailTriggerKey
   return lang === 'en' ? s.templateEn : s.templateCs;
 }
 
-export async function enqueueEmailTrigger(opts: {
-  triggerKey: EmailTriggerKey;
-  toEmail: string;
-  lang: 'cs' | 'en';
-  vars: any;
-  meta?: Record<string, any>;
-  headers?: Record<string, string>;
-  replyTo?: string;
-  supabase?: any;
-}) {
+export async function enqueueEmailTrigger(opts: EnqueueEmailTriggerOptions) {
   const sb = opts.supabase || getServerSupabase();
   const templateKey = await resolveEmailTriggerTemplateKey(opts.triggerKey, opts.lang, sb);
   if (!templateKey) return { ok: false as const, skipped: 'disabled' as const };
 
-  const rendered = await renderEmailTemplateWithDbOverride(templateKey, { ...(opts.vars || {}), lang: opts.lang });
+  const rendered = await renderEmailTemplateWithDbOverride(templateKey, { ...opts.vars, lang: opts.lang });
   const from = await getSenderFromSettings();
   const enq = await enqueueEmailSend(
     {
@@ -146,5 +168,5 @@ export async function enqueueEmailTrigger(opts: {
     } catch {}
   }
 
-  return enq.ok ? { ok: true as const, queueId: enq.queueId || null, templateKey } : { ok: false as const, error: (enq as any).error || null };
+  return enq.ok ? { ok: true as const, queueId: enq.queueId || null, templateKey } : { ok: false as const, error: getEnqueueError(enq) };
 }

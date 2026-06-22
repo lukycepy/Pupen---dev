@@ -1,24 +1,39 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 
-function csvEscape(v: any) {
-  const s = String(v ?? '');
+interface SosExportRow {
+  title?: string | null;
+  category?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  url?: string | null;
+  note?: string | null;
+  sort_order?: number | null;
+  created_at?: string | null;
+}
+
+function csvEscape(value: unknown) {
+  const s = String(value ?? '');
   if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
   return s;
 }
 
-function toVcf(items: any[]) {
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
+function toVcf(items: SosExportRow[]) {
   return items
-    .map((c) => {
+    .map((contact) => {
       const lines = [
         'BEGIN:VCARD',
         'VERSION:3.0',
-        `FN:${String(c.title || '').replace(/\n/g, ' ')}`,
+        `FN:${String(contact.title || '').replace(/\n/g, ' ')}`,
       ];
-      if (c.phone) lines.push(`TEL;TYPE=WORK,VOICE:${String(c.phone).trim()}`);
-      if (c.email) lines.push(`EMAIL;TYPE=INTERNET:${String(c.email).trim()}`);
-      if (c.url) lines.push(`URL:${String(c.url).trim()}`);
-      if (c.note) lines.push(`NOTE:${String(c.note).replace(/\n/g, ' ')}`);
+      if (contact.phone) lines.push(`TEL;TYPE=WORK,VOICE:${String(contact.phone).trim()}`);
+      if (contact.email) lines.push(`EMAIL;TYPE=INTERNET:${String(contact.email).trim()}`);
+      if (contact.url) lines.push(`URL:${String(contact.url).trim()}`);
+      if (contact.note) lines.push(`NOTE:${String(contact.note).replace(/\n/g, ' ')}`);
       lines.push('END:VCARD');
       return lines.join('\n');
     })
@@ -39,7 +54,7 @@ export async function GET(req: Request) {
       .order('created_at', { ascending: false })
       .limit(200);
     if (res.error) throw res.error;
-    const items = res.data || [];
+    const items = (res.data || []) as SosExportRow[];
 
     if (format === 'json') {
       return NextResponse.json({ ok: true, items });
@@ -48,8 +63,8 @@ export async function GET(req: Request) {
     if (format === 'csv') {
       const header = ['title', 'category', 'phone', 'email', 'url', 'note'].join(',');
       const body = items
-        .map((c: any) =>
-          [c.title, c.category, c.phone, c.email, c.url, c.note].map(csvEscape).join(','),
+        .map((contact) =>
+          [contact.title, contact.category, contact.phone, contact.email, contact.url, contact.note].map(csvEscape).join(','),
         )
         .join('\n');
       const out = `${header}\n${body}\n`;
@@ -68,8 +83,7 @@ export async function GET(req: Request) {
         'Content-Disposition': 'attachment; filename="pupen-sos-contacts.vcf"',
       },
     });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }
-

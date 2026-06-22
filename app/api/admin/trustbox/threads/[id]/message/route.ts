@@ -9,6 +9,36 @@ import { sendMailWithQueueFallback } from '@/lib/email/queue';
 import { logTrustBoxAudit } from '@/lib/trustbox/audit';
 import { stripHtmlToText } from '@/lib/richtext-shared';
 
+interface TrustBoxMessageBody {
+  kind?: unknown;
+  message?: unknown;
+  notify?: unknown;
+}
+
+interface TrustBoxThreadMessageRow {
+  id?: string | number | null;
+  allow_followup?: boolean | null;
+  anonymized_at?: string | null;
+}
+
+interface ProfileNameRow {
+  first_name?: string | null;
+  last_name?: string | null;
+}
+
+interface TrustBoxIdentityEmailRow {
+  first_name?: string | null;
+  email?: string | null;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 function sha256Hex(input: string) {
   return createHash('sha256').update(input).digest('hex');
 }
@@ -24,10 +54,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const threadId = String(id || '').trim();
     if (!threadId) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
 
-    const body = await req.json().catch(() => ({}));
-    const kind = body?.kind === 'internal' ? 'internal' : 'admin';
-    const text = String(body?.message || '').trim().slice(0, 10_000);
-    const notify = body?.notify === true;
+    const body = toRecord(await req.json().catch(() => ({}))) as TrustBoxMessageBody;
+    const kind = body.kind === 'internal' ? 'internal' : 'admin';
+    const text = String(body.message || '').trim().slice(0, 10_000);
+    const notify = body.notify === true;
     if (!text) return NextResponse.json({ error: 'Missing message' }, { status: 400 });
 
     const supabase = getServerSupabase();
@@ -35,13 +65,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       .from('trust_box_threads')
       .select('id,allow_followup,anonymized_at')
       .eq('id', threadId)
-      .maybeSingle();
+      .maybeSingle<TrustBoxThreadMessageRow>();
     if (thrRes.error) throw thrRes.error;
-    const thread: any = thrRes.data;
+    const thread = thrRes.data;
     if (!thread?.id) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    const profRes = await supabase.from('profiles').select('first_name,last_name').eq('id', auth.user.id).maybeSingle();
-    const prof: any = profRes.data || null;
+    const profRes = await supabase.from('profiles').select('first_name,last_name').eq('id', auth.user.id).maybeSingle<ProfileNameRow>();
+    const prof = profRes.data || null;
     const authorName = String(`${prof?.first_name || ''} ${prof?.last_name || ''}`).trim() || auth.user.email || 'Admin';
 
     const ins = await supabase
@@ -62,9 +92,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     });
 
     if (kind === 'admin' && notify && thread.allow_followup === true && !thread.anonymized_at) {
-      const identRes = await supabase.from('trust_box_identities').select('first_name,email').eq('thread_id', threadId).maybeSingle();
+      const identRes = await supabase
+        .from('trust_box_identities')
+        .select('first_name,email')
+        .eq('thread_id', threadId)
+        .maybeSingle<TrustBoxIdentityEmailRow>();
       if (identRes.error) throw identRes.error;
-      const ident: any = identRes.data;
+      const ident = identRes.data;
       if (ident?.email) {
         const token = randomToken();
         const tokenHash = sha256Hex(token);
@@ -96,7 +130,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

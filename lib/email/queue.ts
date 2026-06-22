@@ -1,19 +1,74 @@
 import { getServerSupabase } from '@/lib/supabase-server';
+import type { Attachment } from 'nodemailer/lib/mailer';
 
-function isSchemaCacheMissingTable(e: any) {
-  const msg = String(e?.message || '');
+interface QueueIdRow {
+  id?: string | number | null;
+}
+
+interface QueueInsertRow {
+  status: 'queued';
+  to_email: string;
+  from_email: string;
+  reply_to: string | null;
+  subject: string;
+  html: string;
+  meta: EmailQueueMeta;
+  last_error: string | null;
+  max_attempts: number;
+  attempt_count: number;
+  next_attempt_at: string;
+  updated_at: string;
+  text?: string | null;
+  headers?: Record<string, string>;
+}
+
+interface NormalizedQueueError {
+  message: string;
+  name: string;
+  code: string;
+  command: string;
+  responseCode: number | null;
+  response: string;
+  stack: string;
+}
+
+interface QueueTransportMessage {
+  from: string;
+  to: string;
+  subject: string;
+  html: string;
+  text?: string;
+  replyTo?: string;
+  headers?: Record<string, string>;
+  attachments?: Attachment[];
+}
+
+interface QueueTransporter {
+  sendMail(message: QueueTransportMessage, ...args: unknown[]): Promise<unknown> | void;
+}
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error || '');
+}
+
+function isSchemaCacheMissingTable(error: unknown) {
+  const msg = errorMessage(error);
   return msg.includes('Could not find the table') && msg.includes('in the schema cache');
 }
 
-function isSchemaCacheMissingColumn(e: any) {
-  const msg = String(e?.message || '');
+function isSchemaCacheMissingColumn(error: unknown) {
+  const msg = errorMessage(error);
   return msg.includes('in the schema cache') && msg.toLowerCase().includes('column');
 }
 
-function normalizeError(e: any) {
-  const err = e || {};
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function normalizeError(error: unknown): NormalizedQueueError {
+  const err = toRecord(error);
   return {
-    message: String(err.message || err),
+    message: String(err.message || error || ''),
     name: err.name ? String(err.name) : '',
     code: err.code ? String(err.code) : '',
     command: err.command ? String(err.command) : '',
@@ -27,7 +82,7 @@ export type EmailQueueMeta = {
   kind?: string;
   template_key?: string;
   source?: string;
-  [k: string]: any;
+  [k: string]: unknown;
 };
 
 export type EnqueueEmailInput = {
@@ -43,10 +98,10 @@ export type EnqueueEmailInput = {
   lastError?: string;
 };
 
-export async function enqueueEmailSend(input: EnqueueEmailInput, supabase?: any) {
+export async function enqueueEmailSend(input: EnqueueEmailInput, supabase?: ReturnType<typeof getServerSupabase>) {
   try {
     const sb = supabase || getServerSupabase();
-    const base: any = {
+    const base: QueueInsertRow = {
       status: 'queued',
       to_email: input.to,
       from_email: input.from,
@@ -64,23 +119,23 @@ export async function enqueueEmailSend(input: EnqueueEmailInput, supabase?: any)
       .from('email_send_queue')
       .insert([{ ...base, text: input.text || null, headers: input.headers || {} }])
       .select('id')
-      .single();
+      .single<QueueIdRow>();
     if (res.error && isSchemaCacheMissingColumn(res.error)) {
-      res = await sb.from('email_send_queue').insert([base]).select('id').single();
+      res = await sb.from('email_send_queue').insert([base]).select('id').single<QueueIdRow>();
     }
     if (res.error) throw res.error;
     return { ok: true as const, queueId: res.data?.id ? String(res.data.id) : null };
-  } catch (e: any) {
-    if (isSchemaCacheMissingTable(e)) return { ok: false as const, skipped: 'missing_table' as const };
-    return { ok: false as const, error: e };
+  } catch (error: unknown) {
+    if (isSchemaCacheMissingTable(error)) return { ok: false as const, skipped: 'missing_table' as const };
+    return { ok: false as const, error };
   }
 }
 
 export async function sendMailWithQueueFallback(opts: {
-  transporter: any;
-  message: { from: string; to: string; subject: string; html: string; text?: string; replyTo?: string; headers?: Record<string, string>; attachments?: any[] };
+  transporter: QueueTransporter;
+  message: QueueTransportMessage;
   meta?: EmailQueueMeta;
-  supabase?: any;
+  supabase?: ReturnType<typeof getServerSupabase>;
 }) {
   try {
     await opts.transporter.sendMail({
@@ -94,8 +149,8 @@ export async function sendMailWithQueueFallback(opts: {
       attachments: opts.message.attachments,
     });
     return { ok: true as const };
-  } catch (e: any) {
-    const info = normalizeError(e);
+  } catch (error: unknown) {
+    const info = normalizeError(error);
     const lastError = info.message;
     const enq = await enqueueEmailSend(
       {
@@ -111,6 +166,6 @@ export async function sendMailWithQueueFallback(opts: {
       },
       opts.supabase,
     );
-    return { ok: false as const, queued: enq.ok === true, error: e, enqueue: enq };
+    return { ok: false as const, queued: enq.ok === true, error, enqueue: enq };
   }
 }

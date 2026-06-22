@@ -2,6 +2,34 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { requireAdmin } from '@/lib/server-auth';
 
+interface PublishPolicyBody {
+  publish?: unknown;
+  versionId?: unknown;
+}
+
+interface GovernancePolicyRow {
+  id?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  slug?: string | null;
+  title?: string | null;
+  description?: string | null;
+  is_published?: boolean | null;
+  published_version_id?: string | null;
+}
+
+interface GovernancePolicyVersionLookupRow {
+  id?: string | null;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
     const { user } = await requireAdmin(req);
@@ -9,9 +37,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     const policyId = String(id || '').trim();
     if (!policyId) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
 
-    const body = await req.json().catch(() => ({}));
-    const publish = body?.publish === undefined ? true : !!body.publish;
-    const versionId = body?.versionId ? String(body.versionId) : null;
+    const body = toRecord(await req.json().catch(() => ({}))) as PublishPolicyBody;
+    const publish = body.publish === undefined ? true : body.publish === true;
+    const versionId = body.versionId ? String(body.versionId) : null;
     const now = new Date().toISOString();
 
     const supabase = getServerSupabase();
@@ -35,7 +63,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         },
       ]);
 
-      return NextResponse.json({ ok: true, policy: upd.data });
+      return NextResponse.json({ ok: true, policy: upd.data as GovernancePolicyRow });
     }
 
     let publishVersionId = versionId;
@@ -48,7 +76,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         .limit(1)
         .maybeSingle();
       if (last.error) throw last.error;
-      publishVersionId = last.data?.id ? String(last.data.id) : null;
+      const lastVersion = (last.data || null) as GovernancePolicyVersionLookupRow | null;
+      publishVersionId = lastVersion?.id ? String(lastVersion.id) : null;
     }
 
     if (!publishVersionId) {
@@ -73,9 +102,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       },
     ]);
 
-    return NextResponse.json({ ok: true, policy: upd.data });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+    return NextResponse.json({ ok: true, policy: upd.data as GovernancePolicyRow });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

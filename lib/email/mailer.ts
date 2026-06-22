@@ -105,12 +105,32 @@ let cachedSettings:
     }
   | null = null;
 
+interface EmailSettingsRow {
+  smtp_host?: string | null;
+  smtp_user?: string | null;
+  smtp_pass?: string | null;
+  smtp_port?: number | string | null;
+  smtp_secure?: boolean | string | null;
+  smtp_tls_reject_unauthorized?: boolean | string | null;
+  smtp_tls_ca_pem?: string | null;
+  sender_name?: string | null;
+  sender_email?: string | null;
+  application_notification_emails?: unknown;
+  application_notification_emails_new?: unknown;
+  application_notification_emails_status?: unknown;
+  dkim_selector?: string | null;
+}
+
+function normalizeStringArray(input: unknown) {
+  return Array.isArray(input) ? input.map((value) => String(value || '')).filter(Boolean) : null;
+}
+
 async function getEmailSettingsCached() {
   const now = Date.now();
   if (cachedSettings && now - cachedSettings.fetchedAt < 60_000) return cachedSettings;
 
   const supabase = getServerSupabase();
-  const { data } = await supabase.from('email_settings').select('*').limit(1).maybeSingle();
+  const { data } = await supabase.from('email_settings').select('*').limit(1).maybeSingle<EmailSettingsRow>();
 
   const smtp_host = data?.smtp_host ? String(data.smtp_host) : '';
   const smtp_user = data?.smtp_user ? String(data.smtp_user) : '';
@@ -124,12 +144,12 @@ async function getEmailSettingsCached() {
         : String(data?.smtp_secure || '') === 'true';
 
   const smtp_tls_reject_unauthorized =
-    typeof (data as any)?.smtp_tls_reject_unauthorized === 'boolean'
-      ? (data as any).smtp_tls_reject_unauthorized
-      : (data as any)?.smtp_tls_reject_unauthorized == null
+    typeof data?.smtp_tls_reject_unauthorized === 'boolean'
+      ? data.smtp_tls_reject_unauthorized
+      : data?.smtp_tls_reject_unauthorized == null
         ? undefined
-        : String((data as any).smtp_tls_reject_unauthorized || '') === 'true';
-  const smtp_tls_ca_pem = (data as any)?.smtp_tls_ca_pem ? String((data as any).smtp_tls_ca_pem) : '';
+        : String(data.smtp_tls_reject_unauthorized || '') === 'true';
+  const smtp_tls_ca_pem = data?.smtp_tls_ca_pem ? String(data.smtp_tls_ca_pem) : '';
 
   const smtp =
     smtp_host && smtp_user && smtp_pass
@@ -149,16 +169,10 @@ async function getEmailSettingsCached() {
     smtp,
     senderName: data?.sender_name ? String(data.sender_name) : null,
     senderEmail: data?.sender_email ? String(data.sender_email) : null,
-    applicationNotificationEmails: Array.isArray((data as any)?.application_notification_emails)
-      ? (data as any).application_notification_emails.map((x: any) => String(x)).filter(Boolean)
-      : null,
-    applicationNotificationEmailsNew: Array.isArray((data as any)?.application_notification_emails_new)
-      ? (data as any).application_notification_emails_new.map((x: any) => String(x)).filter(Boolean)
-      : null,
-    applicationNotificationEmailsStatus: Array.isArray((data as any)?.application_notification_emails_status)
-      ? (data as any).application_notification_emails_status.map((x: any) => String(x)).filter(Boolean)
-      : null,
-    dkimSelector: (data as any)?.dkim_selector ? String((data as any).dkim_selector) : null,
+    applicationNotificationEmails: normalizeStringArray(data?.application_notification_emails),
+    applicationNotificationEmailsNew: normalizeStringArray(data?.application_notification_emails_new),
+    applicationNotificationEmailsStatus: normalizeStringArray(data?.application_notification_emails_status),
+    dkimSelector: data?.dkim_selector ? String(data.dkim_selector) : null,
   };
   return cachedSettings;
 }
@@ -169,8 +183,8 @@ export async function getMailerWithSettings() {
   return getMailer();
 }
 
-export function createQueueOnlyTransporter(err?: any) {
-  const e = err instanceof Error ? err : new Error('Email not configured');
+export function createQueueOnlyTransporter(error?: unknown) {
+  const e = error instanceof Error ? error : new Error('Email not configured');
   return {
     sendMail: async () => {
       throw e;
@@ -181,8 +195,8 @@ export function createQueueOnlyTransporter(err?: any) {
 export async function getMailerWithSettingsOrQueueTransporter() {
   try {
     return await getMailerWithSettings();
-  } catch (e: any) {
-    return createQueueOnlyTransporter(e);
+  } catch (error: unknown) {
+    return createQueueOnlyTransporter(error);
   }
 }
 

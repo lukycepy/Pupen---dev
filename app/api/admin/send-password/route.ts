@@ -5,6 +5,14 @@ import { sendMailWithQueueFallback } from '@/lib/email/queue';
 import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function POST(req: Request) {
   try {
     const { user, profile } = await requireAdmin(req);
@@ -28,6 +36,7 @@ export async function POST(req: Request) {
     });
     if (!sendRes.ok) {
       const smtp = await getMailerDebugInfoWithSettings().catch(() => null);
+      const sendError = toRecord(sendRes.error);
       try {
         await supabase.from('admin_logs').insert([
           {
@@ -39,15 +48,15 @@ export async function POST(req: Request) {
               email,
               smtp,
               details: {
-                code: sendRes.error?.code,
-                errno: sendRes.error?.errno,
-                syscall: sendRes.error?.syscall,
-                address: sendRes.error?.address,
-                port: sendRes.error?.port,
-                command: sendRes.error?.command,
-                responseCode: sendRes.error?.responseCode,
+                code: sendError.code ? String(sendError.code) : null,
+                errno: sendError.errno ? String(sendError.errno) : null,
+                syscall: sendError.syscall ? String(sendError.syscall) : null,
+                address: sendError.address ? String(sendError.address) : null,
+                port: sendError.port ? String(sendError.port) : null,
+                command: sendError.command ? String(sendError.command) : null,
+                responseCode: typeof sendError.responseCode === 'number' ? sendError.responseCode : null,
               },
-              error: sendRes.error?.message || 'Email send failed',
+              error: sendError.message ? String(sendError.message) : 'Email send failed',
               queued: sendRes.queued === true,
             },
           },
@@ -69,7 +78,7 @@ export async function POST(req: Request) {
     } catch {}
 
     return NextResponse.json({ success: true, queued: !sendRes.ok && sendRes.queued === true });
-  } catch (error: any) {
-    return NextResponse.json({ error: error?.message || 'Error' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

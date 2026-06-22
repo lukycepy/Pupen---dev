@@ -2,10 +2,20 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 
-function clampInt(value: any, min: number, max: number, def: number) {
+interface AdminLogProfileRow {
+  can_manage_admins?: boolean | null;
+  can_view_logs?: boolean | null;
+  can_edit_logs?: boolean | null;
+}
+
+function clampInt(value: unknown, min: number, max: number, def: number) {
   const n = Number(value);
   if (!Number.isFinite(n)) return def;
   return Math.max(min, Math.min(max, Math.trunc(n)));
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
 }
 
 export async function GET(req: Request) {
@@ -20,7 +30,7 @@ export async function GET(req: Request) {
       .maybeSingle();
     if (profRes.error) throw profRes.error;
 
-    const profile = profRes.data as any;
+    const profile = (profRes.data || null) as AdminLogProfileRow | null;
     const canView = !!(profile?.can_manage_admins || profile?.can_view_logs || profile?.can_edit_logs);
     if (!canView) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
@@ -74,8 +84,9 @@ export async function GET(req: Request) {
     }
 
     return NextResponse.json({ error: 'Invalid source' }, { status: 400 });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

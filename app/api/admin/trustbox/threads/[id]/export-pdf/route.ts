@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { PDFDocument, rgb } from 'pdf-lib';
+import { PDFDocument, PDFFont, PDFPage, rgb } from 'pdf-lib';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { requireTrustBoxAdmin } from '@/lib/server-auth';
 import { getPdfFonts } from '@/lib/pdf/fonts';
@@ -8,13 +8,44 @@ import { getPublicBaseUrl } from '@/lib/public-base-url';
 
 const LOGO_PNG_URL = new URL('../../../../../../../public/logo.png', import.meta.url);
 
-function cleanText(input: any, fallback = '—') {
+interface TrustBoxThreadExportRow {
+  id?: string | number | null;
+  status?: string | null;
+  priority?: string | null;
+  category?: string | null;
+  subject?: string | null;
+  allow_followup?: boolean | null;
+  allow_forward_to_faculty?: boolean | null;
+  created_at?: string | null;
+  last_activity_at?: string | null;
+  anonymized_at?: string | null;
+}
+
+interface TrustBoxMessageExportRow {
+  author_type?: string | null;
+  author_name?: string | null;
+  body?: string | null;
+  created_at?: string | null;
+}
+
+interface TrustBoxAttachmentExportRow {
+  original_name?: string | null;
+  content_type?: string | null;
+  size_bytes?: number | string | null;
+  created_at?: string | null;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
+function cleanText(input: unknown, fallback = '—') {
   const s = String(input ?? '').replace(/\u0000/g, '').trim();
   if (!s) return fallback;
   return s.replace(/\s+/g, ' ').trim();
 }
 
-function asciiFallbackText(input: any, fallback = '—') {
+function asciiFallbackText(input: unknown, fallback = '—') {
   const s = String(input ?? '').trim();
   if (!s) return fallback;
   return s
@@ -26,7 +57,7 @@ function asciiFallbackText(input: any, fallback = '—') {
     .trim();
 }
 
-function wrapLines(font: any, text: string, size: number, maxWidth: number) {
+function wrapLines(font: Pick<PDFFont, 'widthOfTextAtSize'>, text: string, size: number, maxWidth: number) {
   const words = String(text || '').split(/\s+/).filter(Boolean);
   const lines: string[] = [];
   let current = '';
@@ -49,7 +80,7 @@ function wrapLines(font: any, text: string, size: number, maxWidth: number) {
   return lines.length ? lines : [''];
 }
 
-function fmt(value: any) {
+function fmt(value: unknown) {
   try {
     return new Date(String(value)).toLocaleString();
   } catch {
@@ -84,7 +115,7 @@ function sanitizeFilePart(value: string) {
     .slice(0, 80);
 }
 
-function mapTrustBoxStatus(status: string) {
+function mapTrustBoxStatus(status: unknown) {
   const s = String(status || '').trim();
   if (s === 'new') return 'Nové';
   if (s === 'in_review') return 'V řešení';
@@ -94,14 +125,14 @@ function mapTrustBoxStatus(status: string) {
   return s || '—';
 }
 
-function mapTrustBoxPriority(priority: string) {
+function mapTrustBoxPriority(priority: unknown) {
   const p = String(priority || '').trim();
   if (p === 'normal') return 'Normální';
   if (p === 'urgent') return 'Urgentní';
   return p || '—';
 }
 
-function mapTrustBoxCategory(category: string) {
+function mapTrustBoxCategory(category: unknown) {
   const c = String(category || '').trim();
   if (c === 'other') return 'Jiné';
   return c || '—';
@@ -127,9 +158,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       .from('trust_box_threads')
       .select('id,status,priority,category,subject,allow_followup,allow_forward_to_faculty,created_at,last_activity_at,anonymized_at')
       .eq('id', threadId)
-      .maybeSingle();
+      .maybeSingle<TrustBoxThreadExportRow>();
     if (thrRes.error) throw thrRes.error;
-    const thread: any = thrRes.data;
+    const thread = thrRes.data;
     if (!thread) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     const msgsRes = await supabase
@@ -138,7 +169,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       .eq('thread_id', threadId)
       .order('created_at', { ascending: true });
     if (msgsRes.error) throw msgsRes.error;
-    const messages: any[] = msgsRes.data || [];
+    const messages: TrustBoxMessageExportRow[] = Array.isArray(msgsRes.data) ? msgsRes.data : [];
 
     const atRes = await supabase
       .from('trust_box_attachments')
@@ -146,15 +177,22 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       .eq('thread_id', threadId)
       .order('created_at', { ascending: true });
     if (atRes.error) throw atRes.error;
-    const attachments: any[] = atRes.data || [];
+    const attachments: TrustBoxAttachmentExportRow[] = Array.isArray(atRes.data) ? atRes.data : [];
 
     const pdfDoc = await PDFDocument.create();
     try {
-      (pdfDoc as any).setTitle?.('Schránka důvěry – export vlákna');
-      (pdfDoc as any).setAuthor?.('Systém Pupen');
-      (pdfDoc as any).setCreator?.('Systém Pupen');
-      (pdfDoc as any).setProducer?.('Systém Pupen');
-      (pdfDoc as any).setSubject?.(String(thread.subject || ''));
+      const metaDoc = pdfDoc as PDFDocument & {
+        setTitle?(title: string): void;
+        setAuthor?(author: string): void;
+        setCreator?(creator: string): void;
+        setProducer?(producer: string): void;
+        setSubject?(subject: string): void;
+      };
+      metaDoc.setTitle?.('Schránka duvery - export vlakna');
+      metaDoc.setAuthor?.('System Pupen');
+      metaDoc.setCreator?.('System Pupen');
+      metaDoc.setProducer?.('System Pupen');
+      metaDoc.setSubject?.(String(thread.subject || ''));
     } catch {}
     const { font, fontBold } = await getPdfFonts(pdfDoc);
 
@@ -166,10 +204,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const green = rgb(0.08, 0.6, 0.26);
     const paper = rgb(0.98, 0.98, 0.97);
 
-    let page = pdfDoc.addPage([width, 841.89]);
+    let page: PDFPage = pdfDoc.addPage([width, 841.89]);
     let y = 800;
 
-    const drawSafe = (text: any, opts: { x: number; y: number; size: number; font: any; color: any }) => {
+    const drawSafe = (
+      text: unknown,
+      opts: { x: number; y: number; size: number; font: PDFFont; color: ReturnType<typeof rgb> },
+    ) => {
       const primary = cleanText(text, '');
       if (!primary) return;
       try {
@@ -223,7 +264,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       y -= 14;
     };
 
-    const row = async (label: string, value: any) => {
+    const row = async (label: string, value: unknown) => {
       if (y < 120) await newPage();
       drawSafe(label, { x: margin, y, size: 9, font: fontBold, color: gray });
       const valueX = margin + 180;
@@ -312,7 +353,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         'Cache-Control': 'no-store',
       },
     });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

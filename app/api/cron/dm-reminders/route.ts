@@ -2,6 +2,27 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { enqueueEmailSend } from '@/lib/email/queue';
 
+interface DmThreadReminderRow {
+  id?: string | null;
+  participant1_id?: string | null;
+  participant2_id?: string | null;
+  participant1_email?: string | null;
+  participant2_email?: string | null;
+  participant1_unread_count?: number | null;
+  participant2_unread_count?: number | null;
+  updated_at?: string | null;
+}
+
+interface DmUnreadReminderRow {
+  first_unread_at?: string | null;
+  reminder_count?: number | null;
+  last_reminded_at?: string | null;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 function requireCron(req: Request) {
   const secret = process.env.CRON_SECRET || '';
   if (!secret) return false;
@@ -34,7 +55,7 @@ export async function POST(req: Request) {
     let scanned = 0;
     let enqueued = 0;
 
-    for (const t of threadsRes.data || []) {
+    for (const t of (threadsRes.data || []) as DmThreadReminderRow[]) {
       scanned += 1;
       const updatedAt = new Date(t.updated_at || '').getTime();
       if (!updatedAt || Number.isNaN(updatedAt)) continue;
@@ -56,7 +77,7 @@ export async function POST(req: Request) {
           .maybeSingle();
         if (remRes.error) throw remRes.error;
 
-        const existing = remRes.data || null;
+        const existing = (remRes.data || null) as DmUnreadReminderRow | null;
         const firstUnreadAt = existing?.first_unread_at ? new Date(existing.first_unread_at).getTime() : updatedAt;
         const count = Number(existing?.reminder_count || 0);
         const days = Math.floor((now - firstUnreadAt) / (24 * 60 * 60 * 1000));
@@ -125,7 +146,7 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ ok: true, scanned, enqueued }, { status: 200 });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

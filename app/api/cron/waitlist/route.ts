@@ -5,6 +5,18 @@ import { advanceWaitlistForEvent } from '@/lib/rsvp/waitlist';
 
 export const runtime = 'nodejs';
 
+interface WaitlistReservationRow {
+  id?: string | null;
+  event_id?: string | null;
+  email?: string | null;
+  expires_at?: string | null;
+  attendees?: unknown;
+}
+
+interface WaitlistAdvanceResult {
+  promoted?: number;
+}
+
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const secret = url.searchParams.get('secret') || '';
@@ -28,7 +40,7 @@ export async function GET(req: Request) {
     .limit(limit);
   if (expRes.error) return NextResponse.json({ error: expRes.error.message }, { status: 500 });
 
-  const rows: any[] = expRes.data || [];
+  const rows = (expRes.data || []) as WaitlistReservationRow[];
   if (!rows.length) return NextResponse.json({ ok: true, expiredCancelled: 0, advancedEvents: 0, promoted: 0 });
 
   const eventIds = new Set<string>();
@@ -70,11 +82,11 @@ export async function GET(req: Request) {
         now,
         lang: 'cs',
       });
-      if ((res as any)?.promoted) promoted += Number((res as any).promoted) || 0;
+      const advanceResult = res as WaitlistAdvanceResult;
+      if (advanceResult.promoted) promoted += Number(advanceResult.promoted) || 0;
       advancedEvents += 1;
     } catch {}
   }
 
   return NextResponse.json({ ok: true, expiredCancelled, advancedEvents, promoted });
 }
-

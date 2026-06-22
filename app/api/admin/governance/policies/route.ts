@@ -2,6 +2,42 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { requireAdmin } from '@/lib/server-auth';
 
+interface GovernancePolicyRow {
+  id?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  slug?: string | null;
+  title?: string | null;
+  description?: string | null;
+  is_published?: boolean | null;
+  published_version_id?: string | null;
+}
+
+interface GovernancePolicyVersionRow {
+  id?: string | null;
+  policy_id?: string | null;
+  created_at?: string | null;
+  version_number?: number | null;
+  content_html?: string | null;
+  created_by_email?: string | null;
+}
+
+interface CreatePolicyBody {
+  title?: unknown;
+  description?: unknown;
+  contentHtml?: unknown;
+  isPublished?: unknown;
+  slug?: unknown;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 function slugify(input: string) {
   const s = String(input || '')
     .toLowerCase()
@@ -23,22 +59,23 @@ export async function GET(req: Request) {
       .order('updated_at', { ascending: false })
       .limit(500);
     if (res.error) throw res.error;
-    return NextResponse.json({ ok: true, policies: res.data || [] });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+    return NextResponse.json({ ok: true, policies: (res.data || []) as GovernancePolicyRow[] });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
 export async function POST(req: Request) {
   try {
     const { user } = await requireAdmin(req);
-    const body = await req.json().catch(() => ({}));
+    const body = toRecord(await req.json().catch(() => ({}))) as CreatePolicyBody;
 
-    const title = String(body?.title || '').trim();
-    const description = body?.description != null ? String(body.description) : null;
-    const contentHtml = String(body?.contentHtml || '').trim();
-    const isPublished = !!body?.isPublished;
+    const title = String(body.title || '').trim();
+    const description = body.description != null ? String(body.description) : null;
+    const contentHtml = String(body.contentHtml || '').trim();
+    const isPublished = body.isPublished === true;
 
     if (!title || !contentHtml) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
@@ -50,7 +87,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Content too long' }, { status: 400 });
     }
 
-    const slug = body?.slug ? slugify(String(body.slug)) : slugify(title);
+    const slug = typeof body.slug === 'string' && body.slug.trim() ? slugify(body.slug) : slugify(title);
     const now = new Date().toISOString();
     const supabase = getServerSupabase();
 
@@ -60,6 +97,7 @@ export async function POST(req: Request) {
       .select('id, created_at, updated_at, slug, title, description, is_published, published_version_id')
       .single();
     if (pol.error) throw pol.error;
+    let policy = pol.data as GovernancePolicyRow;
 
     const version = await supabase
       .from('governance_policy_versions')
@@ -74,16 +112,17 @@ export async function POST(req: Request) {
       .select('id, policy_id, created_at, version_number, content_html, created_by_email')
       .single();
     if (version.error) throw version.error;
+    const createdVersion = version.data as GovernancePolicyVersionRow;
 
     if (isPublished) {
       const pub = await supabase
         .from('governance_policies')
-        .update({ is_published: true, published_version_id: version.data.id, updated_at: now })
-        .eq('id', pol.data.id)
+        .update({ is_published: true, published_version_id: createdVersion.id || null, updated_at: now })
+        .eq('id', policy.id)
         .select('id, created_at, updated_at, slug, title, description, is_published, published_version_id')
         .single();
       if (pub.error) throw pub.error;
-      pol.data = pub.data as any;
+      policy = pub.data as GovernancePolicyRow;
     }
 
     await supabase.from('admin_logs').insert([
@@ -91,15 +130,15 @@ export async function POST(req: Request) {
         admin_email: user.email || 'admin',
         admin_name: 'Governance',
         action: 'GOV_POLICY_CREATE',
-        target_id: String(pol.data?.id || ''),
+        target_id: String(policy.id || ''),
         details: { slug, title, isPublished },
       },
     ]);
 
-    return NextResponse.json({ ok: true, policy: pol.data, version: version.data });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+    return NextResponse.json({ ok: true, policy, version: createdVersion });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
-

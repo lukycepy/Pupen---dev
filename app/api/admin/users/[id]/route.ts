@@ -4,6 +4,16 @@ import { requireAdmin } from '@/lib/server-auth';
 import { evaluatePassword } from '@/lib/auth/password-policy';
 import { PROFILE_PERMISSION_KEYS_SET } from '@/lib/rbac/registry';
 
+type JsonRecord = Record<string, unknown>;
+
+function toRecord(value: unknown): JsonRecord {
+  return value && typeof value === 'object' ? (value as JsonRecord) : {};
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 const ALLOWED_PROFILE_FIELDS = new Set([
   'first_name',
   'last_name',
@@ -18,9 +28,10 @@ const ALLOWED_PROFILE_FIELDS = new Set([
   ...PROFILE_PERMISSION_KEYS_SET,
 ]);
 
-function pickProfilePatch(input: any) {
-  const out: any = {};
-  for (const [k, v] of Object.entries(input || {})) {
+function pickProfilePatch(input: unknown) {
+  const out: JsonRecord = {};
+  const record = toRecord(input);
+  for (const [k, v] of Object.entries(record)) {
     if (!ALLOWED_PROFILE_FIELDS.has(k)) continue;
     out[k] = v;
   }
@@ -47,12 +58,12 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     const { id } = await ctx.params;
     const supabase = getServerSupabase();
 
-    const body = await req.json().catch(() => ({}));
+    const body = toRecord(await req.json().catch(() => ({})));
     const profilePatch = pickProfilePatch(body);
-    const password = typeof body?.password === 'string' ? body.password : '';
+    const password = typeof body.password === 'string' ? body.password : '';
 
     if (password) {
-      const email = profilePatch.email ? String(profilePatch.email) : body?.email ? String(body.email) : '';
+      const email = profilePatch.email ? String(profilePatch.email) : body.email ? String(body.email) : '';
       const pw = evaluatePassword(password, { email });
       if (!pw.ok) return NextResponse.json({ error: 'Password does not meet policy' }, { status: 400 });
       const upd = await supabase.auth.admin.updateUserById(id, { password });
@@ -77,9 +88,10 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     } catch {}
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
@@ -110,8 +122,9 @@ export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }
     } catch {}
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
