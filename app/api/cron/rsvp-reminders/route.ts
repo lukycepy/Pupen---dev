@@ -48,6 +48,14 @@ interface AdminLogReminderRow {
   details?: Record<string, unknown> | null;
 }
 
+type ReminderAttendee = Record<string, unknown> & {
+  name: string;
+};
+
+function isReminderAttendee(value: ReminderAttendee | null): value is ReminderAttendee {
+  return value !== null;
+}
+
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error || 'Error');
 }
@@ -93,7 +101,7 @@ function getReminderStage(order: EventOrderRow, now = Date.now()): ReminderStage
 function normalizeAttendees(value: unknown, fallbackName: string) {
   if (!Array.isArray(value)) return fallbackName ? [{ name: fallbackName }] : [];
   return value
-    .map((item) => {
+    .map<ReminderAttendee | null>((item) => {
       if (typeof item === 'string') return { name: item.trim() };
       if (item && typeof item === 'object') {
         const record = item as Record<string, unknown>;
@@ -102,7 +110,7 @@ function normalizeAttendees(value: unknown, fallbackName: string) {
       }
       return null;
     })
-    .filter((item): item is Record<string, unknown> => !!item);
+    .filter(isReminderAttendee);
 }
 
 export async function GET(req: Request) {

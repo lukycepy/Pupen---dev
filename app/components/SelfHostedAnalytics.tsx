@@ -13,6 +13,7 @@ type AnalyticsTrackEventDetail = {
 };
 
 type AnalyticsParamValue = AnalyticsEventParams[string];
+const DEFAULT_GA_MEASUREMENT_ID = 'G-889DM5DL7F';
 
 function isAnalyticsTrackEventDetail(value: unknown): value is AnalyticsTrackEventDetail {
   return typeof value === 'object' && value !== null;
@@ -38,7 +39,7 @@ export default function SelfHostedAnalytics() {
 
   const provider = String(process.env.NEXT_PUBLIC_ANALYTICS_PROVIDER || '').trim().toLowerCase();
   const src = String(process.env.NEXT_PUBLIC_ANALYTICS_SCRIPT_URL || '').trim();
-  const gaMeasurementId = String(process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '').trim();
+  const gaMeasurementId = String(process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || DEFAULT_GA_MEASUREMENT_ID).trim();
   const [allowed, setAllowed] = useState(false);
   const isGa4 = provider === 'ga4' || !!gaMeasurementId;
 

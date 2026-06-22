@@ -316,8 +316,9 @@ export default function ClenskaSekcePage() {
       const res = await fetch('/api/newsletter/preferences', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           categories: cats,
+          consent: editProfile.marketing_consent !== false,
           hp: ''
         }),
       });
@@ -436,6 +437,31 @@ export default function ClenskaSekcePage() {
         .eq('id', user.id);
 
       if (error) throw error;
+
+      try {
+        const cats = Object.entries(emailPrefs.categories)
+          .filter(([, v]) => !!v)
+          .map(([k]) => {
+            if (k === 'events') return 'Akce';
+            if (k === 'community') return 'Komunita';
+            if (k === 'finance') return 'Finance';
+            if (k === 'news') return 'Novinky';
+            return k;
+          });
+        const { data } = await supabase.auth.getSession();
+        const token = data.session?.access_token;
+        if (token) {
+          await fetch('/api/newsletter/preferences', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({
+              categories: cats,
+              consent: editProfile.marketing_consent !== false,
+              hp: '',
+            }),
+          });
+        }
+      } catch {}
       
       setProfile({ ...profile, ...editProfile, address: validatedAddress, marketing_consent: editProfile.marketing_consent !== false } as any);
       showToast(dict.member.profileUpdated, 'success');

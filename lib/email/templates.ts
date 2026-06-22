@@ -5,6 +5,7 @@ import { getPublicBaseUrl } from '@/lib/public-base-url';
 export type EmailTemplateKey =
   | 'ticket'
   | 'rsvp_payment_reminder'
+  | 'event_feedback_request'
   | 'waitlist_offer'
   | 'admin_password'
   | 'password_reset'
@@ -65,6 +66,11 @@ export function listEmailTemplates() {
         'stage',
         'lang',
       ],
+    },
+    {
+      key: 'event_feedback_request' as const,
+      label: 'Akce - zadost o feedback',
+      variables: ['email', 'name', 'eventTitle', 'eventDate', 'feedbackUrl', 'lang'],
     },
     {
       key: 'waitlist_offer' as const,
@@ -1118,6 +1124,55 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
       `,
       cta: ctaHref ? { href: ctaHref, label: ctaLabel } : undefined,
       secondaryCta: ticketPdfUrl ? { href: ticketPdfUrl, label: secondaryLabel } : undefined,
+      footerText:
+        lang === 'en'
+          ? 'This message was sent automatically by Pupen.'
+          : 'Tento e-mail byl odeslan automaticky systemem Pupen.',
+      toEmail: email,
+      lang,
+    });
+    return { subject, html };
+  }
+
+  if (key === 'event_feedback_request') {
+    const lang = vars?.lang === 'en' ? 'en' : 'cs';
+    const email = String(vars?.email || '').trim();
+    const name = String(vars?.name || email).trim();
+    const eventTitle = String(vars?.eventTitle || '').trim();
+    const eventDate = String(vars?.eventDate || '').trim();
+    const feedbackUrl = String(vars?.feedbackUrl || '').trim();
+    const eventDateLabel = eventDate ? formatDateTimePrague(eventDate, lang) : '';
+    const subject = lang === 'en' ? `Pupen - How was ${eventTitle}?` : `Pupen - Jak se libila akce ${eventTitle}?`;
+    const html = emailDoc({
+      subject,
+      title: lang === 'en' ? 'Thank you for attending' : 'Diky za ucast',
+      badge: lang === 'en' ? 'Feedback' : 'Feedback',
+      preheader:
+        lang === 'en'
+          ? 'A short survey helps us improve future events.'
+          : 'Kratky dotaznik nam pomuze zlepsit dalsi akce.',
+      introHtml: `<p style="margin:0;">${
+        lang === 'en'
+          ? `Hello${name ? ` ${escapeHtml(name)}` : ''}, thank you for joining ${escapeHtml(eventTitle)}.`
+          : `Dobry den${name ? ` ${escapeHtml(name)}` : ''}, dekujeme za ucast na akci ${escapeHtml(eventTitle)}.`
+      }</p>`,
+      contentHtml: `
+        <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px;">
+          <div style="font-weight:950; font-size:16px;">${escapeHtml(eventTitle || (lang === 'en' ? 'Event' : 'Akce'))}</div>
+          ${eventDateLabel ? `<div style="margin-top:8px; font-size:13px; color:#44403c; font-weight:900;">${escapeHtml(lang === 'en' ? 'Date' : 'Datum')}: ${escapeHtml(eventDateLabel)}</div>` : ''}
+          <div style="margin-top:12px; font-size:13px; color:#57534e; font-weight:800;">${escapeHtml(
+            lang === 'en'
+              ? 'Would you spare a minute for a short satisfaction survey? Your feedback helps us improve the next events.'
+              : 'Najdete si prosim minutku na kratky spokojenostni dotaznik? Vase zpetna vazba nam pomaha zlepsovat dalsi akce.',
+          )}</div>
+        </div>
+      `,
+      cta: feedbackUrl
+        ? {
+            href: feedbackUrl,
+            label: lang === 'en' ? 'Open survey' : 'Otevrit dotaznik',
+          }
+        : undefined,
       footerText:
         lang === 'en'
           ? 'This message was sent automatically by Pupen.'

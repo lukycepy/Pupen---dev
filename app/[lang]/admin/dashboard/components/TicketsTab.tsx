@@ -298,15 +298,35 @@ export default function TicketsTab() {
 
   const sendFeedbackMutation = useMutation({
     mutationFn: async (eventId: string) => {
-      // Simulace odeslání e-mailů všem přihlášeným
-      const { data: rsvps } = await supabase.from('rsvp').select('email').eq('event_id', eventId).eq('status', 'confirmed');
-      
-      if (!rsvps || rsvps.length === 0) throw new Error('Žádní účastníci pro odeslání feedbacku');
-      
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulace prodlevy
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
+
+      const res = await fetch('/api/admin/events/send-feedback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ eventId }),
+      });
+      const json = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        enqueued?: number;
+        skippedExisting?: number;
+        total?: number;
+      };
+      if (!res.ok) throw new Error(json.error || 'Nepodařilo se odeslat žádost o feedback');
+      return json;
     },
-    onSuccess: () => {
-      showToast('E-maily s žádostí o feedback byly odeslány!', 'success');
+    onSuccess: (result) => {
+      const enqueued = Number(result?.enqueued || 0);
+      const skipped = Number(result?.skippedExisting || 0);
+      if (enqueued <= 0 && skipped > 0) {
+        showToast('Feedback už byl těmto účastníkům odeslán', 'info');
+        return;
+      }
+      showToast(`Žádost o feedback zařazena do fronty: ${enqueued}${skipped > 0 ? `, přeskočeno: ${skipped}` : ''}`, 'success');
     },
     onError: (err: any) => showToast(err.message, 'error')
   });
@@ -409,7 +429,7 @@ export default function TicketsTab() {
                   <button
                     type="button"
                     onClick={() => setFeedbackConfirmOpen(true)}
-                    disabled={sendFeedbackMutation.isPending || attendees.filter(a => a.checked_in).length === 0}
+                    disabled={sendFeedbackMutation.isPending || attendees.filter(a => a.checked_in).length === 0 || !eventIsPast}
                     className="flex items-center gap-2 px-4 py-2 bg-stone-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-600 transition disabled:opacity-50"
                   >
                     {sendFeedbackMutation.isPending ? <Loader2 className="animate-spin" size={14} /> : <Send size={14} />}
