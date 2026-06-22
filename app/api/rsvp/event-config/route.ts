@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { normalizePriceRules, normalizeRegistrationFields, pickActivePriceRule } from '@/lib/rsvp/eventRegistration';
 
+type EventPriceRule = ReturnType<typeof normalizePriceRules>[number];
+type EventRegistrationField = ReturnType<typeof normalizeRegistrationFields>[number];
+
 function asTrimmedString(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
 }
@@ -35,7 +38,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ ok: false, error: 'EVENT_NOT_PUBLIC' }, { status: 403 });
     }
 
-    let priceRules = [];
+    let priceRules: EventPriceRule[] = [];
     try {
       const res = await supabase
         .from('event_price_rules')
@@ -46,7 +49,7 @@ export async function GET(req: Request) {
       if (!res.error) priceRules = normalizePriceRules(res.data || []);
     } catch {}
 
-    let registrationFields = [];
+    let registrationFields: EventRegistrationField[] = [];
     try {
       const res = await supabase
         .from('event_registration_fields')

@@ -16,6 +16,15 @@ const CRITICAL_TABLES = [
   'trust_box_admins',
 ];
 
+interface HealthTableCheck {
+  table: string;
+  exists: boolean;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function GET(req: Request) {
   try {
     const { profile } = await requireAdmin(req);
@@ -28,7 +37,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ ok: true, mode: 'rpc', health: data }, { status: 200 });
     }
 
-    const checks = await Promise.all(
+    const checks: HealthTableCheck[] = await Promise.all(
       CRITICAL_TABLES.map(async (t) => {
         const q = await supabase.rpc('admin_to_regclass', { name: `public.${t}` });
         return { table: t, exists: !!q.data };
@@ -44,9 +53,9 @@ export async function GET(req: Request) {
       },
       { status: 200 },
     );
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
-

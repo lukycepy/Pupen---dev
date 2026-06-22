@@ -7,6 +7,7 @@ import { listEmailTemplates, type EmailTemplateKey } from '@/lib/email/templates
 export type EmailTriggerKey =
   | 'billing_invoice_sent'
   | 'billing_invoice_paid'
+  | 'rsvp_abandoned_cart'
   | 'membership_application_received'
   | 'membership_application_new_admin'
   | 'membership_application_status'
@@ -31,6 +32,12 @@ export const EMAIL_TRIGGER_DEFS: EmailTriggerDef[] = [
     label: 'Faktury: uhrazeno',
     defaultTemplateCs: 'invoice_paid',
     defaultTemplateEn: 'invoice_paid',
+  },
+  {
+    triggerKey: 'rsvp_abandoned_cart',
+    label: 'RSVP: pripominka nedokoncene platby',
+    defaultTemplateCs: 'rsvp_payment_reminder',
+    defaultTemplateEn: 'rsvp_payment_reminder',
   },
   {
     triggerKey: 'membership_application_received',

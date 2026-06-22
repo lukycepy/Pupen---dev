@@ -1,7 +1,11 @@
 import { formatDatePrague, formatDateTimePrague } from '@/lib/time/prague';
 
+import { getPublicBaseUrl } from '@/lib/public-base-url';
+
 export type EmailTemplateKey =
   | 'ticket'
+  | 'rsvp_payment_reminder'
+  | 'waitlist_offer'
   | 'admin_password'
   | 'password_reset'
   | 'trust_box_verify'
@@ -39,6 +43,33 @@ export function listEmailTemplates() {
         'status',
         'bankAccount',
       ],
+    },
+    {
+      key: 'rsvp_payment_reminder' as const,
+      label: 'RSVP - pripominka platby',
+      variables: [
+        'email',
+        'name',
+        'eventTitle',
+        'attendees',
+        'bankAccount',
+        'vs',
+        'dueDate',
+        'priceTotal',
+        'pricingLabel',
+        'pricingLabelEn',
+        'memberUrl',
+        'eventUrl',
+        'ticketPdfUrl',
+        'remainingHours',
+        'stage',
+        'lang',
+      ],
+    },
+    {
+      key: 'waitlist_offer' as const,
+      label: 'Waitlist nabídka',
+      variables: ['email', 'name', 'eventTitle', 'attendees', 'offerUrl', 'offerExpiresAt', 'priceTotal', 'pricingLabel', 'lang'],
     },
     {
       key: 'admin_password' as const,
@@ -981,6 +1012,176 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
     return { subject, html };
   }
 
+  if (key === 'rsvp_payment_reminder') {
+    const lang = vars?.lang === 'en' ? 'en' : 'cs';
+    const email = String(vars?.email || '').trim();
+    const name = String(vars?.name || email).trim();
+    const eventTitle = String(vars?.eventTitle || '').trim();
+    const bankAccount = String(vars?.bankAccount || '').trim();
+    const vs = String(vars?.vs || '').trim();
+    const dueDate = String(vars?.dueDate || '').trim();
+    const memberUrl = String(vars?.memberUrl || '').trim();
+    const eventUrl = String(vars?.eventUrl || '').trim();
+    const ticketPdfUrl = String(vars?.ticketPdfUrl || '').trim();
+    const stage = String(vars?.stage || '').trim() === 'final' ? 'final' : 'nudge';
+    const priceTotalRaw = Number(vars?.priceTotal ?? 0);
+    const priceTotal = Number.isFinite(priceTotalRaw) ? Math.max(0, Math.round(priceTotalRaw * 100) / 100) : 0;
+    const pricingLabel = String((lang === 'en' ? vars?.pricingLabelEn : vars?.pricingLabel) || vars?.pricingLabel || '').trim();
+    const remainingHoursRaw = Number(vars?.remainingHours ?? 0);
+    const remainingHours = Number.isFinite(remainingHoursRaw) ? Math.max(0, Math.ceil(remainingHoursRaw)) : 0;
+    const attendees = Array.isArray(vars?.attendees) ? vars.attendees : [];
+    const attendeeList = attendees.map((a: any) => `<li style="margin:4px 0;">${escapeHtml(a?.name || a || '')}</li>`).join('');
+    const dueDateLabel = dueDate ? formatDateTimePrague(dueDate, lang) : '';
+    const paymentQrData =
+      bankAccount && (vs || priceTotal > 0)
+        ? `SPD:1.0*ACC:${bankAccount}*AM:${priceTotal.toFixed(2)}*CC:CZK*X-VS:${vs || eventTitle}*MSG:Pupen ${vs || eventTitle}`
+        : '';
+
+    const subject =
+      stage === 'final'
+        ? lang === 'en'
+          ? `Pupen - Final payment reminder: ${eventTitle}`
+          : `Pupen - Posledni pripominka k platbe: ${eventTitle}`
+        : lang === 'en'
+          ? `Pupen - Payment reminder: ${eventTitle}`
+          : `Pupen - Pripominka k platbe: ${eventTitle}`;
+
+    const title =
+      stage === 'final'
+        ? lang === 'en'
+          ? 'Reservation expires soon'
+          : 'Rezervace brzy vyprsi'
+        : lang === 'en'
+          ? 'Complete your payment'
+          : 'Dokoncete prosim platbu';
+
+    const introHtml = `<p style="margin:0;">${
+      lang === 'en'
+        ? `Hello${name ? ` ${escapeHtml(name)}` : ''}, your reservation for ${escapeHtml(eventTitle)} is still awaiting payment.`
+        : `Dobry den${name ? ` ${escapeHtml(name)}` : ''}, vase rezervace na akci ${escapeHtml(eventTitle)} stale ceka na uhradu.`
+    }</p>`;
+
+    const urgency =
+      stage === 'final'
+        ? lang === 'en'
+          ? 'If the payment is not received in time, the reservation may be cancelled and the place offered to the waitlist.'
+          : 'Pokud platba nedorazi vcas, rezervace muze byt zrusena a misto nabidnuto cekaci listine.'
+        : lang === 'en'
+          ? 'Use the payment details below to keep the reservation active.'
+          : 'Pomoci platebnich udaju nize rezervaci udrzite aktivni.';
+
+    const ctaHref = memberUrl || eventUrl;
+    const ctaLabel =
+      lang === 'en'
+        ? memberUrl
+          ? 'Open member section'
+          : 'Open event detail'
+        : memberUrl
+          ? 'Otevrit clenskou sekci'
+          : 'Otevrit detail akce';
+
+    const secondaryLabel = lang === 'en' ? 'Download ticket PDF' : 'Stahnout PDF vstupenku';
+
+    const html = emailDoc({
+      subject,
+      title,
+      badge: stage === 'final' ? (lang === 'en' ? 'Final reminder' : 'Posledni pripominka') : lang === 'en' ? 'Payment reminder' : 'Pripominka platby',
+      preheader:
+        stage === 'final'
+          ? lang === 'en'
+            ? 'Your reservation will expire soon without payment.'
+            : 'Bez platby rezervace brzy vyprsi.'
+          : lang === 'en'
+            ? 'Your reservation is still waiting for payment.'
+            : 'Vase rezervace stale ceka na uhradu.',
+      introHtml,
+      contentHtml: `
+        <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px;">
+          ${attendeeList ? `<div style="font-weight:900; margin-bottom:8px;">${escapeHtml(lang === 'en' ? 'Attendees' : 'Ucastnici')}</div><ul style="padding-left:18px; margin:8px 0 0 0;">${attendeeList}</ul>` : ''}
+          ${priceTotal > 0 ? `<div style="margin-top:12px; font-size:13px; color:#44403c; font-weight:900;">${escapeHtml(lang === 'en' ? 'Total price' : 'Celkova cena')}: ${escapeHtml(priceTotal.toFixed(2))} CZK${pricingLabel ? ` • ${escapeHtml(pricingLabel)}` : ''}</div>` : ''}
+          ${bankAccount ? `<div style="margin-top:8px; font-size:13px; color:#44403c; font-weight:900;">${escapeHtml(lang === 'en' ? 'Account' : 'Ucet')}: ${escapeHtml(bankAccount)}</div>` : ''}
+          ${vs ? `<div style="margin-top:8px; font-size:13px; color:#44403c; font-weight:900;">${escapeHtml(lang === 'en' ? 'Variable symbol' : 'Variabilni symbol')}: ${escapeHtml(vs)}</div>` : ''}
+          ${dueDateLabel ? `<div style="margin-top:8px; font-size:13px; color:#44403c; font-weight:900;">${escapeHtml(lang === 'en' ? 'Pay before' : 'Uhradte do')}: ${escapeHtml(dueDateLabel)}</div>` : ''}
+          ${remainingHours > 0 ? `<div style="margin-top:8px; font-size:12px; color:${stage === 'final' ? '#b91c1c' : '#57534e'}; font-weight:900;">${escapeHtml(lang === 'en' ? `Approx. ${remainingHours} hour(s) remaining.` : `Zbyva priblizne ${remainingHours} hodin.`)}</div>` : ''}
+          <div style="margin-top:12px; font-size:13px; color:#57534e; font-weight:800;">${escapeHtml(urgency)}</div>
+        </div>
+        ${
+          paymentQrData
+            ? `<div style="margin-top:14px; border:2px dashed #16a34a; border-radius:18px; padding:16px; text-align:center;">
+                <div style="font-weight:950; font-size:16px;">${escapeHtml(lang === 'en' ? 'Payment QR' : 'QR platba')}</div>
+                <div style="margin-top:10px;">
+                  <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(paymentQrData)}" alt="Payment QR" style="margin:0; border-radius:14px;" />
+                </div>
+              </div>`
+            : ''
+        }
+      `,
+      cta: ctaHref ? { href: ctaHref, label: ctaLabel } : undefined,
+      secondaryCta: ticketPdfUrl ? { href: ticketPdfUrl, label: secondaryLabel } : undefined,
+      footerText:
+        lang === 'en'
+          ? 'This message was sent automatically by Pupen.'
+          : 'Tento e-mail byl odeslan automaticky systemem Pupen.',
+      toEmail: email,
+      lang,
+    });
+    return { subject, html };
+  }
+
+  if (key === 'waitlist_offer') {
+    const lang = vars?.lang === 'en' ? 'en' : 'cs';
+    const email = String(vars?.email || '').trim();
+    const name = String(vars?.name || email).trim();
+    const eventTitle = String(vars?.eventTitle || '').trim();
+    const offerUrl = String(vars?.offerUrl || '').trim();
+    const offerExpiresAt = String(vars?.offerExpiresAt || '').trim();
+    const pricingLabel = String((lang === 'en' ? vars?.pricingLabelEn : vars?.pricingLabel) || vars?.pricingLabel || '').trim();
+    const priceTotalRaw = Number(vars?.priceTotal ?? 0);
+    const priceTotal = Number.isFinite(priceTotalRaw) ? Math.max(0, Math.round(priceTotalRaw * 100) / 100) : 0;
+    const attendees = Array.isArray(vars?.attendees) ? vars.attendees : [];
+    const attendeeList = attendees.map((a: any) => `<li style="margin:4px 0;">${escapeHtml(a?.name || '')}</li>`).join('');
+
+    const subject = lang === 'en' ? `Pupen — Spot available: ${eventTitle}` : `Pupen — Uvolnilo se místo: ${eventTitle}`;
+    const html = emailDoc({
+      subject,
+      title: lang === 'en' ? 'A spot has opened up' : 'Uvolnilo se místo',
+      badge: lang === 'en' ? 'Waitlist' : 'Čekací listina',
+      preheader: lang === 'en' ? `Complete your registration for ${eventTitle}` : `Dokončete registraci na ${eventTitle}`,
+      introHtml: `<p style="margin:0;">${
+        lang === 'en'
+          ? `Hello${name ? ` ${escapeHtml(name)}` : ''}, a spot has opened up for ${escapeHtml(eventTitle)}.`
+          : `Dobrý den${name ? ` ${escapeHtml(name)}` : ''}, uvolnilo se místo na akci ${escapeHtml(eventTitle)}.`
+      }</p>`,
+      contentHtml: `
+        <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px;">
+          ${attendeeList ? `<div style="font-weight:900; margin-bottom:8px;">${escapeHtml(lang === 'en' ? 'Attendees' : 'Účastníci')}</div><ul style="padding-left:18px; margin:8px 0 0 0;">${attendeeList}</ul>` : ''}
+          ${priceTotal > 0 ? `<div style="margin-top:12px; font-size:13px; color:#44403c; font-weight:900;">${escapeHtml(lang === 'en' ? 'Total price' : 'Celková cena')}: ${escapeHtml(priceTotal.toFixed(2))} CZK${pricingLabel ? ` • ${escapeHtml(pricingLabel)}` : ''}</div>` : ''}
+          ${offerExpiresAt ? `<div style="margin-top:10px; font-size:13px; color:#44403c; font-weight:900;">${escapeHtml(lang === 'en' ? 'Offer valid until' : 'Nabídka platí do')}: ${escapeHtml(new Date(offerExpiresAt).toLocaleString(lang === 'en' ? 'en-US' : 'cs-CZ'))}</div>` : ''}
+        </div>
+        <div style="margin-top:14px; font-size:13px; color:#57534e; font-weight:800;">
+          ${escapeHtml(
+            lang === 'en'
+              ? 'Use the button below to confirm the spot and continue to payment or final confirmation.'
+              : 'Pomocí tlačítka níže potvrďte místo a pokračujte k platbě nebo finálnímu potvrzení.',
+          )}
+        </div>
+      `,
+      cta: offerUrl
+        ? {
+            href: offerUrl,
+            label: lang === 'en' ? 'Complete registration' : 'Dokončit registraci',
+          }
+        : undefined,
+      footerText:
+        lang === 'en'
+          ? 'If you do not use the link in time, the spot will be offered to the next person on the waitlist.'
+          : 'Pokud odkaz včas nevyužijete, místo bude nabídnuto dalšímu zájemci na čekací listině.',
+      toEmail: email,
+      lang,
+    });
+    return { subject, html };
+  }
+
   const lang = vars?.lang === 'en' ? 'en' : 'cs';
   const email = String(vars?.email || '');
   const name = String(vars?.name || email);
@@ -989,6 +1190,11 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
   const qrToken = String(vars?.qrToken || '');
   const status = String(vars?.status || 'confirmed');
   const bankAccount = String(vars?.bankAccount || '');
+  const vs = String(vars?.vs || '').trim();
+  const dueDate = String(vars?.dueDate || '').trim();
+  const guardianConsentUrl = String(vars?.guardianConsentUrl || '').trim();
+  const guardianConsentUploadUrl = String(vars?.guardianConsentUploadUrl || '').trim();
+  const ticketPdfUrl = String(vars?.ticketPdfUrl || '').trim();
   const priceTotalRaw = Number(vars?.priceTotal ?? 0);
   const priceTotal = Number.isFinite(priceTotalRaw) ? Math.max(0, Math.round(priceTotalRaw * 100) / 100) : 0;
   const pricingLabel = String((lang === 'en' ? vars?.pricingLabelEn : vars?.pricingLabel) || vars?.pricingLabel || '').trim();
@@ -1031,7 +1237,9 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
     .map((a: any) => `<li style="margin: 4px 0;">${escapeHtml(a?.name || '')}</li>`)
     .join('');
 
-  const qrPayload = `PUPEN-TICKET:${qrToken}`;
+  const baseUrl = getPublicBaseUrl();
+  const validateUrl = `${baseUrl}/${lang}/admin/tickets/validate?token=${encodeURIComponent(qrToken)}`;
+  const qrPayload = validateUrl;
   const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrPayload)}`;
 
   const html = emailDoc({
@@ -1061,6 +1269,7 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
               )}: ${escapeHtml(priceTotal.toFixed(2))} CZK${pricingLabel ? ` • ${escapeHtml(pricingLabel)}` : ''}</div>`
             : ''
         }
+        ${vs ? `<div style="margin-top:8px; font-size:13px; color:#44403c; font-weight:900;">${escapeHtml(lang === 'en' ? 'Variable symbol' : 'Variabilní symbol')}: ${escapeHtml(vs)}</div>` : ''}
         <hr style="border:none; border-top:1px solid #e7e5e4; margin:14px 0;" />
         <div style="font-weight:900; margin-bottom:8px;">${escapeHtml(lang === 'en' ? 'QR code / token' : 'QR kód / token')}</div>
         <div style="display:inline-block; background:#ffffff; border:1px solid #e7e5e4; border-radius:14px; padding:10px 12px; font-weight:950; letter-spacing:0.22em; font-size:18px;">${escapeHtml(
@@ -1072,6 +1281,11 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
         <div style="margin-top:10px; font-size:12px; color:#78716c; font-weight:800;">${escapeHtml(
           lang === 'en' ? 'Show the QR code (or token) at the entrance.' : 'Při vstupu ukažte QR kód (nebo token).',
         )}</div>
+        <div style="margin-top:6px; font-size:12px; color:#16a34a; font-weight:900;">
+          <a href="${escapeHtml(validateUrl)}" style="color:#16a34a; text-decoration:none;">${escapeHtml(
+            lang === 'en' ? 'Open organizer validation page' : 'Otevřít validační stránku pořadatele',
+          )}</a>
+        </div>
       </div>
       ${
         isPrevod && !isWaitlist
@@ -1090,8 +1304,53 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
                     )}: ${escapeHtml(priceTotal.toFixed(2))} CZK</div>`
                   : ''
               }
+              ${vs ? `<div style="margin-top:6px; font-size:12px; color:#78716c; font-weight:900;">${escapeHtml(lang === 'en' ? 'Variable symbol' : 'Variabilní symbol')}: ${escapeHtml(vs)}</div>` : ''}
+              ${dueDate ? `<div style="margin-top:6px; font-size:12px; color:#78716c; font-weight:900;">${escapeHtml(lang === 'en' ? 'Pay before' : 'Uhraďte do')}: ${escapeHtml(new Date(dueDate).toLocaleString(lang === 'en' ? 'en-US' : 'cs-CZ'))}</div>` : '' }
               <div style="margin-top:10px;">
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`SPD:1.0*ACC:${bankAccount}*AM:${priceTotal.toFixed(2)}*CC:CZK*MSG:Pupen ${qrToken}`)}" alt="QR Platba" style="margin:0; border-radius:14px;" />
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`SPD:1.0*ACC:${bankAccount}*AM:${priceTotal.toFixed(2)}*CC:CZK*X-VS:${vs || qrToken}*MSG:Pupen ${vs || qrToken}`)}" alt="QR Platba" style="margin:0; border-radius:14px;" />
+              </div>
+            </div>`
+          : ''
+      }
+      ${
+        guardianConsentUrl
+          ? `<div style="margin-top:14px; border:1px solid #fde68a; background:#fffbeb; border-radius:18px; padding:16px;">
+              <div style="font-weight:950; font-size:16px; color:#92400e;">${escapeHtml(lang === 'en' ? 'Guardian consent required' : 'Vyžadován souhlas zákonného zástupce')}</div>
+              <div style="margin-top:8px; font-size:13px; color:#78350f; font-weight:800;">${escapeHtml(
+                lang === 'en'
+                  ? 'At least one participant is under 18. Download the pre-filled PDF, have it signed by a legal guardian and upload it back before the event.'
+                  : 'Alespoň jeden účastník je mladší 18 let. Stáhněte si předvyplněné PDF, nechte ho podepsat zákonným zástupcem a nahrajte ho zpět před akcí.',
+              )}</div>
+              <div style="margin-top:12px;">
+                <a href="${escapeHtml(guardianConsentUrl)}" style="color:#16a34a; font-weight:900; text-decoration:none;">${escapeHtml(
+                  lang === 'en' ? 'Download consent PDF' : 'Stáhnout PDF souhlasu',
+                )}</a>
+              </div>
+              ${
+                guardianConsentUploadUrl
+                  ? `<div style="margin-top:8px;">
+                      <a href="${escapeHtml(guardianConsentUploadUrl)}" style="color:#16a34a; font-weight:900; text-decoration:none;">${escapeHtml(
+                        lang === 'en' ? 'Upload signed consent' : 'Nahrát podepsaný souhlas',
+                      )}</a>
+                    </div>`
+                  : ''
+              }
+            </div>`
+          : ''
+      }
+      ${
+        ticketPdfUrl
+          ? `<div style="margin-top:14px; border:1px solid #dcfce7; background:#f0fdf4; border-radius:18px; padding:16px;">
+              <div style="font-weight:950; font-size:16px; color:#166534;">${escapeHtml(lang === 'en' ? 'Printable ticket PDF' : 'Tisknutelna PDF vstupenka')}</div>
+              <div style="margin-top:8px; font-size:13px; color:#166534; font-weight:800;">${escapeHtml(
+                lang === 'en'
+                  ? 'A printable PDF ticket is attached to this email. You can also download it again using the link below.'
+                  : 'Tisknutelna PDF vstupenka je prilozena k tomuto e-mailu. Znovu si ji muzete stahnout i pres odkaz nize.',
+              )}</div>
+              <div style="margin-top:12px;">
+                <a href="${escapeHtml(ticketPdfUrl)}" style="color:#16a34a; font-weight:900; text-decoration:none;">${escapeHtml(
+                  lang === 'en' ? 'Download ticket PDF' : 'Stahnout PDF vstupenku',
+                )}</a>
               </div>
             </div>`
           : ''

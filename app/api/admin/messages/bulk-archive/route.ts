@@ -2,6 +2,22 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 
+interface BulkArchiveBody {
+  olderThanDays?: unknown;
+}
+
+interface MessageIdRow {
+  id?: string | null;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function POST(req: Request) {
   try {
     const { user, profile } = await requireAdmin(req);
@@ -9,8 +25,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const body = await req.json().catch(() => ({}));
-    const olderThanDaysRaw = body?.olderThanDays;
+    const body = toRecord(await req.json().catch(() => ({}))) as BulkArchiveBody;
+    const olderThanDaysRaw = body.olderThanDays;
     const olderThanDays = Math.max(7, Math.min(3650, Number(olderThanDaysRaw || 30) || 30));
     
     const cutoffMs = Date.now() - olderThanDays * 24 * 60 * 60 * 1000;
@@ -30,7 +46,7 @@ export async function POST(req: Request) {
     const count = messagesToClose?.length || 0;
 
     if (count > 0) {
-      const ids = messagesToClose.map(m => m.id);
+      const ids = (messagesToClose as MessageIdRow[]).map((message) => message.id).filter(Boolean);
       const { error: updateError } = await supabase
         .from('messages')
         .update({ status: 'closed' })
@@ -52,8 +68,9 @@ export async function POST(req: Request) {
     } catch {}
 
     return NextResponse.json({ ok: true, olderThanDays, cutoff: cutoffIso, archivedCount: count });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

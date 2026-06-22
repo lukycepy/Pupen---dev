@@ -83,7 +83,7 @@ export default function MyEventsTab({ lang, userEmail }: { lang: string; userEma
     queryFn: async () => {
       const rsvpRes = await supabase
         .from('rsvp')
-        .select('id, event_id, status, created_at, qr_code, expires_at, attendees, payment_method, name, checked_in, checked_in_at')
+        .select('id, event_id, status, created_at, qr_code, expires_at, attendees, payment_method, name, checked_in, checked_in_at, variable_symbol, price_total, pricing_label, pricing_label_en, guardian_consent_required, guardian_consent_status')
         .eq('email', userEmail)
         .order('created_at', { ascending: false });
 
@@ -147,11 +147,16 @@ export default function MyEventsTab({ lang, userEmail }: { lang: string; userEma
         body: JSON.stringify({
           email,
           name: name || email,
+          eventId: row?.event_id || '',
           eventTitle,
           attendees: row.attendees || [{ name: name || email }],
           paymentMethod: row.payment_method || 'hotove',
           qrToken: row.qr_code,
           status: row.status || 'confirmed',
+          vs: row.variable_symbol || '',
+          priceTotal: row.price_total || 0,
+          pricingLabel: row.pricing_label || '',
+          pricingLabelEn: row.pricing_label_en || '',
         }),
       });
 
@@ -344,6 +349,24 @@ export default function MyEventsTab({ lang, userEmail }: { lang: string; userEma
                       </span>
                     )}
 
+                    {r.guardian_consent_required && (
+                      <span
+                        className={`inline-flex items-center rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-widest ${
+                          r.guardian_consent_status === 'uploaded'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-amber-100 text-amber-700'
+                        }`}
+                      >
+                        {r.guardian_consent_status === 'uploaded'
+                          ? lang === 'en'
+                            ? 'Consent uploaded'
+                            : 'Souhlas nahrán'
+                          : lang === 'en'
+                            ? 'Guardian consent required'
+                            : 'Vyžadován souhlas'}
+                      </span>
+                    )}
+
                     {r.status !== 'cancelled' && (
                       <div className="flex items-center gap-2">
                         {r.qr_code && (
@@ -362,6 +385,15 @@ export default function MyEventsTab({ lang, userEmail }: { lang: string; userEma
                             <Ticket size={16} />
                             {t.ticket}
                           </button>
+                        )}
+                        {r.qr_code && (
+                          <a
+                            href={`/api/rsvp/ticket-pdf?token=${encodeURIComponent(String(r.qr_code))}&lang=${encodeURIComponent(lang)}`}
+                            className="inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
+                          >
+                            <Download size={16} />
+                            PDF
+                          </a>
                         )}
                         {(r.status === 'confirmed' || r.status === 'reserved') && (
                           <button
@@ -398,6 +430,15 @@ export default function MyEventsTab({ lang, userEmail }: { lang: string; userEma
                           {resendId === r.id ? <InlinePulse className="bg-stone-300" size={12} /> : <Send size={16} />}
                           {t.resend}
                         </button>
+                        {r.qr_code && r.guardian_consent_required && (
+                          <a
+                            href={`/${lang}/souhlas/${encodeURIComponent(String(r.qr_code))}`}
+                            className="inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
+                          >
+                            <Download size={16} />
+                            {lang === 'en' ? 'Consent' : 'Souhlas'}
+                          </a>
+                        )}
                         <button
                           type="button"
                           onClick={() => setCancelId(r.id)}

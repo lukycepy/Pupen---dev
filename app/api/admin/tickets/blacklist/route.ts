@@ -2,6 +2,22 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { requireAdmin } from '@/lib/server-auth';
 
+interface TicketBlacklistEntry {
+  value?: string | null;
+  note?: string | null;
+}
+
+interface TicketBlacklistLogRow {
+  created_at?: string | null;
+  details?: {
+    entries?: TicketBlacklistEntry[] | null;
+  } | null;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function GET(req: Request) {
   try {
     await requireAdmin(req);
@@ -15,13 +31,13 @@ export async function GET(req: Request) {
       .maybeSingle();
     if (res.error) throw res.error;
 
-    const details = res.data?.details || {};
-    const entries = Array.isArray(details.entries) ? details.entries : [];
+    const row = (res.data || null) as TicketBlacklistLogRow | null;
+    const entries = Array.isArray(row?.details?.entries) ? row.details.entries : [];
 
-    return NextResponse.json({ ok: true, updatedAt: res.data?.created_at || null, entries });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+    return NextResponse.json({ ok: true, updatedAt: row?.created_at || null, entries });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
-

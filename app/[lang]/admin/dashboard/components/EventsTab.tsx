@@ -15,6 +15,7 @@ import ConfirmModal from '@/app/components/ConfirmModal';
 import { draftEventDescriptionHtmlCz, draftEventDescriptionHtmlEn, seoSuggestions, suggestEnglishText } from '@/lib/ai/pilot';
 import AdminModuleHeader from './ui/AdminModuleHeader';
 import { DEFAULT_WAITLIST_CONFIG, normalizeWaitlistConfig } from '@/lib/rsvp/waitlistConfig';
+import { normalizePriceRules, normalizeRegistrationFields, slugifyFieldKey, type EventPriceRule, type EventRegistrationField } from '@/lib/rsvp/eventRegistration';
 
 const Editor = dynamic(() => import('../../../components/Editor'), { 
   ssr: false,
@@ -43,6 +44,61 @@ interface EventsTabProps {
   readOnly?: boolean;
 }
 
+type PriceRuleDraft = {
+  id?: string;
+  sort_order: number;
+  label: string;
+  label_en: string;
+  starts_at: string;
+  ends_at: string;
+  amount_czk: string;
+  is_active: boolean;
+};
+
+type RegistrationFieldDraft = {
+  id?: string;
+  sort_order: number;
+  field_key: string;
+  field_type: EventRegistrationField['field_type'];
+  label: string;
+  label_en: string;
+  placeholder: string;
+  placeholder_en: string;
+  helper_text: string;
+  helper_text_en: string;
+  options_text: string;
+  is_required: boolean;
+  is_active: boolean;
+};
+
+function isMissingSchemaFeature(message: string, feature: string) {
+  return new RegExp(feature, 'i').test(message) && /(schema cache|does not exist|column|relation)/i.test(message);
+}
+
+function toDateTimeLocalValue(value: string | null | undefined) {
+  if (!value) return '';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 16);
+}
+
+function formatFieldOptionsText(field: EventRegistrationField) {
+  return (field.options || [])
+    .map((option) => [option.value, option.label, option.label_en || ''].join('|'))
+    .join('\n');
+}
+
+function parseFieldOptionsText(optionsText: string) {
+  return String(optionsText || '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [value, label, labelEn] = line.split('|').map((part) => part.trim());
+      return { value: value || '', label: label || value || '', label_en: labelEn || '' };
+    })
+    .filter((option) => option.value && option.label);
+}
+
 export default function EventsTab({ dict, events, uploadImage, currentUser, userProfile, readOnly = false }: EventsTabProps) {
   const eventSchema = z.object({
     title: z.string().min(3, dict.admin.validation.min3),
@@ -55,6 +111,16 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
     description_en: z.string().optional(),
     published_at: z.string().optional(),
     capacity: z.preprocess((val) => {
+      if (val === "" || val === null || val === undefined) return null;
+      const num = Number(val);
+      return isNaN(num) ? null : num;
+    }, z.number().nullable().optional()),
+    min_age: z.preprocess((val) => {
+      if (val === "" || val === null || val === undefined) return null;
+      const num = Number(val);
+      return isNaN(num) ? null : num;
+    }, z.number().nullable().optional()),
+    max_age: z.preprocess((val) => {
       if (val === "" || val === null || val === undefined) return null;
       const num = Number(val);
       return isNaN(num) ? null : num;
@@ -89,6 +155,8 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
   const [waitlistConfigLoading, setWaitlistConfigLoading] = useState(false);
   const [waitlistConfigSaving, setWaitlistConfigSaving] = useState(false);
   const [advancingEventId, setAdvancingEventId] = useState<string | null>(null);
+  const [priceRuleDrafts, setPriceRuleDrafts] = useState<PriceRuleDraft[]>([]);
+  const [registrationFieldDrafts, setRegistrationFieldDrafts] = useState<RegistrationFieldDraft[]>([]);
   const waitlistPromotedTpl = String(dict.admin?.waitlist?.promoted || 'Posunuto z čekací listiny: {count}');
   const waitlistNoChangeMsg = String(dict.admin?.waitlist?.noChange || 'Čekací listina je bez změn');
 
@@ -181,6 +249,79 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
       return data || [];
     },
   });
+
+  const { data: priceRulesData = [] } = useQuery({
+    queryKey: ['event_price_rules', editingEvent?.id],
+    enabled: !!editingEvent?.id,
+    queryFn: async () => {
+      const res = await supabase
+        .from('event_price_rules')
+        .select('id, sort_order, label, label_en, starts_at, ends_at, amount_czk, is_active')
+        .eq('event_id', editingEvent.id)
+        .order('sort_order', { ascending: true })
+        .order('starts_at', { ascending: true });
+      if (res.error) {
+        if (isMissingSchemaFeature(res.error.message, 'event_price_rules')) return [];
+        throw res.error;
+      }
+      return normalizePriceRules(res.data || []);
+    },
+  });
+
+  const { data: registrationFieldsData = [] } = useQuery({
+    queryKey: ['event_registration_fields', editingEvent?.id],
+    enabled: !!editingEvent?.id,
+    queryFn: async () => {
+      const res = await supabase
+        .from('event_registration_fields')
+        .select('id, sort_order, field_key, field_type, label, label_en, placeholder, placeholder_en, helper_text, helper_text_en, options, is_required, is_active')
+        .eq('event_id', editingEvent.id)
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true });
+      if (res.error) {
+        if (isMissingSchemaFeature(res.error.message, 'event_registration_fields')) return [];
+        throw res.error;
+      }
+      return normalizeRegistrationFields(res.data || []);
+    },
+  });
+
+  useEffect(() => {
+    if (!editingEvent?.id) return;
+    setPriceRuleDrafts(
+      priceRulesData.map((rule: EventPriceRule, index: number) => ({
+        id: rule.id,
+        sort_order: Number.isFinite(Number(rule.sort_order)) ? Number(rule.sort_order) : index,
+        label: rule.label || '',
+        label_en: rule.label_en || '',
+        starts_at: toDateTimeLocalValue(rule.starts_at),
+        ends_at: toDateTimeLocalValue(rule.ends_at),
+        amount_czk: Number(rule.amount_czk || 0).toFixed(2),
+        is_active: rule.is_active !== false,
+      })),
+    );
+  }, [editingEvent?.id, priceRulesData]);
+
+  useEffect(() => {
+    if (!editingEvent?.id) return;
+    setRegistrationFieldDrafts(
+      registrationFieldsData.map((field: EventRegistrationField, index: number) => ({
+        id: field.id,
+        sort_order: Number.isFinite(Number(field.sort_order)) ? Number(field.sort_order) : index,
+        field_key: field.field_key || '',
+        field_type: field.field_type,
+        label: field.label || '',
+        label_en: field.label_en || '',
+        placeholder: field.placeholder || '',
+        placeholder_en: field.placeholder_en || '',
+        helper_text: field.helper_text || '',
+        helper_text_en: field.helper_text_en || '',
+        options_text: formatFieldOptionsText(field),
+        is_required: field.is_required === true,
+        is_active: field.is_active !== false,
+      })),
+    );
+  }, [editingEvent?.id, registrationFieldsData]);
 
   const uploadEventPhotosMutation = useMutation({
     mutationFn: async () => {
@@ -281,6 +422,8 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
       time: '',
       location: '',
       capacity: null,
+      min_age: null,
+      max_age: null,
       published_at: '',
       ticket_sale_end: ''
     }
@@ -304,6 +447,94 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
     imageUrl: imageFile ? 'local' : editingEvent?.image_url,
     canonicalPath: editingEvent?.id ? `/cs/akce/${editingEvent.id}` : undefined,
   });
+
+  const syncEventPriceRules = async (eventId: string) => {
+    const normalized = normalizePriceRules(
+      priceRuleDrafts.map((rule, index) => ({
+        id: rule.id,
+        sort_order: index,
+        label: rule.label,
+        label_en: rule.label_en,
+        starts_at: rule.starts_at ? new Date(rule.starts_at).toISOString() : null,
+        ends_at: rule.ends_at ? new Date(rule.ends_at).toISOString() : null,
+        amount_czk: Number(rule.amount_czk || 0),
+        is_active: rule.is_active,
+      })),
+    );
+
+    const deleteRes = await supabase.from('event_price_rules').delete().eq('event_id', eventId);
+    if (deleteRes.error) {
+      if (isMissingSchemaFeature(deleteRes.error.message, 'event_price_rules')) return;
+      throw deleteRes.error;
+    }
+    if (normalized.length === 0) return;
+
+    const insertRes = await supabase.from('event_price_rules').insert(
+      normalized.map((rule, index) => ({
+        event_id: eventId,
+        sort_order: index,
+        label: rule.label,
+        label_en: rule.label_en || null,
+        starts_at: rule.starts_at || null,
+        ends_at: rule.ends_at || null,
+        amount_czk: rule.amount_czk,
+        is_active: rule.is_active,
+      })),
+    );
+    if (insertRes.error) {
+      if (isMissingSchemaFeature(insertRes.error.message, 'event_price_rules')) return;
+      throw insertRes.error;
+    }
+  };
+
+  const syncRegistrationFields = async (eventId: string) => {
+    const normalized = normalizeRegistrationFields(
+      registrationFieldDrafts.map((field, index) => ({
+        id: field.id,
+        sort_order: index,
+        field_key: slugifyFieldKey(field.field_key || field.label),
+        field_type: field.field_type,
+        label: field.label,
+        label_en: field.label_en,
+        placeholder: field.placeholder,
+        placeholder_en: field.placeholder_en,
+        helper_text: field.helper_text,
+        helper_text_en: field.helper_text_en,
+        options: parseFieldOptionsText(field.options_text),
+        is_required: field.is_required,
+        is_active: field.is_active,
+      })),
+    );
+
+    const deleteRes = await supabase.from('event_registration_fields').delete().eq('event_id', eventId);
+    if (deleteRes.error) {
+      if (isMissingSchemaFeature(deleteRes.error.message, 'event_registration_fields')) return;
+      throw deleteRes.error;
+    }
+    if (normalized.length === 0) return;
+
+    const insertRes = await supabase.from('event_registration_fields').insert(
+      normalized.map((field, index) => ({
+        event_id: eventId,
+        sort_order: index,
+        field_key: field.field_key,
+        field_type: field.field_type,
+        label: field.label,
+        label_en: field.label_en || null,
+        placeholder: field.placeholder || null,
+        placeholder_en: field.placeholder_en || null,
+        helper_text: field.helper_text || null,
+        helper_text_en: field.helper_text_en || null,
+        options: field.options,
+        is_required: field.is_required,
+        is_active: field.is_active,
+      })),
+    );
+    if (insertRes.error) {
+      if (isMissingSchemaFeature(insertRes.error.message, 'event_registration_fields')) return;
+      throw insertRes.error;
+    }
+  };
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -334,12 +565,20 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
         image_url: imageUrl,
         published_at: data.published_at && data.published_at !== "" ? new Date(data.published_at).toISOString() : null,
         capacity: (data.capacity === "" || data.capacity === null || isNaN(data.capacity)) ? null : Number(data.capacity),
+        min_age: (data.min_age === "" || data.min_age === null || isNaN(data.min_age)) ? null : Number(data.min_age),
+        max_age: (data.max_age === "" || data.max_age === null || isNaN(data.max_age)) ? null : Number(data.max_age),
         ticket_sale_end: data.ticket_sale_end && data.ticket_sale_end !== "" ? new Date(data.ticket_sale_end).toISOString() : null,
         is_member_only: !!data.is_member_only
       };
       const withoutTicketSaleEnd = () => {
         const next: any = { ...(payload as any) };
         delete next.ticket_sale_end;
+        return next;
+      };
+      const withoutAgeLimits = () => {
+        const next: any = { ...(payload as any) };
+        delete next.min_age;
+        delete next.max_age;
         return next;
       };
 
@@ -362,15 +601,17 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
         }
 
         let { error } = await supabase.from('events').update(payload).eq('id', editingEvent.id);
-        if (
-          error &&
-          /ticket_sale_end/i.test(error.message) &&
-          /(schema cache|does not exist|column)/i.test(error.message)
-        ) {
+        if (error && isMissingSchemaFeature(error.message, 'ticket_sale_end')) {
           const retry = await supabase.from('events').update(withoutTicketSaleEnd()).eq('id', editingEvent.id);
           error = retry.error;
         }
+        if (error && (isMissingSchemaFeature(error.message, 'min_age') || isMissingSchemaFeature(error.message, 'max_age'))) {
+          const retry = await supabase.from('events').update(withoutAgeLimits()).eq('id', editingEvent.id);
+          error = retry.error;
+        }
         if (error) throw error;
+        await syncEventPriceRules(editingEvent.id);
+        await syncRegistrationFields(editingEvent.id);
 
         try {
           const cfg = normalizeWaitlistConfig(waitlistConfigDraft);
@@ -386,16 +627,19 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
         }
       } else {
         let { data: newEvent, error } = await supabase.from('events').insert([payload]).select().single();
-        if (
-          error &&
-          /ticket_sale_end/i.test(error.message) &&
-          /(schema cache|does not exist|column)/i.test(error.message)
-        ) {
+        if (error && isMissingSchemaFeature(error.message, 'ticket_sale_end')) {
           const retry = await supabase.from('events').insert([withoutTicketSaleEnd()]).select().single();
           newEvent = retry.data;
           error = retry.error;
         }
+        if (error && (isMissingSchemaFeature(error.message, 'min_age') || isMissingSchemaFeature(error.message, 'max_age'))) {
+          const retry = await supabase.from('events').insert([withoutAgeLimits()]).select().single();
+          newEvent = retry.data;
+          error = retry.error;
+        }
         if (error) throw error;
+        await syncEventPriceRules(newEvent.id);
+        await syncRegistrationFields(newEvent.id);
         
         try {
           await logAdminAction(currentUser?.email, `Vytvořil akci: ${data.title}`, newEvent.id, payload, userProfile ? `${userProfile.first_name} ${userProfile.last_name}` : undefined);
@@ -445,6 +689,29 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
     saveMutation.mutate(data);
   };
 
+  const handleCreateNew = () => {
+    setEditingEvent({ id: null });
+    setImageFile(null);
+    setPriceRuleDrafts([]);
+    setRegistrationFieldDrafts([]);
+    reset({
+      category: 'Párty',
+      is_member_only: false,
+      description: '',
+      description_en: '',
+      title: '',
+      title_en: '',
+      date: '',
+      time: '',
+      location: '',
+      capacity: null,
+      min_age: null,
+      max_age: null,
+      published_at: '',
+      ticket_sale_end: '',
+    });
+  };
+
   const handleEdit = (event: any) => {
     setEditingEvent(event);
     reset({
@@ -458,6 +725,8 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
       description_en: event.description_html_en || event.description_en || '',
       published_at: event.published_at ? new Date(event.published_at).toISOString().slice(0, 16) : '',
       capacity: event.capacity ?? '',
+      min_age: event.min_age ?? '',
+      max_age: event.max_age ?? '',
       ticket_sale_end: event.ticket_sale_end ? new Date(event.ticket_sale_end).toISOString().slice(0, 16) : '',
       is_member_only: event.is_member_only || false,
     });
@@ -466,6 +735,8 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
   const handleCancel = () => {
     setEditingEvent(null);
     setImageFile(null);
+    setPriceRuleDrafts([]);
+    setRegistrationFieldDrafts([]);
     reset();
   };
 
@@ -572,7 +843,7 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
             )}
             {!readOnly && !editingEvent && (
               <button 
-                onClick={() => setEditingEvent({ id: null })} 
+                onClick={handleCreateNew}
                 className="bg-green-600 text-white px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-green-700 transition-all shadow-lg shadow-green-600/20"
               >
                 <Plus size={16} /> {dict.admin.newEvent}
@@ -807,6 +1078,17 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
                   </div>
                 </div>
 
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Min. věk</label>
+                    <input {...register('min_age', { valueAsNumber: true })} type="number" min={0} placeholder="Bez limitu" className="w-full border-none p-4 rounded-2xl outline-none ring-1 ring-stone-100 focus:ring-2 focus:ring-green-500 bg-stone-50/50 font-bold text-stone-700 transition" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Max. věk</label>
+                    <input {...register('max_age', { valueAsNumber: true })} type="number" min={0} placeholder="Bez limitu" className="w-full border-none p-4 rounded-2xl outline-none ring-1 ring-stone-100 focus:ring-2 focus:ring-green-500 bg-stone-50/50 font-bold text-stone-700 transition" />
+                  </div>
+                </div>
+
                 <div className="p-4 bg-stone-50 rounded-2xl border border-stone-100">
                   <label className="flex items-center gap-3 cursor-pointer">
                     <input {...register('is_member_only')} type="checkbox" className="w-5 h-5 accent-green-600 rounded-lg border-stone-300" />
@@ -815,6 +1097,124 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
                       <span className="text-[10px] text-stone-400 font-medium">Akce bude viditelná pouze v členské sekci</span>
                     </div>
                   </label>
+                </div>
+
+                <div className="bg-stone-50 rounded-2xl border border-stone-100 p-4 space-y-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">Cenové vlny</div>
+                      <div className="text-xs font-bold text-stone-500">Aktivní pravidlo se vybere podle data a času.</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPriceRuleDrafts((prev) => [...prev, { sort_order: prev.length, label: '', label_en: '', starts_at: '', ends_at: '', amount_czk: '', is_active: true }])}
+                      className="px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
+                    >
+                      Přidat vlnu
+                    </button>
+                  </div>
+                  <div className="space-y-3">
+                    {priceRuleDrafts.length === 0 ? (
+                      <div className="text-sm font-bold text-stone-500">Bez pravidel bude registrace zdarma.</div>
+                    ) : priceRuleDrafts.map((rule, index) => (
+                      <div key={`${rule.id || 'new'}-${index}`} className="rounded-2xl border border-stone-200 bg-white p-4 space-y-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="text-xs font-black text-stone-900">Vlna #{index + 1}</div>
+                          <button
+                            type="button"
+                            onClick={() => setPriceRuleDrafts((prev) => prev.filter((_, itemIndex) => itemIndex !== index))}
+                            className="p-2 rounded-xl text-stone-400 hover:text-red-600 hover:bg-red-50 transition"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <input value={rule.label} onChange={(e) => setPriceRuleDrafts((prev) => prev.map((item, itemIndex) => itemIndex === index ? { ...item, label: e.target.value } : item))} placeholder="Název CZ" className="w-full border-none p-3 rounded-xl outline-none ring-1 ring-stone-100 focus:ring-2 focus:ring-green-500 bg-stone-50 font-bold text-stone-700 transition" />
+                          <input value={rule.label_en} onChange={(e) => setPriceRuleDrafts((prev) => prev.map((item, itemIndex) => itemIndex === index ? { ...item, label_en: e.target.value } : item))} placeholder="Title EN" className="w-full border-none p-3 rounded-xl outline-none ring-1 ring-stone-100 focus:ring-2 focus:ring-green-500 bg-stone-50 font-bold text-stone-700 transition" />
+                        </div>
+                        <div className="grid grid-cols-3 gap-3">
+                          <input value={rule.amount_czk} onChange={(e) => setPriceRuleDrafts((prev) => prev.map((item, itemIndex) => itemIndex === index ? { ...item, amount_czk: e.target.value } : item))} type="number" min={0} step="0.01" placeholder="Cena CZK" className="w-full border-none p-3 rounded-xl outline-none ring-1 ring-stone-100 focus:ring-2 focus:ring-green-500 bg-stone-50 font-bold text-stone-700 transition" />
+                          <input value={rule.starts_at} onChange={(e) => setPriceRuleDrafts((prev) => prev.map((item, itemIndex) => itemIndex === index ? { ...item, starts_at: e.target.value } : item))} type="datetime-local" className="w-full border-none p-3 rounded-xl outline-none ring-1 ring-stone-100 focus:ring-2 focus:ring-green-500 bg-stone-50 font-bold text-stone-700 transition" />
+                          <input value={rule.ends_at} onChange={(e) => setPriceRuleDrafts((prev) => prev.map((item, itemIndex) => itemIndex === index ? { ...item, ends_at: e.target.value } : item))} type="datetime-local" className="w-full border-none p-3 rounded-xl outline-none ring-1 ring-stone-100 focus:ring-2 focus:ring-green-500 bg-stone-50 font-bold text-stone-700 transition" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-stone-50 rounded-2xl border border-stone-100 p-4 space-y-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">Vlastní pole registrace</div>
+                      <div className="text-xs font-bold text-stone-500">Každý řádek se vykreslí ve veřejném formuláři akce.</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setRegistrationFieldDrafts((prev) => [...prev, { sort_order: prev.length, field_key: '', field_type: 'text', label: '', label_en: '', placeholder: '', placeholder_en: '', helper_text: '', helper_text_en: '', options_text: '', is_required: false, is_active: true }])}
+                      className="px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
+                    >
+                      Přidat pole
+                    </button>
+                  </div>
+                  <div className="space-y-3">
+                    {registrationFieldDrafts.length === 0 ? (
+                      <div className="text-sm font-bold text-stone-500">Zatím bez vlastních polí.</div>
+                    ) : registrationFieldDrafts.map((field, index) => (
+                      <div key={`${field.id || 'new'}-${index}`} className="rounded-2xl border border-stone-200 bg-white p-4 space-y-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="text-xs font-black text-stone-900">Pole #{index + 1}</div>
+                          <button
+                            type="button"
+                            onClick={() => setRegistrationFieldDrafts((prev) => prev.filter((_, itemIndex) => itemIndex !== index))}
+                            className="p-2 rounded-xl text-stone-400 hover:text-red-600 hover:bg-red-50 transition"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <input value={field.label} onChange={(e) => setRegistrationFieldDrafts((prev) => prev.map((item, itemIndex) => itemIndex === index ? { ...item, label: e.target.value, field_key: item.field_key || slugifyFieldKey(e.target.value) } : item))} placeholder="Popisek CZ" className="w-full border-none p-3 rounded-xl outline-none ring-1 ring-stone-100 focus:ring-2 focus:ring-green-500 bg-stone-50 font-bold text-stone-700 transition" />
+                          <input value={field.label_en} onChange={(e) => setRegistrationFieldDrafts((prev) => prev.map((item, itemIndex) => itemIndex === index ? { ...item, label_en: e.target.value } : item))} placeholder="Label EN" className="w-full border-none p-3 rounded-xl outline-none ring-1 ring-stone-100 focus:ring-2 focus:ring-green-500 bg-stone-50 font-bold text-stone-700 transition" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <input value={field.field_key} onChange={(e) => setRegistrationFieldDrafts((prev) => prev.map((item, itemIndex) => itemIndex === index ? { ...item, field_key: slugifyFieldKey(e.target.value) } : item))} placeholder="field_key" className="w-full border-none p-3 rounded-xl outline-none ring-1 ring-stone-100 focus:ring-2 focus:ring-green-500 bg-stone-50 font-mono text-sm text-stone-700 transition" />
+                          <select value={field.field_type} onChange={(e) => setRegistrationFieldDrafts((prev) => prev.map((item, itemIndex) => itemIndex === index ? { ...item, field_type: e.target.value as RegistrationFieldDraft['field_type'] } : item))} className="w-full border-none p-3 rounded-xl outline-none ring-1 ring-stone-100 focus:ring-2 focus:ring-green-500 bg-stone-50 font-bold text-stone-700 transition">
+                            <option value="text">Text</option>
+                            <option value="textarea">Textarea</option>
+                            <option value="checkbox">Checkbox</option>
+                            <option value="select">Select</option>
+                            <option value="date">Datum</option>
+                          </select>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <input value={field.placeholder} onChange={(e) => setRegistrationFieldDrafts((prev) => prev.map((item, itemIndex) => itemIndex === index ? { ...item, placeholder: e.target.value } : item))} placeholder="Placeholder CZ" className="w-full border-none p-3 rounded-xl outline-none ring-1 ring-stone-100 focus:ring-2 focus:ring-green-500 bg-stone-50 font-bold text-stone-700 transition" />
+                          <input value={field.placeholder_en} onChange={(e) => setRegistrationFieldDrafts((prev) => prev.map((item, itemIndex) => itemIndex === index ? { ...item, placeholder_en: e.target.value } : item))} placeholder="Placeholder EN" className="w-full border-none p-3 rounded-xl outline-none ring-1 ring-stone-100 focus:ring-2 focus:ring-green-500 bg-stone-50 font-bold text-stone-700 transition" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <input value={field.helper_text} onChange={(e) => setRegistrationFieldDrafts((prev) => prev.map((item, itemIndex) => itemIndex === index ? { ...item, helper_text: e.target.value } : item))} placeholder="Nápověda CZ" className="w-full border-none p-3 rounded-xl outline-none ring-1 ring-stone-100 focus:ring-2 focus:ring-green-500 bg-stone-50 font-bold text-stone-700 transition" />
+                          <input value={field.helper_text_en} onChange={(e) => setRegistrationFieldDrafts((prev) => prev.map((item, itemIndex) => itemIndex === index ? { ...item, helper_text_en: e.target.value } : item))} placeholder="Helper EN" className="w-full border-none p-3 rounded-xl outline-none ring-1 ring-stone-100 focus:ring-2 focus:ring-green-500 bg-stone-50 font-bold text-stone-700 transition" />
+                        </div>
+                        {field.field_type === 'select' ? (
+                          <textarea
+                            rows={3}
+                            value={field.options_text}
+                            onChange={(e) => setRegistrationFieldDrafts((prev) => prev.map((item, itemIndex) => itemIndex === index ? { ...item, options_text: e.target.value } : item))}
+                            placeholder="value|Popisek CZ|Label EN"
+                            className="w-full border-none p-3 rounded-xl outline-none ring-1 ring-stone-100 focus:ring-2 focus:ring-green-500 bg-stone-50 font-mono text-sm text-stone-700 transition resize-y"
+                          />
+                        ) : null}
+                        <div className="flex items-center gap-5">
+                          <label className="flex items-center gap-2 text-xs font-bold text-stone-700">
+                            <input type="checkbox" checked={field.is_required} onChange={(e) => setRegistrationFieldDrafts((prev) => prev.map((item, itemIndex) => itemIndex === index ? { ...item, is_required: e.target.checked } : item))} className="w-4 h-4 accent-green-600 rounded border-stone-300" />
+                            Povinné
+                          </label>
+                          <label className="flex items-center gap-2 text-xs font-bold text-stone-700">
+                            <input type="checkbox" checked={field.is_active} onChange={(e) => setRegistrationFieldDrafts((prev) => prev.map((item, itemIndex) => itemIndex === index ? { ...item, is_active: e.target.checked } : item))} className="w-4 h-4 accent-green-600 rounded border-stone-300" />
+                            Aktivní
+                          </label>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
 

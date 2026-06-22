@@ -6,6 +6,8 @@ import CopyButton from '@/app/components/CopyButton';
 import Image from 'next/image';
 import Dialog from '@/app/components/ui/Dialog';
 import { useDictionary } from '@/app/context/DictionaryContext';
+import { buildTicketPdfUrl } from '@/lib/tickets/pdf';
+import { getPublicBaseUrl } from '@/lib/public-base-url';
 
 export default function TicketModal({
   open,
@@ -37,7 +39,7 @@ export default function TicketModal({
     return s || '—';
   }, [status, t.statusCancelled, t.statusConfirmed, t.statusReserved, t.statusWaitlist]);
 
-  const payload = useMemo(() => `PUPEN-TICKET:${qrToken}`, [qrToken]);
+  const payload = useMemo(() => `${getPublicBaseUrl()}/${locale}/admin/tickets/validate?token=${encodeURIComponent(qrToken)}`, [locale, qrToken]);
   const [qrUrl, setQrUrl] = useState('');
 
   useEffect(() => {
@@ -60,10 +62,9 @@ export default function TicketModal({
   if (!open) return null;
 
   const downloadQr = () => {
-    if (!qrUrl) return;
+    if (!qrToken) return;
     const a = document.createElement('a');
-    a.href = qrUrl;
-    a.download = `pupen-ticket-${String(qrToken || '').slice(0, 32)}.png`;
+    a.href = buildTicketPdfUrl(qrToken, locale);
     document.body.appendChild(a);
     a.click();
     a.remove();

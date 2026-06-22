@@ -5,6 +5,30 @@ import { getMailerWithSettings } from '@/lib/email/mailer';
 
 export const runtime = 'nodejs';
 
+interface QueueProcessBody {
+  limit?: unknown;
+  resetStuck?: unknown;
+  workerId?: unknown;
+}
+
+interface QueueJobRow {
+  id?: string | null;
+  to_email?: string | null;
+  from_email?: string | null;
+  reply_to?: string | null;
+  subject?: string | null;
+  html?: string | null;
+  text?: string | null;
+  headers?: Record<string, string> | null;
+  attempt_count?: number | null;
+  max_attempts?: number | null;
+  meta?: Record<string, unknown> | null;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
 function backoffSeconds(attempt: number) {
   if (attempt <= 1) return 60;
   if (attempt === 2) return 5 * 60;
@@ -13,10 +37,10 @@ function backoffSeconds(attempt: number) {
   return 12 * 60 * 60;
 }
 
-function normalizeError(e: any) {
-  const err = e || {};
+function normalizeError(error: unknown) {
+  const err = toRecord(error);
   return {
-    message: String(err.message || err),
+    message: String(err.message || error || ''),
     name: err.name ? String(err.name) : '',
     code: err.code ? String(err.code) : '',
     command: err.command ? String(err.command) : '',
@@ -41,10 +65,10 @@ export async function POST(req: Request) {
     const { profile } = await requireAdmin(req);
     if (!profile?.is_admin && !profile?.can_manage_admins) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const body = await req.json().catch(() => ({}));
-    const limit = Math.max(1, Math.min(200, Number(body?.limit || 50)));
-    const resetStuck = body?.resetStuck !== false;
-    const workerId = String(body?.workerId || `admin-${Date.now()}`);
+    const body = toRecord(await req.json().catch(() => ({}))) as QueueProcessBody;
+    const limit = Math.max(1, Math.min(200, Number(body.limit || 50)));
+    const resetStuck = body.resetStuck !== false;
+    const workerId = String(body.workerId || `admin-${Date.now()}`);
 
     const supabase = getServerSupabase();
     const nowIso = new Date().toISOString();
@@ -67,7 +91,7 @@ export async function POST(req: Request) {
     const transporter = await getMailerWithSettings();
     const claim = await supabase.rpc('email_queue_claim', { max_rows: limit, worker_id: workerId });
     if (claim.error) throw claim.error;
-    const jobs: any[] = Array.isArray(claim.data) ? claim.data : [];
+    const jobs = (Array.isArray(claim.data) ? claim.data : []) as QueueJobRow[];
     if (!jobs.length) return NextResponse.json({ ok: true, processed: 0, okCount: 0, retried: 0, dead: 0 });
 
     let okCount = 0;
@@ -99,11 +123,11 @@ export async function POST(req: Request) {
         const del = await supabase.from('email_send_queue').delete().eq('id', id);
         if (del.error) throw del.error;
         okCount += 1;
-      } catch (e: any) {
+      } catch (error: unknown) {
         const nextAttempt = attemptCount + 1;
-        const info = normalizeError(e);
+        const info = normalizeError(error);
         const errMsg = info.message;
-        const meta = j?.meta && typeof j.meta === 'object' ? j.meta : {};
+        const meta = j.meta && typeof j.meta === 'object' ? j.meta : {};
         const meta2 = { ...meta, last_error: info };
 
         if (isPermanentSmtpError(info) || nextAttempt >= maxAttempts) {
@@ -150,9 +174,9 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ ok: true, processed: jobs.length, okCount, retried, dead });
-  } catch (e: any) {
-    const msg = String(e?.message || 'Error');
-    const status = msg === 'Unauthorized' ? 401 : msg === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: msg }, { status });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Error';
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

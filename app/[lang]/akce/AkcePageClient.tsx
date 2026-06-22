@@ -15,6 +15,7 @@ import SocialShareMenu from '@/app/components/SocialShareMenu';
 import CopyButton from '@/app/components/CopyButton';
 import { trackAnalyticsEvent } from '@/lib/analytics-client';
 import { normalizeRsvpSharedDraft, readRsvpSharedDraft, writeRsvpSharedDraft, type RsvpSharedDraft } from '@/lib/client-preferences';
+import { pickActivePriceRule, type EventPriceRule, type EventRegistrationField } from '@/lib/rsvp/eventRegistration';
 
 const RSVP_DRAFT_KEY = 'pupen_rsvp_draft_v1';
 const passthroughLoader = ({ src }: { src: string }) => src;
@@ -40,16 +41,26 @@ interface AkcePageClientProps {
 
 type RsvpFormState = RsvpSharedDraft & {
   promo_code: string;
+  formAnswers: Record<string, string | boolean>;
+};
+
+type RsvpEventConfig = {
+  minAge: number | null;
+  maxAge: number | null;
+  priceRules: EventPriceRule[];
+  registrationFields: EventRegistrationField[];
+  activePriceRule: EventPriceRule | null;
 };
 
 const EMPTY_RSVP_FORM: RsvpFormState = {
   name: '',
   email: '',
   promo_code: '',
+  formAnswers: {},
   subscribe_newsletter: false,
   payment_method: 'hotove',
   attendeesCount: 1,
-  attendees: [{ name: '' }],
+  attendees: [{ name: '', birth_date: null }],
 };
 
 function normalizeRsvpForm(value: Partial<RsvpFormState> | null | undefined): RsvpFormState {
@@ -57,6 +68,15 @@ function normalizeRsvpForm(value: Partial<RsvpFormState> | null | undefined): Rs
   return {
     ...shared,
     promo_code: typeof value?.promo_code === 'string' ? value.promo_code.slice(0, 60) : '',
+    formAnswers:
+      value?.formAnswers && typeof value.formAnswers === 'object' && !Array.isArray(value.formAnswers)
+        ? Object.fromEntries(
+            Object.entries(value.formAnswers as Record<string, unknown>).map(([key, fieldValue]) => [
+              key,
+              typeof fieldValue === 'boolean' ? fieldValue : String(fieldValue || ''),
+            ]),
+          )
+        : {},
   };
 }
 
@@ -94,13 +114,18 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
   const [rsvpLoading, setRsvpLoading] = useState<string | null>(null);
   const [rsvpCancelLoading, setRsvpCancelLoading] = useState(false);
   const [rsvpOpen, setRsvpOpen] = useState<string | null>(null);
+  const [rsvpEventConfig, setRsvpEventConfig] = useState<RsvpEventConfig | null>(null);
   const [rsvpView, setRsvpView] = useState<'form' | 'success'>('form');
   const [rsvpResult, setRsvpResult] = useState<null | {
     eventId: string;
     status: string;
     qrToken: string;
+    variableSymbol?: string | null;
     expiresAt: string | null;
     attendeesCount: number;
+    priceTotal?: number | null;
+    pricingLabel?: string | null;
+    pricingLabelEn?: string | null;
   }>(null);
   const [rsvpForm, setRsvpForm] = useState({ 
     ...EMPTY_RSVP_FORM,
@@ -141,16 +166,30 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
 
   const setAttendeesCount = (count: number) => {
     const c = Math.max(1, Math.min(3, Math.floor(Number(count) || 1)));
-    const nextAttendees = Array.from({ length: c }).map((_, i) => ({ name: rsvpForm.attendees?.[i]?.name || '' }));
+    const nextAttendees = Array.from({ length: c }).map((_, i) => ({
+      name: rsvpForm.attendees?.[i]?.name || '',
+      birth_date: rsvpForm.attendees?.[i]?.birth_date || null,
+    }));
     const next = { ...rsvpForm, attendeesCount: c, attendees: nextAttendees };
     setRsvpFormWithDraft(next, rsvpOpen);
   };
 
-  const updateAttendee = (index: number, name: string) => {
+  const updateAttendee = (index: number, patch: { name?: string; birth_date?: string | null }) => {
     const newAttendees = [...(rsvpForm.attendees || [])];
-    if (!newAttendees[index]) newAttendees[index] = { name: '' };
-    newAttendees[index].name = name;
+    if (!newAttendees[index]) newAttendees[index] = { name: '', birth_date: null };
+    newAttendees[index] = { ...newAttendees[index], ...patch };
     const next = { ...rsvpForm, attendees: newAttendees };
+    setRsvpFormWithDraft(next, rsvpOpen);
+  };
+
+  const updateFormAnswer = (fieldKey: string, value: string | boolean) => {
+    const next = {
+      ...rsvpForm,
+      formAnswers: {
+        ...(rsvpForm.formAnswers || {}),
+        [fieldKey]: value,
+      },
+    };
     setRsvpFormWithDraft(next, rsvpOpen);
   };
 
@@ -221,6 +260,45 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
       })
       .catch(() => {});
   }, [rsvpOpen, readDrafts, writeDraft]);
+
+  useEffect(() => {
+    if (!rsvpOpen) {
+      setRsvpEventConfig(null);
+      return;
+    }
+
+    let cancelled = false;
+    const loadConfig = async () => {
+      try {
+        const res = await fetch(`/api/rsvp/event-config?eventId=${encodeURIComponent(rsvpOpen)}`);
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || cancelled) return;
+        const config = json?.config || {};
+        setRsvpEventConfig({
+          minAge: Number.isFinite(Number(config.minAge)) ? Number(config.minAge) : null,
+          maxAge: Number.isFinite(Number(config.maxAge)) ? Number(config.maxAge) : null,
+          priceRules: Array.isArray(config.priceRules) ? config.priceRules : [],
+          registrationFields: Array.isArray(config.registrationFields) ? config.registrationFields : [],
+          activePriceRule: config.activePriceRule || pickActivePriceRule(Array.isArray(config.priceRules) ? config.priceRules : []),
+        });
+      } catch {
+        if (!cancelled) {
+          setRsvpEventConfig({
+            minAge: null,
+            maxAge: null,
+            priceRules: [],
+            registrationFields: [],
+            activePriceRule: null,
+          });
+        }
+      }
+    };
+
+    loadConfig();
+    return () => {
+      cancelled = true;
+    };
+  }, [rsvpOpen]);
 
   useEffect(() => {
     async function loadPageData() {
@@ -302,6 +380,7 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
     const promoCode = (rsvpForm as any).promo_code ? String((rsvpForm as any).promo_code).trim() : '';
     const attendeeNames = (rsvpForm.attendees || []).slice(0, Math.max(1, Math.min(3, Number(rsvpForm.attendeesCount || 1)))).map((a) => ({
       name: String((a as any)?.name || '').trim(),
+      birth_date: typeof a?.birth_date === 'string' && a.birth_date.trim() ? a.birth_date.trim() : null,
     }));
     const requestedCount = Math.max(1, Math.min(3, Number(rsvpForm.attendeesCount || attendeeNames.length || 1)));
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -407,6 +486,50 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
           showToast(lang === 'en' ? 'Use your member email address.' : 'Použijte svůj členský e-mail.', 'error');
           return;
         }
+        if (res.status === 400 && code === 'RSVP_BIRTH_DATE_REQUIRED') {
+          showToast(
+            lang === 'en'
+              ? 'Date of birth is required for all attendees of this event.'
+              : 'Datum narození je pro tuto akci povinné u všech účastníků.',
+            'error',
+          );
+          return;
+        }
+        if (res.status === 400 && code === 'RSVP_AGE_RESTRICTION') {
+          const minAge = Number(json?.minAge);
+          const maxAge = Number(json?.maxAge);
+          const ageText =
+            Number.isFinite(minAge) && Number.isFinite(maxAge)
+              ? lang === 'en'
+                ? `Allowed age is ${minAge}-${maxAge}.`
+                : `Povolený věk je ${minAge}-${maxAge} let.`
+              : Number.isFinite(minAge)
+                ? lang === 'en'
+                  ? `Minimum age is ${minAge}.`
+                  : `Minimální věk je ${minAge} let.`
+                : Number.isFinite(maxAge)
+                  ? lang === 'en'
+                    ? `Maximum age is ${maxAge}.`
+                    : `Maximální věk je ${maxAge} let.`
+                  : lang === 'en'
+                    ? 'Age restriction is not met.'
+                    : 'Věkové omezení není splněno.';
+          showToast(ageText, 'error');
+          return;
+        }
+        if (res.status === 400 && (code === 'RSVP_FIELD_REQUIRED' || code === 'RSVP_FIELD_INVALID')) {
+          showToast(
+            code === 'RSVP_FIELD_REQUIRED'
+              ? lang === 'en'
+                ? 'Please fill in all required registration fields.'
+                : 'Vyplňte prosím všechna povinná registrační pole.'
+              : lang === 'en'
+                ? 'One of the custom registration fields contains an invalid value.'
+                : 'Jedno z vlastních registračních polí obsahuje neplatnou hodnotu.',
+            'error',
+          );
+          return;
+        }
         if (res.status === 400 && (code === 'RSVP_BAD_INPUT' || code === 'RSVP_INVALID_ATTENDEES')) {
           showToast(lang === 'en' ? 'Please fill in all required fields.' : 'Vyplňte prosím všechna povinná pole.', 'error');
           return;
@@ -416,7 +539,9 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
 
       const status = json.status;
       const qr_token = json.qrToken;
+      const variableSymbol = typeof json.variableSymbol === 'string' ? json.variableSymbol : null;
       const expiresAt = json.expiresAt || null;
+      const priceTotal = Number.isFinite(Number(json.priceTotal)) ? Number(json.priceTotal) : null;
 
       if (status === 'waitlist') {
         showToast(lang === 'cs' ? 'Kapacita naplněna. Jste na čekací listině!' : 'Capacity full. You are on the waitlist!', 'warning');
@@ -456,7 +581,17 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
       );
 
       clearDraft(eventId);
-      setRsvpResult({ eventId, status, qrToken: qr_token, expiresAt, attendeesCount: requestedCount });
+      setRsvpResult({
+        eventId,
+        status,
+        qrToken: qr_token,
+        variableSymbol,
+        expiresAt,
+        attendeesCount: requestedCount,
+        priceTotal,
+        pricingLabel: json.pricingLabel || null,
+        pricingLabelEn: json.pricingLabelEn || null,
+      });
       setRsvpView('success');
     } catch (err: any) {
       showToast(err.message, 'error');
@@ -546,6 +681,10 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
   const monthFilteredEvents = filteredEvents.filter((e) => toYmd(e.date).slice(0, 7) === monthKey);
   const todayKey = toYmd(new Date());
   const futureEvents = filteredEvents.filter((e) => toYmd(e.date) >= todayKey);
+  const activePriceRule = rsvpEventConfig?.activePriceRule || null;
+  const estimatedPrice = activePriceRule
+    ? Number(activePriceRule.amount_czk || 0) * Math.max(1, Number(rsvpForm.attendeesCount || 1))
+    : 0;
 
   const categoryKeys = useMemo(() => {
     const set = new Set<string>();
@@ -824,6 +963,30 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
                       )}
                     </div>
 
+                    {typeof rsvpResult.priceTotal === 'number' && rsvpResult.priceTotal > 0 ? (
+                      <div className="bg-white border border-stone-100 rounded-2xl p-4">
+                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">
+                          {lang === 'en' ? 'Total price' : 'Celková cena'}
+                        </div>
+                        <div className="font-black text-stone-900">
+                          {rsvpResult.priceTotal.toFixed(2)} CZK
+                          {(lang === 'en' ? rsvpResult.pricingLabelEn : rsvpResult.pricingLabel) ? ` • ${lang === 'en' ? rsvpResult.pricingLabelEn : rsvpResult.pricingLabel}` : ''}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {rsvpResult.variableSymbol ? (
+                      <div className="bg-white border border-stone-100 rounded-2xl p-4">
+                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">
+                          {lang === 'en' ? 'Variable symbol' : 'Variabilní symbol'}
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="font-black tracking-widest text-stone-900 truncate">{rsvpResult.variableSymbol}</div>
+                          <CopyButton value={rsvpResult.variableSymbol} className="border-stone-200 bg-white text-stone-700 hover:bg-stone-50" />
+                        </div>
+                      </div>
+                    ) : null}
+
                     <div className="bg-white border border-stone-100 rounded-2xl p-4">
                       <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">
                         QR Token
@@ -909,6 +1072,41 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
                           </select>
                         </div>
                       </div>
+                      {rsvpEventConfig && (
+                        <div className="rounded-2xl border border-stone-100 bg-stone-50 px-5 py-4 space-y-2">
+                          {activePriceRule ? (
+                            <div className="flex items-center justify-between gap-4 text-sm">
+                              <div>
+                                <div className="font-black text-stone-900">
+                                  {lang === 'en'
+                                    ? activePriceRule.label_en || activePriceRule.label
+                                    : activePriceRule.label}
+                                </div>
+                                <div className="text-xs font-bold text-stone-500">
+                                  {Number(activePriceRule.amount_czk || 0).toFixed(2)} CZK / {lang === 'en' ? 'person' : 'osoba'}
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">
+                                  {lang === 'en' ? 'Estimated total' : 'Odhad ceny'}
+                                </div>
+                                <div className="font-black text-stone-900">{estimatedPrice.toFixed(2)} CZK</div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-sm font-bold text-stone-600">
+                              {lang === 'en' ? 'Registration is currently free.' : 'Registrace je aktuálně bez poplatku.'}
+                            </div>
+                          )}
+                          {(rsvpEventConfig.minAge != null || rsvpEventConfig.maxAge != null) && (
+                            <div className="text-xs font-bold text-amber-700">
+                              {lang === 'en'
+                                ? `Age limit: ${rsvpEventConfig.minAge != null ? `${rsvpEventConfig.minAge}+` : ''}${rsvpEventConfig.minAge != null && rsvpEventConfig.maxAge != null ? ' / ' : ''}${rsvpEventConfig.maxAge != null ? `up to ${rsvpEventConfig.maxAge}` : ''}`
+                                : `Věkové omezení: ${rsvpEventConfig.minAge != null ? `${rsvpEventConfig.minAge}+ let` : ''}${rsvpEventConfig.minAge != null && rsvpEventConfig.maxAge != null ? ' / ' : ''}${rsvpEventConfig.maxAge != null ? `max. ${rsvpEventConfig.maxAge} let` : ''}`}
+                            </div>
+                          )}
+                        </div>
+                      )}
                       {Number(rsvpForm.attendeesCount || 1) > 1 ? (
                         <div className="space-y-2">
                           <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">
@@ -919,13 +1117,29 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
                               key={i}
                               type="text"
                               placeholder={lang === 'en' ? `Attendee ${i + 2}` : `Účastník ${i + 2}`}
-                              value={String((rsvpForm.attendees?.[i + 1] as any)?.name || '')}
-                              onChange={(e) => updateAttendee(i + 1, e.target.value)}
+                              value={String(rsvpForm.attendees?.[i + 1]?.name || '')}
+                              onChange={(e) => updateAttendee(i + 1, { name: e.target.value })}
                               className="w-full bg-stone-50 border-none rounded-xl px-6 py-3 font-bold text-sm text-stone-700 outline-none focus:ring-2 focus:ring-green-500"
                             />
                           ))}
                         </div>
                       ) : null}
+                      {(rsvpEventConfig?.minAge != null || rsvpEventConfig?.maxAge != null) && (
+                        <div className="space-y-2">
+                          <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">
+                            {lang === 'en' ? 'Date of birth for attendees' : 'Datum narození účastníků'}
+                          </div>
+                          {Array.from({ length: Math.max(1, Number(rsvpForm.attendeesCount || 1)) }).map((_, i) => (
+                            <input
+                              key={`birth-${i}`}
+                              type="date"
+                              value={String(rsvpForm.attendees?.[i]?.birth_date || '')}
+                              onChange={(e) => updateAttendee(i, { birth_date: e.target.value || null })}
+                              className="w-full bg-stone-50 border-none rounded-xl px-6 py-3 font-bold text-sm text-stone-700 outline-none focus:ring-2 focus:ring-green-500"
+                            />
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     <div className="space-y-2">
@@ -965,6 +1179,68 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
                         placeholder={lang === 'en' ? 'e.g. PUPEN2026' : 'např. PUPEN2026'}
                       />
                     </div>
+
+                    {(rsvpEventConfig?.registrationFields || []).filter((field) => field.is_active !== false).map((field) => {
+                      const fieldLabel = lang === 'en' ? field.label_en || field.label : field.label;
+                      const fieldPlaceholder = lang === 'en' ? field.placeholder_en || field.placeholder : field.placeholder;
+                      const helperText = lang === 'en' ? field.helper_text_en || field.helper_text : field.helper_text;
+                      const value = rsvpForm.formAnswers?.[field.field_key];
+
+                      return (
+                        <div key={field.field_key} className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">
+                            {fieldLabel}
+                            {field.is_required ? ' *' : ''}
+                          </label>
+                          {field.field_type === 'textarea' ? (
+                            <textarea
+                              rows={3}
+                              value={typeof value === 'string' ? value : ''}
+                              onChange={(e) => updateFormAnswer(field.field_key, e.target.value)}
+                              placeholder={fieldPlaceholder || ''}
+                              className="w-full bg-stone-50 border-none rounded-xl px-6 py-4 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 resize-y"
+                            />
+                          ) : field.field_type === 'checkbox' ? (
+                            <label className="flex items-start gap-3 bg-stone-50 border border-stone-100 rounded-2xl px-5 py-4">
+                              <input
+                                type="checkbox"
+                                checked={value === true}
+                                onChange={(e) => updateFormAnswer(field.field_key, e.target.checked)}
+                                className="mt-1"
+                              />
+                              <div className="min-w-0">
+                                <div className="font-black text-stone-900 text-sm">{fieldLabel}</div>
+                                {helperText ? <div className="text-xs font-bold text-stone-500">{helperText}</div> : null}
+                              </div>
+                            </label>
+                          ) : field.field_type === 'select' ? (
+                            <select
+                              value={typeof value === 'string' ? value : ''}
+                              onChange={(e) => updateFormAnswer(field.field_key, e.target.value)}
+                              className="w-full bg-stone-50 border-none rounded-xl px-6 py-4 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500"
+                            >
+                              <option value="">{lang === 'en' ? 'Select option' : 'Vyberte možnost'}</option>
+                              {(field.options || []).map((option) => (
+                                <option key={option.value} value={option.value}>
+                                  {lang === 'en' ? option.label_en || option.label : option.label}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input
+                              type={field.field_type === 'date' ? 'date' : 'text'}
+                              value={typeof value === 'string' ? value : ''}
+                              onChange={(e) => updateFormAnswer(field.field_key, e.target.value)}
+                              placeholder={fieldPlaceholder || ''}
+                              className="w-full bg-stone-50 border-none rounded-xl px-6 py-4 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500"
+                            />
+                          )}
+                          {helperText && field.field_type !== 'checkbox' ? (
+                            <div className="text-xs font-bold text-stone-500 px-1">{helperText}</div>
+                          ) : null}
+                        </div>
+                      );
+                    })}
 
                     <label className="flex items-start gap-3 bg-stone-50 border border-stone-100 rounded-2xl px-5 py-4">
                       <input

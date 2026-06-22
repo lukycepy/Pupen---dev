@@ -6,6 +6,7 @@ import { getDictionary } from '@/lib/get-dictionary';
 import { getPublicBaseUrl } from '@/lib/public-base-url';
 import sanitizeHtml from 'sanitize-html';
 import { decodeHtmlEntitiesDeep } from '@/lib/richtext-shared';
+import { normalizePriceRules, pickActivePriceRule } from '@/lib/rsvp/eventRegistration';
 import ScrollProgressBar from '../../components/ScrollProgressBar';
 import SocialShareInline from '@/app/components/SocialShareInline';
 import { ArrowLeft, Calendar, Clock, MapPin, Navigation, Ticket } from 'lucide-react';
@@ -32,6 +33,22 @@ async function getPublicEvent(id: string, nowIso: string) {
     res = await run(false);
   }
   return res.data;
+}
+
+async function getEventPricingSummary(eventId: string) {
+  try {
+    const res = await supabase
+      .from('event_price_rules')
+      .select('id, sort_order, label, label_en, starts_at, ends_at, amount_czk, is_active')
+      .eq('event_id', eventId)
+      .order('sort_order', { ascending: true })
+      .order('starts_at', { ascending: true });
+
+    if (res.error) return null;
+    return pickActivePriceRule(normalizePriceRules(res.data || []));
+  } catch {
+    return null;
+  }
 }
 
 async function isMapaEnabled() {
@@ -132,6 +149,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ la
   const timeline = descriptionText ? parseTimeline(descriptionText) : [];
 
   const location = event.location || '';
+  const activePriceRule = await getEventPricingSummary(event.id);
   const googleMaps = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(location)}`;
   const appleMaps = `https://maps.apple.com/?daddr=${encodeURIComponent(location)}`;
   const waze = `https://waze.com/ul?q=${encodeURIComponent(location)}&navigate=yes`;
@@ -255,6 +273,42 @@ export default async function EventDetailPage({ params }: { params: Promise<{ la
             </div>
 
             <div className="lg:col-span-5 space-y-6">
+              {(activePriceRule || event.min_age != null || event.max_age != null) && (
+                <section className="bg-white border border-stone-100 rounded-[2.5rem] p-8 shadow-sm">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-4">
+                    {lang === 'en' ? 'Registration info' : 'Informace k registraci'}
+                  </div>
+                  <div className="space-y-3">
+                    {activePriceRule ? (
+                      <div className="flex items-center justify-between gap-4 bg-stone-50 border border-stone-100 px-4 py-3 rounded-xl">
+                        <div>
+                          <div className="font-black text-stone-900">
+                            {lang === 'en' ? activePriceRule.label_en || activePriceRule.label : activePriceRule.label}
+                          </div>
+                          <div className="text-xs font-bold text-stone-500">
+                            {lang === 'en' ? 'Current pricing wave' : 'Aktuální cenová vlna'}
+                          </div>
+                        </div>
+                        <div className="text-right font-black text-stone-900">
+                          {Number(activePriceRule.amount_czk || 0).toFixed(2)} CZK
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-stone-50 border border-stone-100 px-4 py-3 rounded-xl text-sm font-bold text-stone-700">
+                        {lang === 'en' ? 'Registration is currently free.' : 'Registrace je aktuálně bez poplatku.'}
+                      </div>
+                    )}
+                    {(event.min_age != null || event.max_age != null) && (
+                      <div className="bg-amber-50 border border-amber-100 px-4 py-3 rounded-xl text-sm font-bold text-amber-800">
+                        {lang === 'en'
+                          ? `Age restriction: ${event.min_age != null ? `${event.min_age}+` : ''}${event.min_age != null && event.max_age != null ? ' / ' : ''}${event.max_age != null ? `up to ${event.max_age}` : ''}`
+                          : `Věkové omezení: ${event.min_age != null ? `${event.min_age}+ let` : ''}${event.min_age != null && event.max_age != null ? ' / ' : ''}${event.max_age != null ? `max. ${event.max_age} let` : ''}`}
+                      </div>
+                    )}
+                  </div>
+                </section>
+              )}
+
               <section className="bg-stone-50 border border-stone-100 rounded-[2.5rem] p-8">
                 <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-4">
                   {lang === 'en' ? 'Location' : 'Místo'}

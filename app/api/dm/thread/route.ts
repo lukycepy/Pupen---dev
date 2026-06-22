@@ -123,7 +123,7 @@ export async function GET(req: Request) {
         toEmail: row.admin_name || null,
         message: typeof details.message === 'string' ? details.message : '',
       };
-    }));
+    });
 
     return NextResponse.json({ ok: true, messages });
   } catch (error: unknown) {

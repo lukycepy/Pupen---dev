@@ -5,15 +5,24 @@ import { getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer
 import { buildWeeklyDigest } from '@/lib/email/digest';
 import { sendMailWithQueueFallback } from '@/lib/email/queue';
 
+interface PaymentSettingsRow {
+  notification_email?: string | null;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function GET(req: Request) {
   try {
     await requireAdmin(req);
     const supabase = getServerSupabase();
     const digest = await buildWeeklyDigest(supabase);
     return NextResponse.json({ ok: true, digest });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
@@ -23,8 +32,9 @@ export async function POST(req: Request) {
     const supabase = getServerSupabase();
 
     const { data: paymentSettings } = await supabase.from('payment_settings').select('notification_email').maybeSingle();
+    const settings = (paymentSettings || null) as PaymentSettingsRow | null;
 
-    const to = paymentSettings?.notification_email || user.email || process.env.SMTP_USER;
+    const to = settings?.notification_email || user.email || process.env.SMTP_USER;
     if (!to) return NextResponse.json({ error: 'Missing recipient' }, { status: 400 });
 
     const digest = await buildWeeklyDigest(supabase);
@@ -52,8 +62,9 @@ export async function POST(req: Request) {
     } catch {}
 
     return NextResponse.json({ ok: true, to, metrics: digest.metrics });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

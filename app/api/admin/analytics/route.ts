@@ -3,6 +3,37 @@ import { requireUser } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { withSchemaCacheRetry } from '@/lib/schema-cache-retry';
 
+interface AnalyticsProfileRow {
+  is_admin?: boolean | null;
+  can_manage_admins?: boolean | null;
+  can_view_analytics?: boolean | null;
+}
+
+interface AnalyticsContentRow {
+  id?: string | null;
+  title?: string | null;
+  views?: number | null;
+}
+
+interface AnalyticsAdminLogRow {
+  id?: string | null;
+  created_at?: string | null;
+  admin_email?: string | null;
+  admin_name?: string | null;
+  action?: string | null;
+  target_id?: string | null;
+}
+
+interface RetryResult<TData> {
+  data: TData | null;
+  error: Error | null;
+  count?: number | null;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function GET(req: Request) {
   try {
     const user = await requireUser(req);
@@ -15,8 +46,9 @@ export async function GET(req: Request) {
         .eq('id', user.id)
         .maybeSingle(),
     );
-    if ((profRes as any).error) throw (profRes as any).error;
-    const profile = (profRes as any).data as any;
+    const profileResult = profRes as RetryResult<AnalyticsProfileRow>;
+    if (profileResult.error) throw profileResult.error;
+    const profile = profileResult.data;
     if (!profile?.is_admin && !profile?.can_manage_admins) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     if (!profile?.can_manage_admins && !profile?.can_view_analytics) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
@@ -43,27 +75,35 @@ export async function GET(req: Request) {
       ),
     ]);
 
-    for (const r of [eventsRes, postsRes, rsvpCountRes, recentActivityRes, pendingAppsRes, recentLogsRes] as any[]) {
-      if (r?.error) throw r.error;
+    const typedEventsRes = eventsRes as RetryResult<AnalyticsContentRow[]>;
+    const typedPostsRes = postsRes as RetryResult<AnalyticsContentRow[]>;
+    const typedRsvpCountRes = rsvpCountRes as RetryResult<null>;
+    const typedRecentActivityRes = recentActivityRes as RetryResult<null>;
+    const typedPendingAppsRes = pendingAppsRes as RetryResult<null>;
+    const typedRecentLogsRes = recentLogsRes as RetryResult<AnalyticsAdminLogRow[]>;
+
+    for (const result of [typedEventsRes, typedPostsRes, typedRsvpCountRes, typedRecentActivityRes, typedPendingAppsRes, typedRecentLogsRes]) {
+      if (result.error) throw result.error;
     }
 
-    const topEvents = (eventsRes as any).data || [];
-    const topPosts = (postsRes as any).data || [];
-    const totalEventViews = topEvents.reduce((acc: number, curr: any) => acc + (curr?.views || 0), 0);
-    const totalPostViews = topPosts.reduce((acc: number, curr: any) => acc + (curr?.views || 0), 0);
+    const topEvents = typedEventsRes.data || [];
+    const topPosts = typedPostsRes.data || [];
+    const totalEventViews = topEvents.reduce((acc, curr) => acc + Number(curr.views || 0), 0);
+    const totalPostViews = topPosts.reduce((acc, curr) => acc + Number(curr.views || 0), 0);
 
     return NextResponse.json({
       ok: true,
       topEvents,
       topPosts,
-      totalRSVPs: Number((rsvpCountRes as any)?.count || 0),
+      totalRSVPs: Number(typedRsvpCountRes.count || 0),
       totalViews: totalEventViews + totalPostViews,
-      recentActivity: Number((recentActivityRes as any)?.count || 0),
-      pendingApplications: Number((pendingAppsRes as any)?.count || 0),
-      recentLogs: (recentLogsRes as any).data || [],
+      recentActivity: Number(typedRecentActivityRes.count || 0),
+      pendingApplications: Number(typedPendingAppsRes.count || 0),
+      recentLogs: typedRecentLogsRes.data || [],
     });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

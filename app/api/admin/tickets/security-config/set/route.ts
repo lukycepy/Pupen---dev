@@ -3,6 +3,10 @@ import { getServerSupabase } from '@/lib/supabase-server';
 import { requireAdmin } from '@/lib/server-auth';
 import { normalizeTicketSecurityConfig } from '@/lib/tickets/securityConfig';
 
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Error';
 }
@@ -10,7 +14,7 @@ function getErrorMessage(error: unknown) {
 export async function POST(req: Request) {
   try {
     const { user } = await requireAdmin(req);
-    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    const body = toRecord(await req.json().catch(() => ({})));
     const config = normalizeTicketSecurityConfig(body.config);
 
     const supabase = getServerSupabase();

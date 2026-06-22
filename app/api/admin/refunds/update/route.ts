@@ -5,15 +5,46 @@ import { getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer
 import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
 import { sendMailWithQueueFallback } from '@/lib/email/queue';
 
+interface RefundUpdateBody {
+  refundLogId?: unknown;
+  status?: unknown;
+  amount?: unknown;
+  currency?: unknown;
+  note?: unknown;
+}
+
+interface RefundRequesterDetails {
+  requester?: {
+    email?: string | null;
+  } | null;
+  eventTitle?: string | null;
+  rsvpId?: string | null;
+  eventId?: string | null;
+}
+
+interface RefundLogRow {
+  id?: string | null;
+  details?: RefundRequesterDetails | null;
+  created_at?: string | null;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function POST(req: Request) {
   try {
     const { user } = await requireAdmin(req);
-    const body = await req.json().catch(() => ({}));
-    const refundLogId = String(body?.refundLogId || '').trim();
-    const nextStatus = String(body?.status || '').trim();
-    const amount = body?.amount ?? null;
-    const currency = String(body?.currency || 'CZK').trim() || 'CZK';
-    const note = body?.note ? String(body.note).trim() : '';
+    const body = toRecord(await req.json().catch(() => ({}))) as RefundUpdateBody;
+    const refundLogId = String(body.refundLogId || '').trim();
+    const nextStatus = String(body.status || '').trim();
+    const amount = body.amount ?? null;
+    const currency = String(body.currency || 'CZK').trim() || 'CZK';
+    const note = body.note ? String(body.note).trim() : '';
 
     if (!refundLogId) return NextResponse.json({ error: 'Missing refundLogId' }, { status: 400 });
     if (!['open', 'approved', 'denied', 'paid'].includes(nextStatus)) return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
@@ -23,11 +54,12 @@ export async function POST(req: Request) {
     if (reqRow.error) throw reqRow.error;
     if (!reqRow.data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    const d = reqRow.data.details || {};
-    const requesterEmail = d?.requester?.email ? String(d.requester.email).toLowerCase() : '';
-    const eventTitle = d?.eventTitle ? String(d.eventTitle) : '';
-    const rsvpId = d?.rsvpId ? String(d.rsvpId) : '';
-    const eventId = d?.eventId ? String(d.eventId) : '';
+    const row = reqRow.data as RefundLogRow;
+    const details = row.details || {};
+    const requesterEmail = details.requester?.email ? String(details.requester.email).toLowerCase() : '';
+    const eventTitle = details.eventTitle ? String(details.eventTitle) : '';
+    const rsvpId = details.rsvpId ? String(details.rsvpId) : '';
+    const eventId = details.eventId ? String(details.eventId) : '';
 
     const ins = await supabase.from('admin_logs').insert([
       {
@@ -90,8 +122,9 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

@@ -11,6 +11,10 @@ import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
 import { sendMailWithQueueFallback } from '@/lib/email/queue';
 import { stripHtmlToText } from '@/lib/richtext-shared';
 import { DEFAULT_WAITLIST_CONFIG, getWaitlistConfigFromAdminLogs } from '@/lib/rsvp/waitlistConfig';
+import { createEventOrder, getPaymentBankAccount, mapRsvpStatusToOrderStatus } from '@/lib/rsvp/orders';
+import { buildEventCalendarAttachment } from '@/lib/tickets/calendarInvite';
+import { buildTicketPdfAttachment, buildTicketPdfUrl } from '@/lib/tickets/pdf';
+import { ensureGuardianConsentPdf, getMinorAttendees } from '@/lib/rsvp/guardianConsent';
 
 interface EventRow {
   id?: string | null;
@@ -82,6 +86,13 @@ interface RsvpInsertRow {
   pricing_label?: string | null;
   pricing_label_en?: string | null;
   pricing_rule_id?: string | null;
+  event_order_id?: string | null;
+  variable_symbol?: string | null;
+  payment_due_at?: string | null;
+  paid_at?: string | null;
+  has_minor_attendee?: boolean;
+  guardian_consent_required?: boolean;
+  guardian_consent_status?: string;
   qr_token?: string;
   qr_code?: string;
   expires_at: string | null;
@@ -375,6 +386,8 @@ export async function POST(req: Request) {
         return err('RSVP_MEMBER_EMAIL_MISMATCH', 400);
       }
     }
+
+    const minors = getMinorAttendees(attendeeNames, event.date);
 
     if (event.min_age != null || event.max_age != null) {
       const invalidBirthDateIndex = attendeeNames.findIndex((attendee) => !attendee.birth_date);
@@ -687,6 +700,23 @@ export async function POST(req: Request) {
     const expiresAt =
       status === 'reserved' ? new Date(now.getTime() + reservationExpiresHours * 60 * 60 * 1000).toISOString() : null;
 
+    const eventOrder = await createEventOrder(supabase, {
+      eventId,
+      buyerName: cleanName,
+      buyerEmail: cleanEmail,
+      paymentMethod: method,
+      status: mapRsvpStatusToOrderStatus(status),
+      totalAmount: totalPrice,
+      currency: 'CZK',
+      reservationExpiresAt: expiresAt,
+      meta: {
+        promoCode: promo || null,
+        pricingRuleId: activePriceRule?.id || null,
+        attendeesCount: attendeeNames.length,
+        lang: userLang,
+      },
+    });
+
     const baseRow: RsvpInsertRow = {
       event_id: eventId,
       name: cleanName,
@@ -701,6 +731,13 @@ export async function POST(req: Request) {
       pricing_label: activePriceRule?.label ? String(activePriceRule.label) : null,
       pricing_label_en: activePriceRule?.label_en ? String(activePriceRule.label_en) : null,
       pricing_rule_id: activePriceRule?.id ? String(activePriceRule.id) : null,
+      event_order_id: eventOrder.id,
+      variable_symbol: eventOrder.variableSymbol,
+      payment_due_at: expiresAt,
+      paid_at: status === 'confirmed' ? now.toISOString() : null,
+      has_minor_attendee: minors.length > 0,
+      guardian_consent_required: minors.length > 0,
+      guardian_consent_status: minors.length > 0 ? 'required' : 'not_required',
       qr_token: qrToken,
       qr_code: qrToken,
       expires_at: expiresAt,
@@ -710,7 +747,7 @@ export async function POST(req: Request) {
     let ins = await tryInsert(baseRow);
     if (
       ins?.error &&
-      /(qr_code|qr_token|form_answers|price_total|pricing_label|pricing_rule_id|currency)/i.test(ins.error.message) &&
+      /(qr_code|qr_token|form_answers|price_total|pricing_label|pricing_rule_id|currency|event_order_id|variable_symbol|payment_due_at|paid_at|has_minor_attendee|guardian_consent_required|guardian_consent_status)/i.test(ins.error.message) &&
       /(schema cache|does not exist|column)/i.test(ins.error.message)
     ) {
       const row2 = { ...baseRow };
@@ -722,9 +759,23 @@ export async function POST(req: Request) {
       if (/pricing_label/i.test(ins.error.message)) delete row2.pricing_label;
       if (/pricing_label_en/i.test(ins.error.message)) delete row2.pricing_label_en;
       if (/pricing_rule_id/i.test(ins.error.message)) delete row2.pricing_rule_id;
+      if (/event_order_id/i.test(ins.error.message)) delete row2.event_order_id;
+      if (/variable_symbol/i.test(ins.error.message)) delete row2.variable_symbol;
+      if (/payment_due_at/i.test(ins.error.message)) delete row2.payment_due_at;
+      if (/paid_at/i.test(ins.error.message)) delete row2.paid_at;
+      if (/has_minor_attendee/i.test(ins.error.message)) delete row2.has_minor_attendee;
+      if (/guardian_consent_required/i.test(ins.error.message)) delete row2.guardian_consent_required;
+      if (/guardian_consent_status/i.test(ins.error.message)) delete row2.guardian_consent_status;
       ins = await tryInsert(row2);
     }
-    if (ins.error) throw ins.error;
+    if (ins.error) {
+      if (eventOrder.id) {
+        try {
+          await supabase.from('event_orders').delete().eq('id', eventOrder.id);
+        } catch {}
+      }
+      throw ins.error;
+    }
     const rsvpId = String(ins.data?.id || '');
 
     if (promo) {
@@ -771,14 +822,43 @@ export async function POST(req: Request) {
     }
 
     try {
-      let bankAccount = process.env.BANK_ACCOUNT || 'CZ1234567890';
-      try {
-        const { data } = await supabase.from('payment_settings').select('bank_account').single();
-        if (data?.bank_account) bankAccount = String(data.bank_account);
-      } catch {}
+      const bankAccount = await getPaymentBankAccount(supabase);
 
       const transporter = await getMailerWithSettingsOrQueueTransporter();
       const from = await getSenderFromSettings();
+      const calendarAttachment = await buildEventCalendarAttachment(String(eventId), userLang);
+      const ticketPdfAttachment = await buildTicketPdfAttachment({
+        event,
+        rsvp: {
+          id: rsvpId,
+          name: cleanName,
+          email: cleanEmail,
+          attendees: attendeeNames,
+          qr_token: qrToken,
+          qr_code: qrToken,
+          status,
+          expires_at: expiresAt,
+          payment_method: method,
+          variable_symbol: eventOrder.variableSymbol,
+          price_total: totalPrice,
+          pricing_label: activePriceRule?.label || null,
+          pricing_label_en: activePriceRule?.label_en || null,
+        },
+        lang: userLang,
+      });
+      const guardianConsent = await ensureGuardianConsentPdf({
+        event,
+        rsvp: {
+          id: rsvpId,
+          name: cleanName,
+          email: cleanEmail,
+          attendees: attendeeNames,
+          qr_token: qrToken,
+          qr_code: qrToken,
+        },
+        minors,
+        lang: userLang,
+      });
       const { subject, html } = await renderEmailTemplateWithDbOverride('ticket', {
         email: cleanEmail,
         name: cleanName,
@@ -788,16 +868,30 @@ export async function POST(req: Request) {
         qrToken,
         status,
         bankAccount,
+        vs: eventOrder.variableSymbol,
+        dueDate: expiresAt,
         priceTotal: totalPrice,
         pricingLabel: activePriceRule?.label || '',
         pricingLabelEn: activePriceRule?.label_en || '',
+        ticketPdfUrl: buildTicketPdfUrl(qrToken, userLang),
+        guardianConsentUrl: guardianConsent.downloadUrl,
+        guardianConsentUploadUrl: guardianConsent.uploadUrl,
         lang: userLang,
       });
       await sendMailWithQueueFallback({
         transporter,
         supabase,
         meta: { kind: 'ticket', eventId: String(eventId), rsvpId, status, email: cleanEmail },
-        message: { from, to: cleanEmail, subject, html, text: stripHtmlToText(html) },
+        message: {
+          from,
+          to: cleanEmail,
+          subject,
+          html,
+          text: stripHtmlToText(html),
+          attachments: [calendarAttachment, ticketPdfAttachment, guardianConsent.attachment].filter(Boolean) as NonNullable<
+            typeof calendarAttachment | typeof ticketPdfAttachment | typeof guardianConsent.attachment
+          >[],
+        },
       });
     } catch {}
 
@@ -815,12 +909,14 @@ export async function POST(req: Request) {
       ok: true,
       status,
       qrToken,
+      variableSymbol: eventOrder.variableSymbol,
       expiresAt,
       eventId: String(eventId),
       priceTotal: totalPrice,
       pricingLabel: activePriceRule?.label || null,
       pricingLabelEn: activePriceRule?.label_en || null,
       attendeesCount: attendeeNames.length,
+      guardianConsentRequired: minors.length > 0,
     });
   } catch (error: unknown) {
     if (error instanceof Error && error.message.startsWith('RSVP_FIELD_REQUIRED:')) {

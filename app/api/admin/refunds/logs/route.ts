@@ -2,6 +2,19 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { requireAdmin } from '@/lib/server-auth';
 
+interface RefundLogListRow {
+  id?: string | null;
+  created_at?: string | null;
+  admin_email?: string | null;
+  action?: string | null;
+  target_id?: string | null;
+  details?: Record<string, unknown> | null;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function GET(req: Request) {
   try {
     await requireAdmin(req);
@@ -17,9 +30,10 @@ export async function GET(req: Request) {
       .limit(limit);
     if (res.error) throw res.error;
 
-    return NextResponse.json({ ok: true, rows: res.data || [] });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+    return NextResponse.json({ ok: true, rows: (res.data || []) as RefundLogListRow[] });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

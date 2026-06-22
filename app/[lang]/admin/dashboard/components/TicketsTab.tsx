@@ -9,6 +9,7 @@ import Skeleton from '@/app/[lang]/components/Skeleton';
 import InlinePulse from '@/app/components/InlinePulse';
 import ConfirmModal from '@/app/components/ConfirmModal';
 import Dialog from '@/app/components/ui/Dialog';
+import { normalizeTicketToken } from '@/lib/tickets/token';
 
 export default function TicketsTab() {
   const queryClient = useQueryClient();
@@ -151,6 +152,8 @@ export default function TicketsTab() {
         name: String(a.name || ''),
         email: String(a.email || ''),
         status: String(a.status || ''),
+        variable_symbol: String(a.variable_symbol || ''),
+        price_total: a.price_total != null ? String(a.price_total) : '',
         attendees_count: String(count),
         checked_in: a.checked_in ? '1' : '0',
         no_show: noShow ? '1' : '0',
@@ -183,16 +186,9 @@ export default function TicketsTab() {
     streamRef.current = null;
   }, []);
 
-  const normalizeToken = useCallback((raw: string) => {
-    const t = (raw || '').trim();
-    if (!t) return '';
-    if (t.startsWith('PUPEN-TICKET:')) return t.replace('PUPEN-TICKET:', '').trim();
-    return t;
-  }, []);
-
   const processToken = useCallback(async (rawToken: string) => {
     if (!activeEvent) return;
-    const token = normalizeToken(rawToken);
+    const token = normalizeTicketToken(rawToken);
     if (!token) return;
     setScanBusy(true);
     setScanMessage(null);
@@ -234,7 +230,7 @@ export default function TicketsTab() {
     } finally {
       setScanBusy(false);
     }
-  }, [activeEvent, normalizeToken, queryClient, showToast]);
+  }, [activeEvent, queryClient, showToast]);
 
   useEffect(() => {
     if (!scannerOpen) return;
@@ -303,13 +299,10 @@ export default function TicketsTab() {
   const sendFeedbackMutation = useMutation({
     mutationFn: async (eventId: string) => {
       // Simulace odeslání e-mailů všem přihlášeným
-      const { data: event } = await supabase.from('events').select('title').eq('id', eventId).single();
       const { data: rsvps } = await supabase.from('rsvp').select('email').eq('event_id', eventId).eq('status', 'confirmed');
       
       if (!rsvps || rsvps.length === 0) throw new Error('Žádní účastníci pro odeslání feedbacku');
       
-      // V reálné app by se zde volalo API (např. Resend / SendGrid)
-      console.log(`Sending feedback emails for ${event?.title} to ${rsvps.length} users`);
       await new Promise(resolve => setTimeout(resolve, 1500)); // Simulace prodlevy
     },
     onSuccess: () => {
@@ -471,6 +464,46 @@ export default function TicketsTab() {
                           <div>
                             <p className="font-bold text-stone-900 text-sm">{attendee.name}</p>
                             <p className="text-[10px] text-stone-400 font-medium">{attendee.email}</p>
+                            {(attendee.variable_symbol || attendee.price_total != null) && (
+                              <p className="text-[10px] text-stone-500 font-bold mt-1">
+                                {attendee.variable_symbol ? `VS ${attendee.variable_symbol}` : ''}
+                                {attendee.variable_symbol && attendee.price_total != null ? ' • ' : ''}
+                                {attendee.price_total != null ? `${Number(attendee.price_total || 0).toFixed(2)} CZK` : ''}
+                              </p>
+                            )}
+                            {attendee.guardian_consent_required ? (
+                              <div className="mt-2 flex flex-wrap items-center gap-2">
+                                <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-widest ${
+                                  attendee.guardian_consent_status === 'uploaded'
+                                    ? 'bg-green-100 text-green-800'
+                                    : 'bg-amber-100 text-amber-800'
+                                }`}>
+                                  {attendee.guardian_consent_status === 'uploaded' ? 'Souhlas nahrán' : 'Chybí souhlas'}
+                                </span>
+                                {attendee.qr_code ? (
+                                  <>
+                                    <a
+                                      href={`/api/rsvp/guardian-consent?token=${encodeURIComponent(String(attendee.qr_code))}`}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-[10px] font-black uppercase tracking-widest text-green-700"
+                                    >
+                                      PDF
+                                    </a>
+                                    {attendee.guardian_consent_status === 'uploaded' ? (
+                                      <a
+                                        href={`/api/rsvp/guardian-consent?token=${encodeURIComponent(String(attendee.qr_code))}&signed=1`}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="text-[10px] font-black uppercase tracking-widest text-green-700"
+                                      >
+                                        Podepsané
+                                      </a>
+                                    ) : null}
+                                  </>
+                                ) : null}
+                              </div>
+                            ) : null}
                             {noShowByRsvpId.get(String(attendee.id)) && (
                               <p className="text-[10px] font-black uppercase tracking-widest text-amber-700 mt-1">no-show</p>
                             )}

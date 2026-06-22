@@ -2,6 +2,56 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 
+interface TeamImportBody {
+  rows?: unknown;
+}
+
+interface TeamImportRow {
+  name?: unknown;
+  role?: unknown;
+  bio?: unknown;
+  email?: unknown;
+  phone?: unknown;
+  social_linkedin?: unknown;
+  sort_order?: unknown;
+}
+
+interface TeamInsertRow {
+  name: string;
+  role: string;
+  bio: string;
+  email: string | null;
+  phone: string | null;
+  social_linkedin: string | null;
+  sort_order: number;
+  is_active: boolean;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function normalizeImportRow(row: unknown, index: number): TeamInsertRow | null {
+  const record = toRecord(row) as TeamImportRow;
+  const name = String(record.name || '').trim();
+  const role = String(record.role || '').trim();
+  if (!name || !role) return null;
+  return {
+    name,
+    role,
+    bio: String(record.bio || '').trim(),
+    email: record.email ? String(record.email).trim() : null,
+    phone: record.phone ? String(record.phone).trim() : null,
+    social_linkedin: record.social_linkedin ? String(record.social_linkedin).trim() : null,
+    sort_order: parseInt(String(record.sort_order || ''), 10) || (index + 1) * 10,
+    is_active: true,
+  };
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function POST(req: Request) {
   try {
     const { profile, user } = await requireAdmin(req);
@@ -9,23 +59,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const body = await req.json();
-    const rows = Array.isArray(body?.rows) ? body.rows : [];
+    const body = toRecord(await req.json().catch(() => ({}))) as TeamImportBody;
+    const rows = Array.isArray(body.rows) ? body.rows : [];
     if (!rows.length) return NextResponse.json({ error: 'Žádná data k importu' }, { status: 400 });
 
     const supabase = getServerSupabase();
-    
-    // Očekávané sloupce v CSV: name, role, bio, email, phone, social_linkedin, sort_order
-    const inserts = rows.map((row: any, i: number) => ({
-      name: String(row.name || '').trim(),
-      role: String(row.role || '').trim(),
-      bio: String(row.bio || '').trim(),
-      email: row.email ? String(row.email).trim() : null,
-      phone: row.phone ? String(row.phone).trim() : null,
-      social_linkedin: row.social_linkedin ? String(row.social_linkedin).trim() : null,
-      sort_order: parseInt(row.sort_order) || (i + 1) * 10,
-      is_active: true
-    })).filter((x: any) => x.name && x.role);
+    const inserts = rows
+      .map((row, index) => normalizeImportRow(row, index))
+      .filter((row): row is TeamInsertRow => row !== null);
 
     if (!inserts.length) return NextResponse.json({ error: 'Žádné validní záznamy v CSV (chybí name nebo role)' }, { status: 400 });
 
@@ -40,9 +81,9 @@ export async function POST(req: Request) {
     }]);
 
     return NextResponse.json({ ok: true, imported: inserts.length });
-  } catch (error: any) {
-    const msg = String(error?.message || 'Error');
-    const status = msg === 'Unauthorized' ? 401 : msg === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: msg }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
