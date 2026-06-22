@@ -22,8 +22,8 @@ export const membershipApplicationAdminListQuerySchema = z.object({
 
 export const membershipApplicationPdfSnapshotSchema = z
   .object({
-    cs: z.any().optional(),
-    en: z.any().optional(),
+    cs: z.unknown().optional(),
+    en: z.unknown().optional(),
   })
   .optional();
 
@@ -38,7 +38,7 @@ export const membershipApplicationMetaPatchSchema = z
     study_year: z.string().max(80).nullable().optional(),
     signed_on: z.string().max(80).nullable().optional(),
     gdpr_consent: z.boolean().optional(),
-    address_meta: z.any().optional(),
+    address_meta: z.unknown().optional(),
     pdf_snapshot: membershipApplicationPdfSnapshotSchema,
   })
   .passthrough()
@@ -67,4 +67,3 @@ export const membershipApplicationAdminDecisionSchema = z.object({
 export const membershipApplicationAdminChairAuthUploadSchema = z.object({
   kind: membershipApplicationChairAuthKindSchema,
 });
-

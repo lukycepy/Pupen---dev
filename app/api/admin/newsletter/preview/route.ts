@@ -10,16 +10,37 @@ import { stripHtmlToText } from '@/lib/richtext-shared';
 
 export const runtime = 'nodejs';
 
+interface PreviewAttachmentInput {
+  name?: unknown;
+  url?: unknown;
+}
+
+interface PreviewAttachment {
+  filename: string;
+  path: string;
+}
+
+function normalizeAttachment(value: unknown): PreviewAttachment | null {
+  const attachment = value as PreviewAttachmentInput;
+  const filename = typeof attachment?.name === 'string' ? attachment.name : '';
+  const path = typeof attachment?.url === 'string' ? attachment.url : '';
+  return filename && path ? { filename, path } : null;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function POST(req: Request) {
   try {
     const { user, profile } = await requireAdmin(req);
     if (!profile?.is_admin && !profile?.can_manage_admins) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const body = await req.json().catch(() => ({}));
-    const subject = String(body?.subject || '').trim().slice(0, 240);
-    const html = sanitizeEmailHtml(String(body?.html || '').trim());
-    const testEmail = String(body?.email || user.email || '').trim();
-    const attachments = Array.isArray(body?.attachments) ? body.attachments : [];
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    const subject = String(body.subject || '').trim().slice(0, 240);
+    const html = sanitizeEmailHtml(String(body.html || '').trim());
+    const testEmail = String(body.email || user.email || '').trim();
+    const attachments = Array.isArray(body.attachments) ? body.attachments : [];
 
     if (!subject || !html || !testEmail) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
 
@@ -46,9 +67,7 @@ export async function POST(req: Request) {
         to: testEmail, 
         subject: `[PREVIEW] ${wrappedSubject}`, 
         html: trackedHtml,
-        attachments: attachments
-          .map((a: any) => ({ filename: a?.name, path: a?.url }))
-          .filter((a: any) => typeof a?.filename === 'string' && a.filename && typeof a?.path === 'string' && a.path),
+        attachments: attachments.map((attachment) => normalizeAttachment(attachment)).filter((attachment): attachment is PreviewAttachment => attachment != null),
         headers: {
           'List-Unsubscribe': `<${unsubApiUrl}>, <mailto:info@pupen.org?subject=unsubscribe>`,
           'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
@@ -61,7 +80,9 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ ok: true, queued: !!r.queued });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

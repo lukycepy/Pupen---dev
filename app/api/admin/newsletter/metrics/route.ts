@@ -2,15 +2,24 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 
+interface CountResult {
+  count: number | null;
+  error?: unknown;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function GET(req: Request) {
   try {
     await requireAdmin(req);
     const supabase = getServerSupabase();
 
-    const safeCount = async (q: any) => {
+    const safeCount = async (query: PromiseLike<CountResult>) => {
       try {
-        const res = await q;
-        if (res?.error) return 0;
+        const res = await query;
+        if (res.error) return 0;
         return typeof res.count === 'number' ? res.count : 0;
       } catch {
         return 0;
@@ -32,9 +41,9 @@ export async function GET(req: Request) {
     ]);
 
     return NextResponse.json({ ok: true, metrics: { active, pending, unsubscribed, bounced } });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
-

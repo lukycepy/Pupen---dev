@@ -12,7 +12,19 @@ function isUuid(s: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s);
 }
 
-async function resolveAdminRecipients(supabase: any) {
+interface ProfileEmailRow {
+  email?: string | null;
+}
+
+function asTrimmedString(value: unknown) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
+async function resolveAdminRecipients(supabase: ReturnType<typeof getServerSupabase>) {
   const configuredNew = await getApplicationNewNotificationEmailsFromSettings().catch(() => []);
   const cleanedNew = Array.isArray(configuredNew) ? configuredNew.map((x) => String(x).trim().toLowerCase()).filter(Boolean) : [];
   if (cleanedNew.length) return cleanedNew;
@@ -23,7 +35,7 @@ async function resolveAdminRecipients(supabase: any) {
 
   const { data } = await supabase.from('profiles').select('email').or('is_admin.eq.true,can_manage_admins.eq.true').limit(200);
   return (Array.isArray(data) ? data : [])
-    .map((r: any) => String(r?.email || '').trim().toLowerCase())
+    .map((r: ProfileEmailRow) => String(r?.email || '').trim().toLowerCase())
     .filter(Boolean);
 }
 
@@ -38,8 +50,8 @@ export async function POST(req: Request) {
     });
     if (!g.ok) return g.response;
     const body = g.body;
-    const applicationId = String(body?.applicationId || '').trim();
-    const lang = body?.lang === 'en' ? 'en' : 'cs';
+    const applicationId = asTrimmedString(body.applicationId);
+    const lang = body.lang === 'en' ? 'en' : 'cs';
 
     if (!isUuid(applicationId)) return NextResponse.json({ error: 'Invalid applicationId.' }, { status: 400 });
 
@@ -111,7 +123,7 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    return NextResponse.json({ error: String(e?.message || 'Error') }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

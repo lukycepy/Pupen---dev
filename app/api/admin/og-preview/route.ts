@@ -24,6 +24,13 @@ function pickTitle(html: string) {
   return m?.[1]?.trim() || null;
 }
 
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    return error.name === 'AbortError' ? 'Timeout' : error.message || 'Error';
+  }
+  return 'Error';
+}
+
 export async function GET(req: Request) {
   try {
     await requireAdmin(req);
@@ -73,7 +80,9 @@ export async function GET(req: Request) {
       image: ogImage,
       url: ogUrl || res.url,
     });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.name === 'AbortError' ? 'Timeout' : e?.message || 'Error' }, { status: 500 });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

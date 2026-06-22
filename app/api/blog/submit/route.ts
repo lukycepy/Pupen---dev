@@ -3,6 +3,10 @@ import { getServerSupabase } from '@/lib/supabase-server';
 import { getBearerToken } from '@/lib/server-auth';
 import { guardPublicJsonPost } from '@/lib/public-post-guard';
 
+function asTrimmedString(value: unknown) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
 export async function POST(req: Request) {
   try {
     const g = await guardPublicJsonPost(req, {
@@ -15,10 +19,10 @@ export async function POST(req: Request) {
     if (!g.ok) return g.response;
     const body = g.body;
 
-    const title = String(body?.title || '').trim();
-    const content = String(body?.content || '').trim();
-    const author_name = String(body?.author_name || '').trim();
-    const author_email = String(body?.author_email || '').trim();
+    const title = asTrimmedString(body.title);
+    const content = asTrimmedString(body.content);
+    const author_name = asTrimmedString(body.author_name);
+    const author_email = asTrimmedString(body.author_email);
 
     if (!title || !content || !author_email) {
       return NextResponse.json({ error: 'Chybí povinná pole' }, { status: 400 });
@@ -48,8 +52,7 @@ export async function POST(req: Request) {
     if (error) throw error;
 
     return NextResponse.json({ ok: true, status: 'created' });
-  } catch (error: any) {
-    console.error('Blog submit error:', error);
+  } catch {
     return NextResponse.json({ error: 'Interní chyba serveru' }, { status: 500 });
   }
 }

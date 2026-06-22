@@ -4,9 +4,35 @@ import { getServerSupabase } from '@/lib/supabase-server';
 import { PROFILE_PERMISSION_KEYS_SET } from '@/lib/rbac/registry';
 import { withSchemaCacheRetry } from '@/lib/schema-cache-retry';
 
-function isSchemaCacheMissingTable(e: any) {
-  const msg = String(e?.message || '');
+interface AppRolePermissionsRow {
+  permissions?: Record<string, unknown> | null;
+}
+
+interface UserRoleJoinRow {
+  app_roles?: AppRolePermissionsRow | AppRolePermissionsRow[] | null;
+}
+
+interface ProfileIdRow {
+  id?: string | null;
+}
+
+interface AppRoleRow {
+  name?: string | null;
+}
+
+type ComputedPermissions = Record<string, boolean>;
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
+function isSchemaCacheMissingTable(error: unknown) {
+  const msg = error instanceof Error ? error.message : '';
   return msg.includes("Could not find the table") && msg.includes("in the schema cache");
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
 }
 
 const PROFILE_BOOL_FIELDS = PROFILE_PERMISSION_KEYS_SET;
@@ -17,17 +43,18 @@ async function recomputeProfilePermissions(supabase: ReturnType<typeof getServer
   );
   if (rolesRes.error) throw rolesRes.error;
 
-  const computed: any = {};
+  const computed: ComputedPermissions = {};
   for (const k of PROFILE_BOOL_FIELDS) computed[k] = false;
   let roleTrustBox = false;
 
-  for (const row of rolesRes.data || []) {
-    const perms = (row as any)?.app_roles?.permissions || {};
+  for (const row of (rolesRes.data || []) as UserRoleJoinRow[]) {
+    const roleData = Array.isArray(row.app_roles) ? row.app_roles[0] : row.app_roles;
+    const perms = toRecord(roleData?.permissions);
     for (const [k, v] of Object.entries(perms)) {
       if (!PROFILE_BOOL_FIELDS.has(k)) continue;
       if (v) computed[k] = true;
     }
-    if ((perms as any)?.trustbox_admin) roleTrustBox = true;
+    if (perms.trustbox_admin) roleTrustBox = true;
   }
 
   await withSchemaCacheRetry(supabase, () => supabase.from('profiles').update(computed).eq('id', userId).throwOnError());
@@ -49,15 +76,15 @@ export async function POST(req: Request) {
   try {
     const { user, profile } = await requireAdmin(req);
     if (!profile?.can_manage_admins) throw new Error('Forbidden');
-    const body = await req.json().catch(() => ({}));
-    const action = String(body?.action || '').trim().toLowerCase();
-    let userId = String(body?.userId || '').trim();
-    const email = body?.email ? String(body.email).trim().toLowerCase() : '';
-    const roleId = body?.roleId ? String(body.roleId) : '';
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    const action = String(body.action || '').trim().toLowerCase();
+    let userId = String(body.userId || '').trim();
+    const email = body.email ? String(body.email).trim().toLowerCase() : '';
+    const roleId = body.roleId ? String(body.roleId) : '';
 
     const supabase = getServerSupabase();
     if (!userId && email) {
-      const p = await withSchemaCacheRetry(supabase, () => supabase.from('profiles').select('id').eq('email', email).maybeSingle());
+      const p = await withSchemaCacheRetry(supabase, () => supabase.from('profiles').select('id').eq('email', email).maybeSingle<ProfileIdRow>());
       if (p.error) throw p.error;
       userId = p.data?.id ? String(p.data.id) : '';
     }
@@ -101,9 +128,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, computed, enabledKeys: Object.keys(computed).filter((k) => computed[k]) });
     }
 
-    const roleRes = await withSchemaCacheRetry(supabase, () => supabase.from('app_roles').select('id,name,permissions').eq('id', roleId).single());
+    const roleRes = await withSchemaCacheRetry(supabase, () => supabase.from('app_roles').select('id,name,permissions').eq('id', roleId).single<AppRoleRow>());
     if (roleRes.error) throw roleRes.error;
-    const role: any = roleRes.data;
+    const role = roleRes.data;
 
     await withSchemaCacheRetry(supabase, () =>
       supabase
@@ -131,8 +158,8 @@ export async function POST(req: Request) {
       .throwOnError();
 
     return NextResponse.json({ ok: true, computed, enabledKeys: Object.keys(computed).filter((k) => computed[k]) });
-  } catch (e: any) {
-    if (isSchemaCacheMissingTable(e)) {
+  } catch (error: unknown) {
+    if (isSchemaCacheMissingTable(error)) {
       return NextResponse.json(
         {
           error:
@@ -141,7 +168,8 @@ export async function POST(req: Request) {
         { status: 501 },
       );
     }
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

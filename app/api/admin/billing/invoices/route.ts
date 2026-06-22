@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { billingInvoiceCreateSchema, billingInvoiceStatusSchema, billingInvoiceTypeSchema } from '@/lib/validations/billing';
-import { toBillingInvoiceDto, toDbInvoiceJson, toDbItemsJson } from '@/lib/billing/invoices';
+import { toBillingInvoiceDto, toDbInvoiceJson, toDbItemsJson, type BillingInvoiceRowLike } from '@/lib/billing/invoices';
 import { writeAuditLog } from '@/lib/audit/audit-log';
 
 function asDayStartIso(d: string) {
@@ -20,6 +20,14 @@ function asDayEndIso(d: string) {
   const dt = new Date(s);
   if (Number.isNaN(dt.getTime())) return null;
   return new Date(dt.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString();
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
 }
 
 export async function GET(req: Request) {
@@ -57,16 +65,17 @@ export async function GET(req: Request) {
       rows: (res.data || []).map(toBillingInvoiceDto),
       count: typeof res.count === 'number' ? res.count : null,
     });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
 export async function POST(req: Request) {
   try {
     const { user } = await requireAdmin(req);
-    const body = await req.json().catch(() => ({}));
+    const body = toRecord(await req.json().catch(() => ({})));
     const parsed = billingInvoiceCreateSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
 
@@ -76,6 +85,7 @@ export async function POST(req: Request) {
       p_items: toDbItemsJson(parsed.data.items),
     });
     if (invRes.error) throw invRes.error;
+    const invoice = invRes.data as BillingInvoiceRowLike | null;
 
     await supabase
       .from('admin_logs')
@@ -84,7 +94,7 @@ export async function POST(req: Request) {
           admin_email: user.email || 'admin',
           admin_name: user.user_metadata?.full_name || user.email || 'admin',
           action: 'BILLING_INVOICE_CREATE',
-          target_id: invRes.data?.id || null,
+          target_id: invoice?.id || null,
           details: { type: parsed.data.invoice?.type || 'invoice' },
         },
       ])
@@ -95,15 +105,16 @@ export async function POST(req: Request) {
       actorUserId: user.id,
       actorEmail: user.email || null,
       action: 'billing_invoice.create',
-      entity: { type: 'billing_invoice', id: invRes.data?.id || null },
+      entity: { type: 'billing_invoice', id: invoice?.id ? String(invoice.id) : null },
       before: null,
-      after: invRes.data,
+      after: invoice,
       details: { type: parsed.data.invoice?.type || 'invoice' },
     });
 
-    return NextResponse.json({ ok: true, invoice: toBillingInvoiceDto(invRes.data) });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+    return NextResponse.json({ ok: true, invoice: toBillingInvoiceDto(invoice) });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

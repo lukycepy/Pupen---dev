@@ -6,6 +6,14 @@ import dns from 'node:dns/promises';
 
 export const runtime = 'nodejs';
 
+interface EmailSettingsRow {
+  sender_email?: string | null;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 async function resolveTxtSafe(name: string) {
   try {
     const rows = await dns.resolveTxt(name);
@@ -21,8 +29,8 @@ export async function GET(req: Request) {
     if (!profile?.is_admin && !profile?.can_manage_admins) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const supabase = getServerSupabase();
-    const { data } = await supabase.from('email_settings').select('sender_email').limit(1).maybeSingle();
-    const senderEmail = String((data as any)?.sender_email || '').trim();
+    const { data } = await supabase.from('email_settings').select('sender_email').limit(1).maybeSingle<EmailSettingsRow>();
+    const senderEmail = String(data?.sender_email || '').trim();
     const domain = senderEmail.includes('@') ? String(senderEmail.split('@').pop() || '').trim().toLowerCase() : '';
     if (!domain) return NextResponse.json({ error: 'Chybí sender_email pro určení domény.' }, { status: 400 });
 
@@ -44,9 +52,9 @@ export async function GET(req: Request) {
       dmarc: { ok: dmarcOk, records: dmarcTxt },
       dkim: { ok: dkimOk, selector, name: dkimName, records: dkimTxt },
     });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
-

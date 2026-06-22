@@ -7,6 +7,23 @@ import { membershipApplicationAdminChairAuthUploadSchema } from '@/lib/validatio
 
 export const runtime = 'nodejs';
 
+interface ProfilePermissionsRow {
+  can_edit_apps?: boolean | null;
+  can_manage_admins?: boolean | null;
+}
+
+interface MembershipApplicationStatusRow {
+  status?: string | null;
+}
+
+interface InsertedFileIdRow {
+  id?: string | number | null;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 function decodePngDataUrl(dataUrl: string): Buffer {
   const s = String(dataUrl || '').trim();
   const m = s.match(/^data:image\/png;base64,([a-z0-9+/=\s]+)$/i);
@@ -30,9 +47,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
     const { user, profile } = await requireAdmin(req);
     if (!profile?.can_manage_admins) {
       const supabase = getServerSupabase();
-      const perm = await supabase.from('profiles').select('can_edit_apps, can_manage_admins').eq('id', user.id).maybeSingle();
+      const perm = await supabase
+        .from('profiles')
+        .select('can_edit_apps, can_manage_admins')
+        .eq('id', user.id)
+        .maybeSingle<ProfilePermissionsRow>();
       if (perm.error) throw perm.error;
-      const canEdit = !!(perm.data as any)?.can_edit_apps || !!(perm.data as any)?.can_manage_admins;
+      const canEdit = !!perm.data?.can_edit_apps || !!perm.data?.can_manage_admins;
       if (!canEdit) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -44,10 +65,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
     const id = String(applicationId || '').trim();
     if (!id) return NextResponse.json({ error: 'Missing applicationId' }, { status: 400 });
 
-    const appRes = await rls.from('membership_applications_v2').select('status').eq('id', id).maybeSingle();
+    const appRes = await rls.from('membership_applications_v2').select('status').eq('id', id).maybeSingle<MembershipApplicationStatusRow>();
     if (appRes.error) throw appRes.error;
     if (!appRes.data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    if (String((appRes.data as any).status || '') !== 'pending') return NextResponse.json({ error: 'Immutable' }, { status: 409 });
+    if (String(appRes.data.status || '') !== 'pending') return NextResponse.json({ error: 'Immutable' }, { status: 409 });
 
     const form = await req.formData();
     const kindRaw = String(form.get('kind') || '').trim();
@@ -98,13 +119,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
         },
       ])
       .select('id')
-      .single();
+      .single<InsertedFileIdRow>();
     if (ins.error) throw ins.error;
 
     return NextResponse.json({ ok: true, fileId: ins.data?.id || null, kind });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
-

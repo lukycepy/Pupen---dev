@@ -8,6 +8,14 @@ interface StoredFileRow {
   storage_path?: string | null;
 }
 
+interface SignatureSignedUrlBody {
+  expiresIn?: unknown;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Error';
 }
@@ -23,8 +31,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
     const id = String(applicationId || '').trim();
     if (!id) return NextResponse.json({ error: 'Missing applicationId' }, { status: 400 });
 
-    const body = await req.json().catch(() => ({}));
-    const expiresIn = Math.max(60, Math.min(60 * 60, Number(body?.expiresIn || 600) || 600));
+    const body = toRecord(await req.json().catch(() => ({})));
+    const payload = body as SignatureSignedUrlBody;
+    const expiresIn = Math.max(60, Math.min(60 * 60, Number(payload.expiresIn || 600) || 600));
 
     const fileRes = await rls
       .from('membership_application_files')

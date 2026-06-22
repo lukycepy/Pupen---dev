@@ -8,6 +8,26 @@ import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
 import { sendMailWithQueueFallback } from '@/lib/email/queue';
 import { stripHtmlToText } from '@/lib/richtext-shared';
 
+interface TrustBoxVerificationRow {
+  id?: string | null;
+  verified_at?: string | null;
+  expires_at?: string | null;
+  code_hash?: string | null;
+  draft?: Record<string, unknown> | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+  email_type?: string | null;
+}
+
+interface VerificationAttachmentRow {
+  bucket?: string | null;
+  path?: string | null;
+  original_name?: string | null;
+  content_type?: string | null;
+  size_bytes?: number | null;
+}
+
 function sha256Hex(input: string) {
   return createHash('sha256').update(input).digest('hex');
 }
@@ -33,6 +53,21 @@ function randomAccessCode() {
   return out;
 }
 
+function asTrimmedString(value: unknown) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return {};
+}
+
 export async function POST(req: Request) {
   try {
     const g = await guardPublicJsonPost(req, {
@@ -42,11 +77,11 @@ export async function POST(req: Request) {
       honeypotResponse: { ok: true },
     });
     if (!g.ok) return g.response;
-    const body = g.body || {};
+    const body = g.body;
 
-    const lang = body?.lang === 'en' ? 'en' : 'cs';
-    const token = String(body?.token || '').trim();
-    const code = normalizeCode(String(body?.code || '').trim());
+    const lang = body.lang === 'en' ? 'en' : 'cs';
+    const token = asTrimmedString(body.token);
+    const code = normalizeCode(asTrimmedString(body.code));
     if (!token || !code) return NextResponse.json({ error: lang === 'en' ? 'Missing token/code' : 'Chybí token/kód.' }, { status: 400 });
 
     const supabase = getServerSupabase();
@@ -57,20 +92,21 @@ export async function POST(req: Request) {
       .from('trust_box_verifications')
       .select('*')
       .eq('token_hash', tokenHash)
-      .maybeSingle();
+      .maybeSingle<TrustBoxVerificationRow>();
     if (v.error) throw v.error;
-    const row: any = v.data;
+    const row = v.data;
     if (!row || row.verified_at) return NextResponse.json({ error: lang === 'en' ? 'Invalid token' : 'Neplatný token.' }, { status: 400 });
-    if (new Date(row.expires_at).getTime() < Date.now()) return NextResponse.json({ error: lang === 'en' ? 'Expired' : 'Platnost vypršela.' }, { status: 400 });
+    if (!row.expires_at || new Date(row.expires_at).getTime() < Date.now()) return NextResponse.json({ error: lang === 'en' ? 'Expired' : 'Platnost vypršela.' }, { status: 400 });
     if (String(row.code_hash) !== codeHash) return NextResponse.json({ error: lang === 'en' ? 'Invalid code' : 'Neplatný kód.' }, { status: 400 });
 
-    const draft: any = row.draft || {};
-    const category = String(draft?.category || 'other').slice(0, 80) || 'other';
-    const subject = String(draft?.subject || '').slice(0, 120);
-    const message = String(draft?.message || '').slice(0, 10_000);
-    const priority = draft?.priority === 'urgent' ? 'urgent' : 'normal';
-    const allowFollowup = draft?.allow_followup === true;
-    const allowForwardToFaculty = draft?.allow_forward_to_faculty === true;
+    const draft = toRecord(row.draft);
+    const reporterEmail = asTrimmedString(row.email);
+    const category = String(draft.category || 'other').slice(0, 80) || 'other';
+    const subject = String(draft.subject || '').slice(0, 120);
+    const message = String(draft.message || '').slice(0, 10_000);
+    const priority = draft.priority === 'urgent' ? 'urgent' : 'normal';
+    const allowFollowup = draft.allow_followup === true;
+    const allowForwardToFaculty = draft.allow_forward_to_faculty === true;
 
     if (!subject || !message) return NextResponse.json({ error: lang === 'en' ? 'Invalid draft' : 'Neplatný podnět.' }, { status: 400 });
 
@@ -96,7 +132,7 @@ export async function POST(req: Request) {
         thread_id: threadId,
         first_name: row.first_name,
         last_name: row.last_name,
-        email: row.email,
+        email: reporterEmail,
         email_type: row.email_type || 'unknown',
       },
     ]);
@@ -115,7 +151,7 @@ export async function POST(req: Request) {
       .select('*')
       .eq('verification_id', row.id);
     if (attRes.error) throw attRes.error;
-    const atts: any[] = attRes.data || [];
+    const atts: VerificationAttachmentRow[] = attRes.data || [];
     if (atts.length) {
       const insAtts = atts.map((a) => ({
         thread_id: threadId,
@@ -154,7 +190,7 @@ export async function POST(req: Request) {
           token_hash: internalHash,
           code_hash: cHash,
           expires_at: expiresAt,
-        } as any,
+        },
       ]);
       if (codeIns.error) throw codeIns.error;
     }
@@ -169,7 +205,7 @@ export async function POST(req: Request) {
     const from = await getSenderFromSettings();
     const threadUrl = followupToken ? `${getPublicBaseUrl()}/${lang}/schranka-duvery/ticket?token=${encodeURIComponent(followupToken)}` : '';
     const { subject: emailSubject, html } = await renderEmailTemplateWithDbOverride('trust_box_confirm', {
-      toEmail: row.email,
+      toEmail: reporterEmail,
       firstName: row.first_name,
       threadUrl,
       followupCode,
@@ -180,7 +216,7 @@ export async function POST(req: Request) {
         transporter,
         supabase,
         meta: { kind: 'trust_box_confirm', threadId },
-        message: { from, to: row.email, subject: emailSubject, html, text: stripHtmlToText(html) },
+        message: { from, to: reporterEmail, subject: emailSubject, html, text: stripHtmlToText(html) },
       });
     } catch {}
 
@@ -191,7 +227,7 @@ export async function POST(req: Request) {
       followupToken,
       followupCode,
     });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

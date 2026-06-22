@@ -28,6 +28,10 @@ function countLinks(input: string) {
   return m ? m.length : 0;
 }
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function POST(req: Request) {
   try {
     const g = await guardPublicJsonPost(req, { keyPrefix: 'contact', windowMs: 60_000, max: 10 });
@@ -73,7 +77,7 @@ export async function POST(req: Request) {
         
       if (adminProfiles && adminProfiles.length > 0) {
         // Unikátní maily včetně vybraného směrování
-        const adminEmailsSet = new Set(adminProfiles.map(p => p.email).filter(Boolean));
+        const adminEmailsSet = new Set(adminProfiles.map((p) => p.email).filter(Boolean));
         adminEmailsSet.add(routingEmail);
         const adminEmails = Array.from(adminEmailsSet).join(',');
         const transporter = await getMailerWithSettingsOrQueueTransporter();
@@ -101,9 +105,7 @@ export async function POST(req: Request) {
         });
         if (!r.ok && !r.queued) throw r.error;
       }
-    } catch (notifyErr) {
-      console.error('Failed to send admin notification:', notifyErr);
-    }
+    } catch {}
 
     const { subject: mailSubject, html } = await renderEmailTemplateWithDbOverride('contact_message', {
       name,
@@ -129,7 +131,7 @@ export async function POST(req: Request) {
     triggerWebhooks('new_message', { name, email, subject, message });
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

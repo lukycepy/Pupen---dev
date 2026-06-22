@@ -1,13 +1,56 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin, requireUser } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
-import { PageBlocksSchema, pageBlocksToHtml } from '@/lib/site/page-blocks';
+import { PageBlocksSchema, pageBlocksToHtml, type PageBlocks } from '@/lib/site/page-blocks';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
+interface SitePagesProfileRow {
+  can_manage_admins?: boolean | null;
+  can_view_site_pages?: boolean | null;
+  can_edit_site_pages?: boolean | null;
+}
+
+interface UserRoleRow {
+  role_id?: string | null;
+}
+
+interface SitePagePermissionRow {
+  can_view?: boolean | null;
+  can_edit?: boolean | null;
+}
+
+interface SitePageContentRow {
+  slug?: string | null;
+  lang?: string | null;
+  title?: string | null;
+  content_html?: string | null;
+  content_blocks?: PageBlocks | null;
+  updated_at?: string | null;
+}
+
+interface NormalizedLocaleContent {
+  title?: string | null;
+  content_html?: string | null;
+  content_blocks?: PageBlocks | null;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
+function asNullableString(value: unknown): string | null {
+  if (value == null) return null;
+  return typeof value === 'string' ? value : String(value);
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 async function canAccessSitePage(opts: {
-  supabase: any;
+  supabase: ReturnType<typeof getServerSupabase>;
   userId: string;
   slug: string;
   action: 'view' | 'edit';
@@ -18,9 +61,9 @@ async function canAccessSitePage(opts: {
     .from('profiles')
     .select('can_manage_admins, can_view_site_pages, can_edit_site_pages')
     .eq('id', userId)
-    .maybeSingle();
+    .maybeSingle<SitePagesProfileRow>();
   if (profRes.error) throw profRes.error;
-  const profile: any = profRes.data || {};
+  const profile = profRes.data || {};
 
   if (profile?.can_manage_admins) return true;
 
@@ -32,18 +75,18 @@ async function canAccessSitePage(opts: {
 
   const rolesRes = await supabase.from('app_user_roles').select('role_id').eq('user_id', userId);
   if (rolesRes.error) throw rolesRes.error;
-  const roleIds = Array.isArray(rolesRes.data) ? rolesRes.data.map((r: any) => String(r?.role_id || '').trim()).filter(Boolean) : [];
+  const roleIds = Array.isArray(rolesRes.data) ? (rolesRes.data as UserRoleRow[]).map((r) => String(r.role_id || '').trim()).filter(Boolean) : [];
 
-  const rows: any[] = [];
+  const rows: SitePagePermissionRow[] = [];
 
   const userPerms = await supabase.from('site_page_permissions').select('can_view,can_edit').eq('page_slug', slug).eq('user_id', userId);
   if (userPerms.error) throw userPerms.error;
-  rows.push(...(userPerms.data || []));
+  rows.push(...((userPerms.data || []) as SitePagePermissionRow[]));
 
   if (roleIds.length) {
     const rolePerms = await supabase.from('site_page_permissions').select('can_view,can_edit').eq('page_slug', slug).in('role_id', roleIds);
     if (rolePerms.error) throw rolePerms.error;
-    rows.push(...(rolePerms.data || []));
+    rows.push(...((rolePerms.data || []) as SitePagePermissionRow[]));
   }
 
   if (action === 'edit') return rows.some((r) => r?.can_edit === true);
@@ -67,13 +110,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
       .select('slug,lang,title,content_html,content_blocks,updated_at')
       .eq('slug', s);
     if (res.error) throw res.error;
-    const rows = res.data || [];
+    const rows = (res.data || []) as SitePageContentRow[];
     const out = NextResponse.json({ ok: true, items: rows });
     out.headers.set('Cache-Control', 'no-store');
     return out;
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
@@ -84,16 +128,16 @@ export async function PUT(req: Request, { params }: { params: Promise<{ slug: st
     const s = String(slug || '').trim();
     if (!s) return NextResponse.json({ error: 'Missing slug' }, { status: 400 });
 
-    const body = await req.json().catch(() => ({}));
-    const cs = body?.cs && typeof body.cs === 'object' ? body.cs : {};
-    const en = body?.en && typeof body.en === 'object' ? body.en : {};
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    const cs = toRecord(body.cs);
+    const en = toRecord(body.en);
 
-    const normalizeContent = (obj: any) => {
-      const title = Object.prototype.hasOwnProperty.call(obj || {}, 'title') ? obj.title ?? null : undefined;
-      const hasHtml = Object.prototype.hasOwnProperty.call(obj || {}, 'content_html');
-      const hasBlocks = Object.prototype.hasOwnProperty.call(obj || {}, 'content_blocks');
-      const html = hasHtml ? (obj?.content_html ?? null) : undefined;
-      let blocks: any = hasBlocks ? (obj?.content_blocks ?? null) : undefined;
+    const normalizeContent = (obj: Record<string, unknown>): NormalizedLocaleContent => {
+      const title = Object.prototype.hasOwnProperty.call(obj, 'title') ? asNullableString(obj.title) : undefined;
+      const hasHtml = Object.prototype.hasOwnProperty.call(obj, 'content_html');
+      const hasBlocks = Object.prototype.hasOwnProperty.call(obj, 'content_blocks');
+      const html = hasHtml ? asNullableString(obj.content_html) : undefined;
+      let blocks: PageBlocks | null | undefined = hasBlocks ? (obj.content_blocks ?? null) as PageBlocks | null : undefined;
       if (blocks !== undefined && blocks !== null) {
         const parsed = PageBlocksSchema.safeParse(blocks);
         if (!parsed.success) throw new Error('Neplatné content_blocks');
@@ -122,18 +166,22 @@ export async function PUT(req: Request, { params }: { params: Promise<{ slug: st
     const now = new Date().toISOString();
 
     const upserts = [
-      { slug: s, lang: 'cs', title: (nextCs as any).title ?? null, content_html: (nextCs as any).content_html ?? null, content_blocks: (nextCs as any).content_blocks ?? null, updated_at: now },
-      { slug: s, lang: 'en', title: (nextEn as any).title ?? null, content_html: (nextEn as any).content_html ?? null, content_blocks: (nextEn as any).content_blocks ?? null, updated_at: now },
+      { slug: s, lang: 'cs', title: nextCs.title ?? null, content_html: nextCs.content_html ?? null, content_blocks: nextCs.content_blocks ?? null, updated_at: now },
+      { slug: s, lang: 'en', title: nextEn.title ?? null, content_html: nextEn.content_html ?? null, content_blocks: nextEn.content_blocks ?? null, updated_at: now },
     ];
 
-    const res = await supabase.from('site_page_contents').upsert(upserts, { onConflict: 'slug,lang' }).select('slug,lang,title,content_html,content_blocks,updated_at');
+    const res = await supabase
+      .from('site_page_contents')
+      .upsert(upserts, { onConflict: 'slug,lang' })
+      .select('slug,lang,title,content_html,content_blocks,updated_at');
     if (res.error) throw res.error;
 
-    const out = NextResponse.json({ ok: true, items: res.data || [] });
+    const out = NextResponse.json({ ok: true, items: (res.data || []) as SitePageContentRow[] });
     out.headers.set('Cache-Control', 'no-store');
     return out;
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

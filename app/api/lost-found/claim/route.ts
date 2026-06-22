@@ -4,7 +4,22 @@ import { guardPublicJsonPost } from '@/lib/public-post-guard';
 
 const ITEM_STATUS = new Set(['open', 'claimed', 'in_progress', 'returned', 'archived']);
 
-function normalizeStatus(input: any) {
+interface LostFoundItemRow {
+  id?: string | null;
+  title?: string | null;
+  status?: string | null;
+  is_public?: boolean | null;
+}
+
+function asTrimmedString(value: unknown) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
+function normalizeStatus(input: unknown) {
   const s = String(input || '').trim();
   if (ITEM_STATUS.has(s)) return s;
   return 'open';
@@ -20,11 +35,11 @@ export async function POST(req: Request) {
     });
     if (!g.ok) return g.response;
 
-    const itemId = String(g.body?.itemId || '').trim();
-    const email = String(g.body?.email || '').trim().slice(0, 320);
-    const name = String(g.body?.name || '').trim().slice(0, 120);
-    const message = String(g.body?.message || '').trim().slice(0, 2000);
-    const isAnonymous = g.body?.isAnonymous === true;
+    const itemId = asTrimmedString(g.body.itemId);
+    const email = asTrimmedString(g.body.email).slice(0, 320);
+    const name = asTrimmedString(g.body.name).slice(0, 120);
+    const message = asTrimmedString(g.body.message).slice(0, 2000);
+    const isAnonymous = g.body.isAnonymous === true;
 
     if (!itemId) return NextResponse.json({ error: 'Missing itemId' }, { status: 400 });
     if (!isAnonymous && !email) return NextResponse.json({ error: 'Chybí e-mail.' }, { status: 400 });
@@ -35,9 +50,9 @@ export async function POST(req: Request) {
       .from('lost_found_items')
       .select('id,title,status,is_public')
       .eq('id', itemId)
-      .maybeSingle();
+      .maybeSingle<LostFoundItemRow>();
     if (itemRes.error) throw itemRes.error;
-    const item: any = itemRes.data;
+    const item = itemRes.data;
     if (!item?.id || item.is_public !== true) return NextResponse.json({ error: 'Položka nenalezena.' }, { status: 404 });
 
     const currentStatus = normalizeStatus(item.status);
@@ -102,8 +117,7 @@ export async function POST(req: Request) {
     } catch {}
 
     return NextResponse.json({ ok: true, claimId, itemStatus: currentStatus === 'open' ? 'claimed' : currentStatus });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }
-

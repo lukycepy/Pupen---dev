@@ -4,6 +4,56 @@ import { requireAdmin, requireUser } from '@/lib/server-auth';
 
 const SITE_CONFIG_ID = Number(process.env.SITE_CONFIG_ID || 1);
 
+interface ProfilePermissionsRow {
+  can_manage_admins?: boolean | null;
+  can_edit_site_nav?: boolean | null;
+  can_edit_site_home?: boolean | null;
+  can_edit_site_member_portal?: boolean | null;
+  can_edit_site_maintenance?: boolean | null;
+}
+
+interface SitePublicConfigRow {
+  maintenance_enabled?: boolean | null;
+  maintenance_start_at?: string | null;
+  maintenance_end_at?: string | null;
+  maintenance_title_cs?: string | null;
+  maintenance_body_cs?: string | null;
+  maintenance_title_en?: string | null;
+  maintenance_body_en?: string | null;
+  pages?: Record<string, unknown> | null;
+  home?: Record<string, unknown> | null;
+  member_portal?: Record<string, unknown> | null;
+  updated_at?: string | null;
+}
+
+interface SiteConfigRequestBody {
+  section?: unknown;
+  config?: unknown;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
+function asOptionalTrimmedString(value: unknown, maxLength: number) {
+  const text = typeof value === 'string' ? value.trim() : '';
+  return text ? text.slice(0, maxLength) : null;
+}
+
+function asIsoDateOrNull(value: unknown) {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  if (!raw) return { value: null, error: null as string | null };
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) {
+    return { value: null, error: 'invalid' as const };
+  }
+  return { value: parsed.toISOString(), error: null as string | null };
+}
+
 export async function GET(req: Request) {
   try {
     await requireAdmin(req);
@@ -15,13 +65,14 @@ export async function GET(req: Request) {
         'maintenance_enabled, maintenance_start_at, maintenance_end_at, maintenance_title_cs, maintenance_body_cs, maintenance_title_en, maintenance_body_en, pages, home, member_portal, updated_at',
       )
       .eq('id', configId)
-      .maybeSingle();
+      .maybeSingle<SitePublicConfigRow>();
     if (res.error) throw res.error;
 
     return NextResponse.json({ ok: true, config: res.data || null });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
@@ -29,9 +80,10 @@ export async function POST(req: Request) {
   try {
     await requireAdmin(req);
     const user = await requireUser(req);
-    const body = await req.json().catch(() => ({}));
-    const section = String(body?.section || '').trim();
-    const patch = body?.config || {};
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    const payload = body as SiteConfigRequestBody;
+    const section = String(payload.section || '').trim();
+    const patch = toRecord(payload.config);
 
     const supabase = getServerSupabase();
     const configId = Number.isFinite(SITE_CONFIG_ID) && SITE_CONFIG_ID >= 1 ? SITE_CONFIG_ID : 1;
@@ -40,9 +92,9 @@ export async function POST(req: Request) {
       .from('profiles')
       .select('can_manage_admins, can_edit_site_nav, can_edit_site_home, can_edit_site_member_portal, can_edit_site_maintenance')
       .eq('id', user.id)
-      .maybeSingle();
+      .maybeSingle<ProfilePermissionsRow>();
     if (profRes.error) throw profRes.error;
-    const profile: any = profRes.data || {};
+    const profile = profRes.data;
 
     const canAll = !!profile?.can_manage_admins;
     const allowMaintenance = canAll || !!profile?.can_edit_site_maintenance;
@@ -66,11 +118,11 @@ export async function POST(req: Request) {
         'maintenance_enabled, maintenance_start_at, maintenance_end_at, maintenance_title_cs, maintenance_body_cs, maintenance_title_en, maintenance_body_en, pages, home, member_portal',
       )
       .eq('id', configId)
-      .maybeSingle();
+      .maybeSingle<SitePublicConfigRow>();
     if (current.error) throw current.error;
-    const base: any = current.data || {};
+    const base: SitePublicConfigRow = current.data || {};
 
-    const out: any = {
+    const out: SitePublicConfigRow = {
       maintenance_enabled: base.maintenance_enabled ?? false,
       maintenance_start_at: base.maintenance_start_at ?? null,
       maintenance_end_at: base.maintenance_end_at ?? null,
@@ -78,35 +130,33 @@ export async function POST(req: Request) {
       maintenance_body_cs: base.maintenance_body_cs ?? null,
       maintenance_title_en: base.maintenance_title_en ?? null,
       maintenance_body_en: base.maintenance_body_en ?? null,
-      pages: base.pages && typeof base.pages === 'object' ? base.pages : {},
-      home: base.home && typeof base.home === 'object' ? base.home : {},
-      member_portal: base.member_portal && typeof base.member_portal === 'object' ? base.member_portal : {},
+      pages: toRecord(base?.pages),
+      home: toRecord(base?.home),
+      member_portal: toRecord(base?.member_portal),
     };
 
     if (section === 'maintenance') {
-      const maintenance_enabled = !!patch.maintenance_enabled;
-      const startAtRaw = patch.maintenance_start_at ? String(patch.maintenance_start_at) : '';
-      const endAtRaw = patch.maintenance_end_at ? String(patch.maintenance_end_at) : '';
-      const startAt = startAtRaw ? new Date(startAtRaw) : null;
-      const endAt = endAtRaw ? new Date(endAtRaw) : null;
-      if (startAt && Number.isNaN(startAt.getTime())) return NextResponse.json({ error: 'Invalid maintenance_start_at' }, { status: 400 });
-      if (endAt && Number.isNaN(endAt.getTime())) return NextResponse.json({ error: 'Invalid maintenance_end_at' }, { status: 400 });
-      if (startAt && endAt && startAt.getTime() > endAt.getTime()) {
+      const maintenanceEnabled = !!patch.maintenance_enabled;
+      const startAt = asIsoDateOrNull(patch.maintenance_start_at);
+      const endAt = asIsoDateOrNull(patch.maintenance_end_at);
+      if (startAt.error) return NextResponse.json({ error: 'Invalid maintenance_start_at' }, { status: 400 });
+      if (endAt.error) return NextResponse.json({ error: 'Invalid maintenance_end_at' }, { status: 400 });
+      if (startAt.value && endAt.value && new Date(startAt.value).getTime() > new Date(endAt.value).getTime()) {
         return NextResponse.json({ error: 'maintenance_start_at must be <= maintenance_end_at' }, { status: 400 });
       }
-      out.maintenance_enabled = maintenance_enabled;
-      out.maintenance_start_at = startAt ? startAt.toISOString() : null;
-      out.maintenance_end_at = endAt ? endAt.toISOString() : null;
-      out.maintenance_title_cs = patch.maintenance_title_cs ? String(patch.maintenance_title_cs).slice(0, 200) : null;
-      out.maintenance_body_cs = patch.maintenance_body_cs ? String(patch.maintenance_body_cs).slice(0, 4000) : null;
-      out.maintenance_title_en = patch.maintenance_title_en ? String(patch.maintenance_title_en).slice(0, 200) : null;
-      out.maintenance_body_en = patch.maintenance_body_en ? String(patch.maintenance_body_en).slice(0, 4000) : null;
+      out.maintenance_enabled = maintenanceEnabled;
+      out.maintenance_start_at = startAt.value;
+      out.maintenance_end_at = endAt.value;
+      out.maintenance_title_cs = asOptionalTrimmedString(patch.maintenance_title_cs, 200);
+      out.maintenance_body_cs = asOptionalTrimmedString(patch.maintenance_body_cs, 4000);
+      out.maintenance_title_en = asOptionalTrimmedString(patch.maintenance_title_en, 200);
+      out.maintenance_body_en = asOptionalTrimmedString(patch.maintenance_body_en, 4000);
     } else if (section === 'home') {
-      out.home = patch.home && typeof patch.home === 'object' ? patch.home : {};
+      out.home = toRecord(patch.home);
     } else if (section === 'member') {
-      out.member_portal = patch.member_portal && typeof patch.member_portal === 'object' ? patch.member_portal : {};
+      out.member_portal = toRecord(patch.member_portal);
     } else if (section === 'pages') {
-      out.pages = patch.pages && typeof patch.pages === 'object' ? patch.pages : {};
+      out.pages = toRecord(patch.pages);
     }
 
     const up = await supabase
@@ -122,7 +172,7 @@ export async function POST(req: Request) {
         { onConflict: 'id' },
       )
       .select('*')
-      .single();
+      .single<SitePublicConfigRow>();
     if (up.error) throw up.error;
 
     await supabase
@@ -139,8 +189,9 @@ export async function POST(req: Request) {
       .throwOnError();
 
     return NextResponse.json({ ok: true, config: up.data });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

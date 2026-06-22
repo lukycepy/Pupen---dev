@@ -18,7 +18,7 @@ function sign(data: string, secret: string) {
   return b64urlEncode(crypto.createHmac('sha256', secret).update(data).digest());
 }
 
-export function createSignedToken(payload: any, secret: string) {
+export function createSignedToken(payload: unknown, secret: string) {
   const json = JSON.stringify(payload);
   const body = b64urlEncode(Buffer.from(json, 'utf8'));
   const sig = sign(body, secret);
@@ -37,4 +37,3 @@ export function verifySignedToken(token: string, secret: string) {
   const payload = JSON.parse(json);
   return { ok: true as const, payload };
 }
-

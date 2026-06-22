@@ -3,9 +3,50 @@ import { getBearerToken, requireAdmin } from '@/lib/server-auth';
 import { getRlsSupabase } from '@/lib/supabase-rls';
 import { membershipApplicationAdminListQuerySchema } from '@/lib/validations/membership-applications-admin';
 
+type JsonRecord = Record<string, unknown>;
+
+interface MembershipApplicationDecisionMeta {
+  decided_at?: string | null;
+  decided_by_email?: string | null;
+  membership_type?: string | null;
+  chair_auth_kind?: string | null;
+  chair_auth_file_id?: string | null;
+}
+
+interface MembershipApplicationMeta extends JsonRecord {
+  lang?: string | null;
+  membership_type?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  decision?: MembershipApplicationDecisionMeta | JsonRecord | null;
+  pdf_snapshot?: unknown;
+}
+
+interface MembershipApplicationListRow {
+  id?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  status?: string | null;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  motivation?: string | null;
+  decision_reason?: string | null;
+  meta?: MembershipApplicationMeta | JsonRecord | null;
+}
+
 function isTruthy(v: string) {
   const s = String(v || '').toLowerCase().trim();
   return s === '1' || s === 'true';
+}
+
+function toRecord(value: unknown): JsonRecord {
+  return value && typeof value === 'object' ? (value as JsonRecord) : {};
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
 }
 
 export async function GET(req: Request) {
@@ -52,9 +93,10 @@ export async function GET(req: Request) {
       .range(parsed.data.offset, parsed.data.offset + parsed.data.limit - 1);
     if (res.error) throw res.error;
 
-    const rows = (res.data || []).map((r: any) => {
-      const meta = r?.meta && typeof r.meta === 'object' ? r.meta : {};
-      const decision = meta?.decision && typeof meta.decision === 'object' ? meta.decision : {};
+    const rows = (Array.isArray(res.data) ? res.data : []).map((row) => {
+      const r = row as MembershipApplicationListRow;
+      const meta = toRecord(r.meta);
+      const decision = toRecord(meta.decision);
       return {
         id: r.id,
         createdAt: r.created_at,
@@ -84,9 +126,9 @@ export async function GET(req: Request) {
     });
 
     return NextResponse.json({ ok: true, rows, count: typeof res.count === 'number' ? res.count : null });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
-

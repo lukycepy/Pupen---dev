@@ -1,6 +1,12 @@
 import { getPragueYearTwoDigits } from '@/lib/time/prague';
 
-export function formatApplicationPdfFileName(input: { firstName?: any; lastName?: any; createdAt?: any }) {
+interface ApplicationPdfFileNameInput {
+  firstName?: unknown;
+  lastName?: unknown;
+  createdAt?: unknown;
+}
+
+export function formatApplicationPdfFileName(input: ApplicationPdfFileNameInput) {
   const first = String(input.firstName || '').trim();
   const last = String(input.lastName || '').trim();
   const yy = getPragueYearTwoDigits(input.createdAt || new Date());

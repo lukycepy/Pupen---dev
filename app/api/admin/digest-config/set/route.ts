@@ -2,18 +2,37 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { requireAdmin } from '@/lib/server-auth';
 
-function num(v: any, fallback: number) {
+interface DigestConfig {
+  enabled: boolean;
+  timezone: string;
+  dayOfWeek: number;
+  hour: number;
+  minute: number;
+  windowMinutes: number;
+  maxRecipients: number;
+  minIntervalHours: number;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function num(v: unknown, fallback: number) {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
 }
 
 export async function POST(req: Request) {
   try {
     const { user } = await requireAdmin(req);
-    const body = await req.json().catch(() => ({}));
-    const input = body?.config || {};
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    const input = toRecord(body.config);
 
-    const config = {
+    const config: DigestConfig = {
       enabled: !!input.enabled,
       timezone: String(input.timezone || 'Europe/Prague'),
       dayOfWeek: Math.min(7, Math.max(1, Math.floor(num(input.dayOfWeek, 1)))),
@@ -37,9 +56,9 @@ export async function POST(req: Request) {
     if (res.error) throw res.error;
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
-

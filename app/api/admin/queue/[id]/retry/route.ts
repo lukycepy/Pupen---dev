@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { profile } = await requireAdmin(req);
@@ -26,10 +30,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       .eq('id', queueId);
     if (res.error) throw res.error;
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    const msg = String(e?.message || 'Error');
-    const status = msg === 'Unauthorized' ? 401 : msg === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: msg }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
-

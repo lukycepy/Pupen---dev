@@ -3,6 +3,19 @@ import { getBearerToken, requireAdmin } from '@/lib/server-auth';
 import { getRlsSupabase } from '@/lib/supabase-rls';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { BILLING_INVOICE_PDF_BUCKET } from '@/lib/billing/invoice-pdf';
+import { type BillingInvoiceRowLike } from '@/lib/billing/invoices';
+
+interface BillingInvoicePdfSignedUrlBody {
+  expiresIn?: unknown;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
 
 export async function POST(req: Request, ctx: { params: Promise<{ invoiceId: string }> }) {
   try {
@@ -15,15 +28,16 @@ export async function POST(req: Request, ctx: { params: Promise<{ invoiceId: str
     const id = String(invoiceId || '').trim();
     if (!id) return NextResponse.json({ error: 'Missing invoiceId' }, { status: 400 });
 
-    const body = await req.json().catch(() => ({}));
-    const expiresIn = Math.max(60, Math.min(60 * 60, Number(body?.expiresIn || 600) || 600));
+    const body = toRecord(await req.json().catch(() => ({})));
+    const payload = body as BillingInvoicePdfSignedUrlBody;
+    const expiresIn = Math.max(60, Math.min(60 * 60, Number(payload.expiresIn || 600) || 600));
 
-    const inv = await rls.from('billing_invoices').select('pdf_bucket, pdf_path').eq('id', id).maybeSingle();
+    const inv = await rls.from('billing_invoices').select('pdf_bucket, pdf_path').eq('id', id).maybeSingle<BillingInvoiceRowLike>();
     if (inv.error) throw inv.error;
     if (!inv.data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    const bucket = String((inv.data as any)?.pdf_bucket || BILLING_INVOICE_PDF_BUCKET);
-    const path = String((inv.data as any)?.pdf_path || '').trim();
+    const bucket = String(inv.data.pdf_bucket || BILLING_INVOICE_PDF_BUCKET);
+    const path = String(inv.data.pdf_path || '').trim();
     if (!path) return NextResponse.json({ error: 'Missing PDF' }, { status: 409 });
 
     const srv = getServerSupabase();
@@ -31,9 +45,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ invoiceId: str
     if (signed.error) throw signed.error;
 
     return NextResponse.json({ ok: true, signedUrl: signed.data?.signedUrl || null, expiresIn });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
-

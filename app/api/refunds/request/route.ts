@@ -7,6 +7,14 @@ import { isEmailBlacklisted } from '@/lib/tickets/blacklist';
 import { sendMailWithQueueFallback } from '@/lib/email/queue';
 import { guardPublicJsonPost } from '@/lib/public-post-guard';
 
+function asTrimmedString(value: unknown) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function POST(req: Request) {
   try {
     const user = await requireUser(req);
@@ -19,7 +27,11 @@ export async function POST(req: Request) {
     });
     if (!g.ok) return g.response;
     const body = g.body;
-    const { rsvpId, eventId, eventTitle, reason, note } = body || {};
+    const rsvpId = asTrimmedString(body.rsvpId);
+    const eventId = asTrimmedString(body.eventId);
+    const eventTitle = asTrimmedString(body.eventTitle);
+    const reason = asTrimmedString(body.reason);
+    const note = asTrimmedString(body.note);
     if (!rsvpId || !eventId || !eventTitle || !reason) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
 
     const supabase = getServerSupabase();
@@ -88,7 +100,7 @@ export async function POST(req: Request) {
       eventId: String(eventId),
       eventTitle: String(eventTitle),
       reason: String(reason),
-      note: note ? String(note) : null,
+      note: note || null,
       status: 'open',
       createdAt: new Date().toISOString(),
       requester: { id: user.id, email: user.email },
@@ -106,8 +118,9 @@ export async function POST(req: Request) {
     if (log.error) throw log.error;
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

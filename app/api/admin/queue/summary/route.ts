@@ -2,6 +2,15 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 
+interface CountResponse {
+  count: number | null;
+  error: Error | null;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function GET(req: Request) {
   try {
     const { profile } = await requireAdmin(req);
@@ -24,8 +33,8 @@ export async function GET(req: Request) {
       supabase.from('email_send_dead_letters').select('id', { count: 'exact', head: true }),
     ]);
 
-    for (const r of [queued, retry, processing, dueNow, stuckProcessing, dead]) {
-      if ((r as any).error) throw (r as any).error;
+    for (const response of [queued, retry, processing, dueNow, stuckProcessing, dead] as CountResponse[]) {
+      if (response.error) throw response.error;
     }
 
     return NextResponse.json({
@@ -41,10 +50,9 @@ export async function GET(req: Request) {
         total: Number(dead.count || 0),
       },
     });
-  } catch (e: any) {
-    const msg = String(e?.message || 'Error');
-    const status = msg === 'Unauthorized' ? 401 : msg === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: msg }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
-

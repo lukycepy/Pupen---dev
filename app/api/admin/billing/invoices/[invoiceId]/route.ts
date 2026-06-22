@@ -4,10 +4,20 @@ import { getRlsSupabase } from '@/lib/supabase-rls';
 import { writeAdminAudit } from '@/lib/admin-audit';
 import { writeAuditLog } from '@/lib/audit/audit-log';
 import { billingInvoiceUpdateSchema, billingInvoiceTypeSchema } from '@/lib/validations/billing';
-import { toBillingInvoiceDto, toBillingInvoiceItemDto } from '@/lib/billing/invoices';
+import {
+  toBillingInvoiceDto,
+  toBillingInvoiceItemDto,
+  type BillingInvoiceItemRowLike,
+  type BillingInvoiceRowLike,
+  type BillingInvoiceWithItemsRowLike,
+} from '@/lib/billing/invoices';
 
 function sumItems(items: Array<{ quantity: number; unitPrice: number }>) {
   return items.reduce((acc, it) => acc + (Number(it.quantity) || 0) * (Number(it.unitPrice) || 0), 0);
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
 }
 
 export async function GET(_req: Request, ctx: { params: Promise<{ invoiceId: string }> }) {
@@ -21,19 +31,24 @@ export async function GET(_req: Request, ctx: { params: Promise<{ invoiceId: str
     const id = String(invoiceId || '').trim();
     if (!id) return NextResponse.json({ error: 'Missing invoiceId' }, { status: 400 });
 
-    const inv = await supabase.from('billing_invoices').select('*, billing_invoice_items(*)').eq('id', id).maybeSingle();
+    const inv = await supabase
+      .from('billing_invoices')
+      .select('*, billing_invoice_items(*)')
+      .eq('id', id)
+      .maybeSingle<BillingInvoiceWithItemsRowLike>();
     if (inv.error) throw inv.error;
     if (!inv.data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    const items = Array.isArray((inv.data as any)?.billing_invoice_items) ? (inv.data as any).billing_invoice_items : [];
+    const items: BillingInvoiceItemRowLike[] = Array.isArray(inv.data.billing_invoice_items) ? inv.data.billing_invoice_items : [];
     return NextResponse.json({
       ok: true,
       invoice: toBillingInvoiceDto(inv.data),
       items: items.map(toBillingInvoiceItemDto),
     });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
@@ -58,7 +73,11 @@ async function updateInvoice(req: Request, ctx: { params: Promise<{ invoiceId: s
     const items = parsed.data.items;
     const invType = billingInvoiceTypeSchema.parse(invoice.type || 'invoice');
 
-    const beforeRes = await supabase.from('billing_invoices').select('*, billing_invoice_items(*)').eq('id', id).maybeSingle();
+    const beforeRes = await supabase
+      .from('billing_invoices')
+      .select('*, billing_invoice_items(*)')
+      .eq('id', id)
+      .maybeSingle<BillingInvoiceWithItemsRowLike>();
     if (beforeRes.error) throw beforeRes.error;
 
     const total = sumItems(items);
@@ -92,7 +111,7 @@ async function updateInvoice(req: Request, ctx: { params: Promise<{ invoiceId: s
 
     const updated = await supabase.rpc('billing_invoice_update', { p_invoice_id: id, p_invoice: rpcInvoice, p_items: rpcItems });
     if (updated.error) throw updated.error;
-    const row = updated.data as any;
+    const row = updated.data as BillingInvoiceRowLike | null;
 
     await writeAdminAudit({
       adminEmail: user.email,
@@ -102,8 +121,13 @@ async function updateInvoice(req: Request, ctx: { params: Promise<{ invoiceId: s
       details: { id, type: invType, currency: rpcInvoice.currency, total: row?.total ?? null },
     });
 
-    const itemsRes = await supabase.from('billing_invoice_items').select('*').eq('invoice_id', id).order('position', { ascending: true });
+    const itemsRes = await supabase
+      .from('billing_invoice_items')
+      .select('*')
+      .eq('invoice_id', id)
+      .order('position', { ascending: true });
     if (itemsRes.error) throw itemsRes.error;
+    const updatedItems: BillingInvoiceItemRowLike[] = Array.isArray(itemsRes.data) ? itemsRes.data : [];
 
     await writeAuditLog({
       req,
@@ -112,22 +136,23 @@ async function updateInvoice(req: Request, ctx: { params: Promise<{ invoiceId: s
       action: 'billing_invoice.update',
       entity: { type: 'billing_invoice', id },
       before: beforeRes.data,
-      after: { ...(row || {}), billing_invoice_items: itemsRes.data || [] },
+      after: { ...(row || {}), billing_invoice_items: updatedItems },
     });
 
-    return NextResponse.json({ ok: true, invoice: toBillingInvoiceDto(row), items: (itemsRes.data || []).map(toBillingInvoiceItemDto) });
-  } catch (e: any) {
+    return NextResponse.json({ ok: true, invoice: toBillingInvoiceDto(row), items: updatedItems.map(toBillingInvoiceItemDto) });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
     const status =
-      e?.message === 'Unauthorized'
+      message === 'Unauthorized'
         ? 401
-        : e?.message === 'Forbidden'
+        : message === 'Forbidden'
           ? 403
-          : e?.message === 'Not found'
+          : message === 'Not found'
             ? 404
-            : e?.message === 'Invoice is not editable'
+            : message === 'Invoice is not editable'
               ? 409
               : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
@@ -150,10 +175,10 @@ export async function DELETE(req: Request, ctx: { params: Promise<{ invoiceId: s
     const id = String(invoiceId || '').trim();
     if (!id) return NextResponse.json({ error: 'Missing invoiceId' }, { status: 400 });
 
-    const inv = await supabase.from('billing_invoices').select('id, status').eq('id', id).maybeSingle();
+    const inv = await supabase.from('billing_invoices').select('id, status').eq('id', id).maybeSingle<BillingInvoiceRowLike>();
     if (inv.error) throw inv.error;
     if (!inv.data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    if (String((inv.data as any).status) !== 'draft') return NextResponse.json({ error: 'Only draft invoices can be deleted' }, { status: 409 });
+    if (String(inv.data.status) !== 'draft') return NextResponse.json({ error: 'Only draft invoices can be deleted' }, { status: 409 });
 
     const del = await supabase.from('billing_invoices').delete().eq('id', id);
     if (del.error) throw del.error;
@@ -167,8 +192,9 @@ export async function DELETE(req: Request, ctx: { params: Promise<{ invoiceId: s
     });
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

@@ -2,6 +2,14 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { getBearerToken, requireUser } from '@/lib/server-auth';
 
+interface PostRow {
+  id?: string | null;
+}
+
+interface PostReactionRow {
+  reaction?: string | null;
+}
+
 async function optionalUser(req: Request) {
   const token = getBearerToken(req);
   if (!token) return null;
@@ -10,6 +18,14 @@ async function optionalUser(req: Request) {
   } catch {
     return null;
   }
+}
+
+function asTrimmedString(value: unknown) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
 }
 
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -26,7 +42,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
       .eq('id', postId)
       .not('published_at', 'is', null)
       .lte('published_at', nowIso)
-      .maybeSingle();
+      .maybeSingle<PostRow>();
     if (postRes.error) throw postRes.error;
     if (!postRes.data?.id) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
@@ -37,13 +53,13 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     const user = await optionalUser(req);
     let mine: string | null = null;
     if (user) {
-      const myRes = await supabase.from('post_reactions').select('reaction').eq('post_id', postId).eq('user_id', user.id).maybeSingle();
-      if (!myRes.error) mine = myRes.data?.reaction ? String(myRes.data.reaction) : null;
+      const myRes = await supabase.from('post_reactions').select('reaction').eq('post_id', postId).eq('user_id', user.id).maybeSingle<PostReactionRow>();
+      if (!myRes.error) mine = asTrimmedString(myRes.data?.reaction) || null;
     }
 
     return NextResponse.json({ ok: true, likes, mine });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }
 
@@ -54,9 +70,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     const postId = String(id || '').trim();
     if (!postId) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    const body = await req.json().catch(() => ({}));
-    const on = body?.on === false ? false : true;
-    const reaction = String(body?.reaction || 'like').slice(0, 20) || 'like';
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    const on = body.on === false ? false : true;
+    const reaction = (asTrimmedString(body.reaction) || 'like').slice(0, 20) || 'like';
     if (reaction !== 'like') return NextResponse.json({ error: 'Invalid reaction' }, { status: 400 });
 
     const supabase = getServerSupabase();
@@ -67,7 +83,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       .eq('id', postId)
       .not('published_at', 'is', null)
       .lte('published_at', nowIso)
-      .maybeSingle();
+      .maybeSingle<PostRow>();
     if (postRes.error) throw postRes.error;
     if (!postRes.data?.id) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
@@ -86,9 +102,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     const likes = countRes.count || 0;
 
     return NextResponse.json({ ok: true, likes, mine: on ? reaction : null });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
-

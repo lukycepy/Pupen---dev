@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { guardPublicGet, guardPublicPostAny } from '@/lib/public-post-guard';
 
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
 function normalizeEmail(input: unknown) {
   return String(input || '').trim().toLowerCase();
 }
@@ -53,7 +57,7 @@ export async function GET(req: Request) {
 
     const supabase = getServerSupabase();
     const nowIso = new Date().toISOString();
-    const payload: any = {
+    const payload: Record<string, unknown> = {
       consent: false,
       updated_at: nowIso,
       unsubscribed_at: nowIso,
@@ -64,7 +68,7 @@ export async function GET(req: Request) {
       unsubscribe_variant: extras.variant || null,
     };
 
-    let res: any = await supabase.from('newsletter_subscriptions').update(payload).eq('email', email);
+    let res = await supabase.from('newsletter_subscriptions').update(payload).eq('email', email);
     if (res.error && isMissingColumn(res.error)) {
       res = await supabase.from('newsletter_subscriptions').update({ consent: false, updated_at: nowIso }).eq('email', email);
     }
@@ -86,7 +90,7 @@ export async function POST(req: Request) {
       tooManyMessage: 'Příliš mnoho požadavků, zkuste to později.',
     });
     if (!g.ok) return g.response;
-    const body = g.body;
+    const body = toRecord(g.body);
 
     const url = new URL(req.url);
     const email = normalizeEmail(url.searchParams.get('email') || body.email || '');
@@ -98,18 +102,18 @@ export async function POST(req: Request) {
       variant: normalizeSmall(url.searchParams.get('v') || ''),
     };
     const extras = {
-      reason: normalizeReason(body?.reason || fromQuery.reason),
-      detail: normalizeDetail(body?.detail || body?.reason_detail || fromQuery.detail),
-      source: normalizeSmall(body?.source || fromQuery.source),
-      campaignId: normalizeSmall(body?.campaignId || body?.campaign_id || fromQuery.campaignId),
-      variant: normalizeSmall(body?.variant || fromQuery.variant),
+      reason: normalizeReason(body.reason || fromQuery.reason),
+      detail: normalizeDetail(body.detail || body.reason_detail || fromQuery.detail),
+      source: normalizeSmall(body.source || fromQuery.source),
+      campaignId: normalizeSmall(body.campaignId || body.campaign_id || fromQuery.campaignId),
+      variant: normalizeSmall(body.variant || fromQuery.variant),
     };
 
     if (!email) return NextResponse.json({ error: 'Chybí e-mail.' }, { status: 400 });
 
     const supabase = getServerSupabase();
     const nowIso = new Date().toISOString();
-    const payload: any = {
+    const payload: Record<string, unknown> = {
       consent: false,
       updated_at: nowIso,
       unsubscribed_at: nowIso,
@@ -120,7 +124,7 @@ export async function POST(req: Request) {
       unsubscribe_variant: extras.variant || null,
     };
 
-    let res: any = await supabase.from('newsletter_subscriptions').update(payload).eq('email', email);
+    let res = await supabase.from('newsletter_subscriptions').update(payload).eq('email', email);
     if (res.error && isMissingColumn(res.error)) {
       res = await supabase.from('newsletter_subscriptions').update({ consent: false, updated_at: nowIso }).eq('email', email);
     }

@@ -2,6 +2,16 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 
+interface ErrorLogsProfilePermissionsRow {
+  can_manage_admins?: boolean | null;
+  can_view_logs?: boolean | null;
+  can_edit_logs?: boolean | null;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function GET(req: Request) {
   try {
     const supabase = getServerSupabase();
@@ -10,9 +20,9 @@ export async function GET(req: Request) {
       .from('profiles')
       .select('can_manage_admins, can_view_logs, can_edit_logs')
       .eq('id', user.id)
-      .maybeSingle();
+      .maybeSingle<ErrorLogsProfilePermissionsRow>();
     if (profRes.error) throw profRes.error;
-    const profile = profRes.data as any;
+    const profile = profRes.data;
     const canView = !!(profile?.can_manage_admins || profile?.can_view_logs || profile?.can_edit_logs);
     if (!canView) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     const { data, error } = await supabase
@@ -23,9 +33,10 @@ export async function GET(req: Request) {
 
     if (error) throw error;
     return NextResponse.json({ logs: data });
-  } catch (error: any) {
-    console.error('GET error_logs error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
@@ -37,9 +48,9 @@ export async function DELETE(req: Request) {
       .from('profiles')
       .select('can_manage_admins, can_edit_logs')
       .eq('id', user.id)
-      .maybeSingle();
+      .maybeSingle<ErrorLogsProfilePermissionsRow>();
     if (profRes.error) throw profRes.error;
-    const profile = profRes.data as any;
+    const profile = profRes.data;
     const canEdit = !!(profile?.can_manage_admins || profile?.can_edit_logs);
     if (!canEdit) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
@@ -50,8 +61,9 @@ export async function DELETE(req: Request) {
 
     if (error) throw error;
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error('DELETE error_logs error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

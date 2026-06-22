@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { getBearerToken, requireUser } from '@/lib/server-auth';
 
+interface ProfileRow {
+  first_name?: string | null;
+  last_name?: string | null;
+}
+
 async function optionalUser(req: Request) {
   const token = getBearerToken(req);
   if (!token) return null;
@@ -10,6 +15,14 @@ async function optionalUser(req: Request) {
   } catch {
     return null;
   }
+}
+
+function asTrimmedString(value: unknown) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
 }
 
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -45,8 +58,8 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
 
     if (res.error) throw res.error;
     return NextResponse.json({ ok: true, comments: res.data || [] });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }
 
@@ -57,8 +70,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     const postId = String(id || '').trim();
     if (!postId) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    const body = await req.json().catch(() => ({}));
-    const text = String(body?.body || body?.text || '').trim();
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    const text = asTrimmedString(body.body || body.text);
     if (!text) return NextResponse.json({ error: 'Missing body' }, { status: 400 });
     if (text.length > 2000) return NextResponse.json({ error: 'Too long' }, { status: 400 });
 
@@ -74,8 +87,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     if (postRes.error) throw postRes.error;
     if (!postRes.data?.id) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    const profRes = await supabase.from('profiles').select('first_name,last_name').eq('id', user.id).maybeSingle();
-    const p: any = profRes.data || {};
+    const profRes = await supabase.from('profiles').select('first_name,last_name').eq('id', user.id).maybeSingle<ProfileRow>();
+    const p = profRes.data || {};
     const authorName = [p.first_name, p.last_name].filter(Boolean).join(' ').trim() || (user.email || 'Member');
 
     const ins = await supabase
@@ -95,9 +108,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     if (ins.error) throw ins.error;
 
     return NextResponse.json({ ok: true, comment: ins.data });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
-

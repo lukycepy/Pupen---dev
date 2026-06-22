@@ -5,12 +5,46 @@ import { withSchemaCacheRetry } from '@/lib/schema-cache-retry';
 import { EMAIL_TRIGGER_DEFS, type EmailTriggerKey } from '@/lib/email/triggers';
 import { listEmailTemplates, type EmailTemplateKey } from '@/lib/email/templates';
 
+interface EmailTriggerSettingsRow {
+  trigger_key?: string | null;
+  enabled?: boolean | null;
+  settings?: Record<string, unknown> | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+interface EmailTriggerBody {
+  trigger_key?: unknown;
+  triggerKey?: unknown;
+  enabled?: unknown;
+  template_cs?: unknown;
+  templateCs?: unknown;
+  template_en?: unknown;
+  templateEn?: unknown;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
+function isEmailTriggerKey(value: string): value is EmailTriggerKey {
+  return allowedTriggerKeySet().has(value as EmailTriggerKey);
+}
+
+function isEmailTemplateKey(value: string): value is EmailTemplateKey {
+  return allowedTemplateKeySet().has(value as EmailTemplateKey);
+}
+
 function allowedTriggerKeySet() {
   return new Set(EMAIL_TRIGGER_DEFS.map((d) => d.triggerKey));
 }
 
 function allowedTemplateKeySet() {
-  return new Set(listEmailTemplates().map((t) => String(t.key)));
+  return new Set<EmailTemplateKey>(listEmailTemplates().map((t) => t.key));
 }
 
 export async function GET(req: Request) {
@@ -21,22 +55,21 @@ export async function GET(req: Request) {
     const supabase = getServerSupabase();
     const keys = EMAIL_TRIGGER_DEFS.map((d) => d.triggerKey);
     const res = await withSchemaCacheRetry(supabase, () =>
-      supabase.from('email_trigger_settings').select('trigger_key, enabled, settings, created_at, updated_at').in('trigger_key', keys as any),
+      supabase.from('email_trigger_settings').select('trigger_key, enabled, settings, created_at, updated_at').in('trigger_key', keys),
     );
     if (res.error) throw res.error;
-    const rows = Array.isArray(res.data) ? res.data : [];
+    const rows: EmailTriggerSettingsRow[] = Array.isArray(res.data) ? res.data : [];
 
-    const byKey = new Map<string, any>();
-    for (const r of rows) byKey.set(String((r as any).trigger_key), r);
+    const byKey = new Map<string, EmailTriggerSettingsRow>();
+    for (const row of rows) byKey.set(String(row.trigger_key || ''), row);
 
-    const allowedTemplates = allowedTemplateKeySet();
     const triggers = EMAIL_TRIGGER_DEFS.map((d) => {
       const row = byKey.get(d.triggerKey) || null;
-      const settings = row?.settings && typeof row.settings === 'object' ? row.settings : {};
-      const cs = String(settings?.template_cs || '').trim();
-      const en = String(settings?.template_en || '').trim();
-      const templateCs = allowedTemplates.has(cs) ? (cs as EmailTemplateKey) : d.defaultTemplateCs;
-      const templateEn = allowedTemplates.has(en) ? (en as EmailTemplateKey) : d.defaultTemplateEn;
+      const settings = toRecord(row?.settings);
+      const cs = String(settings.template_cs || '').trim();
+      const en = String(settings.template_en || '').trim();
+      const templateCs = isEmailTemplateKey(cs) ? cs : d.defaultTemplateCs;
+      const templateEn = isEmailTemplateKey(en) ? en : d.defaultTemplateEn;
       return {
         trigger_key: d.triggerKey,
         label: d.label,
@@ -49,9 +82,10 @@ export async function GET(req: Request) {
     });
 
     return NextResponse.json({ ok: true, triggers });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
@@ -60,18 +94,17 @@ export async function POST(req: Request) {
     const { user, profile } = await requireAdmin(req);
     if (!profile?.can_manage_admins) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const body = await req.json().catch(() => ({}));
-    const triggerKey = String(body?.trigger_key || body?.triggerKey || '').trim() as EmailTriggerKey;
-    const enabled = body?.enabled != null ? !!body.enabled : true;
-    const templateCs = String(body?.template_cs || body?.templateCs || '').trim();
-    const templateEn = String(body?.template_en || body?.templateEn || '').trim();
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    const payload = body as EmailTriggerBody;
+    const triggerKey = String(payload.trigger_key || payload.triggerKey || '').trim();
+    const enabled = payload.enabled != null ? !!payload.enabled : true;
+    const templateCs = String(payload.template_cs || payload.templateCs || '').trim();
+    const templateEn = String(payload.template_en || payload.templateEn || '').trim();
 
-    const allowedTriggers = allowedTriggerKeySet();
-    if (!allowedTriggers.has(triggerKey)) return NextResponse.json({ error: 'Invalid trigger key' }, { status: 400 });
+    if (!isEmailTriggerKey(triggerKey)) return NextResponse.json({ error: 'Invalid trigger key' }, { status: 400 });
 
-    const allowedTemplates = allowedTemplateKeySet();
-    if (templateCs && !allowedTemplates.has(templateCs)) return NextResponse.json({ error: 'Invalid CS template key' }, { status: 400 });
-    if (templateEn && !allowedTemplates.has(templateEn)) return NextResponse.json({ error: 'Invalid EN template key' }, { status: 400 });
+    if (templateCs && !isEmailTemplateKey(templateCs)) return NextResponse.json({ error: 'Invalid CS template key' }, { status: 400 });
+    if (templateEn && !isEmailTemplateKey(templateEn)) return NextResponse.json({ error: 'Invalid EN template key' }, { status: 400 });
 
     const supabase = getServerSupabase();
     const now = new Date().toISOString();
@@ -99,9 +132,9 @@ export async function POST(req: Request) {
       .throwOnError();
 
     return NextResponse.json({ ok: true, trigger: up.data });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
-

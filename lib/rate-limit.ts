@@ -9,9 +9,19 @@ type Options = {
   max: number;
 };
 
+interface RateLimitRpcRow {
+  allowed?: boolean | null;
+  remaining?: number | null;
+  reset_at?: string | null;
+}
+
+type GlobalWithRateLimitStore = typeof globalThis & {
+  __PUPEN_RATE_LIMIT_STORE__?: Map<string, { count: number; resetAtMs: number }>;
+};
+
 const store: Map<string, { count: number; resetAtMs: number }> =
-  (globalThis as any).__PUPEN_RATE_LIMIT_STORE__ || new Map();
-(globalThis as any).__PUPEN_RATE_LIMIT_STORE__ = store;
+  (globalThis as GlobalWithRateLimitStore).__PUPEN_RATE_LIMIT_STORE__ || new Map();
+(globalThis as GlobalWithRateLimitStore).__PUPEN_RATE_LIMIT_STORE__ = store;
 
 async function rateLimitSharedDb({ bucket, key, windowMs, max }: Options): Promise<RateLimitResult | null> {
   const windowSeconds = Math.max(1, Math.floor(Number(windowMs) / 1000));
@@ -28,7 +38,7 @@ async function rateLimitSharedDb({ bucket, key, windowMs, max }: Options): Promi
     });
     if (res.error) return null;
 
-    const row: any = Array.isArray(res.data) ? res.data[0] : res.data;
+    const row = (Array.isArray(res.data) ? res.data[0] : res.data) as RateLimitRpcRow | null;
     if (!row) return null;
 
     const resetAtMs = row.reset_at ? Date.parse(String(row.reset_at)) : NaN;

@@ -2,11 +2,15 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { requireAdmin } from '@/lib/server-auth';
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function POST(req: Request) {
   try {
     const { user } = await requireAdmin(req);
-    const body = await req.json().catch(() => ({}));
-    const text = String(body?.text || '').trim();
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    const text = String(body.text || '').trim();
 
     const supabase = getServerSupabase();
     const res = await supabase.from('admin_logs').insert([
@@ -21,9 +25,9 @@ export async function POST(req: Request) {
     if (res.error) throw res.error;
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
-

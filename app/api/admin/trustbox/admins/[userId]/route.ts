@@ -3,6 +3,10 @@ import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { logTrustBoxAudit } from '@/lib/trustbox/audit';
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function PATCH(req: Request, { params }: { params: Promise<{ userId: string }> }) {
   try {
     const { user, profile } = await requireAdmin(req);
@@ -11,8 +15,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ userId
     const targetId = String(userId || '').trim();
     if (!targetId) return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
 
-    const body = await req.json().catch(() => ({}));
-    const canViewPii = body?.canViewPii === true;
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    const canViewPii = body.canViewPii === true;
 
     const supabase = getServerSupabase();
     const upd = await supabase.from('trust_box_admins').update({ can_view_pii: canViewPii }).eq('user_id', targetId);
@@ -41,9 +45,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ userId
     }).catch(() => {});
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
@@ -82,8 +87,9 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ userI
     }).catch(() => {});
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

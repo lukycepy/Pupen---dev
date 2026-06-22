@@ -11,10 +11,36 @@ import {
   getApplicationStatusNotificationEmailsFromSettings,
 } from '@/lib/email/mailer';
 
-function mergeDecision(meta: any, patch: any) {
-  const base = meta && typeof meta === 'object' ? meta : {};
-  const prevDecision = base.decision && typeof base.decision === 'object' ? base.decision : {};
+type JsonRecord = Record<string, unknown>;
+
+interface MembershipApplicationDecisionRow {
+  id?: string | null;
+  email?: string | null;
+  status?: string | null;
+  decision_reason?: string | null;
+  meta?: JsonRecord | null;
+}
+
+interface MembershipApplicationFileIdRow {
+  id?: string | number | null;
+}
+
+interface ProfileEmailRow {
+  email?: string | null;
+}
+
+function toRecord(value: unknown): JsonRecord {
+  return value && typeof value === 'object' ? (value as JsonRecord) : {};
+}
+
+function mergeDecision(meta: unknown, patch: JsonRecord) {
+  const base = toRecord(meta);
+  const prevDecision = toRecord(base.decision);
   return { ...base, decision: { ...prevDecision, ...patch } };
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
 }
 
 export async function POST(req: Request, ctx: { params: Promise<{ applicationId: string }> }) {
@@ -28,15 +54,19 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
     const id = String(applicationId || '').trim();
     if (!id) return NextResponse.json({ error: 'Missing applicationId' }, { status: 400 });
 
-    const body = await req.json().catch(() => ({}));
-    const lang = body?.lang === 'en' ? 'en' : 'cs';
+    const body = toRecord(await req.json().catch(() => ({})));
+    const lang = body.lang === 'en' ? 'en' : 'cs';
     const parsed = membershipApplicationAdminDecisionSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
 
-    const appRes = await rls.from('membership_applications_v2').select('status,meta').eq('id', id).maybeSingle();
+    const appRes = await rls
+      .from('membership_applications_v2')
+      .select('status,meta')
+      .eq('id', id)
+      .maybeSingle<MembershipApplicationDecisionRow>();
     if (appRes.error) throw appRes.error;
     if (!appRes.data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    if (String((appRes.data as any).status || '') !== 'pending') return NextResponse.json({ error: 'Immutable' }, { status: 409 });
+    if (String(appRes.data.status || '') !== 'pending') return NextResponse.json({ error: 'Immutable' }, { status: 409 });
 
     const expectedKind = `chair_${parsed.data.decision.chairAuthKind}`;
     const fileRes = await rls
@@ -45,14 +75,14 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
       .eq('id', parsed.data.decision.chairAuthFileId)
       .eq('application_id', id)
       .contains('meta', { kind: expectedKind })
-      .maybeSingle();
+      .maybeSingle<MembershipApplicationFileIdRow>();
     if (fileRes.error) throw fileRes.error;
     if (!fileRes.data) return NextResponse.json({ error: 'Invalid chair auth file' }, { status: 400 });
 
     const decidedAt = new Date().toISOString();
     const decidedBy = user.email || null;
 
-    const nextMeta = mergeDecision((appRes.data as any).meta, {
+    const nextMeta = mergeDecision(appRes.data.meta, {
       decided_at: decidedAt,
       decided_by_email: decidedBy,
       membership_type: parsed.data.decision.membershipType,
@@ -77,13 +107,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
       .from('membership_applications_v2')
       .select('id, email, status, decision_reason, meta')
       .eq('id', id)
-      .maybeSingle();
+      .maybeSingle<MembershipApplicationDecisionRow>();
     if (fullRes.error) throw fullRes.error;
-    const app: any = fullRes.data;
+    const app = fullRes.data;
     const applicantEmail = String(app?.email || '').trim().toLowerCase();
-    const meta: any = app?.meta && typeof app.meta === 'object' ? app.meta : {};
-    const firstName = String(meta?.first_name || '').trim();
-    const lastName = String(meta?.last_name || '').trim();
+    const meta = toRecord(app?.meta);
+    const firstName = String(meta.first_name || '').trim();
+    const lastName = String(meta.last_name || '').trim();
     const status = String(parsed.data.decision.status || '');
     const reason = String(parsed.data.decision.reason || '').trim();
 
@@ -134,7 +164,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
     }
     if (!adminRecipients.length) {
       const { data: profs } = await srv.from('profiles').select('email').or('is_admin.eq.true,can_manage_admins.eq.true').limit(200);
-      adminRecipients = (Array.isArray(profs) ? profs : []).map((r: any) => String(r?.email || '').trim().toLowerCase()).filter(Boolean);
+      adminRecipients = (Array.isArray(profs) ? (profs as ProfileEmailRow[]) : [])
+        .map((row) => String(row.email || '').trim().toLowerCase())
+        .filter(Boolean);
     }
 
     if (adminRecipients.length) {
@@ -157,8 +189,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
     }
 
     return NextResponse.json({ ok: true, decidedAt, decidedBy });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

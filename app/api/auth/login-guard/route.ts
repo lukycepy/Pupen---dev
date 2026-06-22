@@ -3,6 +3,19 @@ import { getClientIp, rateLimit } from '@/lib/rate-limit';
 import { isSameSiteRequest } from '@/lib/request-origin';
 import { isRequestBanned } from '@/lib/security/bans';
 
+interface LoginGuardBody {
+  token?: unknown;
+  captchaToken?: unknown;
+}
+
+interface TurnstileVerifyResponse {
+  success?: boolean;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
 export async function POST(req: Request) {
   const ip = getClientIp(req) || 'unknown';
   if (await isRequestBanned({ ip })) {
@@ -22,12 +35,13 @@ export async function POST(req: Request) {
     );
   }
 
-  const body = await req.json().catch(() => ({}));
+  const body = toRecord(await req.json().catch(() => ({})));
+  const payload = body as LoginGuardBody;
   const secret = process.env.TURNSTILE_SECRET_KEY || '';
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
   const turnstileEnabled = !!(secret && siteKey);
   if (turnstileEnabled) {
-    const token = String(body?.token || body?.captchaToken || '').trim();
+    const token = String(payload.token || payload.captchaToken || '').trim();
     if (!token) return NextResponse.json({ error: 'Captcha required' }, { status: 400 });
     const form = new URLSearchParams();
     form.set('secret', secret);
@@ -40,8 +54,8 @@ export async function POST(req: Request) {
       body: form.toString(),
     }).catch(() => null);
     if (!res) return NextResponse.json({ error: 'Captcha verify failed' }, { status: 400 });
-    const json: any = await res.json().catch(() => ({}));
-    if (!json?.success) return NextResponse.json({ error: 'Invalid captcha' }, { status: 400 });
+    const json = (await res.json().catch(() => ({}))) as TurnstileVerifyResponse;
+    if (!json.success) return NextResponse.json({ error: 'Invalid captcha' }, { status: 400 });
   }
   return NextResponse.json({ ok: true });
 }

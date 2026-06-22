@@ -8,6 +8,21 @@ import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
 import { sendMailWithQueueFallback } from '@/lib/email/queue';
 import { stripHtmlToText } from '@/lib/richtext-shared';
 
+interface NewsletterSubscriptionRow {
+  id?: string | number | null;
+  email?: string | null;
+  categories?: string[] | null;
+  consent?: boolean | null;
+  preferences?: Record<string, unknown> | null;
+  unsubscribed_at?: string | null;
+  doi_token_hash?: string | null;
+  doi_requested_at?: string | null;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
 function asTrimmedString(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
 }
@@ -40,7 +55,7 @@ function isEmail(input: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 }
 
-function normalizeCategories(input: any): string[] {
+function normalizeCategories(input: unknown): string[] {
   const arr = Array.isArray(input) ? input : [];
   const cats = Array.from(new Set(arr.map((x) => String(x || '').trim()).filter(Boolean)));
   if (!cats.length) return ['all'];
@@ -58,10 +73,10 @@ export async function POST(req: Request) {
       tooManyMessage: 'Příliš mnoho požadavků, zkuste to později.',
     });
     if (!g.ok) return g.response;
-    const body = g.body;
+    const body = toRecord(g.body);
 
     const email = normalizeEmail(body.email);
-    const categories = normalizeCategories(body?.categories);
+    const categories = normalizeCategories(body.categories);
     const source = body.source != null ? String(body.source).slice(0, 80) : 'web';
     const lang = normalizeLang(body.lang);
 
@@ -80,19 +95,19 @@ export async function POST(req: Request) {
       .select('id,email,categories,consent,preferences,unsubscribed_at,doi_token_hash,doi_requested_at')
       .eq('email', email)
       .limit(1)
-      .maybeSingle();
+      .maybeSingle<NewsletterSubscriptionRow>();
     if (existing.error) throw existing.error;
 
     // Pokud uživatel už existuje, ale neposlal nové kategorie, zachováme původní
-    const finalCategories = body.categories ? categories : (existing.data?.categories || ['all']);
+    const finalCategories = body.categories !== undefined ? categories : (existing.data?.categories || ['all']);
     // Preference: "marketing" a "transactional"
-    const prefs = (typeof body.preferences === 'object' && body.preferences !== null ? body.preferences : null) || existing.data?.preferences || { marketing: true, transactional: true };
-    const existingId = existing.data?.id ? String((existing.data as any).id) : null;
+    const prefs = Object.keys(toRecord(body.preferences)).length ? toRecord(body.preferences) : existing.data?.preferences || { marketing: true, transactional: true };
+    const existingId = existing.data?.id != null ? String(existing.data.id) : null;
 
     if (doiCfg.enabled) {
       const alreadyConfirmed = !!existingId && existing.data?.consent === true && !existing.data?.unsubscribed_at;
       if (alreadyConfirmed) {
-        let up: any = await supabase
+        let up = await supabase
           .from('newsletter_subscriptions')
           .update({ categories: finalCategories, preferences: prefs, consent: true, source, updated_at: nowIso })
           .eq('id', existingId);
@@ -112,7 +127,7 @@ export async function POST(req: Request) {
       confirmUrl.searchParams.set('token', token);
       confirmUrl.searchParams.set('lang', lang);
 
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         categories: finalCategories,
         preferences: prefs,
         consent: false,
@@ -124,23 +139,23 @@ export async function POST(req: Request) {
       };
 
       if (existingId) {
-        let up: any = await supabase.from('newsletter_subscriptions').update(payload).eq('id', existingId);
+        let up = await supabase.from('newsletter_subscriptions').update(payload).eq('id', existingId);
         if (up.error && isMissingColumn(up.error)) {
-          const payload2: any = { categories: finalCategories, preferences: prefs, consent: false, source };
+          const payload2: Record<string, unknown> = { categories: finalCategories, preferences: prefs, consent: false, source };
           up = await supabase.from('newsletter_subscriptions').update(payload2).eq('id', existingId);
         }
         if (up.error) throw up.error;
       } else {
-        let ins: any = await supabase.from('newsletter_subscriptions').insert([{ email, ...payload }]);
+        let ins = await supabase.from('newsletter_subscriptions').insert([{ email, ...payload }]);
         if (ins.error && ins.error.code === '23505') {
-          let up: any = await supabase.from('newsletter_subscriptions').update(payload).eq('email', email);
+          let up = await supabase.from('newsletter_subscriptions').update(payload).eq('email', email);
           if (up.error && isMissingColumn(up.error)) {
-            const payload2: any = { categories: finalCategories, preferences: prefs, consent: false, source };
+            const payload2: Record<string, unknown> = { categories: finalCategories, preferences: prefs, consent: false, source };
             up = await supabase.from('newsletter_subscriptions').update(payload2).eq('email', email);
           }
           if (up.error) throw up.error;
         } else if (ins.error && isMissingColumn(ins.error)) {
-          const payload2: any = { email, categories: finalCategories, preferences: prefs, consent: false, source };
+          const payload2: Record<string, unknown> = { email, categories: finalCategories, preferences: prefs, consent: false, source };
           ins = await supabase.from('newsletter_subscriptions').insert([payload2]);
           if (ins.error) throw ins.error;
         } else if (ins.error) {
@@ -169,7 +184,7 @@ export async function POST(req: Request) {
     }
 
     if (existing.data?.id) {
-      let up: any = await supabase
+      let up = await supabase
         .from('newsletter_subscriptions')
         .update({ categories: finalCategories, preferences: prefs, consent: true, source, updated_at: nowIso })
         .eq('id', existing.data.id);
@@ -180,7 +195,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, status: 'updated' });
     }
 
-    let ins: any = await supabase.from('newsletter_subscriptions').insert([
+    let ins = await supabase.from('newsletter_subscriptions').insert([
       {
         email,
         categories: finalCategories,
@@ -203,7 +218,7 @@ export async function POST(req: Request) {
     }
     if (ins.error) {
       if (ins.error.code === '23505') {
-        let up: any = await supabase
+        let up = await supabase
           .from('newsletter_subscriptions')
           .update({ categories: finalCategories, preferences: prefs, consent: true, source, updated_at: nowIso })
           .eq('email', email);

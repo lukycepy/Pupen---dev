@@ -2,15 +2,38 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { guardPublicJsonPost } from '@/lib/public-post-guard';
 
-function pickFirst(obj: any, keys: string[]) {
+interface SitePublicConfigRow {
+  member_portal?: Record<string, unknown> | null;
+}
+
+interface AddressResult {
+  ok: boolean;
+  provider?: 'nominatim' | 'ruian';
+  id?: string;
+  label?: string;
+  full?: string;
+  city?: string;
+  postcode?: string;
+  street?: string;
+  house_number?: string;
+  lat?: number | null;
+  lon?: number | null;
+  score?: number | null;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function pickFirst(obj: Record<string, unknown>, keys: string[]) {
   for (const k of keys) {
-    const v = obj?.[k];
+    const v = obj[k];
     if (typeof v === 'string' && v.trim()) return v.trim();
   }
   return '';
 }
 
-function formatLabel(addr: any) {
+function formatLabel(addr: Record<string, unknown>) {
   const street = pickFirst(addr, ['road', 'pedestrian', 'footway', 'street']);
   const house = pickFirst(addr, ['house_number']);
   const postcode = pickFirst(addr, ['postcode']);
@@ -21,7 +44,7 @@ function formatLabel(addr: any) {
   return [a, b].filter(Boolean).join(', ');
 }
 
-function formatFull(addr: any) {
+function formatFull(addr: Record<string, unknown>) {
   const street = pickFirst(addr, ['road', 'pedestrian', 'footway', 'street']);
   const house = pickFirst(addr, ['house_number']);
   const postcode = pickFirst(addr, ['postcode']);
@@ -30,13 +53,21 @@ function formatFull(addr: any) {
   return parts.join(', ');
 }
 
+function asTrimmedString(value: unknown) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 async function getAddressProvider() {
   try {
     const supabase = getServerSupabase();
-    const { data, error } = await supabase.from('site_public_config').select('member_portal').eq('id', 1).maybeSingle();
+    const { data, error } = await supabase.from('site_public_config').select('member_portal').eq('id', 1).maybeSingle<SitePublicConfigRow>();
     if (error) return 'nominatim';
-    const mp: any = data?.member_portal && typeof data.member_portal === 'object' ? data.member_portal : {};
-    const v = String(mp?.address_provider || '').trim().toLowerCase();
+    const mp = toRecord(data?.member_portal);
+    const v = String(mp.address_provider || '').trim().toLowerCase();
     return v === 'ruian' ? 'ruian' : 'nominatim';
   } catch {
     return 'nominatim';
@@ -61,12 +92,13 @@ async function validateNominatim(q: string, lang: string) {
     cache: 'no-store',
   });
   if (!res.ok) return { ok: false };
-  const data = (await res.json().catch(() => [])) as any[];
+  const data = (await res.json().catch(() => [])) as unknown[];
   const x = Array.isArray(data) ? data[0] : null;
   if (!x) return { ok: false };
-  const addr = x?.address || {};
-  const label = formatLabel(addr) || String(x?.display_name || '').trim();
-  const full = formatFull(addr) || String(x?.display_name || '').trim();
+  const item = toRecord(x);
+  const addr = toRecord(item.address);
+  const label = formatLabel(addr) || String(item.display_name || '').trim();
+  const full = formatFull(addr) || String(item.display_name || '').trim();
   const city = pickFirst(addr, ['city', 'town', 'village', 'municipality', 'hamlet', 'suburb']);
   const postcode = pickFirst(addr, ['postcode']);
   const street = pickFirst(addr, ['road', 'pedestrian', 'footway', 'street']);
@@ -76,16 +108,16 @@ async function validateNominatim(q: string, lang: string) {
   return {
     ok: strictOk,
     provider: 'nominatim',
-    id: String(x?.place_id || ''),
+    id: String(item.place_id || ''),
     label,
     full,
     city,
     postcode,
     street,
     house_number,
-    lat: x?.lat ? Number(x.lat) : null,
-    lon: x?.lon ? Number(x.lon) : null,
-  };
+    lat: item.lat ? Number(item.lat) : null,
+    lon: item.lon ? Number(item.lon) : null,
+  } satisfies AddressResult;
 }
 
 async function validateRuian(q: string) {
@@ -98,11 +130,15 @@ async function validateRuian(q: string) {
   });
   const res = await fetch(`${base}?${qs.toString()}`, { cache: 'no-store' });
   if (!res.ok) return { ok: false };
-  const json: any = await res.json().catch(() => ({}));
-  const c = Array.isArray(json?.candidates) ? json.candidates[0] : null;
-  const address = String(c?.address || c?.attributes?.Match_addr || '').trim();
+  const json = toRecord(await res.json().catch(() => ({})));
+  const candidates = Array.isArray(json.candidates) ? json.candidates : [];
+  const c = candidates[0];
+  const candidate = toRecord(c);
+  const attributes = toRecord(candidate.attributes);
+  const location = toRecord(candidate.location);
+  const address = String(candidate.address || attributes.Match_addr || '').trim();
   if (!address) return { ok: false };
-  const score = typeof c?.score === 'number' ? c.score : typeof c?.attributes?.Score === 'number' ? c.attributes.Score : null;
+  const score = typeof candidate.score === 'number' ? candidate.score : typeof attributes.Score === 'number' ? attributes.Score : null;
   const strictOk = typeof score === 'number' ? score >= 90 : false;
   return {
     ok: strictOk,
@@ -111,9 +147,9 @@ async function validateRuian(q: string) {
     label: address,
     full: address,
     score,
-    lon: typeof c?.location?.x === 'number' ? c.location.x : null,
-    lat: typeof c?.location?.y === 'number' ? c.location.y : null,
-  };
+    lon: typeof location.x === 'number' ? location.x : null,
+    lat: typeof location.y === 'number' ? location.y : null,
+  } satisfies AddressResult;
 }
 
 export async function POST(req: Request) {
@@ -129,8 +165,8 @@ export async function POST(req: Request) {
     });
     if (!g.ok) return g.response;
     const body = g.body;
-    const q = String(body?.q || body?.address || '').trim();
-    const lang = body?.lang === 'en' ? 'en' : 'cs';
+    const q = asTrimmedString(body.q || body.address);
+    const lang = body.lang === 'en' ? 'en' : 'cs';
     if (q.length < 3) return NextResponse.json({ ok: false, error: 'Too short' }, { status: 400 });
 
     const provider = await getAddressProvider();
@@ -139,8 +175,8 @@ export async function POST(req: Request) {
       const fallback = await validateNominatim(q, lang);
       return NextResponse.json({ ok: fallback.ok, address: fallback.full || q, meta: fallback, provider: 'nominatim' });
     }
-    return NextResponse.json({ ok: result.ok, address: (result as any).full || q, meta: result, provider: (result as any).provider || provider });
-  } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message || 'Error' }, { status: 500 });
+    return NextResponse.json({ ok: result.ok, address: result.full || q, meta: result, provider: result.provider || provider });
+  } catch (error: unknown) {
+    return NextResponse.json({ ok: false, error: getErrorMessage(error) }, { status: 500 });
   }
 }

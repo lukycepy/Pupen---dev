@@ -3,11 +3,27 @@ import { getServerSupabase } from '@/lib/supabase-server';
 import { requireUser } from '@/lib/server-auth';
 import { extractDocumentsPath } from '@/lib/documents/storage';
 
+interface DocumentRow {
+  id?: string | null;
+  file_url?: string | null;
+  access_level?: string | null;
+  is_member_only?: boolean | null;
+  share_enabled?: boolean | null;
+}
+
+function asTrimmedString(value: unknown) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function POST(req: Request) {
   try {
     const user = await requireUser(req);
-    const body = await req.json().catch(() => ({}));
-    const documentId = String(body?.documentId || body?.document_id || body?.id || '').trim();
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    const documentId = asTrimmedString(body.documentId || body.document_id || body.id);
     if (!documentId) return NextResponse.json({ error: 'Missing documentId' }, { status: 400 });
 
     const supabase = getServerSupabase();
@@ -15,9 +31,9 @@ export async function POST(req: Request) {
       .from('documents')
       .select('id, file_url, access_level, is_member_only, share_enabled')
       .eq('id', documentId)
-      .maybeSingle();
+      .maybeSingle<DocumentRow>();
     if (docRes.error) throw docRes.error;
-    const doc: any = docRes.data;
+    const doc = docRes.data;
     if (!doc) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     const { data: profile, error: profErr } = await supabase
@@ -39,9 +55,9 @@ export async function POST(req: Request) {
     const signed = await supabase.storage.from('documents').createSignedUrl(path, 60 * 10);
     if (signed.error) throw signed.error;
     return NextResponse.json({ ok: true, url: signed.data?.signedUrl });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
-

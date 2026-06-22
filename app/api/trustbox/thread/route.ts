@@ -4,8 +4,41 @@ import { getServerSupabase } from '@/lib/supabase-server';
 import { guardPublicGet, guardPublicJsonPost } from '@/lib/public-post-guard';
 import { enqueueEmailSend } from '@/lib/email/queue';
 
+interface AccessTokenRow {
+  thread_id?: string | null;
+  expires_at?: string | null;
+}
+
+interface TrustBoxThreadRow {
+  id: string;
+  status?: string | null;
+  priority?: string | null;
+  category?: string | null;
+  subject?: string | null;
+  created_at?: string | null;
+  anonymized_at?: string | null;
+}
+
+interface AdminMessageRow {
+  author_user_id?: string | null;
+}
+
+interface ProfileRow {
+  email?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+}
+
 function sha256Hex(input: string) {
   return createHash('sha256').update(input).digest('hex');
+}
+
+function asTrimmedString(value: unknown) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
 }
 
 export async function GET(req: Request) {
@@ -22,15 +55,15 @@ export async function GET(req: Request) {
       .from('trust_box_access_tokens')
       .select('thread_id, expires_at')
       .eq('token_hash', tokenHash)
-      .maybeSingle();
+      .maybeSingle<AccessTokenRow>();
     if (tok.error) throw tok.error;
-    const row: any = tok.data;
+    const row = tok.data;
     if (!row) return NextResponse.json({ error: 'Invalid token' }, { status: 400 });
-    if (new Date(row.expires_at).getTime() < Date.now()) return NextResponse.json({ error: 'Expired' }, { status: 400 });
+    if (!row.expires_at || new Date(row.expires_at).getTime() < Date.now()) return NextResponse.json({ error: 'Expired' }, { status: 400 });
 
-    const threadRes = await supabase.from('trust_box_threads').select('*').eq('id', row.thread_id).maybeSingle();
+    const threadRes = await supabase.from('trust_box_threads').select('*').eq('id', row.thread_id).maybeSingle<TrustBoxThreadRow>();
     if (threadRes.error) throw threadRes.error;
-    const thread: any = threadRes.data;
+    const thread = threadRes.data;
     if (!thread) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     const msgsRes = await supabase
@@ -62,8 +95,8 @@ export async function GET(req: Request) {
       messages: msgsRes.data || [],
       attachments: atRes.data || [],
     });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }
 
@@ -76,10 +109,10 @@ export async function POST(req: Request) {
       honeypotResponse: { ok: true },
     });
     if (!g.ok) return g.response;
-    const body = g.body || {};
+    const body = g.body;
 
-    const token = String(body?.token || '').trim();
-    const message = String(body?.message || '').trim().slice(0, 10_000);
+    const token = asTrimmedString(body.token);
+    const message = asTrimmedString(body.message).slice(0, 10_000);
     if (!token) return NextResponse.json({ error: 'Missing token' }, { status: 400 });
     if (!message) return NextResponse.json({ error: 'Missing message' }, { status: 400 });
 
@@ -89,11 +122,11 @@ export async function POST(req: Request) {
       .from('trust_box_access_tokens')
       .select('thread_id, expires_at')
       .eq('token_hash', tokenHash)
-      .maybeSingle();
+      .maybeSingle<AccessTokenRow>();
     if (tok.error) throw tok.error;
-    const row: any = tok.data;
+    const row = tok.data;
     if (!row) return NextResponse.json({ error: 'Invalid token' }, { status: 400 });
-    if (new Date(row.expires_at).getTime() < Date.now()) return NextResponse.json({ error: 'Expired' }, { status: 400 });
+    if (!row.expires_at || new Date(row.expires_at).getTime() < Date.now()) return NextResponse.json({ error: 'Expired' }, { status: 400 });
 
     const ins = await supabase.from('trust_box_messages').insert([{ thread_id: row.thread_id, author_type: 'reporter', body: message }]);
     if (ins.error) throw ins.error;
@@ -109,15 +142,15 @@ export async function POST(req: Request) {
         .not('author_user_id', 'is', null)
         .order('created_at', { ascending: false })
         .limit(1)
-        .maybeSingle();
-      const adminMsg: any = lastAdmin.data || null;
+        .maybeSingle<AdminMessageRow>();
+      const adminMsg = lastAdmin.data || null;
       if (adminMsg?.author_user_id) {
         const profRes = await supabase
           .from('profiles')
           .select('email, first_name, last_name')
           .eq('id', String(adminMsg.author_user_id))
-          .maybeSingle();
-        const prof: any = profRes.data || null;
+          .maybeSingle<ProfileRow>();
+        const prof = profRes.data || null;
         const toEmail = String(prof?.email || '').trim();
         if (toEmail) {
           const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://pupen.org';
@@ -154,7 +187,7 @@ export async function POST(req: Request) {
     } catch {}
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

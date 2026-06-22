@@ -2,6 +2,20 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 
+interface NewsletterHistoryRow {
+  id?: string | number | null;
+  created_at?: string | null;
+  subject?: string | null;
+  sent_at?: string | null;
+  target_count?: number | null;
+  open_count?: number | null;
+  click_count?: number | null;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function GET(req: Request) {
   try {
     const { profile } = await requireAdmin(req);
@@ -15,9 +29,11 @@ export async function GET(req: Request) {
       .limit(50);
     if (res.error) throw res.error;
 
-    return NextResponse.json({ ok: true, campaigns: res.data || [] });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+    const campaigns: NewsletterHistoryRow[] = Array.isArray(res.data) ? res.data : [];
+    return NextResponse.json({ ok: true, campaigns });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

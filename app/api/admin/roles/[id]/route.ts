@@ -3,9 +3,13 @@ import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { withSchemaCacheRetry } from '@/lib/schema-cache-retry';
 
-function isSchemaCacheMissingTable(e: any) {
-  const msg = String(e?.message || '');
+function isSchemaCacheMissingTable(error: unknown) {
+  const msg = error instanceof Error ? error.message : '';
   return msg.includes("Could not find the table") && msg.includes("in the schema cache");
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
 }
 
 export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -31,8 +35,8 @@ export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }
       .throwOnError();
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    if (isSchemaCacheMissingTable(e)) {
+  } catch (error: unknown) {
+    if (isSchemaCacheMissingTable(error)) {
       return NextResponse.json(
         {
           error:
@@ -41,7 +45,8 @@ export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }
         { status: 501 },
       );
     }
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

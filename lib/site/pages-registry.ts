@@ -46,8 +46,10 @@ export const SITE_PAGES: SitePageRegistryItem[] = [
   { slug: 'vyrocni-zpravy', group: 'Nástroje', defaults: { enabled: true, tools: true } },
 ];
 
+type SitePagesConfig = Record<string, SitePageRegistryItem['defaults']>;
+
 export function buildDefaultPagesConfig() {
-  const out: Record<string, any> = {};
+  const out: SitePagesConfig = {};
   for (const p of SITE_PAGES) out[p.slug] = { ...p.defaults };
   return out;
 }

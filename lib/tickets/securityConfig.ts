@@ -38,32 +38,38 @@ export const DEFAULT_TICKET_SECURITY_CONFIG: TicketSecurityConfig = {
   },
 };
 
-function n(v: any, fallback: number) {
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function n(v: unknown, fallback: number) {
   const x = Number(v);
   if (!Number.isFinite(x)) return fallback;
   return x;
 }
 
-export function normalizeTicketSecurityConfig(input: any): TicketSecurityConfig {
-  const cfg = input || {};
+export function normalizeTicketSecurityConfig(input: unknown): TicketSecurityConfig {
+  const cfg = toRecord(input);
+  const rsvp = toRecord(cfg.rsvp);
+  const ui = toRecord(cfg.ui);
+  const domainSuggest = toRecord(cfg.domainSuggest);
   return {
     rsvp: {
-      windowMinutes: Math.max(1, Math.floor(n(cfg?.rsvp?.windowMinutes, DEFAULT_TICKET_SECURITY_CONFIG.rsvp.windowMinutes))),
-      maxAttemptsPerIp: Math.max(1, Math.floor(n(cfg?.rsvp?.maxAttemptsPerIp, DEFAULT_TICKET_SECURITY_CONFIG.rsvp.maxAttemptsPerIp))),
-      maxAttemptsPerEmail: Math.max(1, Math.floor(n(cfg?.rsvp?.maxAttemptsPerEmail, DEFAULT_TICKET_SECURITY_CONFIG.rsvp.maxAttemptsPerEmail))),
+      windowMinutes: Math.max(1, Math.floor(n(rsvp.windowMinutes, DEFAULT_TICKET_SECURITY_CONFIG.rsvp.windowMinutes))),
+      maxAttemptsPerIp: Math.max(1, Math.floor(n(rsvp.maxAttemptsPerIp, DEFAULT_TICKET_SECURITY_CONFIG.rsvp.maxAttemptsPerIp))),
+      maxAttemptsPerEmail: Math.max(1, Math.floor(n(rsvp.maxAttemptsPerEmail, DEFAULT_TICKET_SECURITY_CONFIG.rsvp.maxAttemptsPerEmail))),
     },
     ui: {
-      ipHighAttempts: Math.max(1, Math.floor(n(cfg?.ui?.ipHighAttempts, DEFAULT_TICKET_SECURITY_CONFIG.ui.ipHighAttempts))),
-      ipMedAttempts: Math.max(1, Math.floor(n(cfg?.ui?.ipMedAttempts, DEFAULT_TICKET_SECURITY_CONFIG.ui.ipMedAttempts))),
-      ipHighDistinctEmails: Math.max(1, Math.floor(n(cfg?.ui?.ipHighDistinctEmails, DEFAULT_TICKET_SECURITY_CONFIG.ui.ipHighDistinctEmails))),
-      repeatOffenderHighScore: Math.max(1, Math.floor(n(cfg?.ui?.repeatOffenderHighScore, DEFAULT_TICKET_SECURITY_CONFIG.ui.repeatOffenderHighScore))),
-      repeatOffenderMedScore: Math.max(1, Math.floor(n(cfg?.ui?.repeatOffenderMedScore, DEFAULT_TICKET_SECURITY_CONFIG.ui.repeatOffenderMedScore))),
-      repeatOffenderMinScore: Math.max(1, Math.floor(n(cfg?.ui?.repeatOffenderMinScore, DEFAULT_TICKET_SECURITY_CONFIG.ui.repeatOffenderMinScore))),
+      ipHighAttempts: Math.max(1, Math.floor(n(ui.ipHighAttempts, DEFAULT_TICKET_SECURITY_CONFIG.ui.ipHighAttempts))),
+      ipMedAttempts: Math.max(1, Math.floor(n(ui.ipMedAttempts, DEFAULT_TICKET_SECURITY_CONFIG.ui.ipMedAttempts))),
+      ipHighDistinctEmails: Math.max(1, Math.floor(n(ui.ipHighDistinctEmails, DEFAULT_TICKET_SECURITY_CONFIG.ui.ipHighDistinctEmails))),
+      repeatOffenderHighScore: Math.max(1, Math.floor(n(ui.repeatOffenderHighScore, DEFAULT_TICKET_SECURITY_CONFIG.ui.repeatOffenderHighScore))),
+      repeatOffenderMedScore: Math.max(1, Math.floor(n(ui.repeatOffenderMedScore, DEFAULT_TICKET_SECURITY_CONFIG.ui.repeatOffenderMedScore))),
+      repeatOffenderMinScore: Math.max(1, Math.floor(n(ui.repeatOffenderMinScore, DEFAULT_TICKET_SECURITY_CONFIG.ui.repeatOffenderMinScore))),
     },
     domainSuggest: {
-      minAttempts: Math.max(1, Math.floor(n(cfg?.domainSuggest?.minAttempts, DEFAULT_TICKET_SECURITY_CONFIG.domainSuggest.minAttempts))),
-      minDistinctEmails: Math.max(1, Math.floor(n(cfg?.domainSuggest?.minDistinctEmails, DEFAULT_TICKET_SECURITY_CONFIG.domainSuggest.minDistinctEmails))),
+      minAttempts: Math.max(1, Math.floor(n(domainSuggest.minAttempts, DEFAULT_TICKET_SECURITY_CONFIG.domainSuggest.minAttempts))),
+      minDistinctEmails: Math.max(1, Math.floor(n(domainSuggest.minDistinctEmails, DEFAULT_TICKET_SECURITY_CONFIG.domainSuggest.minDistinctEmails))),
     },
   };
 }
-

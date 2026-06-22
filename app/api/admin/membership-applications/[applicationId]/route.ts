@@ -4,19 +4,50 @@ import { getRlsSupabase } from '@/lib/supabase-rls';
 import { membershipApplicationAdminUpdateSchema } from '@/lib/validations/membership-applications-admin';
 import { writeAuditLog } from '@/lib/audit/audit-log';
 
-function mergeMeta(prev: any, patch: any) {
-  const base = prev && typeof prev === 'object' ? prev : {};
-  const p = patch && typeof patch === 'object' ? patch : {};
-  const next: any = { ...base };
+type JsonRecord = Record<string, unknown>;
+
+interface MembershipApplicationRow {
+  id?: string | null;
+  status?: string | null;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  motivation?: string | null;
+  faculty?: string | null;
+  meta?: JsonRecord | null;
+}
+
+interface MembershipApplicationFileRow {
+  id?: string | number | null;
+  created_at?: string | null;
+  file_name?: string | null;
+  mime_type?: string | null;
+  size_bytes?: number | null;
+  meta?: JsonRecord | null;
+}
+
+function toRecord(value: unknown): JsonRecord {
+  return value && typeof value === 'object' ? (value as JsonRecord) : {};
+}
+
+function mergeMeta(prev: unknown, patch: unknown) {
+  const base = toRecord(prev);
+  const p = toRecord(patch);
+  const next: JsonRecord = { ...base };
   for (const [k, v] of Object.entries(p)) {
     if (k === 'pdf_snapshot' && v && typeof v === 'object') {
-      const prevSnap = next.pdf_snapshot && typeof next.pdf_snapshot === 'object' ? next.pdf_snapshot : {};
-      next.pdf_snapshot = { ...prevSnap, ...(v as any) };
+      const prevSnap = toRecord(next.pdf_snapshot);
+      next.pdf_snapshot = { ...prevSnap, ...toRecord(v) };
       continue;
     }
     next[k] = v;
   }
   return next;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
 }
 
 export async function GET(req: Request, ctx: { params: Promise<{ applicationId: string }> }) {
@@ -30,7 +61,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ applicationId: 
     const id = String(applicationId || '').trim();
     if (!id) return NextResponse.json({ error: 'Missing applicationId' }, { status: 400 });
 
-    const appRes = await rls.from('membership_applications_v2').select('*').eq('id', id).maybeSingle();
+    const appRes = await rls.from('membership_applications_v2').select('*').eq('id', id).maybeSingle<MembershipApplicationRow>();
     if (appRes.error) throw appRes.error;
     if (!appRes.data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
@@ -41,10 +72,12 @@ export async function GET(req: Request, ctx: { params: Promise<{ applicationId: 
       .order('created_at', { ascending: false });
     if (filesRes.error) throw filesRes.error;
 
-    return NextResponse.json({ ok: true, application: appRes.data, files: filesRes.data || [] });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+    const files: MembershipApplicationFileRow[] = Array.isArray(filesRes.data) ? filesRes.data : [];
+    return NextResponse.json({ ok: true, application: appRes.data, files });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
@@ -63,22 +96,22 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ applicationId
     const parsed = membershipApplicationAdminUpdateSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
 
-    const current = await rls.from('membership_applications_v2').select('*').eq('id', id).maybeSingle();
+    const current = await rls.from('membership_applications_v2').select('*').eq('id', id).maybeSingle<MembershipApplicationRow>();
     if (current.error) throw current.error;
     if (!current.data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    if (String((current.data as any).status || '') !== 'pending') {
+    if (String(current.data.status || '') !== 'pending') {
       return NextResponse.json({ error: 'Immutable' }, { status: 409 });
     }
 
-    const prevMeta = (current.data as any).meta;
+    const prevMeta = current.data.meta;
     const patchMeta = parsed.data.application.meta;
     const nextMeta = mergeMeta(prevMeta, patchMeta);
 
-    const firstName = String(nextMeta?.first_name || '').trim();
-    const lastName = String(nextMeta?.last_name || '').trim();
-    const nextName = `${firstName} ${lastName}`.trim() || String((current.data as any).name || '').trim() || null;
-    const membershipType = String(nextMeta?.membership_type || '').trim();
-    const fieldOfStudy = String(nextMeta?.field_of_study || '').trim();
+    const firstName = String(nextMeta.first_name || '').trim();
+    const lastName = String(nextMeta.last_name || '').trim();
+    const nextName = `${firstName} ${lastName}`.trim() || String(current.data.name || '').trim() || null;
+    const membershipType = String(nextMeta.membership_type || '').trim();
+    const fieldOfStudy = String(nextMeta.field_of_study || '').trim();
     const nextFaculty = membershipType === 'regular' ? fieldOfStudy || null : null;
 
     const up = await rls
@@ -96,7 +129,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ applicationId
       .eq('id', id);
     if (up.error) throw up.error;
 
-    const afterRes = await rls.from('membership_applications_v2').select('*').eq('id', id).maybeSingle();
+    const afterRes = await rls.from('membership_applications_v2').select('*').eq('id', id).maybeSingle<MembershipApplicationRow>();
     if (afterRes.error) throw afterRes.error;
 
     await writeAuditLog({
@@ -110,8 +143,9 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ applicationId
     });
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

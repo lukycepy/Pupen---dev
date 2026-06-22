@@ -10,6 +10,10 @@ interface StoredFileRow {
   storage_path?: string | null;
 }
 
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Error';
 }
@@ -30,7 +34,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
     const id = String(applicationId || '').trim();
     if (!id) return NextResponse.json({ error: 'Missing applicationId' }, { status: 400 });
 
-    const body = await req.json().catch(() => ({}));
+    const body = toRecord(await req.json().catch(() => ({})));
     const parsed = bodySchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
 

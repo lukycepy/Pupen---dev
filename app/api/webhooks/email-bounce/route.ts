@@ -2,14 +2,22 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { guardPublicJsonPost } from '@/lib/public-post-guard';
 
-function normEmail(v: any) {
+function normEmail(v: unknown) {
   return String(v || '').trim().toLowerCase().slice(0, 240);
 }
 
-function pickEmail(body: any) {
-  const direct = normEmail(body?.email || body?.recipient || body?.to || body?.address);
+function toRecord(value: unknown): Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
+function pickEmail(body: Record<string, unknown>) {
+  const direct = normEmail(body.email || body.recipient || body.to || body.address);
   if (direct.includes('@')) return direct;
-  const arr = Array.isArray(body?.recipients) ? body.recipients : Array.isArray(body?.emails) ? body.emails : null;
+  const arr = Array.isArray(body.recipients) ? body.recipients : Array.isArray(body.emails) ? body.emails : null;
   if (arr && arr.length) {
     const first = normEmail(arr[0]);
     if (first.includes('@')) return first;
@@ -35,13 +43,13 @@ export async function POST(req: Request) {
       tooManyMessage: 'Too many requests',
     });
     if (!g.ok) return g.response;
-    const body = g.body;
+    const body = toRecord(g.body);
     const email = pickEmail(body);
     if (!email || !email.includes('@')) return NextResponse.json({ ok: true, ignored: true });
 
-    const provider = body?.provider ? String(body.provider).slice(0, 80) : '';
-    const bounceType = body?.type ? String(body.type).slice(0, 80) : body?.bounceType ? String(body.bounceType).slice(0, 80) : '';
-    const reason = body?.reason ? String(body.reason).slice(0, 500) : body?.description ? String(body.description).slice(0, 500) : '';
+    const provider = body.provider ? String(body.provider).slice(0, 80) : '';
+    const bounceType = body.type ? String(body.type).slice(0, 80) : body.bounceType ? String(body.bounceType).slice(0, 80) : '';
+    const reason = body.reason ? String(body.reason).slice(0, 500) : body.description ? String(body.description).slice(0, 500) : '';
     const now = new Date().toISOString();
 
     const cur = await supabase.from('email_bounces').select('bounce_count').eq('email', email).maybeSingle();
@@ -59,7 +67,7 @@ export async function POST(req: Request) {
             provider: provider || null,
             bounce_type: bounceType || null,
             reason: reason || null,
-            raw: body || {},
+            raw: body,
             updated_at: now,
           },
         ],
@@ -82,7 +90,7 @@ export async function POST(req: Request) {
     ]);
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

@@ -11,7 +11,52 @@ import { stripHtmlToText } from '@/lib/richtext-shared';
 
 export const runtime = 'nodejs';
 
-function normalizeCategories(input: any): string[] {
+interface NewsletterSendBody {
+  subject?: unknown;
+  html?: unknown;
+  categories?: unknown;
+  roleIds?: unknown;
+  attachments?: unknown;
+  ab?: unknown;
+  draftId?: unknown;
+}
+
+interface NewsletterSubscriptionRow {
+  email?: string | null;
+  categories?: string[] | null;
+  consent?: boolean | null;
+}
+
+interface UserRoleRow {
+  user_id?: string | null;
+}
+
+interface ProfileEmailRow {
+  email?: string | null;
+}
+
+interface NewsletterInsertRow {
+  id?: string | number | null;
+}
+
+interface AbInput {
+  enabled?: unknown;
+  subjectA?: unknown;
+  subjectB?: unknown;
+  split?: unknown;
+}
+
+interface AttachmentInput {
+  name?: unknown;
+  url?: unknown;
+}
+
+interface MailAttachment {
+  filename: string;
+  path: string;
+}
+
+function normalizeCategories(input: unknown): string[] {
   const arr = Array.isArray(input) ? input : [];
   const cats = Array.from(new Set(arr.map((x) => String(x || '').trim()).filter(Boolean)));
   if (!cats.length) return ['all'];
@@ -19,12 +64,27 @@ function normalizeCategories(input: any): string[] {
   return cats;
 }
 
-function matchesCategories(subCats: any, targetCats: string[]) {
+function matchesCategories(subCats: unknown, targetCats: string[]) {
   if (targetCats.includes('all')) return true;
   const c = Array.isArray(subCats) ? subCats.map((x) => String(x || '').trim()) : [];
   if (!c.length) return true;
   if (c.includes('all')) return true;
   return c.some((x) => targetCats.includes(x));
+}
+
+function normalizeStringArray(input: unknown): string[] {
+  return Array.isArray(input) ? input.map((item) => String(item || '').trim()).filter(Boolean) : [];
+}
+
+function normalizeAttachment(input: unknown): MailAttachment | null {
+  const attachment = input as AttachmentInput;
+  const filename = typeof attachment?.name === 'string' ? attachment.name.trim() : '';
+  const path = typeof attachment?.url === 'string' ? attachment.url.trim() : '';
+  return filename && path ? { filename, path } : null;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
 }
 
 async function sendWithConcurrency<T>(
@@ -59,42 +119,47 @@ export async function POST(req: Request) {
     const { user, profile } = await requireAdmin(req);
     if (!profile?.is_admin && !profile?.can_manage_admins) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const body = await req.json().catch(() => ({}));
-    const subject = String(body?.subject || '').trim().slice(0, 240);
-    const html = sanitizeEmailHtml(String(body?.html || '').trim());
-    const categories = normalizeCategories(body?.categories);
-    const roleIds = Array.isArray(body?.roleIds) ? body.roleIds.map((x: any) => String(x || '').trim()).filter(Boolean) : [];
-    const attachments = Array.isArray(body?.attachments) ? body.attachments : [];
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    const payload = body as NewsletterSendBody;
+    const ab = (payload.ab && typeof payload.ab === 'object' ? payload.ab : {}) as AbInput;
+    const subject = String(payload.subject || '').trim().slice(0, 240);
+    const html = sanitizeEmailHtml(String(payload.html || '').trim());
+    const categories = normalizeCategories(payload.categories);
+    const roleIds = normalizeStringArray(payload.roleIds);
+    const attachments = Array.isArray(payload.attachments) ? payload.attachments : [];
 
-    const abEnabled = !!body?.ab?.enabled;
-    const subjectA = String(body?.ab?.subjectA || '').trim().slice(0, 240);
-    const subjectB = String(body?.ab?.subjectB || '').trim().slice(0, 240);
-    const abSplitRaw = Number(body?.ab?.split);
+    const abEnabled = !!ab.enabled;
+    const subjectA = String(ab.subjectA || '').trim().slice(0, 240);
+    const subjectB = String(ab.subjectB || '').trim().slice(0, 240);
+    const abSplitRaw = Number(ab.split);
     const abSplit = Number.isFinite(abSplitRaw) ? Math.min(90, Math.max(10, Math.round(abSplitRaw))) : 50;
 
     if (!subject || !html) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     if (abEnabled && (!subjectA || !subjectB)) return NextResponse.json({ error: 'Missing A/B subjects' }, { status: 400 });
 
-    const draftId = body?.draftId;
+    const draftId = payload.draftId;
 
     const supabase = getServerSupabase();
     const subs = await supabase.from('newsletter_subscriptions').select('email,categories,consent').order('created_at', { ascending: false });
     if (subs.error) throw subs.error;
 
-    let recipients = (subs.data || [])
-      .filter((s: any) => s?.consent !== false)
-      .filter((s: any) => matchesCategories(s?.categories, categories))
-      .map((s: any) => String(s.email || '').trim().toLowerCase())
+    const subscriptions: NewsletterSubscriptionRow[] = Array.isArray(subs.data) ? subs.data : [];
+    let recipients = subscriptions
+      .filter((subscription) => subscription.consent !== false)
+      .filter((subscription) => matchesCategories(subscription.categories, categories))
+      .map((subscription) => String(subscription.email || '').trim().toLowerCase())
       .filter(Boolean);
 
     if (roleIds.length) {
       const rolesRes = await supabase.from('app_user_roles').select('user_id').in('role_id', roleIds);
       if (rolesRes.error) throw rolesRes.error;
-      const userIds = Array.from(new Set((rolesRes.data || []).map((r: any) => String(r.user_id)).filter(Boolean)));
+      const roleRows: UserRoleRow[] = Array.isArray(rolesRes.data) ? rolesRes.data : [];
+      const userIds = Array.from(new Set(roleRows.map((row) => String(row.user_id || '')).filter(Boolean)));
       if (!userIds.length) return NextResponse.json({ ok: true, sent: 0, queued: 0, failed: 0, recipients: 0 });
-      const profRes = await supabase.from('profiles').select('email').in('id', userIds as any);
+      const profRes = await supabase.from('profiles').select('email').in('id', userIds);
       if (profRes.error) throw profRes.error;
-      const allowed = new Set((profRes.data || []).map((p: any) => String(p.email || '').trim().toLowerCase()).filter(Boolean));
+      const profileRows: ProfileEmailRow[] = Array.isArray(profRes.data) ? profRes.data : [];
+      const allowed = new Set(profileRows.map((row) => String(row.email || '').trim().toLowerCase()).filter(Boolean));
       recipients = recipients.filter((e: string) => allowed.has(e));
     }
 
@@ -121,9 +186,9 @@ export async function POST(req: Request) {
         },
       ])
       .select('id')
-      .single();
+      .single<NewsletterInsertRow>();
     if (ins.error) throw ins.error;
-    const campaignId = String((ins.data as any)?.id || '');
+    const campaignId = String(ins.data?.id || '');
 
     // Povolíme maximálně 3 paralelní požadavky a po každém e-mailu ve frontě počkáme 100ms
     // Zabrání to rate limitingu od SMTP providera (např. SendGrid, AWS SES, Resend)
@@ -176,8 +241,8 @@ export async function POST(req: Request) {
             text: stripHtmlToText(trackedHtml),
             replyTo: 'info@pupen.org',
             attachments: attachments
-              .map((a: any) => ({ filename: a?.name, path: a?.url }))
-              .filter((a: any) => typeof a?.filename === 'string' && a.filename && typeof a?.path === 'string' && a.path),
+              .map((attachment) => normalizeAttachment(attachment))
+              .filter((attachment): attachment is MailAttachment => attachment != null),
             headers: {
               'X-Pupen-Category': 'newsletter',
               'X-Pupen-Campaign': campaignId,
@@ -214,7 +279,9 @@ export async function POST(req: Request) {
       .throwOnError();
 
     return NextResponse.json({ ok: true, sent: sendRes.sent, queued: sendRes.queued, failed: sendRes.failed, recipients: recipients.length });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

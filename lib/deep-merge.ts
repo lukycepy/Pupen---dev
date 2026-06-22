@@ -5,14 +5,15 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 export function deepMerge<T, U>(base: T, patch: U): T & U {
-  if (patch === undefined) return base as any;
-  if (Array.isArray(base) || Array.isArray(patch)) return patch as any;
+  if (patch === undefined) return base as unknown as T & U;
+  if (Array.isArray(base) || Array.isArray(patch)) return patch as unknown as T & U;
   if (isPlainObject(base) && isPlainObject(patch)) {
-    const out: Record<string, unknown> = { ...(base as any) };
+    const baseRecord = base as Record<string, unknown>;
+    const out: Record<string, unknown> = { ...baseRecord };
     for (const [k, v] of Object.entries(patch)) {
-      out[k] = deepMerge((base as any)[k], v as any);
+      out[k] = deepMerge(baseRecord[k], v);
     }
-    return out as any;
+    return out as T & U;
   }
-  return patch as any;
+  return patch as unknown as T & U;
 }

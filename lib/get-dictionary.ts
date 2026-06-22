@@ -7,9 +7,13 @@ const dictionaries: Record<Locale, () => Promise<Dictionary>> = {
 
 type DictionaryCacheEntry = { value: Dictionary; atMs: number };
 
+type GlobalWithDictionaryCache = typeof globalThis & {
+  __PUPEN_DICTIONARY_CACHE__?: Partial<Record<Locale, DictionaryCacheEntry>>;
+};
+
 const cache: Partial<Record<Locale, DictionaryCacheEntry>> =
-  ((globalThis as any).__PUPEN_DICTIONARY_CACHE__ as Partial<Record<Locale, DictionaryCacheEntry>> | undefined) || {};
-(globalThis as any).__PUPEN_DICTIONARY_CACHE__ = cache;
+  (globalThis as GlobalWithDictionaryCache).__PUPEN_DICTIONARY_CACHE__ || {};
+(globalThis as GlobalWithDictionaryCache).__PUPEN_DICTIONARY_CACHE__ = cache;
 
 export function normalizeLocale(locale: string): Locale {
   return locale === 'en' ? 'en' : 'cs';

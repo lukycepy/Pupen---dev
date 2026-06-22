@@ -3,6 +3,11 @@ import { createHash, randomBytes } from 'crypto';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { guardPublicJsonPost } from '@/lib/public-post-guard';
 
+interface AccessTokenRow {
+  thread_id?: string | null;
+  expires_at?: string | null;
+}
+
 function sha256Hex(input: string) {
   return createHash('sha256').update(input).digest('hex');
 }
@@ -18,6 +23,14 @@ function randomToken() {
   return randomBytes(32).toString('base64url');
 }
 
+function asTrimmedString(value: unknown) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function POST(req: Request) {
   try {
     const g = await guardPublicJsonPost(req, {
@@ -27,8 +40,8 @@ export async function POST(req: Request) {
       honeypotResponse: { ok: true },
     });
     if (!g.ok) return g.response;
-    const body = g.body || {};
-    const code = normalizeCode(String(body?.code || '').trim());
+    const body = g.body;
+    const code = normalizeCode(asTrimmedString(body.code));
     if (!code) return NextResponse.json({ error: 'Chybí kód.' }, { status: 400 });
 
     const supabase = getServerSupabase();
@@ -39,11 +52,11 @@ export async function POST(req: Request) {
       .from('trust_box_access_tokens')
       .select('thread_id, expires_at')
       .eq('code_hash', codeHash)
-      .maybeSingle();
+      .maybeSingle<AccessTokenRow>();
     if (res.error) throw res.error;
-    const row: any = res.data;
+    const row = res.data;
     if (!row?.thread_id) return NextResponse.json({ error: 'Neplatný kód.' }, { status: 400 });
-    if (String(row.expires_at) <= nowIso) return NextResponse.json({ error: 'Platnost vypršela.' }, { status: 400 });
+    if (!row.expires_at || String(row.expires_at) <= nowIso) return NextResponse.json({ error: 'Platnost vypršela.' }, { status: 400 });
 
     const token = randomToken();
     const tokenHash = sha256Hex(token);
@@ -54,8 +67,7 @@ export async function POST(req: Request) {
     if (ins.error) throw ins.error;
 
     return NextResponse.json({ ok: true, token });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }
-

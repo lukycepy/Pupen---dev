@@ -5,9 +5,13 @@ import { listEmailTemplates } from '@/lib/email/templates';
 import { sanitizeEmailWrapperHtml } from '@/lib/email/sanitize';
 import { withSchemaCacheRetry } from '@/lib/schema-cache-retry';
 
-function isSchemaCacheMissingTable(e: any) {
-  const msg = String(e?.message || '');
+function isSchemaCacheMissingTable(error: unknown) {
+  const msg = String(error instanceof Error ? error.message : '');
   return msg.includes('Could not find the table') && msg.includes('in the schema cache');
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
 }
 
 function allowedKeys() {
@@ -35,15 +39,16 @@ export async function GET(req: Request) {
     );
     if (res.error) throw res.error;
     return NextResponse.json({ ok: true, overrides: res.data || [] });
-  } catch (e: any) {
-    if (isSchemaCacheMissingTable(e)) {
+  } catch (error: unknown) {
+    if (isSchemaCacheMissingTable(error)) {
       return NextResponse.json(
         { error: 'Chybí tabulka email_template_overrides. Spusť migraci `supabase/migrations/20260414174647_38_email_template_overrides.sql` v Supabase.' },
         { status: 501 },
       );
     }
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
@@ -51,11 +56,11 @@ export async function POST(req: Request) {
   try {
     const { user, profile } = await requireAdmin(req);
     if (!profile?.can_manage_admins) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    const body = await req.json().catch(() => ({}));
-    const templateKey = String(body?.template_key || body?.templateKey || '').trim();
-    const subject = String(body?.subject || '');
-    const html = String(body?.html || '');
-    const isEnabled = body?.is_enabled != null ? !!body.is_enabled : body?.isEnabled != null ? !!body.isEnabled : true;
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    const templateKey = String(body.template_key || body.templateKey || '').trim();
+    const subject = String(body.subject || '');
+    const html = String(body.html || '');
+    const isEnabled = body.is_enabled != null ? !!body.is_enabled : body.isEnabled != null ? !!body.isEnabled : true;
 
     const allowed = allowedKeys();
     if (!allowed.has(templateKey)) return NextResponse.json({ error: 'Invalid template key' }, { status: 400 });
@@ -98,14 +103,15 @@ export async function POST(req: Request) {
       .throwOnError();
 
     return NextResponse.json({ ok: true, override: up.data });
-  } catch (e: any) {
-    if (isSchemaCacheMissingTable(e)) {
+  } catch (error: unknown) {
+    if (isSchemaCacheMissingTable(error)) {
       return NextResponse.json(
         { error: 'Chybí tabulka email_template_overrides. Spusť migraci `supabase/migrations/20260414174647_38_email_template_overrides.sql` v Supabase.' },
         { status: 501 },
       );
     }
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

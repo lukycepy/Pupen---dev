@@ -2,7 +2,7 @@ export type PupenLang = 'cs' | 'en';
 
 export const PRAGUE_TZ = 'Europe/Prague';
 
-function toDate(input: any): Date | null {
+function toDate(input: unknown): Date | null {
   if (!input) return null;
   if (input instanceof Date) return isNaN(input.getTime()) ? null : input;
   const d = new Date(String(input));
@@ -10,7 +10,7 @@ function toDate(input: any): Date | null {
 }
 
 function getParts(
-  input: any,
+  input: unknown,
   lang: PupenLang,
   opts: Intl.DateTimeFormatOptions,
 ): Record<string, string> | null {
@@ -25,24 +25,23 @@ function getParts(
   return out;
 }
 
-export function formatDatePrague(input: any, lang: PupenLang = 'cs') {
+export function formatDatePrague(input: unknown, lang: PupenLang = 'cs') {
   const p = getParts(input, lang, { year: 'numeric', month: '2-digit', day: '2-digit' });
   if (!p) return '';
   if (lang === 'en') return `${p.day}/${p.month}/${p.year}`;
   return `${p.day}.${p.month}.${p.year}`;
 }
 
-export function formatDateTimePrague(input: any, lang: PupenLang = 'cs') {
+export function formatDateTimePrague(input: unknown, lang: PupenLang = 'cs') {
   const p = getParts(input, lang, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
   if (!p) return '';
   const date = lang === 'en' ? `${p.day}/${p.month}/${p.year}` : `${p.day}.${p.month}.${p.year}`;
   return `${date} ${p.hour}:${p.minute}`;
 }
 
-export function getPragueYearTwoDigits(input: any) {
+export function getPragueYearTwoDigits(input: unknown) {
   const p = getParts(input || new Date(), 'cs', { year: 'numeric' });
   const yyyy = p?.year ? Number(p.year) : NaN;
   if (!Number.isFinite(yyyy)) return '';
   return String(yyyy % 100).padStart(2, '0');
 }
-

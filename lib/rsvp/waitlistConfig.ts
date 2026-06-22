@@ -24,7 +24,39 @@ export const DEFAULT_WAITLIST_CONFIG: WaitlistConfig = {
   maxPromotionsPerRun: 25,
 };
 
-function clampInt(n: any, min: number, max: number, fallback: number) {
+interface WaitlistConfigLogRow {
+  created_at?: string | null;
+  details?: {
+    config?: unknown;
+  } | null;
+}
+
+interface AdminLogsQueryResult {
+  data: WaitlistConfigLogRow | null;
+  error: Error | null;
+}
+
+interface AdminLogsQuery {
+  eq(column: string, value: string): {
+    order(column: string, options: { ascending: boolean }): {
+      limit(value: number): {
+        maybeSingle(): PromiseLike<AdminLogsQueryResult>;
+      };
+    };
+  };
+}
+
+interface AdminLogsSupabaseLike {
+  from(table: 'admin_logs'): {
+    select(columns: string): AdminLogsQuery;
+  };
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function clampInt(n: unknown, min: number, max: number, fallback: number) {
   const x = Number(n);
   if (!Number.isFinite(x)) return fallback;
   const v = Math.trunc(x);
@@ -33,8 +65,8 @@ function clampInt(n: any, min: number, max: number, fallback: number) {
   return v;
 }
 
-export function normalizeWaitlistConfig(input: any): WaitlistConfig {
-  const i = input && typeof input === 'object' ? input : {};
+export function normalizeWaitlistConfig(input: unknown): WaitlistConfig {
+  const i = toRecord(input);
 
   const enabled = i.enabled !== false;
   const strategy = 'fifo' as const;
@@ -62,8 +94,11 @@ export function normalizeWaitlistConfig(input: any): WaitlistConfig {
   };
 }
 
-export async function getWaitlistConfigFromAdminLogs(supabase: any): Promise<{ config: WaitlistConfig; updatedAt: string | null }> {
-  const res = await supabase
+export async function getWaitlistConfigFromAdminLogs(
+  supabase: unknown,
+): Promise<{ config: WaitlistConfig; updatedAt: string | null }> {
+  const adminLogs = supabase as AdminLogsSupabaseLike;
+  const res = await adminLogs
     .from('admin_logs')
     .select('created_at, details')
     .eq('action', 'WAITLIST_CONFIG')

@@ -19,11 +19,6 @@ interface EventRow {
   is_member_only?: boolean | null;
 }
 
-interface ProfileRow {
-  is_member?: boolean | null;
-  email?: string | null;
-}
-
 interface RsvpExistingRow {
   status?: string | null;
   expires_at?: string | null;

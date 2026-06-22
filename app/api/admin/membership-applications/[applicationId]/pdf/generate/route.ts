@@ -16,6 +16,34 @@ export const runtime = 'nodejs';
 
 const TEMPLATE_PDF_URL = new URL('../../../../../../../assets/pdf-templates/prihlaska.pdf', import.meta.url);
 
+type JsonRecord = Record<string, unknown>;
+
+interface ProfilePermissionsRow {
+  can_edit_apps?: boolean | null;
+  can_manage_admins?: boolean | null;
+}
+
+interface MembershipApplicationRow {
+  id?: string | null;
+  status?: string | null;
+  created_at?: string | null;
+  meta?: JsonRecord | null;
+}
+
+interface ExistingMembershipFileRow {
+  id?: string | number | null;
+}
+
+interface StoredMembershipFileRow {
+  storage_bucket?: string | null;
+  storage_path?: string | null;
+  mime_type?: string | null;
+}
+
+interface InsertedMembershipFileRow {
+  id?: string | number | null;
+}
+
 async function loadTemplatePdfBytes() {
   const buf = await readFile(TEMPLATE_PDF_URL);
   if (buf?.length) return new Uint8Array(buf);
@@ -30,14 +58,26 @@ async function downloadStorageFile(bucket: string, storagePath: string) {
   return new Uint8Array(ab);
 }
 
+function toRecord(value: unknown): JsonRecord {
+  return value && typeof value === 'object' ? (value as JsonRecord) : {};
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function POST(req: Request, ctx: { params: Promise<{ applicationId: string }> }) {
   try {
     const { user, profile } = await requireAdmin(req);
     if (!profile?.can_manage_admins) {
       const supabase = getServerSupabase();
-      const perm = await supabase.from('profiles').select('can_edit_apps, can_manage_admins').eq('id', user.id).maybeSingle();
+      const perm = await supabase
+        .from('profiles')
+        .select('can_edit_apps, can_manage_admins')
+        .eq('id', user.id)
+        .maybeSingle<ProfilePermissionsRow>();
       if (perm.error) throw perm.error;
-      const canEdit = !!(perm.data as any)?.can_edit_apps || !!(perm.data as any)?.can_manage_admins;
+      const canEdit = !!perm.data?.can_edit_apps || !!perm.data?.can_manage_admins;
       if (!canEdit) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -52,10 +92,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
     const templatePdfBytes = await loadTemplatePdfBytes();
 
     const srv = getServerSupabase();
-    const appRes = await srv.from('membership_applications_v2').select('*').eq('id', id).maybeSingle();
+    const appRes = await srv.from('membership_applications_v2').select('*').eq('id', id).maybeSingle<MembershipApplicationRow>();
     if (appRes.error) throw appRes.error;
     if (!appRes.data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    if (String((appRes.data as any).status || '') === 'pending') {
+    if (String(appRes.data.status || '') === 'pending') {
       return NextResponse.json({ error: 'Not decided' }, { status: 409 });
     }
 
@@ -66,7 +106,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
       .contains('meta', { kind: 'application_pdf' })
       .order('created_at', { ascending: false })
       .limit(1)
-      .maybeSingle();
+      .maybeSingle<ExistingMembershipFileRow>();
     if (existing.error) throw existing.error;
     if (existing.data?.id) {
       await writeAuditLog({
@@ -89,13 +129,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
       .contains('meta', { kind: 'applicant_signature' })
       .order('created_at', { ascending: false })
       .limit(1)
-      .maybeSingle();
+      .maybeSingle<StoredMembershipFileRow>();
     if (signatureFile.error) throw signatureFile.error;
     if (!signatureFile.data) return NextResponse.json({ error: 'Missing applicant signature' }, { status: 409 });
 
-    const meta = (appRes.data as any)?.meta && typeof (appRes.data as any)?.meta === 'object' ? (appRes.data as any).meta : {};
-    const decision = meta?.decision && typeof meta.decision === 'object' ? meta.decision : {};
-    const chairAuthFileId = String(decision?.chair_auth_file_id || '').trim();
+    const meta = toRecord(appRes.data.meta);
+    const decision = toRecord(meta.decision);
+    const chairAuthFileId = String(decision.chair_auth_file_id || '').trim();
     if (!chairAuthFileId) return NextResponse.json({ error: 'Missing chair auth' }, { status: 409 });
 
     const chairFile = await srv
@@ -103,17 +143,17 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
       .select('storage_bucket, storage_path, mime_type')
       .eq('id', chairAuthFileId)
       .eq('application_id', id)
-      .maybeSingle();
+      .maybeSingle<StoredMembershipFileRow>();
     if (chairFile.error) throw chairFile.error;
     if (!chairFile.data) return NextResponse.json({ error: 'Invalid chair auth file' }, { status: 409 });
 
     const applicantSigBytes = await downloadStorageFile(
-      String((signatureFile.data as any).storage_bucket || MEMBERSHIP_APPLICATION_PDF_BUCKET),
-      String((signatureFile.data as any).storage_path || ''),
+      String(signatureFile.data.storage_bucket || MEMBERSHIP_APPLICATION_PDF_BUCKET),
+      String(signatureFile.data.storage_path || ''),
     );
     const chairAuthBytes = await downloadStorageFile(
-      String((chairFile.data as any).storage_bucket || MEMBERSHIP_APPLICATION_PDF_BUCKET),
-      String((chairFile.data as any).storage_path || ''),
+      String(chairFile.data.storage_bucket || MEMBERSHIP_APPLICATION_PDF_BUCKET),
+      String(chairFile.data.storage_path || ''),
     );
 
     const pdfBytes = await buildMembershipApplicationPdfBytes({
@@ -121,11 +161,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
       application: appRes.data,
       applicantSignature: {
         bytes: applicantSigBytes,
-        mimeType: String((signatureFile.data as any).mime_type || 'image/png'),
+        mimeType: String(signatureFile.data.mime_type || 'image/png'),
       },
       chairAuth: {
         bytes: chairAuthBytes,
-        mimeType: String((chairFile.data as any).mime_type || 'image/png'),
+        mimeType: String(chairFile.data.mime_type || 'image/png'),
       },
     });
 
@@ -137,9 +177,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
     if (upload.error) throw upload.error;
 
     const { utf8: fileName } = formatMembershipApplicationPdfFileName({
-      firstName: meta?.first_name,
-      lastName: meta?.last_name,
-      createdAt: (appRes.data as any)?.created_at,
+      firstName: meta.first_name,
+      lastName: meta.last_name,
+      createdAt: appRes.data.created_at,
     });
 
     const ins = await withSchemaCacheRetry(srv, async () => {
@@ -162,7 +202,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
           },
         ])
         .select('id')
-        .single();
+        .single<InsertedMembershipFileRow>();
     });
     if (ins.error) throw ins.error;
 
@@ -177,15 +217,16 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
     });
 
     return NextResponse.json({ ok: true, fileId: ins.data?.id || null });
-  } catch (e: any) {
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
     const status =
-      e?.message === 'Unauthorized'
+      message === 'Unauthorized'
         ? 401
-        : e?.message === 'Forbidden'
+        : message === 'Forbidden'
           ? 403
-          : e?.message === 'Not decided'
+          : message === 'Not decided'
             ? 409
             : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+    return NextResponse.json({ error: message }, { status });
   }
 }

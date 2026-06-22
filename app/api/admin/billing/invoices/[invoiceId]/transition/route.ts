@@ -7,6 +7,7 @@ import { writeAuditLog } from '@/lib/audit/audit-log';
 import { billingInvoiceTransitionSchema, type BillingInvoiceStatus } from '@/lib/validations/billing';
 import { BILLING_INVOICE_PDF_BUCKET, buildBillingInvoicePdfBytes, buildBillingInvoicePdfStoragePath } from '@/lib/billing/invoice-pdf';
 import { enqueueEmailTrigger } from '@/lib/email/triggers';
+import { type BillingInvoiceItemRowLike, type BillingInvoiceRowLike } from '@/lib/billing/invoices';
 
 const transitions: Record<BillingInvoiceStatus, BillingInvoiceStatus[]> = {
   draft: ['issued', 'cancelled'],
@@ -17,6 +18,26 @@ const transitions: Record<BillingInvoiceStatus, BillingInvoiceStatus[]> = {
   cancelled: [],
   credited: [],
 };
+
+interface BillingInvoiceSentEmailRow extends BillingInvoiceRowLike {
+  buyer_email?: string | null;
+  buyer_name?: string | null;
+  number?: string | null;
+  vs?: string | null;
+  total?: number | string | null;
+  currency?: string | null;
+  due_date?: string | null;
+  pdf_bucket?: string | null;
+  pdf_path?: string | null;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
 
 export async function POST(req: Request, ctx: { params: Promise<{ invoiceId: string }> }) {
   try {
@@ -29,18 +50,22 @@ export async function POST(req: Request, ctx: { params: Promise<{ invoiceId: str
     const id = String(invoiceId || '').trim();
     if (!id) return NextResponse.json({ error: 'Missing invoiceId' }, { status: 400 });
 
-    const body = await req.json().catch(() => null);
-    const lang = body?.lang === 'en' ? 'en' : 'cs';
+    const body = toRecord(await req.json().catch(() => ({})));
+    const lang = body.lang === 'en' ? 'en' : 'cs';
     const parsed = billingInvoiceTransitionSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: 'Invalid body', issues: parsed.error.issues }, { status: 400 });
     }
 
-    const curr = await rls.from('billing_invoices').select('id, status, type, number').eq('id', id).maybeSingle();
+    const curr = await rls
+      .from('billing_invoices')
+      .select('id, status, type, number')
+      .eq('id', id)
+      .maybeSingle<BillingInvoiceRowLike>();
     if (curr.error) throw curr.error;
     if (!curr.data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    const fromStatus = String((curr.data as any).status) as BillingInvoiceStatus;
+    const fromStatus = String(curr.data.status || '') as BillingInvoiceStatus;
     const toStatus = parsed.data.toStatus;
     const allowed = transitions[fromStatus] || [];
     if (!allowed.includes(toStatus)) return NextResponse.json({ error: 'Invalid status transition' }, { status: 409 });
@@ -49,13 +74,15 @@ export async function POST(req: Request, ctx: { params: Promise<{ invoiceId: str
       const srv = getServerSupabase();
       const issued = await srv.rpc('billing_issue_invoice', { p_invoice_id: id });
       if (issued.error) throw issued.error;
+      const issuedInvoice = issued.data as BillingInvoiceRowLike | null;
 
       try {
         const itemsRes = await srv.from('billing_invoice_items').select('*').eq('invoice_id', id).order('position', { ascending: true });
         if (itemsRes.error) throw itemsRes.error;
+        const items: BillingInvoiceItemRowLike[] = Array.isArray(itemsRes.data) ? itemsRes.data : [];
 
-        const pdfBytes = await buildBillingInvoicePdfBytes({ invoice: issued.data, items: itemsRes.data || [] });
-        const pdfPath = buildBillingInvoicePdfStoragePath(issued.data);
+        const pdfBytes = await buildBillingInvoicePdfBytes({ invoice: issuedInvoice, items });
+        const pdfPath = buildBillingInvoicePdfStoragePath(issuedInvoice);
         const upload = await srv.storage.from(BILLING_INVOICE_PDF_BUCKET).upload(pdfPath, pdfBytes, {
           upsert: true,
           contentType: 'application/pdf',
@@ -81,13 +108,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ invoiceId: str
           targetId: id,
           details: { id, bucket: BILLING_INVOICE_PDF_BUCKET, path: pdfPath, size: pdfBytes.length },
         });
-      } catch (e: any) {
+      } catch (error: unknown) {
         await writeAdminAudit({
           adminEmail: user.email,
           adminName: 'Billing',
           action: 'BILLING_INVOICE_PDF_GENERATE_FAILED',
           targetId: id,
-          details: { id, error: e?.message || 'Error' },
+          details: { id, error: getErrorMessage(error) },
         });
       }
 
@@ -96,10 +123,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ invoiceId: str
         adminName: 'Billing',
         action: 'BILLING_INVOICE_ISSUE',
         targetId: id,
-        details: { id, number: (issued.data as any)?.number ?? null },
+        details: { id, number: issuedInvoice?.number ?? null },
       });
 
-      const refreshed = await rls.from('billing_invoices').select('*').eq('id', id).maybeSingle();
+      const refreshed = await rls.from('billing_invoices').select('*').eq('id', id).maybeSingle<BillingInvoiceRowLike>();
       if (refreshed.error) throw refreshed.error;
 
       await writeAuditLog({
@@ -109,13 +136,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ invoiceId: str
         action: 'billing_invoice.issue',
         entity: { type: 'billing_invoice', id },
         before: curr.data,
-        after: refreshed.data || issued.data,
+        after: refreshed.data || issuedInvoice,
       });
 
-      return NextResponse.json({ invoice: refreshed.data || issued.data });
+      return NextResponse.json({ invoice: refreshed.data || issuedInvoice });
     }
 
-    const upd = await rls.from('billing_invoices').update({ status: toStatus }).eq('id', id).select('*').maybeSingle();
+    const upd = await rls.from('billing_invoices').update({ status: toStatus }).eq('id', id).select('*').maybeSingle<BillingInvoiceRowLike>();
     if (upd.error) throw upd.error;
     if (!upd.data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
@@ -145,9 +172,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ invoiceId: str
         .from('billing_invoices')
         .select('id, buyer_email, buyer_name, number, vs, total, currency, due_date, pdf_bucket, pdf_path')
         .eq('id', id)
-        .maybeSingle();
+        .maybeSingle<BillingInvoiceSentEmailRow>();
       if (invRes.error) throw invRes.error;
-      const inv: any = invRes.data;
+      const inv = invRes.data;
 
       const toEmail = String(inv?.buyer_email || '').trim();
       const pdfBucket = String(inv?.pdf_bucket || BILLING_INVOICE_PDF_BUCKET);
@@ -183,23 +210,30 @@ export async function POST(req: Request, ctx: { params: Promise<{ invoiceId: str
           adminName: 'Billing',
           action: 'EMAIL_ENQUEUE_BILLING_INVOICE_SENT',
           targetId: id,
-          details: { id, to: toEmail, ok: enq.ok === true, queue_id: (enq as any).queueId || null, template_key: (enq as any).templateKey || null },
+          details: {
+            id,
+            to: toEmail,
+            ok: enq.ok === true,
+            queue_id: 'queueId' in enq ? enq.queueId || null : null,
+            template_key: 'templateKey' in enq ? enq.templateKey || null : null,
+          },
         });
       }
     }
 
     return NextResponse.json({ invoice: upd.data });
-  } catch (e: any) {
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
     const status =
-      e?.message === 'Unauthorized'
+      message === 'Unauthorized'
         ? 401
-        : e?.message === 'Forbidden'
+        : message === 'Forbidden'
           ? 403
-          : e?.message === 'Not found'
+          : message === 'Not found'
             ? 404
-            : e?.message === 'Invalid status transition'
+            : message === 'Invalid status transition'
               ? 409
               : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+    return NextResponse.json({ error: message }, { status });
   }
 }

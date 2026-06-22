@@ -1,15 +1,42 @@
-import { PDFDocument, rgb } from 'pdf-lib';
+import { PDFDocument, PDFFont, PDFPage, rgb } from 'pdf-lib';
 import { getPdfFonts } from '@/lib/pdf/fonts';
 
 export const MEMBERSHIP_APPLICATION_PDF_BUCKET = 'member_applications';
 
-function cleanText(input: any, fallback = '') {
+type JsonRecord = Record<string, unknown>;
+
+interface MembershipApplicationPdfApplication {
+  meta?: JsonRecord | null;
+  name?: unknown;
+  email?: unknown;
+  phone?: unknown;
+  address?: unknown;
+  faculty?: unknown;
+}
+
+interface PdfImageInput {
+  bytes: Uint8Array;
+  mimeType: string;
+}
+
+interface MembershipApplicationPdfBuildInput {
+  templatePdfBytes: Uint8Array;
+  application: MembershipApplicationPdfApplication;
+  applicantSignature: PdfImageInput | null;
+  chairAuth: PdfImageInput | null;
+}
+
+function toRecord(value: unknown): JsonRecord {
+  return value && typeof value === 'object' ? (value as JsonRecord) : {};
+}
+
+function cleanText(input: unknown, fallback = '') {
   const s = String(input ?? '').replace(/\u0000/g, '').trim();
   if (!s) return fallback;
   return s.replace(/\s+/g, ' ').trim();
 }
 
-function asciiFallbackText(input: any, fallback = '') {
+function asciiFallbackText(input: unknown, fallback = '') {
   const s = String(input ?? '').trim();
   if (!s) return fallback;
   return s
@@ -21,7 +48,7 @@ function asciiFallbackText(input: any, fallback = '') {
     .trim();
 }
 
-function wrapLines(font: any, text: string, size: number, maxWidth: number) {
+function wrapLines(font: Pick<PDFFont, 'widthOfTextAtSize'>, text: string, size: number, maxWidth: number) {
   const words = String(text || '').split(/\s+/).filter(Boolean);
   const lines: string[] = [];
   let current = '';
@@ -68,7 +95,10 @@ export function formatMembershipApplicationPdfFileName(input: { firstName?: any;
   return { utf8, ascii };
 }
 
-function drawCheckbox(page: any, input: { checked: boolean; x: number; y: number; size?: number }) {
+function drawCheckbox(
+  page: Pick<PDFPage, 'drawLine'>,
+  input: { checked: boolean; x: number; y: number; size?: number },
+) {
   const size = input.size ?? 10;
   const x = input.x;
   const y = input.y;
@@ -83,29 +113,29 @@ async function embedImage(pdfDoc: PDFDocument, bytes: Uint8Array, mimeType: stri
   if (mt.includes('png')) return await pdfDoc.embedPng(bytes);
   if (mt.includes('jpeg') || mt.includes('jpg')) return await pdfDoc.embedJpg(bytes);
 
-  const sharpMod: any = await import('sharp');
-  const sharp = sharpMod?.default || sharpMod;
+  const sharpModule = await import('sharp');
+  const sharpCandidate = 'default' in sharpModule ? sharpModule.default : sharpModule;
+  const sharp = sharpCandidate as (input: Uint8Array) => { png(): { toBuffer(): Promise<Buffer> } };
   const png = await sharp(bytes).png().toBuffer();
   return await pdfDoc.embedPng(new Uint8Array(png));
 }
 
-export async function buildMembershipApplicationPdfBytes(input: {
-  templatePdfBytes: Uint8Array;
-  application: any;
-  applicantSignature: { bytes: Uint8Array; mimeType: string } | null;
-  chairAuth: { bytes: Uint8Array; mimeType: string } | null;
-}) {
+export async function buildMembershipApplicationPdfBytes(input: MembershipApplicationPdfBuildInput) {
   const pdfDoc = await PDFDocument.load(input.templatePdfBytes);
   const { font } = await getPdfFonts(pdfDoc);
 
   const pages = pdfDoc.getPages();
   if (!pages.length) throw new Error('Template PDF has no pages');
 
-  const app = input.application || {};
-  const meta = (app as any)?.meta && typeof (app as any)?.meta === 'object' ? (app as any).meta : {};
-  const decision = meta?.decision && typeof meta.decision === 'object' ? meta.decision : {};
+  const app = input.application;
+  const meta = toRecord(app.meta);
+  const decision = toRecord(meta.decision);
 
-  const drawSafe = (page: any, text: any, opts: { x: number; y: number; size: number; maxWidth?: number }) => {
+  const drawSafe = (
+    page: Pick<PDFPage, 'drawText'>,
+    text: unknown,
+    opts: { x: number; y: number; size: number; maxWidth?: number },
+  ) => {
     const primary = cleanText(text, '');
     if (!primary) return;
     const size = opts.size;
@@ -126,17 +156,17 @@ export async function buildMembershipApplicationPdfBytes(input: {
 
   const page1 = pages[0];
 
-  const firstName = cleanText(meta?.first_name, cleanText(app?.name, ''));
-  const lastName = cleanText(meta?.last_name, '');
-  const email = cleanText(app?.email, '');
-  const phone = cleanText(app?.phone, '');
-  const address = cleanText(app?.address, '');
-  const membershipType = cleanText(decision?.membership_type || meta?.membership_type, '');
-  const universityEmail = cleanText(meta?.university_email, '');
-  const fieldOfStudy = cleanText(meta?.field_of_study, cleanText(app?.faculty, ''));
-  const studyYear = cleanText(meta?.study_year, '');
-  const signedOn = cleanText(meta?.signed_on, '');
-  const gdprConsent = meta?.gdpr_consent === true;
+  const firstName = cleanText(meta.first_name, cleanText(app.name, ''));
+  const lastName = cleanText(meta.last_name, '');
+  const email = cleanText(app.email, '');
+  const phone = cleanText(app.phone, '');
+  const address = cleanText(app.address, '');
+  const membershipType = cleanText(decision.membership_type || meta.membership_type, '');
+  const universityEmail = cleanText(meta.university_email, '');
+  const fieldOfStudy = cleanText(meta.field_of_study, cleanText(app.faculty, ''));
+  const studyYear = cleanText(meta.study_year, '');
+  const signedOn = cleanText(meta.signed_on, '');
+  const gdprConsent = meta.gdpr_consent === true;
 
   drawSafe(page1, firstName, { x: 120, y: 718, size: 10, maxWidth: 180 });
   drawSafe(page1, lastName, { x: 340, y: 718, size: 10, maxWidth: 200 });

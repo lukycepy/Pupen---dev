@@ -4,11 +4,19 @@ import { getServerSupabase } from '@/lib/supabase-server';
 import { guardPublicGet } from '@/lib/public-post-guard';
 import { DEFAULT_NEWSLETTER_DOI_CONFIG, getNewsletterDoiConfigFromAdminLogs } from '@/lib/newsletter/doiConfig';
 
+interface NewsletterConfirmRow {
+  id?: string | number | null;
+  email?: string | null;
+  doi_requested_at?: string | null;
+  consent?: boolean | null;
+  unsubscribed_at?: string | null;
+}
+
 function sha256Hex(input: string) {
   return createHash('sha256').update(input).digest('hex');
 }
 
-function normalizeLang(input: any) {
+function normalizeLang(input: unknown) {
   return String(input || '').trim() === 'en' ? 'en' : 'cs';
 }
 
@@ -44,9 +52,9 @@ export async function GET(req: Request) {
       .from('newsletter_subscriptions')
       .select('id, email, doi_requested_at, consent, unsubscribed_at')
       .eq('doi_token_hash', tokenHash)
-      .maybeSingle();
+      .maybeSingle<NewsletterConfirmRow>();
     if (rowRes.error) throw rowRes.error;
-    const row: any = rowRes.data;
+    const row = rowRes.data;
     if (!row?.id) {
       home.searchParams.set('newsletter', 'invalid');
       return NextResponse.redirect(home);

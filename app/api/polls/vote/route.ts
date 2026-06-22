@@ -3,6 +3,31 @@ import { getServerSupabase } from '@/lib/supabase-server';
 import { requireMember } from '@/lib/server-auth';
 import { guardPublicJsonPost } from '@/lib/public-post-guard';
 
+interface PollRow {
+  id?: string | null;
+  is_active?: boolean | null;
+  ends_at?: string | null;
+  allow_multiple?: boolean | null;
+}
+
+interface PollOptionRow {
+  id?: string | null;
+  poll_id?: string | null;
+  votes?: number | null;
+}
+
+function asTrimmedString(value: unknown) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function asStringArray(value: unknown) {
+  return Array.isArray(value) ? value.map((x) => String(x).trim()).filter(Boolean) : [];
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function POST(req: Request) {
   try {
     const { user } = await requireMember(req);
@@ -15,10 +40,9 @@ export async function POST(req: Request) {
     });
     if (!g.ok) return g.response;
     const body = g.body;
-    const pollId = String(body?.pollId || body?.poll_id || '').trim();
-    const optionId = body?.optionId ? String(body.optionId).trim() : '';
-    const optionIdsRaw = Array.isArray(body?.optionIds) ? body.optionIds : null;
-    const optionIds = optionIdsRaw ? optionIdsRaw.map((x: any) => String(x).trim()).filter(Boolean) : [];
+    const pollId = asTrimmedString(body.pollId || body.poll_id);
+    const optionId = asTrimmedString(body.optionId);
+    const optionIds = asStringArray(body.optionIds);
     if (!pollId) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
 
     const supabase = getServerSupabase();
@@ -27,9 +51,9 @@ export async function POST(req: Request) {
       .from('polls')
       .select('id,is_active,ends_at,allow_multiple')
       .eq('id', pollId)
-      .maybeSingle();
+      .maybeSingle<PollRow>();
     if (pollRes.error) throw pollRes.error;
-    const poll: any = pollRes.data;
+    const poll = pollRes.data;
     if (!poll?.id) return NextResponse.json({ error: 'Invalid poll' }, { status: 400 });
     if (!poll.is_active) return NextResponse.json({ error: 'Poll is inactive' }, { status: 400 });
     if (poll.ends_at) {
@@ -55,9 +79,9 @@ export async function POST(req: Request) {
 
     const optionsRes = await supabase.from('poll_options').select('id, poll_id, votes').in('id', uniq);
     if (optionsRes.error) throw optionsRes.error;
-    const rows = optionsRes.data || [];
+    const rows: PollOptionRow[] = optionsRes.data || [];
     if (rows.length !== uniq.length) return NextResponse.json({ error: 'Invalid option' }, { status: 400 });
-    if (rows.some((r: any) => String(r.poll_id) !== String(pollId))) return NextResponse.json({ error: 'Invalid option' }, { status: 400 });
+    if (rows.some((r) => String(r.poll_id) !== String(pollId))) return NextResponse.json({ error: 'Invalid option' }, { status: 400 });
 
     const voteInsert = await supabase.from('poll_votes').insert([
       {
@@ -69,7 +93,7 @@ export async function POST(req: Request) {
     ]);
     if (voteInsert.error) throw voteInsert.error;
 
-    for (const opt of rows as any[]) {
+    for (const opt of rows) {
       const nextVotes = (opt.votes || 0) + 1;
       const upd = await supabase.from('poll_options').update({ votes: nextVotes }).eq('id', opt.id);
       if (upd.error) throw upd.error;
@@ -90,8 +114,9 @@ export async function POST(req: Request) {
     if (full.error) throw full.error;
 
     return NextResponse.json({ ok: true, poll: full.data, alreadyVoted: false });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

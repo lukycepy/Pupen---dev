@@ -3,6 +3,23 @@ import { requireAdmin, requireTrustBoxAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { logTrustBoxAudit } from '@/lib/trustbox/audit';
 
+interface TrustBoxAdminProfileRow {
+  email?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+}
+
+interface TrustBoxAdminListRow {
+  user_id?: string | null;
+  can_view_pii?: boolean | null;
+  created_at?: string | null;
+  profiles?: TrustBoxAdminProfileRow | TrustBoxAdminProfileRow[] | null;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function GET(req: Request) {
   try {
     const auth = await requireTrustBoxAdmin(req);
@@ -13,10 +30,11 @@ export async function GET(req: Request) {
       .order('created_at', { ascending: false })
       .limit(200);
     if (res.error) throw res.error;
-    return NextResponse.json({ ok: true, items: res.data || [], isSuperadmin: auth.isSuperadmin });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+    return NextResponse.json({ ok: true, items: (res.data || []) as TrustBoxAdminListRow[], isSuperadmin: auth.isSuperadmin });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
@@ -24,9 +42,9 @@ export async function POST(req: Request) {
   try {
     const { user, profile } = await requireAdmin(req);
     if (!profile?.can_manage_admins) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    const body = await req.json().catch(() => ({}));
-    const userId = String(body?.userId || '').trim();
-    const canViewPii = body?.canViewPii === true;
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    const userId = String(body.userId || '').trim();
+    const canViewPii = body.canViewPii === true;
     if (!userId) return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
 
     const supabase = getServerSupabase();
@@ -58,8 +76,9 @@ export async function POST(req: Request) {
     }).catch(() => {});
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

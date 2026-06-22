@@ -1,9 +1,15 @@
 import { getServerSupabase } from '@/lib/supabase-server';
 
 type CacheEntry = { banned: boolean; atMs: number };
+type BanRpcResult = boolean | number | string | null;
 
-const cache: Map<string, CacheEntry> = (globalThis as any).__PUPEN_BAN_CACHE__ || new Map();
-(globalThis as any).__PUPEN_BAN_CACHE__ = cache;
+type GlobalWithBanCache = typeof globalThis & {
+  __PUPEN_BAN_CACHE__?: Map<string, CacheEntry>;
+};
+
+const globalWithBanCache = globalThis as GlobalWithBanCache;
+const cache: Map<string, CacheEntry> = globalWithBanCache.__PUPEN_BAN_CACHE__ || new Map();
+globalWithBanCache.__PUPEN_BAN_CACHE__ = cache;
 
 export async function isRequestBanned(opts: { ip?: string | null; identityId?: string | null }) {
   const ip = opts.ip ? String(opts.ip).trim() : '';
@@ -21,7 +27,7 @@ export async function isRequestBanned(opts: { ip?: string | null; identityId?: s
     });
     if (res.error) return false;
 
-    const raw: any = res.data;
+    const raw = res.data as BanRpcResult | BanRpcResult[];
     const banned = Array.isArray(raw) ? !!raw[0] : !!raw;
     cache.set(key, { banned, atMs: now });
     return banned;

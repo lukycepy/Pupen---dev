@@ -33,7 +33,19 @@ function randomCode() {
   return out;
 }
 
-function normalizeEmail(input: any) {
+interface TrustBoxSettingsRow {
+  allowed_staff_subdomains?: string[] | null;
+}
+
+function asTrimmedString(value: unknown) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
+function normalizeEmail(input: unknown) {
   return String(input || '').trim().toLowerCase();
 }
 
@@ -57,18 +69,18 @@ export async function POST(req: Request) {
       honeypotResponse: { ok: true },
     });
     if (!g.ok) return g.response;
-    const body = g.body || {};
+    const body = g.body;
 
-    const lang = body?.lang === 'en' ? 'en' : 'cs';
-    const firstName = String(body?.firstName || '').trim();
-    const lastName = String(body?.lastName || '').trim();
-    const email = normalizeEmail(body?.email || '');
-    const category = String(body?.category || 'other').trim().slice(0, 80) || 'other';
-    const subject = String(body?.subject || '').trim().slice(0, 120);
-    const message = String(body?.message || '').trim().slice(0, 10_000);
-    const priority = body?.priority === 'urgent' ? 'urgent' : 'normal';
-    const allowFollowup = body?.allowFollowup === true;
-    const allowForwardToFaculty = body?.allowForwardToFaculty === true;
+    const lang = body.lang === 'en' ? 'en' : 'cs';
+    const firstName = asTrimmedString(body.firstName);
+    const lastName = asTrimmedString(body.lastName);
+    const email = normalizeEmail(body.email);
+    const category = (asTrimmedString(body.category) || 'other').slice(0, 80);
+    const subject = asTrimmedString(body.subject).slice(0, 120);
+    const message = asTrimmedString(body.message).slice(0, 10_000);
+    const priority = body.priority === 'urgent' ? 'urgent' : 'normal';
+    const allowFollowup = body.allowFollowup === true;
+    const allowForwardToFaculty = body.allowForwardToFaculty === true;
 
     if (!firstName || !lastName) return NextResponse.json({ error: lang === 'en' ? 'Missing name' : 'Chybí jméno/příjmení.' }, { status: 400 });
     if (!email) return NextResponse.json({ error: lang === 'en' ? 'Missing email' : 'Chybí e‑mail.' }, { status: 400 });
@@ -80,9 +92,9 @@ export async function POST(req: Request) {
       .from('trust_box_settings')
       .select('allowed_staff_subdomains')
       .eq('id', 1)
-      .maybeSingle();
+      .maybeSingle<TrustBoxSettingsRow>();
     if (settingsRes.error) throw settingsRes.error;
-    const allowedStaffSubdomains = (settingsRes.data as any)?.allowed_staff_subdomains || [];
+    const allowedStaffSubdomains = Array.isArray(settingsRes.data?.allowed_staff_subdomains) ? settingsRes.data.allowed_staff_subdomains : [];
 
     let emailType: 'student' | 'staff' | 'unknown' = 'unknown';
     if (isStudentEmail(email)) emailType = 'student';
@@ -147,7 +159,7 @@ export async function POST(req: Request) {
       verificationId: ins.data?.id,
       expiresAt,
     });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

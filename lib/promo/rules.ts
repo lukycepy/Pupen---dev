@@ -32,32 +32,43 @@ export function normalizeEmail(input: string) {
   return String(input || '').trim().toLowerCase();
 }
 
-export function normalizeEmailList(input: any) {
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function toOptionalNumber(value: unknown) {
+  if (value === '' || value == null) return null;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+export function normalizeEmailList(input: unknown) {
   if (Array.isArray(input)) return input.map((x) => normalizeEmail(x)).filter(Boolean);
   if (typeof input === 'string') return parseCsv(input).map((x) => normalizeEmail(x)).filter(Boolean);
   return [];
 }
 
-export function normalizePromoRules(input: any): PromoRule[] {
+export function normalizePromoRules(input: unknown): PromoRule[] {
   const rows = Array.isArray(input) ? input : [];
   const map = new Map<string, PromoRule>();
   for (const r of rows) {
-    const code = normalizePromoCode(r?.code || '');
+    const row = toRecord(r);
+    const code = normalizePromoCode(String(row.code || ''));
     if (!code) continue;
     if (map.has(code)) continue;
 
-    const maxUses = r?.maxUses === '' || r?.maxUses == null ? null : Number(r.maxUses);
-    const maxUsesPerEmail = r?.maxUsesPerEmail === '' || r?.maxUsesPerEmail == null ? null : Number(r.maxUsesPerEmail);
-    const discountAmount = r?.discountAmount === '' || r?.discountAmount == null ? null : Number(r.discountAmount);
-    const discountPercentage = r?.discountPercentage === '' || r?.discountPercentage == null ? null : Number(r.discountPercentage);
-    const eventIds = Array.isArray(r?.eventIds) ? r.eventIds.map((x: any) => String(x)).filter(Boolean) : [];
-    const mode = r?.mode === 'per_attendee' ? 'per_attendee' : 'per_rsvp';
-    const whitelistEmails = normalizeEmailList(r?.whitelistEmails);
+    const maxUses = toOptionalNumber(row.maxUses);
+    const maxUsesPerEmail = toOptionalNumber(row.maxUsesPerEmail);
+    const discountAmount = toOptionalNumber(row.discountAmount);
+    const discountPercentage = toOptionalNumber(row.discountPercentage);
+    const eventIds = Array.isArray(row.eventIds) ? row.eventIds.map((x) => String(x)).filter(Boolean) : [];
+    const mode = row.mode === 'per_attendee' ? 'per_attendee' : 'per_rsvp';
+    const whitelistEmails = normalizeEmailList(row.whitelistEmails);
 
     map.set(code, {
       code,
-      title: r?.title ? String(r.title).trim() : '',
-      active: !!r?.active,
+      title: row.title ? String(row.title).trim() : '',
+      active: !!row.active,
       mode,
       discountAmount: Number.isFinite(discountAmount) && discountAmount! >= 0 ? discountAmount : null,
       discountPercentage: Number.isFinite(discountPercentage) && discountPercentage! >= 0 && discountPercentage! <= 100 ? discountPercentage : null,
@@ -65,9 +76,9 @@ export function normalizePromoRules(input: any): PromoRule[] {
       maxUsesPerEmail: Number.isFinite(maxUsesPerEmail) && maxUsesPerEmail! >= 1 ? Math.floor(maxUsesPerEmail!) : null,
       eventIds,
       whitelistEmails,
-      startsAt: r?.startsAt ? String(r.startsAt) : null,
-      endsAt: r?.endsAt ? String(r.endsAt) : null,
-      note: r?.note ? String(r.note).trim() : '',
+      startsAt: row.startsAt ? String(row.startsAt) : null,
+      endsAt: row.endsAt ? String(row.endsAt) : null,
+      note: row.note ? String(row.note).trim() : '',
     });
   }
   return Array.from(map.values());

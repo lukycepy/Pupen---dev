@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { guardPublicJsonPost } from '@/lib/public-post-guard';
 
+function asTrimmedString(value: unknown) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
 export async function POST(req: Request) {
   try {
     const g = await guardPublicJsonPost(req, {
@@ -14,9 +18,9 @@ export async function POST(req: Request) {
     if (!g.ok) return g.response;
     const body = g.body;
 
-    const event_id = String(body?.event_id || '').trim();
-    const rating = body?.rating;
-    const comment = body?.comment;
+    const event_id = asTrimmedString(body.event_id);
+    const rating = body.rating;
+    const comment = body.comment;
 
     // Základní validace
     if (!event_id) {
@@ -50,8 +54,7 @@ export async function POST(req: Request) {
     if (error) throw error;
 
     return NextResponse.json({ ok: true, status: 'created' });
-  } catch (error: any) {
-    console.error('Feedback submit error:', error);
+  } catch {
     return NextResponse.json({ error: 'Interní chyba serveru' }, { status: 500 });
   }
 }

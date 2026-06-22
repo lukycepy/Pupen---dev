@@ -4,6 +4,23 @@ import { getRlsSupabase } from '@/lib/supabase-rls';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { MEMBERSHIP_APPLICATION_PDF_BUCKET } from '@/lib/membership-applications/pdf';
 
+interface StoredFileRow {
+  storage_bucket?: string | null;
+  storage_path?: string | null;
+}
+
+interface MembershipApplicationSignedUrlBody {
+  expiresIn?: unknown;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Error';
+}
+
 export async function POST(req: Request, ctx: { params: Promise<{ applicationId: string }> }) {
   try {
     await requireUser(req);
@@ -15,8 +32,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
     const id = String(applicationId || '').trim();
     if (!id) return NextResponse.json({ error: 'Missing applicationId' }, { status: 400 });
 
-    const body = await req.json().catch(() => ({}));
-    const expiresIn = Math.max(60, Math.min(60 * 60, Number(body?.expiresIn || 600) || 600));
+    const body = toRecord(await req.json().catch(() => ({})));
+    const payload = body as MembershipApplicationSignedUrlBody;
+    const expiresIn = Math.max(60, Math.min(60 * 60, Number(payload.expiresIn || 600) || 600));
 
     const fileRes = await rls
       .from('membership_application_files')
@@ -25,12 +43,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
       .contains('meta', { kind: 'application_pdf' })
       .order('created_at', { ascending: false })
       .limit(1)
-      .maybeSingle();
+      .maybeSingle<StoredFileRow>();
     if (fileRes.error) throw fileRes.error;
     if (!fileRes.data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    const bucket = String((fileRes.data as any)?.storage_bucket || MEMBERSHIP_APPLICATION_PDF_BUCKET).trim();
-    const path = String((fileRes.data as any)?.storage_path || '').trim();
+    const bucket = String(fileRes.data.storage_bucket || MEMBERSHIP_APPLICATION_PDF_BUCKET).trim();
+    const path = String(fileRes.data.storage_path || '').trim();
     if (!bucket || !path) return NextResponse.json({ error: 'Missing file' }, { status: 409 });
 
     const srv = getServerSupabase();
@@ -38,9 +56,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
     if (signed.error) throw signed.error;
 
     return NextResponse.json({ ok: true, signedUrl: signed.data?.signedUrl || null, expiresIn });
-  } catch (e: any) {
-    const status = e?.message === 'Unauthorized' ? 401 : e?.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: e?.message || 'Error' }, { status });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
-

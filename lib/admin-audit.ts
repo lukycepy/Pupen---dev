@@ -6,7 +6,7 @@ export async function writeAdminAudit(input: {
   adminName?: string | null | undefined;
   action: string;
   targetId?: string | null | undefined;
-  details?: any;
+  details?: unknown;
 }) {
   const admin_email = input.adminEmail ? sanitizeLogMessage(input.adminEmail).slice(0, 200) : null;
   if (!admin_email) return;
