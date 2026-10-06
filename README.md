@@ -41,6 +41,7 @@ Zkopíruj `.env.example` → `.env` a doplň hodnoty. `.env` se nikdy necommitne
 - `CRON_SECRET` (ochrana `/api/cron/*`)
 
 ### Doporučené (produkce)
+- `NEXT_PUBLIC_GA_MEASUREMENT_ID=G-889DM5DL7F` pro Google tag / GA4
 - `NEXT_PUBLIC_ANALYTICS_PROVIDER`, `NEXT_PUBLIC_ANALYTICS_DOMAIN=pupen.org` (+ další analytics dle poskytovatele)
 - `NEXT_PUBLIC_TURNSTILE_SITE_KEY` a `TURNSTILE_SECRET_KEY` (ochrana loginu)
 - `PUPEN_FIO_WEBHOOK_SECRET` (pokud používáš FIO webhooky)

@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "lastUpdated": "2026-09-29T00:00:00.000Z",
+  "contacts": [
+    {
+      "id": 11,
+      "jmeno": "Lukáš Čepelák",
+      "oddeleni": "Podpora aplikace Linka",
+      "fakulta": "Studentský spolek Pupen, z.s.",
+      "budova": "Studentské centrum",
+      "mistnost": "Pupen klubovna",
+      "klapka": "1777",
+      "email": "tech@pupen.org"
+    },
+    {
+      "id": 12,
+      "jmeno": "Studentský spolek Pupen, z.s.",
+      "oddeleni": "Studentské projekty",
+      "fakulta": "Studentský spolek Pupen, z.s.",
+      "budova": "Studentské centrum",
+      "mistnost": "Pupen klubovna",
+      "klapka": "1700",
+      "email": "info@pupen.org"
+    }
+  ]
+}

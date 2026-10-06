@@ -1,0 +1,497 @@
+========================================================================
+  SEZNAM VŠECH 120 MIGRACÍ PRO SPUŠTĚNÍ WEBU PUPEN 4.0
+  Sestaveno: 2026-09-29
+  Složka: supabase/migrations/*.sql
+  Řazení: Chronologicky dle timestamp prefixu v názvu souboru
+========================================================================
+
+K aplikaci celé sady migrací je potřeba:
+  1. Mít spojený Supabase projekt (supabase link)
+  2. Místo -p parametr používat SUPABASE_DB_PASSWORD env var (kvůli pooleru)
+  3. Buď:
+     - Supabase CLI: npx supabase db push --linked --include-all --yes
+     - Nebo Node.js: MIGRATE_INCLUDE_LEGACY=true npm run db:migrate
+  4. Ověřit stav: npx supabase migration list --linked
+  5. Pokud schema_migrations chybí záznamy, spustit npm run db:migrate
+
+========================================================================
+# 1. ZÁKLADNÍ SCHÉMA A KONFIGURACE (založení tabulek, RLS, storage)
+========================================================================
+
+[01] 20260414174610_02_notify_schema_change.sql
+     -> Trigger notifikující o změnách schématu (audit změn struktury DB)
+
+[02] 20260414174611_03_site_public_config.sql
+     -> Veřejná konfigurace webu (příznak, texty, odkazy viditelné bez přihlášení)
+
+[03] 20260414174612_04_lost_found.sql
+     -> Ztráty a nálezy (založení core tabulky)
+
+[04] 20260414174613_05_sos_contacts.sql
+     -> SOS kontakty (krizové kontakty členů, dobrovolníků)
+
+[05] 20260414174614_06_profiles.sql
+     -> Základní uživatelské profily rozšiřující auth.users
+
+[06] 20260414174615_07_core_tables.sql
+     -> Jádrové obecné tabulky (galerie, fotografie, obecné entity)
+
+[07] 20260414174616_08_storage_buckets.sql
+     -> Založení základních Storage bucketů (avatary, dokumenty, eventy, ...)
+
+[08] 20260414174617_09_lost_found_and_sos_admin_policies.sql
+     -> RLS politiky pro Ztráty a nálezy a SOS (správci vs. běžní uživatelé)
+
+[09] 20260414174618_10_avatars_bucket.sql
+     -> Storage bucket pro avatary uživatelů + RLS přístupová práva
+
+[10] 20260414174619_11_schema_fixes.sql
+     -> Opravy strukturálních nedostatků předchozích migrací
+
+[11] 20260414174620_12_missing_tables_and_rls.sql
+     -> Doplňující tabulky a RLS, které chyběly v původní sadě
+
+[12] 20260414174621_13_email_settings_imap.sql
+     -> Nastavení IMAP pro příchozí poštu (čtení doručenky, bounces)
+
+[13] 20260414174622_14_maintenance_window.sql
+     -> Okna údržby webu (časové intervaly, kdy je web režim údržby)
+
+[14] 20260414174623_15_profiles_rls_alignment.sql
+     -> Sblížení RLS politik pro profiles (konzistence napříč moduly)
+
+[15] 20260414174624_16_db_hardening.sql
+     -> Zpevnění DB (zákaz veřejných insertů, audit, bezpečnostní opatření)
+
+[16] 20260414174629_20260326130841_add_discount_coupons.sql
+     -> Slevové kupóny (pro registrace na akce a členské příspěvky)
+
+========================================================================
+# 2. OBSAHOVÉ MODULY (FAQ, Widgety, Newsletter, Kategorie)
+========================================================================
+
+[17] 20260414174625_17_newsletter_categories.sql
+     -> Kategorie newsletterů (rozdělení obsahu newsletteru)
+
+[18] 20260414174626_18_home_widgets.sql
+     -> Widgety na hlavní stránce (pořadí, obsah, viditelnost)
+
+[19] 20260414174627_19_faq_i18n.sql
+     -> FAQ (klikací otázky s vícejazyčnou podporou CS/EN)
+
+========================================================================
+# 3. UDÁLOSTI - FOTOGRAFIE, DOKUMENTY, PŘIHLÁŠKY
+========================================================================
+
+[20] 20260414174628_20_event_photos.sql
+     -> Fotografie k událostem (album, náhledy, meta)
+
+[21] 20260414174630_21_member_documents.sql
+     -> Členské dokumenty (smlouvy, potvrzení, kopie OP, ...)
+
+[22] 20260414174631_22_member_admin_profile.sql
+     -> Profil člena viditelný adminem (rozšíření profilů o interní data)
+
+[23] 20260414174632_23_storage_member_applications.sql
+     -> Storage bucket pro soubory k členským přihláškám (podklady)
+
+[24] 20260414174633_24_applications_pdf_fields.sql
+     -> PDF pole pro generování přihlášek a formulářů (mapování polí)
+
+========================================================================
+# 4. RBAC, ROLE, BEZPEČNOST, PŘIHLÁŠKY ADRESY
+========================================================================
+
+[25] 20260414174634_25_password_resets.sql
+     -> Historie resetů hesel (audit + prevence zneužití)
+
+[26] 20260414174635_26_app_roles.sql
+     -> Role aplikace (admin, redaktor, člen, host, ...)
+
+[27] 20260414174636_27_site_member_portal_config.sql
+     -> Konfigurace členského portálu (příznaky pro zobrazení sekcí)
+
+[28] 20260414174637_28_profiles_ui_prefs.sql
+     -> Uživatelské preference UI (tmavý režim, jazyk, layout)
+
+[29] 20260414174638_29_user_security_logs.sql
+     -> Logy bezpečnosti uživatelů (příhlášení, změna hesla, 2FA)
+
+[30] 20260414174639_30_profiles_address.sql
+     -> Adresy spojované s profilem uživatele (trvalé, dočasné)
+
+[31] 20260414174640_31_applications_address.sql
+     -> Adresy u členských přihlášek (původní adresa v okamžiku přihlášky)
+
+[32] 20260414174641_32_rbac_ruian_and_schema_fixes.sql
+     -> RBAC + RUIAN adresy (registrace míst, správná oprávnění)
+
+[33] 20260414174642_33_admin_schema_cache_tools.sql
+     -> Cache nástroje pro administrátorské schéma (performance opt.)
+
+[34] 20260414174643_34_newsletter_unique_email.sql
+     -> Unikátní e-mail pro newsletter odběry (constraint)
+
+[35] 20260414174644_35_app_user_roles_multi.sql
+     -> Více rolí na uživatele (m:n tabulka user <-> role)
+
+[36] 20260522120000_34_analytics_rls_policies.sql
+     -> RLS politiky pro analytická data (přístup ke statistikám)
+
+========================================================================
+# 5. ANKETY, NEWSLETTER - ADMIN, E-MAILOVÁ SYSTÉM
+========================================================================
+
+[37] 20260414174645_36_polls_public_select_policy.sql
+     -> Veřejná viditelnost anket (RLS pro prohlížení bez přihlášení)
+
+[38] 20260414174646_37_newsletter_admin_rls.sql
+     -> RLS pro správu newsletterů (kdo může vytvářet, posílat)
+
+[39] 20260414174647_38_email_template_overrides.sql
+     -> Přepisy e-mailových šablon (lokální úpravy šablon Supabase Auth)
+
+[40] 20260414174648_39_email_send_queue.sql
+     -> Fronta odchozích e-mailů (pro hromadné rozesílání)
+
+[41] 20260414174649_40_email_bounces.sql
+     -> Záznamy o bounce e-mailů (nepodařená doručení, odběry)
+
+[42] 20260414174650_40_email_queue_claim_reclaim_processing.sql
+     -> Claim/reclaim zpracování fronty e-mailů (paralelní bezpečnost)
+
+========================================================================
+# 6. PROFILY UŽIVATELŮ, MARKETING, PREFERENCE
+========================================================================
+
+[43] 20260414174651_41_admin_only_update_policy.sql
+     -> Politika: některé sloupce updatovatelné pouze adminem
+
+[44] 20260414174652_41_profiles_marketing_consent.sql
+     -> Souhlas s marketingovými komunikacemi (GDPR)
+
+[45] 20260414174653_42_newsletter_subscriptions_preferences.sql
+     -> Preference odběru newsletterů (které kategorie, frekvence)
+
+[46] 20260414174654_42_profiles_block.sql
+     -> Blokování uživatelů (uživatel může zablokovat jiného)
+
+[47] 20260414174655_43_email_settings_tls_ca.sql
+     -> TLS/CA certifikáty pro SMTP/IMAP nastavení e-mailu
+
+[48] 20260414174656_43_member_numbers.sql
+     -> Členská čísla (automatická generace, unikátnost)
+
+========================================================================
+# 7. ČLENSTVÍ, PLATBY, UDÁLOSTI - ZÁKLAD
+========================================================================
+
+[49] 20260414174657_44_events_member_only.sql
+     -> Události pouze pro členy (RLS omezující přístup)
+
+[50] 20260414174658_44_membership_expiry.sql
+     -> Konec platnosti členství (datum, automatické prodloužení)
+
+[51] 20260414174659_45_membership_payments.sql
+     -> Platby za členství (záznam o transakcích, stav)
+
+[52] 20260414194700_46_rsvp_checkins.sql
+     -> Registrace na události (RSVP) a check-in na místě (QR, ruční)
+
+========================================================================
+# 8. DOKUMENTY, ANKETY, PŘÍSPĚVKY, REAKCE
+========================================================================
+
+[53] 20260414194701_47_documents_access_and_share.sql
+     -> Sdílení dokumentů (s odkazy, přístupová práva, expirace)
+
+[54] 20260414194702_48_polls_schema_and_rls.sql
+     -> Schéma a RLS pro ankety (otázky, možnosti, vlastníci)
+
+[55] 20260414194703_49_poll_votes.sql
+     -> Hlasy v anketách (uživatel <-> anketa, zabránění duplicitám)
+
+[56] 20260414194704_50_post_comments_reactions.sql
+     -> Komentáře a reakce k příspěvkům (příspěvky na nástěnce)
+
+[57] 20260414194705_51_address_validation_meta.sql
+     -> Validace adres (meta data o ověření RUIAN/geolokace)
+
+========================================================================
+# 9. GAMIFIKACE, LOGY, FEATURE FLAGS
+========================================================================
+
+[58] 20260414194706_52_gamification_badges.sql
+     -> Badges / achievements (gamifikační odznaky pro členy)
+
+[59] 20260414194707_53_error_logs.sql
+     -> Logy chyb webové aplikace (Sentry-like lokální ukládání)
+
+[60] 20260414194708_54_feature_flags.sql
+     -> Feature toggles (vypínání/zapínání funkcí v produkci)
+
+[61] 20260414194709_55_webhooks.sql
+     -> Webhook konfigurace (odchozí notifikace na externí služby)
+
+[62] 20260414194710_56_inbox_triage.sql
+     -> Triage příchozí zprávy (řazení inboxu, spam, značky)
+
+========================================================================
+# 10. NEWSLETTER - ROZŠÍŘENÍ, TÝM, GALERIE, STATISTIKY
+========================================================================
+
+[63] 20260414194711_57_newsletter_extensions.sql
+     -> Rozšíření newsletteru (attachmenty, priority, metadata)
+
+[64] 20260414194712_58_team_and_gallery.sql
+     -> Tým (seznam členů týmu) + galerie (albumy kolekcí)
+
+[65] 20260414194713_59_newsletter_stats.sql
+     -> Statistiky newsletterů (open rate, click rate, odběry/odpisy)
+
+========================================================================
+# 11. NEWSLETTER - A/B TESTOVÁNÍ
+========================================================================
+
+[66] 20260414194714_60_newsletter_ab_and_variants.sql
+     -> Základ A/B testování newsletterů (varianty předmětů a obsahu)
+
+[67] 20260414194715_61_newsletter_drafts_ab.sql
+     -> Koncepty a návrhy A/B variant (neodeslané verze)
+
+[68] 20260414194716_62_newsletter_ab_constraints.sql
+     -> Integrity constraints pro A/B testy (správné vazby variant)
+
+========================================================================
+# 12. PŘIHLÁŠKY - VYLUČENÍ, SEED, UDÁLOSTI - PRODEJ
+========================================================================
+
+[69] 20260414194717_63_applications_exclusion.sql
+     -> Vyloučení z přihlášek (důvody, stavy vyloučení členství)
+
+[70] 20260414194718_64_seed_team_members.sql
+     -> Seed počátečních členů týmu (init data pro administrátory)
+
+[71] 20260414194719_65_events_ticket_sale_end.sql
+     -> Konec prodeje vstupenek (časové uzavření registrací na akce)
+
+[72] 20260414194720_66_rsvp_qr_code.sql
+     -> QR kódy pro RSVP (generování, kontrola na check-inu)
+
+========================================================================
+# 13. NEWSLETTER - ODHLÁŠENÍ, E-MAILY - VYLEPŠENÍ
+========================================================================
+
+[73] 20260414194721_67_newsletter_unsubscribe_reason.sql
+     -> Důvody odhlášení z newsletteru (povinné pole při odpisu)
+
+[74] 20260414194722_68_email_send_queue_headers_text.sql
+     -> Rozšíření fronty e-mailů o hlavičky a plain text verzi
+
+[75] 20260414194723_69_email_settings_application_notifications.sql
+     -> Notifikační nastavení aplikace (které e-maily posílat)
+
+[76] 20260414194724_70_email_settings_application_notifications_v2.sql
+     -> V2 notifikačního nastavení (více granularit, kanály)
+
+========================================================================
+# 14. PŘIHLÁŠKY - RLS OPRAVY, DROP VEŘEJNÝCH INSERTŮ
+========================================================================
+
+[77] 20260414194725_71_applications_public_insert_rls_fix.sql
+     -> Oprava RLS: veřejné vložení přihlášky (povolí anonymní přihlášky)
+
+[78] 20260414194726_72_drop_public_inserts.sql
+     -> Zrušení veřejných INSERT oprávnění (celkové zpřísnění)
+
+========================================================================
+# 15. TRUST BOX (DŮVĚRNÁ SCHRÁNKA)
+========================================================================
+
+[79] 20260414194727_73_trust_box_storage_bucket.sql
+     -> Storage bucket pro Trust Box (šifrované přílohy zpráv)
+
+[80] 20260414194728_74_trust_box_core.sql
+     -> Jádro Trust Boxu (zprávy, vlákna, příjemci, anonymita)
+
+[81] 20260414194729_75_trust_box_audit_logs.sql
+     -> Audit logy pro Trust Box (přístup, přečtení, zpracování)
+
+========================================================================
+# 16. MODERACE OBSAHU, RATE LIMITING
+========================================================================
+
+[82] 20260414194730_76_content_moderation_status.sql
+     -> Stavy moderace obsahu (pending, approved, rejected, flags)
+
+[83] 20260414194731_77_shared_rate_limit.sql
+     -> Sdílený rate limiter (prevence spamu API endpointů a formulářů)
+
+========================================================================
+# 17. ADMIN - HEALTH CHECK, DM ZPRÁVY
+========================================================================
+
+[84] 20260414195010_admin_schema_health_rpc.sql
+     -> RPC funkce pro kontrolu zdraví admin schématu (diagnostika)
+
+[85] 20260414195200_dm_schema_upgrade.sql
+     -> Upgrade schématu pro Direct Messages (novější struktura DM)
+
+[86] 20260414195400_dm_unread_reminders.sql
+     -> Připomenutí nepřečtených DM (notifikace po X čase nečtení)
+
+========================================================================
+# 18. E-MAIL AUDIT, TRUST BOX DOPLŇKY, RBAC, CMS
+========================================================================
+
+[87] 20260414220000_email_audit_logs.sql
+     -> Audit logy odeslaných e-mailů (kompletní stopa každého e-mailu)
+
+[88] 20260414220100_trustbox_message_author.sql
+     -> Autor zprávy v Trust Boxu (možnost volitelného odkrytí identity)
+
+[89] 20260414223000_rbac_more_modules.sql
+     -> Další RBAC moduly (oprávnění pro více částí systému)
+
+[90] 20260414224000_site_page_contents.sql
+     -> Obsah stránek webu (CMS pro statické stránky)
+
+========================================================================
+# 19. RBAC VÝBOR, ADRESÁŘ ČLENŮ
+========================================================================
+
+[91] 20260416220000_rbac_governance_module.sql
+     -> RBAC pro Výbor (členové výboru mají specifická oprávnění)
+
+[92] 20260416223000_profiles_member_directory_policy.sql
+     -> RLS pro adresář členů (kdo koho vidí v členské sekci)
+
+========================================================================
+# 20. UDÁLOSTI - ARCHIVACE, PRAVA KONFIGURACE
+========================================================================
+
+[93] 20260417183000_events_activity_archive.sql
+     -> Archivace aktivit událostí (staré události → archiv)
+
+[94] 20260417190000_site_config_permissions.sql
+     -> Oprávnění pro správu webové konfigurace (nastavení webu)
+
+========================================================================
+# 21. NEWSLETTER, PROFILY RLS - RECURZE, LEGAL PAGES
+========================================================================
+
+[95] 20260417195000_newsletter_subscriptions_updated_at.sql
+     -> Trigger updated_at pro odběry newsletteru (automatická změna data)
+
+[96] 20260417195500_profiles_rls_no_recursion.sql
+     -> RLS bez rekurze (oprava nekonečné rekurze v profilech)
+
+[97] 20260417200000_legal_pages_content.sql
+     -> Obsah právních stránek (GDPR, Obchodní podmínky, Cookies)
+
+[98] 20260417201000_trustbox_access_code.sql
+     -> Přístupové kódy do Trust Boxu (anonymní přístup přes PIN)
+
+========================================================================
+# 22. RSVP CHECKIN, NEWSLETTER DOI, ZTRÁTY NÁLEZY
+========================================================================
+
+[99] 20260419190000_rsvp_checked_in.sql
+     -> Stav checked_in u RSVP (příznak zda se uživatel dostavil)
+
+[100] 20260419194500_newsletter_doi.sql
+     -> Double Opt-In pro newsletter (ověření e-mailu před přidáním)
+
+[101] 20260419203000_lost_found_claims_and_pin.sql
+     -> Nároky na ztráty a nálezy + PIN kód pro vyzvednutí
+
+[102] 20260419212000_trustbox_owner.sql
+     -> Vlastník vlákna Trust Boxu (určení správce/zpracovatele)
+
+[103] 20260420100000_team_facebook.sql
+     -> Facebook URL/ID členů týmu (propojení s FB profily)
+
+========================================================================
+# 23. CMS - BLOCKY STRÁNEK, SERVER LOGY, BANY, PERMISIONS
+========================================================================
+
+[104] 20260522123000_site_page_contents_blocks.sql
+     -> Blocky na stránkách (CMS blokové uspořádání obsahu stránek)
+
+[105] 20260522133000_78_server_logs.sql
+     -> Serverové logy (HTTP požadavky, chyby, výkon - serverside)
+
+[106] 20260522140000_79_security_bans.sql
+     -> Bezpečnostní bany (uživatelé zakázaní na úrovni DB/IP)
+
+[107] 20260522150000_80_site_page_permissions.sql
+     -> Oprávnění pro CMS stránky (kdo může editovat jaké stránky)
+
+========================================================================
+# 24. FAKTURY, BANKOVNÍ TRANSAKCE - ÚČETNÍ MODUL
+========================================================================
+
+[108] 20260523120000_81_billing_invoices_and_membership_applications_v2.sql
+     -> Spojení faktur s přihláškami V2 (core účetního modulu)
+
+[109] 20260523121500_80_billing_invoices.sql
+     -> Faktury (základní účetní tabulka pro faktury)
+
+[110] 20260523121600_83_bank_transactions.sql
+     -> Bankovní transakce (import výpisů, jednotlivé pohyby)
+
+[111] 20260523130000_82_billing_invoices_pdf.sql
+     -> PDF generování faktur (metadata pro PDF render)
+
+[112] 20260523140000_83_bank_transactions_runs.sql
+     -> Spuštění importů bankovních transakcí (dávky, logy importu)
+
+[113] 20260523150000_84_billing_invoice_matching.sql
+     -> Paired faktur ↔ bankovní transakce (automatický párování plateb)
+
+========================================================================
+# 25. PŘIHLÁŠKY V2 - CORE
+========================================================================
+
+[114] 20260523160000_85_membership_applications_v2_immutable.sql
+     -> Neměnitelnost (immutable) přihlášek V2 (audit, nelze upravovat)
+
+[115] 20260523161000_86_membership_application_page_content.sql
+     -> Obsah stránky přihlášky (CMS pro text formuláře V2)
+
+========================================================================
+# 26. REGISTRACE NA AKCE - CENY, OBJEDNÁVKY, ČEKACÍ LISTINA, VÝCHOVA
+========================================================================
+
+[116] 20260622123000_87_event_registration_pricing.sql
+     -> Ceny registrací na akce (časové vrstvy, slevy, člen vs. nečlen)
+
+[117] 20260622142000_88_event_orders_and_vs.sql
+     -> Objednávky vstupenek na akce + Variabilní symbol (VS) pro platbu
+
+[118] 20260622161000_89_waitlist_offers.sql
+     -> Nabídky z čekací listiny (automatické nabízení uvolněných míst)
+
+[119] 20260622174000_90_rsvp_guardian_consent.sql
+     -> Souhlas zákonného zástupce pro nezletilé u RSVP (GDPR děti)
+
+========================================================================
+# 27. PŘIHLÁŠKY V2 - TECHNICKÉ DOPLŇKY
+========================================================================
+
+[120] 20260623130000_91_membership_applications_v2_technical_updates.sql
+     -> Technické aktualizace přihlášek V2 (perf., indexy, integrita)
+
+========================================================================
+  KONTROLA PO APLIKACI
+========================================================================
+
+Po aplikaci všech migrací ověřit:
+  ✅ 130+ tabulek v public schématu
+  ✅ 12 storage bucketů (avatars, trust-box, event-photos, member-documents,
+     applications, newsletter-attachments, trust-box-documents, ...)
+  ✅ RLS enable on ALL tables (nikdo nemá právo psát bez explicitní policy)
+  ✅ Supabase Auth integrace: profiles.id = auth.uids() vazba
+  ✅ Tabule supabase_migrations.schema_migrations obsahuje všech 120 verzí
+  ✅ Pokud ne: MIGRATE_INCLUDE_LEGACY=true npm run db:migrate
+========================================================================

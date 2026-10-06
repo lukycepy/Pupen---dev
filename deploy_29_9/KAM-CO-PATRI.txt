@@ -1,0 +1,41 @@
+Kam co patří na serveru (rychlá kontrolní listina)
+====================================================
+
+Cesta v tomto balíčku (deploy_29_9/)        →   Kam to na Ubuntu VPS (pupen.org)
+-----------------------------------------------------------------------------
+
+/package.json                                →   /var/www/pupen.org/package.json
+/package-lock.json                           →   /var/www/pupen.org/package-lock.json
+/app/                                        →   /var/www/pupen.org/app/
+/lib/                                        →   /var/www/pupen.org/lib/
+/dictionaries/                               →   /var/www/pupen.org/dictionaries/
+/public/                                     →   /var/www/pupen.org/public/
+/components/                                 →   /var/www/pupen.org/components/
+/supabase/                                   →   /var/www/pupen.org/supabase/
+/scripts/                                    →   /var/www/pupen.org/scripts/
+/types/                                      →   /var/www/pupen.org/types/
+/assets/                                     →   /var/www/pupen.org/assets/
+/tests/                                      →   /var/www/pupen.org/tests/ (nepovinné)
+/docs/                                       →   /var/www/pupen.org/docs/ (nepovinné)
+/deploy/                                     →   /var/www/pupen.org/deploy/ (šablona pro Nginx)
+/.env.example                                →   /var/www/pupen.org/.env.example (JEN ŠABLONA)
+next.config.mjs, tsconfig.json atd.         →   /var/www/pupen.org/ (vše z rootu)
+
+SOUBORY CO NA SERVER NENÍ (a mají tam být ručně):
+-----------------------------------------------------------------------------
+/var/www/pupen.org/.env                      ← TADY MUSÍŠ DOPLNIT SKUTEČNÉ HODNOTY z původního
+/var/www/pupen.org/node_modules/             ← vytvoří se npm ci / npm install
+/var/www/pupen.org/.next/                    ← vytvoří se npm run build
+/var/www/pupen.org/apps/kontakty.json        ← viz KROK 4 v README.md (seed z public/apps/kontakty.json)
+
+NGINX konfigurace:
+-----------------------------------------------------------------------------
+/etc/nginx/sites-available/pupen.org        ← sem doplnit obsah z deploy/nginx-pupen-apps.conf.template
+                                                • location ^~ /apps/ MUSÍ být PŘED maintenance/503 pravidly
+                                                • upravit if podmínku $request_uri !~ ^/apps/ pro odstávku
+
+PM2 proces:
+-----------------------------------------------------------------------------
+Jméno procesu: pupen-app      (NE "pupen" – viz screenshot)
+Restart po nasazení: pm2 restart pupen-app --update-env
+Port: obvykle 3000

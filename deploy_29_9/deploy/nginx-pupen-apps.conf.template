@@ -1,0 +1,113 @@
+# --------------------------------------------------------------------
+# pupen.org – Nginx konfigurace: /apps/ vždy dostupná (mimo odstávku)
+#
+# Použití:
+#   1.  Vložte tento location blok **PŘED** jakýmikoliv pravidly pro
+#       maintenance / odstávku / 503 / error_page / @custom proxy.
+#   2.  Doporučená cesta na VPS: /var/www/pupen.org/apps
+#   3.  V .env nastavte APPS_DATA_DIR=/var/www/pupen.org/apps
+#       a restartujte PM2/Node.js proces.
+# --------------------------------------------------------------------
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name pupen.org www.pupen.org;
+    return 301 https://pupen.org$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name pupen.org www.pupen.org;
+
+    # (zde zůstávají SSL, logování, gzip atd. – dle stávající konfigurace)
+
+    root /var/www/pupen.org/html;
+    index index.html index.htm;
+
+    # ====================================================================
+    # APLIKACE / APPS – VŽDY DOSTUPNÉ, I PŘI ZAPNUTÉ ODSTÁVCE
+    # POZOR: tento location MUSÍ být PŘED všemi pravidly pro maintenance!
+    # ====================================================================
+    location ^~ /apps/ {
+        # Žádné Basic Auth, žádné IP whitelisty, žádné maintenance podmínky
+        # zde NEAPLIKUJEME. /apps/ musí být veřejně dostupné.
+
+        alias /var/www/pupen.org/apps/;
+
+        # Specificky pro veřejný kontakty.json – CORS + no-cache
+        location = /apps/kontakty.json {
+            alias /var/www/pupen.org/apps/kontakty.json;
+
+            add_header Access-Control-Allow-Origin "*" always;
+            add_header Access-Control-Allow-Methods "GET, OPTIONS" always;
+            add_header Access-Control-Allow-Headers "Content-Type, Accept" always;
+            add_header Cache-Control "no-cache, must-revalidate" always;
+            add_header X-Content-Type-Options "nosniff" always;
+
+            default_type application/json;
+            charset utf-8;
+
+            # OPTIONS preflight
+            if ($request_method = OPTIONS) {
+                return 204;
+            }
+
+            # Pokud soubor neexistuje, přesměrujeme na Next.js handler,
+            # který vrátí výchozí seed data.
+            try_files $uri @nextjs_apps_fallback;
+        }
+
+        # Veškerý ostatní obsah v /apps/ (statické soubory, budoucí admin aj.)
+        try_files $uri $uri/ @nextjs_apps_fallback;
+    }
+
+    location @nextjs_apps_fallback {
+        # Pokud Nginx nemá soubor lokálně, nechej zpracovat Node.js/Next.js.
+        # Díky tomu funguje /apps/kontakty.json i když soubor fyzicky ještě neexistuje.
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 300;
+    }
+
+    # ====================================================================
+    # PŘÍKLAD: ODSTÁVKA / ÚDRŽBA (stávající pravidla, UPRAVTE dle reality)
+    # Klíčové: pravidlo NESMÍ být aplikováno na URL začínající /apps/.
+    # ====================================================================
+    #
+    # PŮVODNÍ (ŠPATNĚ):
+    #   if (-f $document_root/maintenance-on) { return 503; }
+    #
+    # NÁHRADA (SPRÁVNĚ):
+    #   set $maintenance "";
+    #   if (-f $document_root/maintenance-on) { set $maintenance "M"; }
+    #   if ($request_uri !~ ^/apps/) { set $maintenance "${maintenance}A"; }
+    #   if ($maintenance = MA) { return 503; }
+    #
+    # error_page 503 /maintenance.html;
+    # location = /maintenance.html { internal; root /var/www/pupen.org/html; }
+
+    # ====================================================================
+    # ZBYTEK WEBU – proxy na Next.js (PM2, port 3000)
+    # ====================================================================
+    location / {
+        # (zde případně další maintenance pravidla, /apps/ už vyřazena výše)
+
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 300;
+    }
+}

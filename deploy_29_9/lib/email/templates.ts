@@ -1,0 +1,1445 @@
+import { formatDatePrague, formatDateTimePrague } from '@/lib/time/prague';
+
+import { getPublicBaseUrl } from '@/lib/public-base-url';
+
+export type EmailTemplateKey =
+  | 'ticket'
+  | 'rsvp_payment_reminder'
+  | 'event_feedback_request'
+  | 'waitlist_offer'
+  | 'admin_password'
+  | 'password_reset'
+  | 'trust_box_verify'
+  | 'trust_box_confirm'
+  | 'trust_box_admin_reply'
+  | 'newsletter_doi_confirm'
+  | 'member_access'
+  | 'member_welcome'
+  | 'membership_expiry'
+  | 'application_received'
+  | 'application_new_admin'
+  | 'application_approved_access'
+  | 'application_status'
+  | 'application_status_admin'
+  | 'invoice_request'
+  | 'billing_invoice_sent'
+  | 'invoice_paid'
+  | 'refund_request'
+  | 'refund_status'
+  | 'contact_message'
+  | 'newsletter';
+
+export function listEmailTemplates() {
+  return [
+    {
+      key: 'ticket' as const,
+      label: 'Vstupenka / RSVP',
+      variables: [
+        'email',
+        'name',
+        'eventTitle',
+        'attendees',
+        'paymentMethod',
+        'qrToken',
+        'status',
+        'bankAccount',
+      ],
+    },
+    {
+      key: 'rsvp_payment_reminder' as const,
+      label: 'RSVP - pripominka platby',
+      variables: [
+        'email',
+        'name',
+        'eventTitle',
+        'attendees',
+        'bankAccount',
+        'vs',
+        'dueDate',
+        'priceTotal',
+        'pricingLabel',
+        'pricingLabelEn',
+        'memberUrl',
+        'eventUrl',
+        'ticketPdfUrl',
+        'remainingHours',
+        'stage',
+        'lang',
+      ],
+    },
+    {
+      key: 'event_feedback_request' as const,
+      label: 'Akce - zadost o feedback',
+      variables: ['email', 'name', 'eventTitle', 'eventDate', 'feedbackUrl', 'lang'],
+    },
+    {
+      key: 'waitlist_offer' as const,
+      label: 'Waitlist nabídka',
+      variables: ['email', 'name', 'eventTitle', 'attendees', 'offerUrl', 'offerExpiresAt', 'priceTotal', 'pricingLabel', 'lang'],
+    },
+    {
+      key: 'admin_password' as const,
+      label: 'Admin přístup (heslo)',
+      variables: ['email', 'firstName', 'password'],
+    },
+    {
+      key: 'password_reset' as const,
+      label: 'Reset hesla',
+      variables: ['email', 'resetUrl', 'lang'],
+    },
+    {
+      key: 'trust_box_verify' as const,
+      label: 'Schránka důvěry – ověření e‑mailu',
+      variables: ['toEmail', 'firstName', 'verifyUrl', 'code', 'lang'],
+    },
+    {
+      key: 'trust_box_confirm' as const,
+      label: 'Schránka důvěry – potvrzení',
+      variables: ['toEmail', 'firstName', 'threadUrl', 'followupCode', 'lang'],
+    },
+    {
+      key: 'trust_box_admin_reply' as const,
+      label: 'Schránka důvěry – odpověď správce',
+      variables: ['toEmail', 'firstName', 'threadUrl', 'adminName', 'message', 'lang'],
+    },
+    {
+      key: 'member_access' as const,
+      label: 'Člen – aktivace přístupu',
+      variables: ['toEmail', 'firstName', 'actionUrl', 'lang'],
+    },
+    {
+      key: 'member_welcome' as const,
+      label: 'Člen – welcome',
+      variables: ['toEmail', 'firstName', 'lang'],
+    },
+    {
+      key: 'membership_expiry' as const,
+      label: 'Členství – expirace',
+      variables: ['toEmail', 'firstName', 'expiresAt', 'daysLeft', 'lang'],
+    },
+    {
+      key: 'application_status' as const,
+      label: 'Přihláška – změna stavu',
+      variables: ['toEmail', 'firstName', 'status', 'reason', 'lang'],
+    },
+    {
+      key: 'application_status_admin' as const,
+      label: 'Přihláška: změna stavu (admin)',
+      variables: ['toEmail', 'firstName', 'lastName', 'status', 'reason', 'adminLink', 'lang'],
+    },
+    {
+      key: 'application_received' as const,
+      label: 'Přihláška – potvrzení uchazeči',
+      variables: ['toEmail', 'firstName', 'lastName', 'lang'],
+    },
+    {
+      key: 'application_new_admin' as const,
+      label: 'Přihláška – upozornění předseda/admin',
+      variables: ['toEmail', 'firstName', 'lastName', 'membershipType', 'adminLink', 'lang'],
+    },
+    {
+      key: 'application_approved_access' as const,
+      label: 'Přihláška – schválení + přístup + PDF',
+      variables: ['toEmail', 'firstName', 'lastName', 'actionUrl', 'pdfUrl', 'lang'],
+    },
+    {
+      key: 'invoice_request' as const,
+      label: 'Žádost o fakturu (interní)',
+      variables: ['toEmail', 'replyTo', 'rsvpId', 'eventId', 'eventTitle', 'email', 'buyerType', 'buyerName', 'buyerAddress', 'ico', 'dic', 'note'],
+    },
+    {
+      key: 'invoice_paid' as const,
+      label: 'Faktura – uhrazeno',
+      variables: ['toEmail', 'buyerName', 'invoiceNumber', 'vs', 'total', 'currency', 'lang'],
+    },
+    {
+      key: 'billing_invoice_sent' as const,
+      label: 'Faktury – odeslání faktury',
+      variables: ['toEmail', 'buyerName', 'invoiceNumber', 'vs', 'total', 'currency', 'dueDate', 'pdfUrl', 'lang'],
+    },
+    {
+      key: 'refund_request' as const,
+      label: 'Žádost o refund (interní)',
+      variables: ['toEmail', 'replyTo', 'rsvpId', 'eventId', 'eventTitle', 'email', 'reason', 'note'],
+    },
+    {
+      key: 'refund_status' as const,
+      label: 'Refund – změna stavu (žadatel)',
+      variables: ['toEmail', 'refundLogId', 'rsvpId', 'eventId', 'eventTitle', 'status', 'amount', 'currency', 'note'],
+    },
+    {
+      key: 'contact_message' as const,
+      label: 'Kontakt – nová zpráva (interní)',
+      variables: ['name', 'email', 'subject', 'message', 'createdAt', 'messageId'],
+    },
+    {
+      key: 'newsletter' as const,
+      label: 'Newsletter',
+      variables: ['subject', 'preheader', 'html', 'unsubLink', 'preferencesLink', 'variant'],
+    },
+    {
+      key: 'newsletter_doi_confirm' as const,
+      label: 'Newsletter – potvrzení odběru (DOI)',
+      variables: ['toEmail', 'firstName', 'confirmUrl', 'lang'],
+    },
+  ];
+}
+
+function escapeHtml(input: any) {
+  return String(input ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function csVocativeFirstName(input: any) {
+  const raw = String(input || '').trim();
+  if (!raw) return '';
+  const parts = raw.split(/\s+/);
+  const first = parts[0] || '';
+  const rest = parts.slice(1).join(' ');
+  const lower = first.toLowerCase();
+
+  const irregular: Record<string, string> = {
+    petr: 'Petře',
+    pavel: 'Pavle',
+    lukáš: 'Lukáši',
+    tomáš: 'Tomáši',
+    ondřej: 'Ondřeji',
+    matěj: 'Matěji',
+  };
+  let v = irregular[lower];
+  if (!v) {
+    if (lower.endsWith('š') || lower.endsWith('j') || lower.endsWith('č') || lower.endsWith('ž')) v = `${first}i`;
+    else if (lower.endsWith('a')) v = `${first.slice(0, -1)}o`;
+    else if (lower.endsWith('ek')) v = `${first.slice(0, -2)}ku`;
+    else if (lower.endsWith('el')) v = `${first.slice(0, -2)}le`;
+    else if (lower.endsWith('r') || lower.endsWith('n') || lower.endsWith('m') || lower.endsWith('l')) v = `${first}e`;
+    else v = `${first}e`;
+  }
+
+  return [v, rest].filter(Boolean).join(' ');
+}
+
+function section(label: string, value: any) {
+  return `<p style="margin: 8px 0;"><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}</p>`;
+}
+
+function bulletproofButton(href: string, label: string) {
+  const h = String(href || '').trim();
+  const l = String(label || '').trim();
+  if (!h || !l) return '';
+  const width = Math.max(180, Math.min(520, l.length * 9 + 80));
+  const eh = escapeHtml(h);
+  const el = escapeHtml(l);
+  return `<!--[if mso]>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${eh}" style="height:44px;v-text-anchor:middle;width:${width}px;" arcsize="32%" stroke="f" fillcolor="#16a34a">
+<w:anchorlock/>
+<center style="color:#ffffff;font-family:Arial,sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">${el}</center>
+</v:roundrect>
+<![endif]--><!--[if !mso]><!-- -->
+<a href="${eh}" style="display:inline-block;background:#16a34a;color:#ffffff;text-decoration:none;padding:14px 18px;border-radius:14px;font-weight:900;letter-spacing:0.08em;text-transform:uppercase;font-size:12px;font-family:Arial,sans-serif;">${el}</a>
+<!--<![endif]-->`;
+}
+
+function emailDoc(opts: {
+  subject: string;
+  title: string;
+  preheader?: string;
+  badge?: string;
+  introHtml?: string;
+  contentHtml?: string;
+  cta?: { href: string; label: string };
+  secondaryCta?: { href: string; label: string };
+  footerText?: string;
+  footerHtml?: string;
+  toEmail?: string;
+  lang?: 'cs' | 'en';
+}) {
+  const subject = String(opts.subject || '').trim();
+  const title = String(opts.title || '').trim();
+  const preheader = String(opts.preheader || '').trim();
+  const badge = String(opts.badge || '').trim();
+  const introHtml = String(opts.introHtml || '').trim();
+  const contentHtml = String(opts.contentHtml || '').trim();
+  const footerText = String(opts.footerText || '').trim();
+  const footerHtml = String(opts.footerHtml || '').trim();
+  const toEmail = String(opts.toEmail || '').trim();
+  const lang = opts.lang === 'en' ? 'en' : 'cs';
+
+  const ctaHref = String(opts.cta?.href || '').trim();
+  const ctaLabel = String(opts.cta?.label || '').trim();
+  const secondaryHref = String(opts.secondaryCta?.href || '').trim();
+  const secondaryLabel = String(opts.secondaryCta?.label || '').trim();
+
+  const ctaBlock = ctaHref && ctaLabel
+    ? `<tr><td align="center" style="padding:18px 28px 8px 28px;">${bulletproofButton(ctaHref, ctaLabel)}</td></tr>
+<tr><td align="center" style="padding:0 28px 18px 28px;font-family:Arial,sans-serif;font-size:12px;line-height:1.4;color:#78716c;word-break:break-all;">${escapeHtml(ctaHref)}</td></tr>`
+    : '';
+
+  const secondaryBlock = secondaryHref && secondaryLabel
+    ? `<tr><td align="center" style="padding:0 28px 18px 28px;font-family:Arial,sans-serif;font-size:12px;line-height:1.4;">
+<a href="${escapeHtml(secondaryHref)}" style="color:#16a34a;font-weight:900;text-decoration:underline;">${escapeHtml(secondaryLabel)}</a>
+</td></tr>`
+    : '';
+
+  const footerLine = footerHtml
+    ? footerHtml
+    : footerText
+      ? escapeHtml(footerText)
+      : lang === 'en'
+        ? 'Student club Pupen, z.s.'
+        : 'Studentský spolek Pupen, z.s.';
+
+  return `<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><meta name="x-apple-disable-message-reformatting"/><title>${escapeHtml(subject)}</title></head><body style="margin:0;padding:0;background:#f5f5f4;"><div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;mso-hide:all;">${escapeHtml(preheader)}</div><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f5f5f4;"><tr><td align="center" style="padding:24px 12px;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="640" style="width:640px;max-width:640px;"><tr><td style="padding:0 0 14px 0;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td align="left" style="font-family:Arial,sans-serif;"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#dcfce7" style="padding:8px 12px;border-radius:999px;color:#166534;font-weight:900;letter-spacing:0.18em;text-transform:uppercase;font-size:11px;">Pupen</td></tr></table></td><td align="right" style="font-family:Arial,sans-serif;font-size:12px;color:#78716c;"><a href="https://pupen.org" style="color:#16a34a;text-decoration:none;font-weight:800;">pupen.org</a></td></tr></table></td></tr><tr><td bgcolor="#ffffff" style="border:1px solid #e7e5e4;border-radius:24px;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td bgcolor="#16a34a" style="height:6px;line-height:6px;font-size:6px;">&nbsp;</td></tr><tr><td style="padding:26px 28px 8px 28px;font-family:Arial,sans-serif;color:#1c1917;">${badge ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#f5f5f4" style="padding:6px 10px;border-radius:999px;border:1px solid #e7e5e4;color:#57534e;font-weight:900;letter-spacing:0.18em;text-transform:uppercase;font-size:10px;">${escapeHtml(badge)}</td></tr></table>` : ''}<div style="height:${badge ? '10px' : '0'};line-height:${badge ? '10px' : '0'};font-size:${badge ? '10px' : '0'};">&nbsp;</div><div style="font-size:28px;line-height:1.15;font-weight:900;letter-spacing:-0.02em;">${escapeHtml(title)}</div></td></tr>${introHtml ? `<tr><td style="padding:10px 28px 0 28px;font-family:Arial,sans-serif;color:#292524;font-size:16px;line-height:1.6;">${introHtml}</td></tr>` : ''}${contentHtml ? `<tr><td style="padding:14px 28px 0 28px;font-family:Arial,sans-serif;color:#292524;font-size:15px;line-height:1.6;">${contentHtml}</td></tr>` : ''}${ctaBlock}${secondaryBlock}</table></td></tr><tr><td align="center" style="padding:16px 6px 0 6px;font-family:Arial,sans-serif;color:#78716c;font-size:12px;line-height:1.5;">${footerLine ? `<div style="margin-top:10px;">${footerLine}</div>` : ''}${toEmail ? `<div style="margin-top:8px;">${lang === 'en' ? 'This email was sent to' : 'Tento e‑mail byl odeslán na'} <span style="font-weight:800;color:#44403c;">${escapeHtml(toEmail)}</span>.</div>` : ''}</td></tr></table></td></tr></table></body></html>`;
+}
+
+export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject: string; html: string; text?: string } {
+  if (key === 'contact_message') {
+    const name = String(vars?.name || '');
+    const email = String(vars?.email || '');
+    const subjectLine = String(vars?.subject || '').trim();
+    const message = String(vars?.message || '');
+    const createdAt = vars?.createdAt ? formatDateTimePrague(String(vars.createdAt), 'cs') : '';
+    const messageId = String(vars?.messageId || '').trim();
+
+    const subject = `Pupen — Nová zpráva z webu${subjectLine ? `: ${subjectLine}` : ''}`;
+    const html = emailDoc({
+      subject,
+      title: 'Nová zpráva z webu',
+      badge: 'Kontakt',
+      preheader: subjectLine ? `Nová zpráva: ${subjectLine}` : 'Nová zpráva z webu.',
+      introHtml: `<p style="margin:0;">Doručila se nová zpráva z webového formuláře.</p>`,
+      contentHtml: `
+        <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px;">
+          ${section('Jméno', name)}
+          ${section('E‑mail', email)}
+          ${subjectLine ? section('Předmět', subjectLine) : ''}
+          ${createdAt ? section('Čas', createdAt) : ''}
+          ${messageId ? section('ID', messageId) : ''}
+          <hr style="border:none; border-top:1px solid #e7e5e4; margin:14px 0;" />
+          <div style="font-weight:900; margin:0 0 8px 0;">Zpráva</div>
+          <div style="background:#ffffff; border:1px solid #e7e5e4; border-radius:14px; padding:14px; white-space:pre-wrap;">${escapeHtml(message)}</div>
+        </div>
+        <div style="margin-top:12px; font-size:13px; color:#57534e; font-weight:800;">Odpověď pošlete na ${escapeHtml(email)}.</div>
+      `,
+    });
+    return { subject, html };
+  }
+
+  if (key === 'newsletter') {
+    const subjectLine = String(vars?.subject || '').trim();
+    const content = String(vars?.html || '');
+    const preheader = String(vars?.preheader || '').trim();
+    const unsubLink = String(vars?.unsubLink || '').trim();
+    const preferencesLink = String(vars?.preferencesLink || '').trim();
+    const subject = subjectLine ? `Pupen — ${subjectLine}` : 'Pupen — Newsletter';
+    const footerHtml = `<div style="margin-top:10px;">Studentský spolek Pupen, z.s.</div>${
+      preferencesLink || unsubLink
+        ? `<div style="margin-top:8px;">${
+            preferencesLink
+              ? `<a href="${escapeHtml(preferencesLink)}" style="color:#16a34a;font-weight:900;text-decoration:none;">Upravit odběr</a>`
+              : ''
+          }${preferencesLink && unsubLink ? `<span style="display:inline-block;width:12px;">&nbsp;</span>` : ''}${
+            unsubLink ? `<a href="${escapeHtml(unsubLink)}" style="color:#78716c;font-weight:900;text-decoration:underline;">Zrušit odběr</a>` : ''
+          }</div>`
+        : ''
+    }`;
+    const html = emailDoc({
+      subject,
+      title: subjectLine || 'Newsletter',
+      badge: 'Newsletter',
+      preheader,
+      contentHtml: content,
+      footerHtml,
+      lang: 'cs',
+    });
+    return { subject, html };
+  }
+
+  if (key === 'newsletter_doi_confirm') {
+    const toEmail = String(vars?.toEmail || '').trim();
+    const firstName = String(vars?.firstName || '').trim();
+    const confirmUrl = String(vars?.confirmUrl || '').trim();
+    const lang = vars?.lang === 'en' ? 'en' : 'cs';
+    const subject = lang === 'en' ? 'Pupen — Confirm subscription' : 'Pupen — Potvrďte odběr newsletteru';
+    const html = emailDoc({
+      subject,
+      title: lang === 'en' ? 'Confirm subscription' : 'Potvrďte odběr',
+      badge: 'Newsletter',
+      preheader: lang === 'en' ? 'One more step to confirm your subscription.' : 'Ještě jeden krok pro potvrzení odběru.',
+      introHtml: `<p style="margin:0;">${
+        lang === 'en'
+          ? `Hello${firstName ? ` ${escapeHtml(firstName)}` : ''}, please confirm your newsletter subscription.`
+          : `Dobrý den${firstName ? ` ${escapeHtml(firstName)}` : ''}, potvrďte prosím odběr newsletteru.`
+      }</p>`,
+      cta: confirmUrl ? { href: confirmUrl, label: lang === 'en' ? 'Confirm' : 'Potvrdit' } : undefined,
+      footerText:
+        lang === 'en'
+          ? 'If you did not request this, you can ignore this email.'
+          : 'Pokud jste o odběr nežádali, můžete tento e‑mail ignorovat.',
+      toEmail,
+      lang,
+    });
+    return { subject, html };
+  }
+
+  if (key === 'trust_box_verify') {
+    const toEmail = String(vars?.toEmail || '').trim();
+    const firstName = String(vars?.firstName || '').trim();
+    const verifyUrl = String(vars?.verifyUrl || '').trim();
+    const code = String(vars?.code || '').trim();
+    const lang = vars?.lang === 'en' ? 'en' : 'cs';
+    const subject = lang === 'en' ? 'Pupen — Trust Box verification' : 'Pupen — Ověření schránky důvěry';
+    const html = emailDoc({
+      subject,
+      title: lang === 'en' ? 'Verify your email' : 'Ověřte svůj e‑mail',
+      badge: lang === 'en' ? 'Trust Box' : 'Schránka důvěry',
+      preheader: lang === 'en' ? 'Verification code inside.' : 'Uvnitř je ověřovací kód.',
+      introHtml: `<p style="margin:0;">${lang === 'en' ? 'To submit a message to the Trust Box, verify your email.' : 'Pro odeslání podnětu do schránky důvěry prosím ověřte svůj e‑mail.'}</p>`,
+      contentHtml: `
+        <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px;">
+          <div style="font-weight:900; font-size:13px; color:#44403c; margin-bottom:10px;">${lang === 'en' ? 'Hello' : 'Dobrý den'}${firstName ? ` ${escapeHtml(firstName)}` : ''}</div>
+          ${code ? `<div style="margin:10px 0; font-weight:900;">${escapeHtml(lang === 'en' ? 'Code' : 'Kód')}:</div><div style="display:inline-block; background:#ffffff; border:1px solid #e7e5e4; border-radius:14px; padding:10px 12px; font-weight:950; letter-spacing:0.22em; font-size:18px;">${escapeHtml(code)}</div>` : ''}
+          <div style="margin-top:14px; font-size:12px; line-height:1.5; color:#57534e; font-weight:800;">${
+            lang === 'en'
+              ? 'If you cannot find this email, check your spam/junk folder.'
+              : 'Pokud e‑mail nevidíte, zkontrolujte Nevyžádanou poštu / Spam.'
+          }</div>
+        </div>
+      `,
+      cta: verifyUrl ? { href: verifyUrl, label: lang === 'en' ? 'Verify' : 'Ověřit' } : undefined,
+      toEmail,
+      lang,
+    });
+    return { subject, html };
+  }
+
+  if (key === 'trust_box_confirm') {
+    const toEmail = String(vars?.toEmail || '').trim();
+    const firstName = String(vars?.firstName || '').trim();
+    const threadUrl = String(vars?.threadUrl || '').trim();
+    const followupCode = String(vars?.followupCode || '').trim();
+    const lang = vars?.lang === 'en' ? 'en' : 'cs';
+    const subject = lang === 'en' ? 'Pupen — Trust Box received' : 'Pupen — Schránka důvěry: přijato';
+    const html = emailDoc({
+      subject,
+      title: lang === 'en' ? 'Thank you' : 'Děkujeme za důvěru',
+      badge: lang === 'en' ? 'Trust Box' : 'Schránka důvěry',
+      preheader: lang === 'en' ? 'We received your report.' : 'Váš podnět byl přijat.',
+      introHtml: `<p style="margin:0;">${lang === 'en' ? 'Hello' : 'Dobrý den'}${firstName ? ` ${escapeHtml(firstName)}` : ''}, ${lang === 'en' ? 'your message was received.' : 'váš podnět byl přijat.'}</p>`,
+      contentHtml: followupCode
+        ? `<div style="background:#f5f5f4;border:1px solid #e7e5e4;border-radius:18px;padding:16px;">
+            <div style="font-weight:900;margin:0 0 10px 0;">${escapeHtml(lang === 'en' ? 'Access code' : 'Přístupový kód')}</div>
+            <div style="display:inline-block;background:#ffffff;border:1px solid #e7e5e4;border-radius:14px;padding:10px 12px;font-weight:950;letter-spacing:0.22em;font-size:18px;">${escapeHtml(
+              followupCode,
+            )}</div>
+            <div style="margin-top:12px;font-size:12px;line-height:1.5;color:#57534e;font-weight:800;">${
+              lang === 'en'
+                ? 'You can use this code to open the thread later.'
+                : 'Tento kód můžete použít pro návrat do ticketu později.'
+            }</div>
+          </div>`
+        : '',
+      cta: threadUrl ? { href: threadUrl, label: lang === 'en' ? 'Open thread' : 'Otevřít vlákno' } : undefined,
+      toEmail,
+      lang,
+    });
+    return { subject, html };
+  }
+
+  if (key === 'trust_box_admin_reply') {
+    const toEmail = String(vars?.toEmail || '').trim();
+    const firstName = String(vars?.firstName || '').trim();
+    const threadUrl = String(vars?.threadUrl || '').trim();
+    const authorName = String(vars?.authorName || '').trim();
+    const lang = vars?.lang === 'en' ? 'en' : 'cs';
+    const subject = lang === 'en' ? 'Pupen — Trust Box update' : 'Pupen — Schránka důvěry: nová zpráva';
+    const html = emailDoc({
+      subject,
+      title: lang === 'en' ? 'New message' : 'Nová zpráva',
+      badge: lang === 'en' ? 'Trust Box' : 'Schránka důvěry',
+      preheader: lang === 'en' ? 'There is a new message in your thread.' : 'Ve vlákně je nová zpráva.',
+      introHtml: `<p style="margin:0;">${lang === 'en' ? 'Hello' : 'Dobrý den'}${firstName ? ` ${escapeHtml(firstName)}` : ''}, ${lang === 'en' ? 'there is a new message in your Trust Box thread.' : 've vašem vlákně schránky důvěry je nová zpráva.'}</p>`,
+      contentHtml: authorName
+        ? `<div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:14px; font-weight:900; color:#57534e; font-size:13px;">${escapeHtml(lang === 'en' ? 'Replied by' : 'Odpověděl')}: ${escapeHtml(authorName)}</div>`
+        : '',
+      cta: threadUrl ? { href: threadUrl, label: lang === 'en' ? 'Open thread' : 'Otevřít vlákno' } : undefined,
+      toEmail,
+      lang,
+    });
+    return { subject, html };
+  }
+
+  if (key === 'admin_password') {
+    const firstName = vars?.firstName ? String(vars.firstName) : '';
+    const firstNameVoc = csVocativeFirstName(firstName);
+    const password = String(vars?.password || '');
+    const subject = 'Pupen — Přístup do administrace';
+    const html = emailDoc({
+      subject,
+      title: 'Přístup do administrace',
+      badge: 'Admin',
+      preheader: 'V e‑mailu je dočasné heslo pro přihlášení.',
+      introHtml: `<p style="margin:0;">Ahoj${firstNameVoc ? ` ${escapeHtml(firstNameVoc)}` : ''}! Níže je dočasné heslo pro přístup do administrace.</p>`,
+      contentHtml: `
+        <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px; text-align:center;">
+          <div style="font-weight:900; margin-bottom:10px;">Dočasné heslo</div>
+          <div style="display:inline-block; background:#ffffff; border:1px solid #e7e5e4; border-radius:14px; padding:10px 12px; font-weight:950; letter-spacing:0.18em; font-size:18px;">${escapeHtml(password)}</div>
+          <div style="margin-top:12px; font-size:12px; color:#78716c; font-weight:800;">Heslo si po přihlášení změňte.</div>
+        </div>
+      `,
+      footerText: 'Tento e‑mail byl odeslán automaticky systémem Pupen.',
+      lang: 'cs',
+    });
+    return { subject, html };
+  }
+
+  if (key === 'password_reset') {
+    const lang = vars?.lang === 'en' ? 'en' : 'cs';
+    const resetUrl = String(vars?.resetUrl || '');
+    const subject = lang === 'en' ? 'Pupen — Password reset' : 'Pupen — Obnova hesla';
+    const title = lang === 'en' ? 'Password reset' : 'Obnova hesla';
+    const intro =
+      lang === 'en'
+        ? 'We received a request to reset your password.'
+        : 'Obdrželi jsme žádost o obnovu vašeho hesla.';
+    const cta = lang === 'en' ? 'Set a new password' : 'Nastavit nové heslo';
+    const note =
+      lang === 'en'
+        ? 'If you did not request this, you can ignore this email.'
+        : 'Pokud jste o obnovu nepožádali, tento e‑mail ignorujte.';
+    const html = emailDoc({
+      subject,
+      title,
+      badge: lang === 'en' ? 'Security' : 'Bezpečnost',
+      preheader: lang === 'en' ? 'Use the link to set a new password.' : 'Odkaz pro nastavení nového hesla.',
+      introHtml: `<p style="margin:0;">${escapeHtml(intro)}</p>`,
+      cta: resetUrl ? { href: resetUrl, label: cta } : undefined,
+      contentHtml: `<div style="margin-top:12px; font-size:12px; color:#78716c; font-weight:800;">${escapeHtml(note)}</div>`,
+      lang,
+    });
+    return { subject, html };
+  }
+
+  if (key === 'member_access') {
+    const lang = vars?.lang === 'en' ? 'en' : 'cs';
+    const firstName = vars?.firstName ? String(vars.firstName) : '';
+    const firstNameCs = lang === 'cs' ? csVocativeFirstName(firstName) : firstName;
+    const toEmail = String(vars?.toEmail || vars?.email || '');
+    const actionUrl = String(vars?.actionUrl || '');
+
+    const subject = lang === 'en' ? 'Pupen — Access approved' : 'Pupen — Přístup schválen';
+    const title = lang === 'en' ? 'Your access is approved' : 'Váš přístup je schválen';
+    const intro =
+      lang === 'en'
+        ? `Hello${firstName ? ` ${escapeHtml(firstName)}` : ''}, your access to Pupen has been approved.`
+        : `Ahoj${firstNameCs ? ` ${escapeHtml(firstNameCs)}` : ''}, tvůj přístup do systému Pupen byl schválen.`;
+    const cta = lang === 'en' ? 'Set password and sign in' : 'Nastavit heslo a přihlásit se';
+    const note =
+      lang === 'en'
+        ? 'If you already have a password, you can still use this link to set a new one.'
+        : 'Pokud už heslo máš, tímto odkazem si ho můžeš případně znovu nastavit.';
+
+    const html = emailDoc({
+      subject,
+      title,
+      badge: lang === 'en' ? 'Member' : 'Člen',
+      preheader: lang === 'en' ? 'Your access is approved.' : 'Váš přístup je schválen.',
+      introHtml: `<p style="margin:0;">${intro}</p>`,
+      cta: actionUrl ? { href: actionUrl, label: cta } : undefined,
+      contentHtml: `<div style="margin-top:12px; font-size:12px; color:#78716c; font-weight:800;">${escapeHtml(note)}</div>`,
+      toEmail,
+      lang,
+    });
+    return { subject, html };
+  }
+
+  if (key === 'member_welcome') {
+    const lang = vars?.lang === 'en' ? 'en' : 'cs';
+    const firstName = vars?.firstName ? String(vars.firstName) : '';
+    const firstNameCs = lang === 'cs' ? csVocativeFirstName(firstName) : firstName;
+    const toEmail = String(vars?.toEmail || vars?.email || '');
+
+    const subject = lang === 'en' ? 'Pupen — Welcome' : 'Pupen — Vítej';
+    const title = lang === 'en' ? 'Welcome to Pupen' : 'Vítej v Pupen';
+    const intro =
+      lang === 'en'
+        ? `Hello${firstName ? ` ${escapeHtml(firstName)}` : ''}! Your membership was approved.`
+        : `Ahoj${firstNameCs ? ` ${escapeHtml(firstNameCs)}` : ''}! Tvoje členství bylo schváleno.`;
+    const body =
+      lang === 'en'
+        ? 'You can now access the member portal and stay updated.'
+        : 'Můžeš teď využívat členský portál a mít přehled o dění.';
+
+    const html = emailDoc({
+      subject,
+      title,
+      badge: lang === 'en' ? 'Member' : 'Člen',
+      preheader: lang === 'en' ? 'Welcome to Pupen.' : 'Vítej v Pupen.',
+      introHtml: `<p style="margin:0;">${intro}</p>`,
+      contentHtml: `<div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px; font-weight:800;">${escapeHtml(body)}</div>`,
+      toEmail,
+      lang,
+    });
+    return { subject, html };
+  }
+
+  if (key === 'application_received') {
+    const lang = vars?.lang === 'en' ? 'en' : 'cs';
+    const firstName = vars?.firstName ? String(vars.firstName) : '';
+    const firstNameCs = lang === 'cs' ? csVocativeFirstName(firstName) : firstName;
+    const toEmail = String(vars?.toEmail || vars?.email || '');
+
+    const subject = lang === 'en' ? 'Pupen — Application received' : 'Pupen — Přihláška přijata';
+    const title = lang === 'en' ? 'We received your application' : 'Přihláška dorazila';
+    const intro =
+      lang === 'en'
+        ? `Hello${firstName ? ` ${escapeHtml(firstName)}` : ''}, thank you! We received your application.`
+        : `Ahoj${firstNameCs ? ` ${escapeHtml(firstNameCs)}` : ''}, díky! Přihláška k nám dorazila.`;
+    const body =
+      lang === 'en'
+        ? 'We will review it and then email you the result. After approval you will get access to the member portal.'
+        : 'Přihlášku zkontrolujeme a výsledek pošleme e-mailem. Po schválení přijde i přístup do členského portálu.';
+
+    const html = emailDoc({
+      subject,
+      title,
+      badge: lang === 'en' ? 'Application' : 'Přihláška',
+      preheader: lang === 'en' ? 'We received your application.' : 'Přihláška dorazila.',
+      introHtml: `<p style="margin:0;">${intro}</p>`,
+      contentHtml: `<div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px; font-weight:800;">${escapeHtml(body)}</div>`,
+      toEmail,
+      lang,
+    });
+    return { subject, html };
+  }
+
+  if (key === 'application_new_admin') {
+    const lang = vars?.lang === 'en' ? 'en' : 'cs';
+    const firstName = vars?.firstName ? String(vars.firstName) : '';
+    const lastName = vars?.lastName ? String(vars.lastName) : '';
+    const toEmail = String(vars?.toEmail || vars?.email || '');
+    const membershipType = String(vars?.membershipType || '');
+    const adminLink = String(vars?.adminLink || '');
+
+    const subject = lang === 'en' ? 'Pupen Control — New application' : 'Pupen Control — Nová přihláška';
+    const title = lang === 'en' ? 'New application submitted' : 'Byla podána nová přihláška';
+    const fullName = `${String(firstName || '').trim()} ${String(lastName || '').trim()}`.trim();
+
+    const html = emailDoc({
+      subject,
+      title,
+      badge: 'Admin',
+      preheader: lang === 'en' ? 'A new application was submitted.' : 'Byla podána nová přihláška.',
+      contentHtml: `
+        <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px;">
+          ${fullName ? section(lang === 'en' ? 'Name' : 'Jméno', fullName) : ''}
+          ${toEmail ? section('E-mail', toEmail) : ''}
+          ${membershipType ? section(lang === 'en' ? 'Type' : 'Typ', membershipType) : ''}
+        </div>
+      `,
+      cta: adminLink ? { href: adminLink, label: lang === 'en' ? 'Open in admin' : 'Otevřít v administraci' } : undefined,
+      lang,
+    });
+    return { subject, html };
+  }
+
+  if (key === 'application_approved_access') {
+    const lang = vars?.lang === 'en' ? 'en' : 'cs';
+    const firstName = vars?.firstName ? String(vars.firstName) : '';
+    const firstNameCs = lang === 'cs' ? csVocativeFirstName(firstName) : firstName;
+    const toEmail = String(vars?.toEmail || vars?.email || '');
+    const actionUrl = String(vars?.actionUrl || '');
+    const pdfUrl = String(vars?.pdfUrl || '');
+
+    const subject = lang === 'en' ? 'Pupen — Application approved' : 'Pupen — Přihláška schválena';
+    const title = lang === 'en' ? 'Welcome to Pupen' : 'Vítej v Pupen';
+    const intro =
+      lang === 'en'
+        ? `Hello${firstName ? ` ${escapeHtml(firstName)}` : ''}, your application was approved.`
+        : `Ahoj${firstNameCs ? ` ${escapeHtml(firstNameCs)}` : ''}, tvoje přihláška byla schválena.`;
+    const cta = lang === 'en' ? 'Set password and sign in' : 'Nastavit heslo a přihlásit se';
+    const pdfLabel = lang === 'en' ? 'Download application PDF' : 'Stáhnout PDF přihlášky';
+
+    const html = emailDoc({
+      subject,
+      title,
+      badge: lang === 'en' ? 'Application' : 'Přihláška',
+      preheader: lang === 'en' ? 'Application approved.' : 'Přihláška schválena.',
+      introHtml: `<p style="margin:0;">${intro}</p>`,
+      cta: actionUrl ? { href: actionUrl, label: cta } : undefined,
+      secondaryCta: pdfUrl ? { href: pdfUrl, label: pdfLabel } : undefined,
+      toEmail,
+      lang,
+    });
+    return { subject, html };
+  }
+
+  if (key === 'application_status') {
+    const lang = vars?.lang === 'en' ? 'en' : 'cs';
+    const firstName = vars?.firstName ? String(vars.firstName) : '';
+    const firstNameCs = lang === 'cs' ? csVocativeFirstName(firstName) : firstName;
+    const toEmail = String(vars?.toEmail || vars?.email || '');
+    const status = String(vars?.status || 'pending').trim();
+    const reason = String(vars?.reason || '').trim();
+
+    const statusLabel =
+      status === 'approved'
+        ? lang === 'en'
+          ? 'Approved'
+          : 'Schváleno'
+        : status === 'rejected'
+          ? lang === 'en'
+            ? 'Rejected'
+            : 'Odmítnuto'
+          : lang === 'en'
+            ? 'Pending'
+            : 'Čeká';
+
+    const subject =
+      status === 'approved'
+        ? lang === 'en'
+          ? 'Pupen — Application approved'
+          : 'Pupen — Přihláška schválena'
+        : status === 'rejected'
+          ? lang === 'en'
+            ? 'Pupen — Application rejected'
+            : 'Pupen — Přihláška zamítnuta'
+          : lang === 'en'
+            ? 'Pupen — Application update'
+            : 'Pupen — Změna stavu přihlášky';
+
+    const title = lang === 'en' ? 'Application status update' : 'Změna stavu přihlášky';
+    const intro =
+      lang === 'en'
+        ? `Hello${firstName ? ` ${escapeHtml(firstName)}` : ''}, the status of your application has changed.`
+        : `Ahoj${firstNameCs ? ` ${escapeHtml(firstNameCs)}` : ''}, změnil se stav tvé přihlášky.`;
+    const hint =
+      status === 'approved'
+        ? lang === 'en'
+          ? 'You will receive access instructions separately.'
+          : 'Pokyny k přístupu přijdou v samostatném e-mailu.'
+        : status === 'rejected'
+          ? lang === 'en'
+            ? 'If you have questions, reply to this email.'
+            : 'Pokud máte dotazy, odpovězte na tento e-mail.'
+          : lang === 'en'
+            ? 'We will contact you after review.'
+            : 'Po posouzení vás budeme kontaktovat.';
+
+    const html = emailDoc({
+      subject,
+      title,
+      badge: lang === 'en' ? 'Application' : 'Přihláška',
+      preheader: `${lang === 'en' ? 'Status' : 'Stav'}: ${statusLabel}`,
+      introHtml: `<p style="margin:0;">${intro}</p>`,
+      contentHtml: `
+        <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px;">
+          <div style="font-weight:950; font-size:16px;">${escapeHtml(lang === 'en' ? 'Status' : 'Stav')}: ${escapeHtml(statusLabel)}</div>
+          ${reason ? `<div style="margin-top:10px; font-weight:800; color:#44403c;">${escapeHtml(lang === 'en' ? 'Reason' : 'Důvod')}: ${escapeHtml(reason)}</div>` : ''}
+          <div style="margin-top:12px; font-size:12px; color:#78716c; font-weight:800;">${escapeHtml(hint)}</div>
+        </div>
+      `,
+      toEmail,
+      lang,
+    });
+    return { subject, html };
+  }
+
+  if (key === 'application_status_admin') {
+    const lang = vars?.lang === 'en' ? 'en' : 'cs';
+    const firstName = vars?.firstName ? String(vars.firstName) : '';
+    const lastName = vars?.lastName ? String(vars.lastName) : '';
+    const toEmail = String(vars?.toEmail || vars?.email || '');
+    const status = String(vars?.status || 'pending').trim();
+    const reason = String(vars?.reason || '').trim();
+    const adminLink = String(vars?.adminLink || '').trim();
+
+    const statusLabel =
+      status === 'approved'
+        ? lang === 'en'
+          ? 'Approved'
+          : 'Schváleno'
+        : status === 'rejected'
+          ? lang === 'en'
+            ? 'Rejected'
+            : 'Zamítnuto'
+          : lang === 'en'
+            ? 'Pending'
+            : 'Čeká';
+
+    const subject = lang === 'en' ? 'Pupen Control — Application status changed' : 'Pupen Control — Změna stavu přihlášky';
+    const title = lang === 'en' ? 'Application status changed' : 'Změna stavu přihlášky';
+    const fullName = `${String(firstName || '').trim()} ${String(lastName || '').trim()}`.trim();
+
+    const html = emailDoc({
+      subject,
+      title,
+      badge: 'Admin',
+      preheader: `${lang === 'en' ? 'Status' : 'Stav'}: ${statusLabel}`,
+      contentHtml: `
+        <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px;">
+          ${fullName ? section(lang === 'en' ? 'Name' : 'Jméno', fullName) : ''}
+          ${toEmail ? section('E-mail', toEmail) : ''}
+          ${section(lang === 'en' ? 'Status' : 'Stav', statusLabel)}
+          ${reason ? section(lang === 'en' ? 'Reason' : 'Důvod', reason) : ''}
+        </div>
+      `,
+      cta: adminLink ? { href: adminLink, label: lang === 'en' ? 'Open in admin' : 'Otevřít v administraci' } : undefined,
+      lang,
+    });
+    return { subject, html };
+  }
+
+  if (key === 'membership_expiry') {
+    const lang = vars?.lang === 'en' ? 'en' : 'cs';
+    const firstName = vars?.firstName ? String(vars.firstName) : '';
+    const firstNameCs = lang === 'cs' ? csVocativeFirstName(firstName) : firstName;
+    const toEmail = String(vars?.toEmail || vars?.email || '');
+    const daysLeft = typeof vars?.daysLeft === 'number' ? vars.daysLeft : Number(vars?.daysLeft || 0);
+    const dateStr = vars?.expiresAt ? formatDatePrague(String(vars.expiresAt), lang) : '';
+
+    const isExpired = daysLeft < 0;
+    const subject = isExpired
+      ? lang === 'en'
+        ? 'Pupen — Membership expired'
+        : 'Pupen — Členství vypršelo'
+      : lang === 'en'
+        ? 'Pupen — Membership expires soon'
+        : 'Pupen — Členství brzy vyprší';
+    const title = isExpired ? (lang === 'en' ? 'Membership expired' : 'Členství vypršelo') : (lang === 'en' ? 'Membership expires soon' : 'Členství brzy vyprší');
+    const intro = isExpired
+      ? lang === 'en'
+        ? `Hello${firstName ? ` ${escapeHtml(firstName)}` : ''}, your membership has expired.`
+        : `Ahoj${firstNameCs ? ` ${escapeHtml(firstNameCs)}` : ''}, tvoje členství vypršelo.`
+      : lang === 'en'
+        ? `Hello${firstName ? ` ${escapeHtml(firstName)}` : ''}, your membership will expire soon.`
+        : `Ahoj${firstNameCs ? ` ${escapeHtml(firstNameCs)}` : ''}, tvoje členství brzy vyprší.`;
+    const body = dateStr
+      ? isExpired
+        ? lang === 'en'
+          ? `Expiration date: ${escapeHtml(dateStr)}`
+          : `Datum expirace: ${escapeHtml(dateStr)}`
+        : lang === 'en'
+          ? `Expiration date: ${escapeHtml(dateStr)}`
+          : `Datum expirace: ${escapeHtml(dateStr)}`
+      : '';
+    const hint =
+      lang === 'en'
+        ? 'If you have questions about renewal, reply to this email.'
+        : 'Pokud máte dotazy k prodloužení, odpovězte na tento e-mail.';
+
+    const html = emailDoc({
+      subject,
+      title,
+      badge: lang === 'en' ? 'Membership' : 'Členství',
+      preheader: isExpired ? (lang === 'en' ? 'Membership expired.' : 'Členství vypršelo.') : (lang === 'en' ? 'Membership expires soon.' : 'Členství brzy vyprší.'),
+      introHtml: `<p style="margin:0;">${intro}</p>`,
+      contentHtml: `
+        <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px;">
+          ${body ? `<div style="font-weight:900;">${body}</div>` : ''}
+          ${daysLeft >= 0 ? `<div style="margin-top:10px; font-size:12px; color:#78716c; font-weight:900;">${escapeHtml(lang === 'en' ? `Days left: ${Math.ceil(daysLeft)}` : `Zbývá dní: ${Math.ceil(daysLeft)}`)}</div>` : ''}
+          <div style="margin-top:12px; font-size:12px; color:#78716c; font-weight:800;">${escapeHtml(hint)}</div>
+        </div>
+      `,
+      toEmail,
+      lang,
+    });
+    return { subject, html };
+  }
+
+  if (key === 'billing_invoice_sent') {
+    const lang = vars?.lang === 'en' ? 'en' : 'cs';
+    const toEmail = String(vars?.toEmail || '').trim();
+    const buyerName = String(vars?.buyerName || '').trim();
+    const invoiceNumber = String(vars?.invoiceNumber || '').trim();
+    const vs = String(vars?.vs || '').trim();
+    const currency = String(vars?.currency || 'CZK').trim() || 'CZK';
+    const total = vars?.total != null && vars?.total !== '' ? String(vars.total) : '';
+    const dueDate = String(vars?.dueDate || '').trim();
+    const pdfUrl = String(vars?.pdfUrl || '').trim();
+
+    const subject = lang === 'en' ? 'Pupen — Invoice' : 'Pupen — Faktura';
+    const title = lang === 'en' ? 'Invoice' : 'Faktura';
+
+    const html = emailDoc({
+      subject,
+      title,
+      badge: lang === 'en' ? 'Invoice' : 'Faktura',
+      preheader: invoiceNumber ? `${lang === 'en' ? 'Invoice' : 'Faktura'} ${invoiceNumber}` : title,
+      introHtml: `<p style="margin:0;">${
+        lang === 'en'
+          ? `Hello${buyerName ? ` ${escapeHtml(buyerName)}` : ''}, your invoice is ready.`
+          : `Dobrý den${buyerName ? ` ${escapeHtml(buyerName)}` : ''}, vaše faktura je připravena.`
+      }</p>`,
+      contentHtml: `
+        <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px;">
+          ${invoiceNumber ? section(lang === 'en' ? 'Invoice number' : 'Číslo faktury', invoiceNumber) : ''}
+          ${vs ? section('VS', vs) : ''}
+          ${total ? section(lang === 'en' ? 'Total' : 'Celkem', `${total} ${currency}`) : ''}
+          ${dueDate ? section(lang === 'en' ? 'Due date' : 'Splatnost', dueDate) : ''}
+          ${pdfUrl ? `<p style="margin: 14px 0 0 0; font-weight:900;"><a href="${escapeHtml(pdfUrl)}" style="color:#16a34a;text-decoration:underline;">${escapeHtml(lang === 'en' ? 'Download PDF' : 'Stáhnout PDF')}</a></p>` : ''}
+        </div>
+      `,
+      toEmail,
+      lang,
+    });
+    return { subject, html };
+  }
+
+  if (key === 'invoice_paid') {
+    const lang = vars?.lang === 'en' ? 'en' : 'cs';
+    const toEmail = String(vars?.toEmail || '').trim();
+    const buyerName = String(vars?.buyerName || '').trim();
+    const invoiceNumber = String(vars?.invoiceNumber || '').trim();
+    const vs = String(vars?.vs || '').trim();
+    const currency = String(vars?.currency || 'CZK').trim() || 'CZK';
+    const total = vars?.total != null && vars?.total !== '' ? String(vars.total) : '';
+
+    const subject = lang === 'en' ? 'Pupen — Invoice paid' : 'Pupen — Faktura uhrazena';
+    const title = lang === 'en' ? 'Invoice paid' : 'Faktura uhrazena';
+
+    const html = emailDoc({
+      subject,
+      title,
+      badge: lang === 'en' ? 'Invoice' : 'Faktura',
+      preheader: invoiceNumber ? `${lang === 'en' ? 'Invoice' : 'Faktura'} ${invoiceNumber}` : title,
+      introHtml: `<p style="margin:0;">${
+        lang === 'en'
+          ? `Hello${buyerName ? ` ${escapeHtml(buyerName)}` : ''}, your invoice has been paid.`
+          : `Dobrý den${buyerName ? ` ${escapeHtml(buyerName)}` : ''}, vaše faktura byla uhrazena.`
+      }</p>`,
+      contentHtml: `
+        <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px;">
+          ${invoiceNumber ? section(lang === 'en' ? 'Invoice number' : 'Číslo faktury', invoiceNumber) : ''}
+          ${vs ? section('VS', vs) : ''}
+          ${total ? section(lang === 'en' ? 'Total' : 'Celkem', `${total} ${currency}`) : ''}
+        </div>
+      `,
+      toEmail,
+      lang,
+    });
+    return { subject, html };
+  }
+
+  if (key === 'invoice_request') {
+    const rsvpId = String(vars?.rsvpId || '');
+    const eventTitle = String(vars?.eventTitle || '');
+    const buyerType = vars?.buyerType === 'company' ? 'Firma' : 'Osoba';
+    const subject = `Žádost o fakturu: ${eventTitle} (${rsvpId})`;
+    const html = emailDoc({
+      subject,
+      title: 'Žádost o fakturu',
+      badge: 'Finance',
+      preheader: `Žádost o fakturu: ${eventTitle}`,
+      contentHtml: `
+        <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px;">
+          <div style="font-weight:950; font-size:16px; margin-bottom:10px;">${escapeHtml(eventTitle)}</div>
+          ${section('RSVP ID', rsvpId)}
+          ${vars?.eventId ? section('Event ID', vars.eventId) : ''}
+          ${section('Kontakt', vars?.email)}
+          <hr style="border:none; border-top:1px solid #e7e5e4; margin:14px 0;" />
+          ${section('Typ odběratele', buyerType)}
+          ${section('Název / jméno', vars?.buyerName)}
+          ${section('Adresa', vars?.buyerAddress)}
+          ${vars?.buyerType === 'company' ? `${section('IČO', vars?.ico || '-')}${section('DIČ', vars?.dic || '-')}` : ''}
+          ${vars?.note ? `<hr style="border:none; border-top:1px solid #e7e5e4; margin:14px 0;" />${section('Poznámka', vars?.note)}` : ''}
+        </div>
+      `,
+      footerText: 'Tento e‑mail byl odeslán automaticky systémem Pupen.',
+      lang: 'cs',
+    });
+    return { subject, html };
+  }
+
+  if (key === 'refund_request') {
+    const rsvpId = String(vars?.rsvpId || '');
+    const eventTitle = String(vars?.eventTitle || '');
+    const reason = String(vars?.reason || '');
+    const subject = `Žádost o refund: ${eventTitle} (${rsvpId})`;
+    const html = emailDoc({
+      subject,
+      title: 'Žádost o refund',
+      badge: 'Finance',
+      preheader: `Žádost o refund: ${eventTitle}`,
+      contentHtml: `
+        <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px;">
+          <div style="font-weight:950; font-size:16px; margin-bottom:10px;">${escapeHtml(eventTitle)}</div>
+          ${section('RSVP ID', rsvpId)}
+          ${vars?.eventId ? section('Event ID', vars.eventId) : ''}
+          ${section('Kontakt', vars?.email)}
+          <hr style="border:none; border-top:1px solid #e7e5e4; margin:14px 0;" />
+          ${section('Důvod', reason)}
+          ${vars?.note ? `<hr style="border:none; border-top:1px solid #e7e5e4; margin:14px 0;" />${section('Poznámka', vars?.note)}` : ''}
+        </div>
+      `,
+      footerText: 'Tento e‑mail byl odeslán automaticky systémem Pupen.',
+      lang: 'cs',
+    });
+    return { subject, html };
+  }
+
+  if (key === 'refund_status') {
+    const refundLogId = String(vars?.refundLogId || '');
+    const rsvpId = String(vars?.rsvpId || '');
+    const eventTitle = String(vars?.eventTitle || '');
+    const status = String(vars?.status || '');
+    const amount = vars?.amount != null && vars?.amount !== '' ? String(vars.amount) : '';
+    const currency = String(vars?.currency || 'CZK');
+    const note = vars?.note ? String(vars.note) : '';
+
+    const statusLabel =
+      status === 'approved' ? 'Schváleno' : status === 'denied' ? 'Zamítnuto' : status === 'paid' ? 'Vyplaceno' : status;
+
+    const subject = `Refund – ${statusLabel}: ${eventTitle}`;
+    const html = emailDoc({
+      subject,
+      title: 'Refund – změna stavu',
+      badge: 'Finance',
+      preheader: `${statusLabel}: ${eventTitle}`,
+      contentHtml: `
+        <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px;">
+          <div style="font-weight:950; font-size:16px; margin-bottom:10px;">${escapeHtml(eventTitle)}</div>
+          ${refundLogId ? section('Žádost ID', refundLogId) : ''}
+          ${rsvpId ? section('RSVP ID', rsvpId) : ''}
+          ${vars?.eventId ? section('Event ID', vars.eventId) : ''}
+          <hr style="border:none; border-top:1px solid #e7e5e4; margin:14px 0;" />
+          ${section('Stav', statusLabel)}
+          ${amount ? section('Částka', `${amount} ${currency}`) : ''}
+          ${note ? `<hr style="border:none; border-top:1px solid #e7e5e4; margin:14px 0;" />${section('Poznámka', note)}` : ''}
+        </div>
+      `,
+      footerText: 'Tento e‑mail byl odeslán automaticky systémem Pupen.',
+      lang: 'cs',
+    });
+    return { subject, html };
+  }
+
+  if (key === 'rsvp_payment_reminder') {
+    const lang = vars?.lang === 'en' ? 'en' : 'cs';
+    const email = String(vars?.email || '').trim();
+    const name = String(vars?.name || email).trim();
+    const eventTitle = String(vars?.eventTitle || '').trim();
+    const bankAccount = String(vars?.bankAccount || '').trim();
+    const vs = String(vars?.vs || '').trim();
+    const dueDate = String(vars?.dueDate || '').trim();
+    const memberUrl = String(vars?.memberUrl || '').trim();
+    const eventUrl = String(vars?.eventUrl || '').trim();
+    const ticketPdfUrl = String(vars?.ticketPdfUrl || '').trim();
+    const stage = String(vars?.stage || '').trim() === 'final' ? 'final' : 'nudge';
+    const priceTotalRaw = Number(vars?.priceTotal ?? 0);
+    const priceTotal = Number.isFinite(priceTotalRaw) ? Math.max(0, Math.round(priceTotalRaw * 100) / 100) : 0;
+    const pricingLabel = String((lang === 'en' ? vars?.pricingLabelEn : vars?.pricingLabel) || vars?.pricingLabel || '').trim();
+    const remainingHoursRaw = Number(vars?.remainingHours ?? 0);
+    const remainingHours = Number.isFinite(remainingHoursRaw) ? Math.max(0, Math.ceil(remainingHoursRaw)) : 0;
+    const attendees = Array.isArray(vars?.attendees) ? vars.attendees : [];
+    const attendeeList = attendees.map((a: any) => `<li style="margin:4px 0;">${escapeHtml(a?.name || a || '')}</li>`).join('');
+    const dueDateLabel = dueDate ? formatDateTimePrague(dueDate, lang) : '';
+    const paymentQrData =
+      bankAccount && (vs || priceTotal > 0)
+        ? `SPD:1.0*ACC:${bankAccount}*AM:${priceTotal.toFixed(2)}*CC:CZK*X-VS:${vs || eventTitle}*MSG:Pupen ${vs || eventTitle}`
+        : '';
+
+    const subject =
+      stage === 'final'
+        ? lang === 'en'
+          ? `Pupen - Final payment reminder: ${eventTitle}`
+          : `Pupen - Posledni pripominka k platbe: ${eventTitle}`
+        : lang === 'en'
+          ? `Pupen - Payment reminder: ${eventTitle}`
+          : `Pupen - Pripominka k platbe: ${eventTitle}`;
+
+    const title =
+      stage === 'final'
+        ? lang === 'en'
+          ? 'Reservation expires soon'
+          : 'Rezervace brzy vyprsi'
+        : lang === 'en'
+          ? 'Complete your payment'
+          : 'Dokoncete prosim platbu';
+
+    const introHtml = `<p style="margin:0;">${
+      lang === 'en'
+        ? `Hello${name ? ` ${escapeHtml(name)}` : ''}, your reservation for ${escapeHtml(eventTitle)} is still awaiting payment.`
+        : `Dobry den${name ? ` ${escapeHtml(name)}` : ''}, vase rezervace na akci ${escapeHtml(eventTitle)} stale ceka na uhradu.`
+    }</p>`;
+
+    const urgency =
+      stage === 'final'
+        ? lang === 'en'
+          ? 'If the payment is not received in time, the reservation may be cancelled and the place offered to the waitlist.'
+          : 'Pokud platba nedorazi vcas, rezervace muze byt zrusena a misto nabidnuto cekaci listine.'
+        : lang === 'en'
+          ? 'Use the payment details below to keep the reservation active.'
+          : 'Pomoci platebnich udaju nize rezervaci udrzite aktivni.';
+
+    const ctaHref = memberUrl || eventUrl;
+    const ctaLabel =
+      lang === 'en'
+        ? memberUrl
+          ? 'Open member section'
+          : 'Open event detail'
+        : memberUrl
+          ? 'Otevrit clenskou sekci'
+          : 'Otevrit detail akce';
+
+    const secondaryLabel = lang === 'en' ? 'Download ticket PDF' : 'Stahnout PDF vstupenku';
+
+    const html = emailDoc({
+      subject,
+      title,
+      badge: stage === 'final' ? (lang === 'en' ? 'Final reminder' : 'Posledni pripominka') : lang === 'en' ? 'Payment reminder' : 'Pripominka platby',
+      preheader:
+        stage === 'final'
+          ? lang === 'en'
+            ? 'Your reservation will expire soon without payment.'
+            : 'Bez platby rezervace brzy vyprsi.'
+          : lang === 'en'
+            ? 'Your reservation is still waiting for payment.'
+            : 'Vase rezervace stale ceka na uhradu.',
+      introHtml,
+      contentHtml: `
+        <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px;">
+          ${attendeeList ? `<div style="font-weight:900; margin-bottom:8px;">${escapeHtml(lang === 'en' ? 'Attendees' : 'Ucastnici')}</div><ul style="padding-left:18px; margin:8px 0 0 0;">${attendeeList}</ul>` : ''}
+          ${priceTotal > 0 ? `<div style="margin-top:12px; font-size:13px; color:#44403c; font-weight:900;">${escapeHtml(lang === 'en' ? 'Total price' : 'Celkova cena')}: ${escapeHtml(priceTotal.toFixed(2))} CZK${pricingLabel ? ` • ${escapeHtml(pricingLabel)}` : ''}</div>` : ''}
+          ${bankAccount ? `<div style="margin-top:8px; font-size:13px; color:#44403c; font-weight:900;">${escapeHtml(lang === 'en' ? 'Account' : 'Ucet')}: ${escapeHtml(bankAccount)}</div>` : ''}
+          ${vs ? `<div style="margin-top:8px; font-size:13px; color:#44403c; font-weight:900;">${escapeHtml(lang === 'en' ? 'Variable symbol' : 'Variabilni symbol')}: ${escapeHtml(vs)}</div>` : ''}
+          ${dueDateLabel ? `<div style="margin-top:8px; font-size:13px; color:#44403c; font-weight:900;">${escapeHtml(lang === 'en' ? 'Pay before' : 'Uhradte do')}: ${escapeHtml(dueDateLabel)}</div>` : ''}
+          ${remainingHours > 0 ? `<div style="margin-top:8px; font-size:12px; color:${stage === 'final' ? '#b91c1c' : '#57534e'}; font-weight:900;">${escapeHtml(lang === 'en' ? `Approx. ${remainingHours} hour(s) remaining.` : `Zbyva priblizne ${remainingHours} hodin.`)}</div>` : ''}
+          <div style="margin-top:12px; font-size:13px; color:#57534e; font-weight:800;">${escapeHtml(urgency)}</div>
+        </div>
+        ${
+          paymentQrData
+            ? `<div style="margin-top:14px; border:2px dashed #16a34a; border-radius:18px; padding:16px; text-align:center;">
+                <div style="font-weight:950; font-size:16px;">${escapeHtml(lang === 'en' ? 'Payment QR' : 'QR platba')}</div>
+                <div style="margin-top:10px;">
+                  <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(paymentQrData)}" alt="Payment QR" style="margin:0; border-radius:14px;" />
+                </div>
+              </div>`
+            : ''
+        }
+      `,
+      cta: ctaHref ? { href: ctaHref, label: ctaLabel } : undefined,
+      secondaryCta: ticketPdfUrl ? { href: ticketPdfUrl, label: secondaryLabel } : undefined,
+      footerText:
+        lang === 'en'
+          ? 'This message was sent automatically by Pupen.'
+          : 'Tento e-mail byl odeslan automaticky systemem Pupen.',
+      toEmail: email,
+      lang,
+    });
+    return { subject, html };
+  }
+
+  if (key === 'event_feedback_request') {
+    const lang = vars?.lang === 'en' ? 'en' : 'cs';
+    const email = String(vars?.email || '').trim();
+    const name = String(vars?.name || email).trim();
+    const eventTitle = String(vars?.eventTitle || '').trim();
+    const eventDate = String(vars?.eventDate || '').trim();
+    const feedbackUrl = String(vars?.feedbackUrl || '').trim();
+    const eventDateLabel = eventDate ? formatDateTimePrague(eventDate, lang) : '';
+    const subject = lang === 'en' ? `Pupen - How was ${eventTitle}?` : `Pupen - Jak se libila akce ${eventTitle}?`;
+    const html = emailDoc({
+      subject,
+      title: lang === 'en' ? 'Thank you for attending' : 'Diky za ucast',
+      badge: lang === 'en' ? 'Feedback' : 'Feedback',
+      preheader:
+        lang === 'en'
+          ? 'A short survey helps us improve future events.'
+          : 'Kratky dotaznik nam pomuze zlepsit dalsi akce.',
+      introHtml: `<p style="margin:0;">${
+        lang === 'en'
+          ? `Hello${name ? ` ${escapeHtml(name)}` : ''}, thank you for joining ${escapeHtml(eventTitle)}.`
+          : `Dobry den${name ? ` ${escapeHtml(name)}` : ''}, dekujeme za ucast na akci ${escapeHtml(eventTitle)}.`
+      }</p>`,
+      contentHtml: `
+        <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px;">
+          <div style="font-weight:950; font-size:16px;">${escapeHtml(eventTitle || (lang === 'en' ? 'Event' : 'Akce'))}</div>
+          ${eventDateLabel ? `<div style="margin-top:8px; font-size:13px; color:#44403c; font-weight:900;">${escapeHtml(lang === 'en' ? 'Date' : 'Datum')}: ${escapeHtml(eventDateLabel)}</div>` : ''}
+          <div style="margin-top:12px; font-size:13px; color:#57534e; font-weight:800;">${escapeHtml(
+            lang === 'en'
+              ? 'Would you spare a minute for a short satisfaction survey? Your feedback helps us improve the next events.'
+              : 'Najdete si prosim minutku na kratky spokojenostni dotaznik? Vase zpetna vazba nam pomaha zlepsovat dalsi akce.',
+          )}</div>
+        </div>
+      `,
+      cta: feedbackUrl
+        ? {
+            href: feedbackUrl,
+            label: lang === 'en' ? 'Open survey' : 'Otevrit dotaznik',
+          }
+        : undefined,
+      footerText:
+        lang === 'en'
+          ? 'This message was sent automatically by Pupen.'
+          : 'Tento e-mail byl odeslan automaticky systemem Pupen.',
+      toEmail: email,
+      lang,
+    });
+    return { subject, html };
+  }
+
+  if (key === 'waitlist_offer') {
+    const lang = vars?.lang === 'en' ? 'en' : 'cs';
+    const email = String(vars?.email || '').trim();
+    const name = String(vars?.name || email).trim();
+    const eventTitle = String(vars?.eventTitle || '').trim();
+    const offerUrl = String(vars?.offerUrl || '').trim();
+    const offerExpiresAt = String(vars?.offerExpiresAt || '').trim();
+    const pricingLabel = String((lang === 'en' ? vars?.pricingLabelEn : vars?.pricingLabel) || vars?.pricingLabel || '').trim();
+    const priceTotalRaw = Number(vars?.priceTotal ?? 0);
+    const priceTotal = Number.isFinite(priceTotalRaw) ? Math.max(0, Math.round(priceTotalRaw * 100) / 100) : 0;
+    const attendees = Array.isArray(vars?.attendees) ? vars.attendees : [];
+    const attendeeList = attendees.map((a: any) => `<li style="margin:4px 0;">${escapeHtml(a?.name || '')}</li>`).join('');
+
+    const subject = lang === 'en' ? `Pupen — Spot available: ${eventTitle}` : `Pupen — Uvolnilo se místo: ${eventTitle}`;
+    const html = emailDoc({
+      subject,
+      title: lang === 'en' ? 'A spot has opened up' : 'Uvolnilo se místo',
+      badge: lang === 'en' ? 'Waitlist' : 'Čekací listina',
+      preheader: lang === 'en' ? `Complete your registration for ${eventTitle}` : `Dokončete registraci na ${eventTitle}`,
+      introHtml: `<p style="margin:0;">${
+        lang === 'en'
+          ? `Hello${name ? ` ${escapeHtml(name)}` : ''}, a spot has opened up for ${escapeHtml(eventTitle)}.`
+          : `Dobrý den${name ? ` ${escapeHtml(name)}` : ''}, uvolnilo se místo na akci ${escapeHtml(eventTitle)}.`
+      }</p>`,
+      contentHtml: `
+        <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px;">
+          ${attendeeList ? `<div style="font-weight:900; margin-bottom:8px;">${escapeHtml(lang === 'en' ? 'Attendees' : 'Účastníci')}</div><ul style="padding-left:18px; margin:8px 0 0 0;">${attendeeList}</ul>` : ''}
+          ${priceTotal > 0 ? `<div style="margin-top:12px; font-size:13px; color:#44403c; font-weight:900;">${escapeHtml(lang === 'en' ? 'Total price' : 'Celková cena')}: ${escapeHtml(priceTotal.toFixed(2))} CZK${pricingLabel ? ` • ${escapeHtml(pricingLabel)}` : ''}</div>` : ''}
+          ${offerExpiresAt ? `<div style="margin-top:10px; font-size:13px; color:#44403c; font-weight:900;">${escapeHtml(lang === 'en' ? 'Offer valid until' : 'Nabídka platí do')}: ${escapeHtml(new Date(offerExpiresAt).toLocaleString(lang === 'en' ? 'en-US' : 'cs-CZ'))}</div>` : ''}
+        </div>
+        <div style="margin-top:14px; font-size:13px; color:#57534e; font-weight:800;">
+          ${escapeHtml(
+            lang === 'en'
+              ? 'Use the button below to confirm the spot and continue to payment or final confirmation.'
+              : 'Pomocí tlačítka níže potvrďte místo a pokračujte k platbě nebo finálnímu potvrzení.',
+          )}
+        </div>
+      `,
+      cta: offerUrl
+        ? {
+            href: offerUrl,
+            label: lang === 'en' ? 'Complete registration' : 'Dokončit registraci',
+          }
+        : undefined,
+      footerText:
+        lang === 'en'
+          ? 'If you do not use the link in time, the spot will be offered to the next person on the waitlist.'
+          : 'Pokud odkaz včas nevyužijete, místo bude nabídnuto dalšímu zájemci na čekací listině.',
+      toEmail: email,
+      lang,
+    });
+    return { subject, html };
+  }
+
+  const lang = vars?.lang === 'en' ? 'en' : 'cs';
+  const email = String(vars?.email || '');
+  const name = String(vars?.name || email);
+  const eventTitle = String(vars?.eventTitle || '');
+  const paymentMethod = String(vars?.paymentMethod || 'hotove');
+  const qrToken = String(vars?.qrToken || '');
+  const status = String(vars?.status || 'confirmed');
+  const bankAccount = String(vars?.bankAccount || '');
+  const vs = String(vars?.vs || '').trim();
+  const dueDate = String(vars?.dueDate || '').trim();
+  const guardianConsentUrl = String(vars?.guardianConsentUrl || '').trim();
+  const guardianConsentUploadUrl = String(vars?.guardianConsentUploadUrl || '').trim();
+  const ticketPdfUrl = String(vars?.ticketPdfUrl || '').trim();
+  const priceTotalRaw = Number(vars?.priceTotal ?? 0);
+  const priceTotal = Number.isFinite(priceTotalRaw) ? Math.max(0, Math.round(priceTotalRaw * 100) / 100) : 0;
+  const pricingLabel = String((lang === 'en' ? vars?.pricingLabelEn : vars?.pricingLabel) || vars?.pricingLabel || '').trim();
+
+  const isWaitlist = status === 'waitlist';
+  const isPrevod = paymentMethod === 'prevod';
+
+  const statusLabel =
+    lang === 'en'
+      ? status === 'confirmed'
+        ? 'Confirmed'
+        : status === 'reserved'
+          ? 'Reserved'
+          : status === 'waitlist'
+            ? 'Waitlist'
+            : status === 'cancelled'
+              ? 'Cancelled'
+              : status
+      : status === 'confirmed'
+        ? 'Potvrzeno'
+        : status === 'reserved'
+          ? 'Rezervováno'
+          : status === 'waitlist'
+            ? 'Čekací listina'
+            : status === 'cancelled'
+              ? 'Zrušeno'
+              : status;
+
+  const subject =
+    lang === 'en'
+      ? isWaitlist
+        ? `Pupen — Waitlist: ${eventTitle}`
+        : `Pupen — Ticket: ${eventTitle}`
+      : isWaitlist
+        ? `Pupen — Čekací listina: ${eventTitle}`
+        : `Pupen — Vstupenka: ${eventTitle}`;
+  const attendees = Array.isArray(vars?.attendees) ? vars.attendees : [];
+
+  const attendeeList = attendees
+    .map((a: any) => `<li style="margin: 4px 0;">${escapeHtml(a?.name || '')}</li>`)
+    .join('');
+
+  const baseUrl = getPublicBaseUrl();
+  const validateUrl = `${baseUrl}/${lang}/admin/tickets/validate?token=${encodeURIComponent(qrToken)}`;
+  const qrPayload = validateUrl;
+  const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrPayload)}`;
+
+  const html = emailDoc({
+    subject,
+    title: eventTitle || 'Vstupenka',
+    badge: isWaitlist ? (lang === 'en' ? 'Waitlist' : 'Čekací listina') : lang === 'en' ? 'Ticket' : 'Vstupenka',
+    preheader: isWaitlist
+      ? lang === 'en'
+        ? `Waitlist: ${eventTitle}`
+        : `Čekací listina: ${eventTitle}`
+      : lang === 'en'
+        ? `Ticket: ${eventTitle}`
+        : `Vstupenka: ${eventTitle}`,
+    introHtml: `<p style="margin:0;">${escapeHtml(name)}</p>`,
+    contentHtml: `
+      <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px;">
+        <div style="font-weight:900;">${escapeHtml(lang === 'en' ? 'Status' : 'Stav')}: ${escapeHtml(statusLabel)}</div>
+        ${
+          attendeeList
+            ? `<div style="margin-top:12px; font-weight:900;">${escapeHtml(lang === 'en' ? 'Attendees' : 'Účastníci')}:</div><ul style="padding-left:18px; margin:8px 0 0 0;">${attendeeList}</ul>`
+            : ''
+        }
+        ${
+          priceTotal > 0
+            ? `<div style="margin-top:12px; font-size:13px; color:#44403c; font-weight:900;">${escapeHtml(
+                lang === 'en' ? 'Total price' : 'Celková cena',
+              )}: ${escapeHtml(priceTotal.toFixed(2))} CZK${pricingLabel ? ` • ${escapeHtml(pricingLabel)}` : ''}</div>`
+            : ''
+        }
+        ${vs ? `<div style="margin-top:8px; font-size:13px; color:#44403c; font-weight:900;">${escapeHtml(lang === 'en' ? 'Variable symbol' : 'Variabilní symbol')}: ${escapeHtml(vs)}</div>` : ''}
+        <hr style="border:none; border-top:1px solid #e7e5e4; margin:14px 0;" />
+        <div style="font-weight:900; margin-bottom:8px;">${escapeHtml(lang === 'en' ? 'QR code / token' : 'QR kód / token')}</div>
+        <div style="display:inline-block; background:#ffffff; border:1px solid #e7e5e4; border-radius:14px; padding:10px 12px; font-weight:950; letter-spacing:0.22em; font-size:18px;">${escapeHtml(
+          qrToken,
+        )}</div>
+        <div style="margin-top:12px;">
+          <img src="${qrImgUrl}" alt="Ticket QR" width="220" height="220" style="margin:0; border-radius:14px; border:1px solid #e7e5e4; background:#ffffff; padding:10px;" />
+        </div>
+        <div style="margin-top:10px; font-size:12px; color:#78716c; font-weight:800;">${escapeHtml(
+          lang === 'en' ? 'Show the QR code (or token) at the entrance.' : 'Při vstupu ukažte QR kód (nebo token).',
+        )}</div>
+        <div style="margin-top:6px; font-size:12px; color:#16a34a; font-weight:900;">
+          <a href="${escapeHtml(validateUrl)}" style="color:#16a34a; text-decoration:none;">${escapeHtml(
+            lang === 'en' ? 'Open organizer validation page' : 'Otevřít validační stránku pořadatele',
+          )}</a>
+        </div>
+      </div>
+      ${
+        isPrevod && !isWaitlist
+          ? `<div style="margin-top:14px; border:2px dashed #16a34a; border-radius:18px; padding:16px; text-align:center;">
+              <div style="font-weight:950; font-size:16px;">${escapeHtml(lang === 'en' ? 'Payment details' : 'Platební údaje')}</div>
+              <div style="margin-top:8px; font-weight:800;">${escapeHtml(
+                lang === 'en' ? 'Please pay within 24 hours, otherwise the reservation will be cancelled.' : 'Prosíme o úhradu do 24 hodin, jinak bude rezervace zrušena.',
+              )}</div>
+              <div style="margin-top:10px; font-size:12px; color:#78716c; font-weight:900;">${escapeHtml(
+                lang === 'en' ? 'Account' : 'Účet',
+              )}: ${escapeHtml(bankAccount || '—')}</div>
+              ${
+                priceTotal > 0
+                  ? `<div style="margin-top:6px; font-size:12px; color:#78716c; font-weight:900;">${escapeHtml(
+                      lang === 'en' ? 'Amount' : 'Částka',
+                    )}: ${escapeHtml(priceTotal.toFixed(2))} CZK</div>`
+                  : ''
+              }
+              ${vs ? `<div style="margin-top:6px; font-size:12px; color:#78716c; font-weight:900;">${escapeHtml(lang === 'en' ? 'Variable symbol' : 'Variabilní symbol')}: ${escapeHtml(vs)}</div>` : ''}
+              ${dueDate ? `<div style="margin-top:6px; font-size:12px; color:#78716c; font-weight:900;">${escapeHtml(lang === 'en' ? 'Pay before' : 'Uhraďte do')}: ${escapeHtml(new Date(dueDate).toLocaleString(lang === 'en' ? 'en-US' : 'cs-CZ'))}</div>` : '' }
+              <div style="margin-top:10px;">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`SPD:1.0*ACC:${bankAccount}*AM:${priceTotal.toFixed(2)}*CC:CZK*X-VS:${vs || qrToken}*MSG:Pupen ${vs || qrToken}`)}" alt="QR Platba" style="margin:0; border-radius:14px;" />
+              </div>
+            </div>`
+          : ''
+      }
+      ${
+        guardianConsentUrl
+          ? `<div style="margin-top:14px; border:1px solid #fde68a; background:#fffbeb; border-radius:18px; padding:16px;">
+              <div style="font-weight:950; font-size:16px; color:#92400e;">${escapeHtml(lang === 'en' ? 'Guardian consent required' : 'Vyžadován souhlas zákonného zástupce')}</div>
+              <div style="margin-top:8px; font-size:13px; color:#78350f; font-weight:800;">${escapeHtml(
+                lang === 'en'
+                  ? 'At least one participant is under 18. Download the pre-filled PDF, have it signed by a legal guardian and upload it back before the event.'
+                  : 'Alespoň jeden účastník je mladší 18 let. Stáhněte si předvyplněné PDF, nechte ho podepsat zákonným zástupcem a nahrajte ho zpět před akcí.',
+              )}</div>
+              <div style="margin-top:12px;">
+                <a href="${escapeHtml(guardianConsentUrl)}" style="color:#16a34a; font-weight:900; text-decoration:none;">${escapeHtml(
+                  lang === 'en' ? 'Download consent PDF' : 'Stáhnout PDF souhlasu',
+                )}</a>
+              </div>
+              ${
+                guardianConsentUploadUrl
+                  ? `<div style="margin-top:8px;">
+                      <a href="${escapeHtml(guardianConsentUploadUrl)}" style="color:#16a34a; font-weight:900; text-decoration:none;">${escapeHtml(
+                        lang === 'en' ? 'Upload signed consent' : 'Nahrát podepsaný souhlas',
+                      )}</a>
+                    </div>`
+                  : ''
+              }
+            </div>`
+          : ''
+      }
+      ${
+        ticketPdfUrl
+          ? `<div style="margin-top:14px; border:1px solid #dcfce7; background:#f0fdf4; border-radius:18px; padding:16px;">
+              <div style="font-weight:950; font-size:16px; color:#166534;">${escapeHtml(lang === 'en' ? 'Printable ticket PDF' : 'Tisknutelna PDF vstupenka')}</div>
+              <div style="margin-top:8px; font-size:13px; color:#166534; font-weight:800;">${escapeHtml(
+                lang === 'en'
+                  ? 'A printable PDF ticket is attached to this email. You can also download it again using the link below.'
+                  : 'Tisknutelna PDF vstupenka je prilozena k tomuto e-mailu. Znovu si ji muzete stahnout i pres odkaz nize.',
+              )}</div>
+              <div style="margin-top:12px;">
+                <a href="${escapeHtml(ticketPdfUrl)}" style="color:#16a34a; font-weight:900; text-decoration:none;">${escapeHtml(
+                  lang === 'en' ? 'Download ticket PDF' : 'Stahnout PDF vstupenku',
+                )}</a>
+              </div>
+            </div>`
+          : ''
+      }
+    `,
+    footerText: 'Tento e‑mail byl odeslán automaticky systémem Pupen.',
+    lang,
+  });
+
+  return { subject, html };
+}
+
+export function getEmailTemplateDefaultSource(key: EmailTemplateKey) {
+  const placeholder: any = {
+    lang: 'cs',
+    toEmail: '{{toEmail}}',
+    email: '{{email}}',
+    firstName: '{{firstName}}',
+    lastName: '{{lastName}}',
+    password: '{{password}}',
+    resetUrl: '{{resetUrl}}',
+    verifyUrl: '{{verifyUrl}}',
+    threadUrl: '{{threadUrl}}',
+    followupCode: '{{followupCode}}',
+    code: '{{code}}',
+    subject: '{{subject}}',
+    html: '{{{html}}}',
+    preheader: '{{preheader}}',
+    unsubLink: '{{unsubLink}}',
+    preferencesLink: '{{preferencesLink}}',
+    actionUrl: '{{actionUrl}}',
+    adminName: '{{adminName}}',
+    message: '{{message}}',
+    reason: '{{reason}}',
+  };
+  return renderEmailTemplate(key, placeholder);
+}

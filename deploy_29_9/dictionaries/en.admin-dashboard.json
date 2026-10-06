@@ -1,0 +1,80 @@
+{
+  "admin": {
+    "queue": {
+      "searchPlaceholder": "Search email / subject / error",
+      "allStatuses": "All statuses",
+      "kindPlaceholder": "kind (e.g. newsletter)",
+      "dueOn": "Due: on",
+      "dueOff": "Due: off",
+      "processQueue": "Process queue",
+      "summaryDueNow": "Due now",
+      "summaryStuck": "Stuck",
+      "emptyTitle": "No items",
+      "emptyDescription": "The queue is empty.",
+      "hintTimeout": "Tip: Connection timeout usually means outbound SMTP port is blocked / firewall, or the host is wrong.",
+      "table": {
+        "to": "To",
+        "subject": "Subject",
+        "status": "Status",
+        "attempts": "Attempts",
+        "nextFailed": "Next / Failed"
+      },
+      "pagination": {
+        "showing": "Showing",
+        "of": "of",
+        "previous": "Previous",
+        "next": "Next"
+      }
+    },
+    "trustbox": {
+      "labels": {
+        "status": "Status",
+        "priority": "Priority",
+        "category": "Category",
+        "owner": "Owner"
+      },
+      "ownerUnassigned": "Unassigned",
+      "templatePlaceholder": "Template…",
+      "insert": "Insert",
+      "reporter": "reporter",
+      "audit": {
+        "title": "Global audit log",
+        "subtitle": "Records of PII access and changes",
+        "allActions": "All actions",
+        "empty": "No records match the filters.",
+        "actions": {
+          "ADMIN_VIEW_PII": "View PII",
+          "ADMIN_EXPORT_PDF": "Export PDF",
+          "ADMIN_DOWNLOAD_ATTACHMENT": "Download attachment",
+          "ADMIN_MESSAGE_SENT": "Message sent",
+          "ADMIN_THREAD_UPDATE": "Thread update",
+          "ADMIN_ASSIGN_OWNER": "Assign owner",
+          "ADMIN_UPDATE_SETTINGS": "Update settings",
+          "ADMIN_ADD_ADMIN": "Add admin",
+          "ADMIN_REMOVE_ADMIN": "Remove admin",
+          "ADMIN_UPDATE_ADMIN_PERMS": "Update permissions"
+        }
+      }
+    },
+    "common": {
+      "status": "Status"
+    },
+    "projects": {
+      "status": {
+        "open": "Open",
+        "closed": "Closed",
+        "paused": "Paused"
+      }
+    },
+    "map": {
+      "manageCategories": "Manage categories",
+      "manageCategoriesTitle": "Manage Categories",
+      "iconLabel": "Icon",
+      "addCategoryFirst": "Add a category first"
+    },
+    "users": {
+      "passwordStrength": "Password strength",
+      "passwordMinChars": "Min. 5 characters"
+    }
+  }
+}

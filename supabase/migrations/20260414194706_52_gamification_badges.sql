@@ -29,7 +29,7 @@ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='gamification_badges' AND policyname='Public read gamification_badges'
   ) THEN
-    EXECUTE 'CREATE POLICY \"Public read gamification_badges\" ON public.gamification_badges FOR SELECT USING (true)';
+    EXECUTE 'CREATE POLICY "Public read gamification_badges" ON public.gamification_badges FOR SELECT USING (true)';
   END IF;
 END $$;
 
@@ -38,8 +38,8 @@ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='gamification_badges' AND policyname='Admin all gamification_badges'
   ) THEN
-    EXECUTE '
-      CREATE POLICY \"Admin all gamification_badges\"
+    EXECUTE $exe$
+      CREATE POLICY "Admin all gamification_badges"
         ON public.gamification_badges
         FOR ALL
         TO authenticated
@@ -55,7 +55,7 @@ BEGIN
             WHERE profiles.id = auth.uid() AND (profiles.is_admin = true OR profiles.can_manage_admins = true)
           )
         )
-    ';
+    $exe$;
   END IF;
 END $$;
 
@@ -65,7 +65,7 @@ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='user_badges' AND policyname='Public read user_badges'
   ) THEN
-    EXECUTE 'CREATE POLICY \"Public read user_badges\" ON public.user_badges FOR SELECT USING (true)';
+    EXECUTE 'CREATE POLICY "Public read user_badges" ON public.user_badges FOR SELECT USING (true)';
   END IF;
 END $$;
 
@@ -74,8 +74,8 @@ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='user_badges' AND policyname='Admin all user_badges'
   ) THEN
-    EXECUTE '
-      CREATE POLICY \"Admin all user_badges\"
+    EXECUTE $exe$
+      CREATE POLICY "Admin all user_badges"
         ON public.user_badges
         FOR ALL
         TO authenticated
@@ -91,6 +91,6 @@ BEGIN
             WHERE profiles.id = auth.uid() AND (profiles.is_admin = true OR profiles.can_manage_admins = true)
           )
         )
-    ';
+    $exe$;
   END IF;
 END $$;

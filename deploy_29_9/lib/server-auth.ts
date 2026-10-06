@@ -1,0 +1,88 @@
+import { getServerSupabase } from '@/lib/supabase-server';
+import { getClientIp } from '@/lib/rate-limit';
+import { isRequestBanned } from '@/lib/security/bans';
+
+interface AdminProfileRow {
+  is_admin?: boolean | null;
+  can_manage_admins?: boolean | null;
+}
+
+interface MemberProfileRow extends AdminProfileRow {
+  is_member?: boolean | null;
+  can_view_member_portal?: boolean | null;
+  can_edit_member_portal?: boolean | null;
+}
+
+interface TrustBoxAdminRow {
+  can_view_pii?: boolean | null;
+}
+
+export function getBearerToken(req: Request) {
+  const auth = req.headers.get('authorization') || req.headers.get('Authorization') || '';
+  const m = String(auth).match(/^Bearer\s+(.+)$/i);
+  if (m?.[1]) return m[1];
+
+  const alt = req.headers.get('x-supabase-token') || '';
+  const mm = String(alt).match(/^Bearer\s+(.+)$/i);
+  if (mm?.[1]) return mm[1];
+  if (alt && !alt.toLowerCase().startsWith('bearer ')) return alt;
+  return null;
+}
+
+export async function requireUser(req: Request) {
+  const token = getBearerToken(req);
+  if (!token) throw new Error('Unauthorized');
+  const supabase = getServerSupabase();
+  const res = await supabase.auth.getUser(token);
+  const user = res.data?.user;
+  if (!user) throw new Error('Unauthorized');
+  const ip = getClientIp(req) || 'unknown';
+  if (await isRequestBanned({ ip, identityId: user.id })) throw new Error('Banned');
+  return user;
+}
+
+export async function requireAdmin(req: Request) {
+  const user = await requireUser(req);
+  const supabase = getServerSupabase();
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select('is_admin, can_manage_admins')
+    .eq('id', user.id)
+    .maybeSingle<AdminProfileRow>();
+  if (error) throw error;
+  if (!profile?.is_admin && !profile?.can_manage_admins) throw new Error('Forbidden');
+  return { user, profile };
+}
+
+export async function requireSuperadmin(req: Request) {
+  const { user, profile } = await requireAdmin(req);
+  if (!profile?.can_manage_admins) throw new Error('Forbidden');
+  return { user, profile };
+}
+
+export async function requireMember(req: Request) {
+  const user = await requireUser(req);
+  const supabase = getServerSupabase();
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select('is_admin, is_member, can_view_member_portal, can_edit_member_portal')
+    .eq('id', user.id)
+    .maybeSingle<MemberProfileRow>();
+  if (error) throw error;
+  if (!profile?.is_admin && !profile?.is_member && !profile?.can_view_member_portal && !profile?.can_edit_member_portal) throw new Error('Forbidden');
+  return { user, profile };
+}
+
+export async function requireTrustBoxAdmin(req: Request) {
+  const user = await requireUser(req);
+  const supabase = getServerSupabase();
+  const profRes = await supabase.from('profiles').select('can_manage_admins').eq('id', user.id).maybeSingle<AdminProfileRow>();
+  if (profRes.error) throw profRes.error;
+  const isSuperadmin = !!profRes.data?.can_manage_admins;
+  if (isSuperadmin) return { user, isSuperadmin: true, canViewPii: true };
+
+  const row = await supabase.from('trust_box_admins').select('can_view_pii').eq('user_id', user.id).maybeSingle<TrustBoxAdminRow>();
+  if (row.error) throw row.error;
+  if (!row.data) throw new Error('Forbidden');
+  return { user, isSuperadmin: false, canViewPii: !!row.data.can_view_pii };
+}
