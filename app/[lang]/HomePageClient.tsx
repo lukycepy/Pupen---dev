@@ -162,33 +162,33 @@ export default function HomePageClient({ lang }: HomePageClientProps) {
 
   if (!dict) {
     return (
-      <div className="min-h-screen bg-stone-50 text-stone-900 font-sans selection:bg-green-100 selection:text-green-900">
+      <div className="min-h-screen bg-white dark:bg-black text-black dark:text-white font-sans selection:bg-green-100 selection:text-green-900">
         <div className="max-w-5xl mx-auto px-6 pt-16 pb-28">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-white text-stone-700 rounded-full text-[10px] font-black uppercase tracking-widest border border-stone-100">
-            <Leaf size={12} className="text-green-600" /> Pupen
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-white dark:bg-black text-black dark:text-white rounded-full text-[10px] font-black uppercase tracking-widest border-2 border-black dark:border-white">
+            <Leaf size={12} className="text-green-600 dark:text-green-400" /> Pupen
           </div>
           <h1 className="mt-6 text-4xl md:text-6xl font-black tracking-tight">
             {lang === 'en' ? 'Studentský spolek Pupen, z.s.' : 'Studentský spolek Pupen, z.s.'}
           </h1>
-          <p className="mt-4 text-stone-600 font-medium leading-relaxed max-w-3xl">
+          <p className="mt-4 text-stone-500 dark:text-stone-400 font-medium leading-relaxed max-w-3xl">
             {lang === 'en'
               ? 'We connect students, science and fun at our faculty. This website provides public information and member features.'
               : 'Propojujeme studenty, vědu a zábavu na naší fakultě. Web obsahuje veřejné informace a členské funkce.'}
           </p>
-          <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm font-bold text-stone-600">
-            <Link href={`/${lang}/ochrana-soukromi`} className="hover:text-green-700 underline underline-offset-4 decoration-green-200">
+          <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm font-bold text-stone-500 dark:text-stone-400">
+            <Link href={`/${lang}/ochrana-soukromi`} className="hover:text-green-700 dark:hover:text-green-400 underline underline-offset-4 decoration-green-200">
               {lang === 'en' ? 'Privacy policy' : 'Ochrana soukromí'}
             </Link>
             <span className="text-stone-300">•</span>
-            <Link href={`/${lang}/tos`} className="hover:text-green-700 underline underline-offset-4 decoration-green-200">
+            <Link href={`/${lang}/tos`} className="hover:text-green-700 dark:hover:text-green-400 underline underline-offset-4 decoration-green-200">
               {lang === 'en' ? 'Terms of service' : 'Obchodní podmínky'}
             </Link>
             <span className="text-stone-300">•</span>
-            <Link href={`/${lang}/login`} className="hover:text-green-700 underline underline-offset-4 decoration-green-200">
+            <Link href={`/${lang}/login`} className="hover:text-green-700 dark:hover:text-green-400 underline underline-offset-4 decoration-green-200">
               {lang === 'en' ? 'Member login' : 'Přihlášení členů'}
             </Link>
           </div>
-          <div className="mt-10 h-10 w-64 bg-white rounded-2xl border border-stone-100 animate-pulse" />
+          <div className="mt-10 h-10 w-64 bg-white dark:bg-black rounded-2xl border-2 border-black dark:border-white animate-pulse" />
         </div>
       </div>
     );
@@ -200,13 +200,13 @@ export default function HomePageClient({ lang }: HomePageClientProps) {
   const testimonialsHtml = String(lang) === 'en' ? String((testimonialsCfg as any).html_en || '') : String((testimonialsCfg as any).html_cs || '');
 
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-900 font-sans selection:bg-green-100 selection:text-green-900">
+    <div className="min-h-screen bg-white dark:bg-black text-black dark:text-white font-sans selection:bg-green-100 selection:text-green-900">
       
       {/* --- 1. HERO SECTION --- */}
       {widgets.hero !== false && (
-      <header className="relative min-h-[70vh] sm:min-h-[85vh] lg:min-h-[90vh] flex items-center justify-center text-center px-4 overflow-visible bg-stone-900">
+      <header className="relative min-h-[70vh] sm:min-h-[85vh] lg:min-h-[90vh] flex items-center justify-center text-center px-4 overflow-visible bg-black">
         <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/20 to-stone-900/40 z-10" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/20 to-black/40 z-10" />
           <Image 
             src={heroBg ? String(heroBg) : '/img/prezentace_pupen.jpg'} 
             alt="Students" 
@@ -249,15 +249,15 @@ export default function HomePageClient({ lang }: HomePageClientProps) {
           ].map((item, i) => (
             <div 
               key={i} 
-              className="group relative bg-white rounded-[2rem] p-8 text-center transition-all duration-500 hover:-translate-y-3 border border-stone-100 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.05)] hover:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.12)]"
+              className="group relative bg-white dark:bg-black rounded-[2rem] p-8 text-center transition-all duration-500 hover:-translate-y-3 border-2 border-black dark:border-white"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-green-50/0 to-green-50/0 group-hover:from-green-50/50 group-hover:to-white transition-all duration-500 rounded-[2rem]" />
+              <div className="absolute inset-0 bg-gradient-to-br from-green-50/0 to-green-50/0 group-hover:from-green-50/50 dark:group-hover:from-green-950/50 group-hover:to-white dark:group-hover:to-black transition-all duration-500 rounded-[2rem]" />
               <div className="relative z-10">
-                <div className="w-14 h-14 mx-auto bg-stone-50 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-green-600 transition-all duration-500 shadow-sm group-hover:shadow-green-200 group-hover:shadow-lg">
-                  <item.Icon className="w-7 h-7 text-green-600 group-hover:text-white transition-colors duration-500" />
+                <div className="w-14 h-14 mx-auto bg-white dark:bg-black rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-green-600 dark:group-hover:bg-green-600 transition-all duration-500 border-2 border-black dark:border-white group-hover:border-green-600 dark:group-hover:border-green-600">
+                  <item.Icon className="w-7 h-7 text-green-600 dark:text-green-400 group-hover:text-white dark:group-hover:text-white transition-colors duration-500" />
                 </div>
-                <h3 className="text-xl font-bold mb-3 text-stone-900 tracking-tight">{item.title}</h3>
-                <p className="text-stone-500 text-sm leading-relaxed px-2">{item.text}</p>
+                <h3 className="text-xl font-bold mb-3 text-black dark:text-white tracking-tight">{item.title}</h3>
+                <p className="text-stone-500 dark:text-stone-400 text-sm leading-relaxed px-2">{item.text}</p>
                 <div className="w-0 h-1 bg-green-500 mx-auto mt-6 rounded-full group-hover:w-12 transition-all duration-500" />
               </div>
             </div>
@@ -269,28 +269,28 @@ export default function HomePageClient({ lang }: HomePageClientProps) {
       <section className="py-20 sm:py-16 px-6 max-w-6xl mx-auto overflow-hidden">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
           <div className="order-2 lg:order-1">
-            <span className="text-green-600 font-bold uppercase tracking-widest text-xs sm:text-sm mb-3 block">{dict.aboutBadge}</span>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-stone-900 mb-6 leading-tight">
-              {dict.aboutTitleStart} <span className="text-green-600 underline decoration-4 decoration-green-200">{dict.aboutTitleUnderline}</span>.
+            <span className="text-green-600 dark:text-green-400 font-bold uppercase tracking-widest text-xs sm:text-sm mb-3 block">{dict.aboutBadge}</span>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-black dark:text-white mb-6 leading-tight">
+              {dict.aboutTitleStart} <span className="text-green-600 dark:text-green-400 underline decoration-4 decoration-green-200">{dict.aboutTitleUnderline}</span>.
             </h2>
-            <div className="space-y-5 text-base sm:text-lg text-stone-600 leading-relaxed">
+            <div className="space-y-5 text-base sm:text-lg text-stone-500 dark:text-stone-400 leading-relaxed">
               <p>{dict.aboutP1}</p>
               <p>{dict.aboutP2}</p>
             </div>
             <div className="mt-10">
-              <Link href={`/${lang}/o-nas#pribeh`} className="inline-flex items-center gap-2 text-lg font-bold text-green-700 hover:text-green-800 transition-colors group">
+              <Link href={`/${lang}/o-nas#pribeh`} className="inline-flex items-center gap-2 text-lg font-bold text-green-700 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 transition-colors group">
                 {dict.aboutLink} <ArrowRight className="group-hover:translate-x-1 transition-transform" size={20} />
               </Link>
             </div>
           </div>
           <div className="relative order-1 lg:order-2 px-4 sm:px-0">
-            <div className="absolute -inset-4 bg-green-100 rounded-3xl rotate-2 -z-10 hidden sm:block"></div>
+            <div className="absolute -inset-4 bg-green-50 dark:bg-green-950 rounded-3xl rotate-2 -z-10 hidden sm:block border-2 border-green-600 dark:border-green-400"></div>
             <Image 
               src="/img/listopad_pupen.jpg" 
               alt="Pupen" 
               width={800}
               height={550}
-              className="rounded-2xl shadow-2xl w-full aspect-[4/3] lg:aspect-auto object-cover h-auto lg:h-[550px] blur-sm transition-all duration-700"
+              className="rounded-2xl border-2 border-black dark:border-white w-full aspect-[4/3] lg:aspect-auto object-cover h-auto lg:h-[550px] blur-sm transition-all duration-700"
               style={{ objectPosition: '50% 25%' }}
               onLoadingComplete={(target) => target.classList.remove('blur-sm')}
             />
@@ -303,10 +303,10 @@ export default function HomePageClient({ lang }: HomePageClientProps) {
         <div className="grid lg:grid-cols-3 gap-12">
           <div className="lg:col-span-2 space-y-12">
             <header className="flex items-center justify-between mb-12">
-              <h2 className="text-3xl sm:text-5xl font-black text-stone-900 tracking-tighter leading-none">
+              <h2 className="text-3xl sm:text-5xl font-black text-black dark:text-white tracking-tighter leading-none">
                 {dict.newsTitle}
               </h2>
-              <Link href={`/${lang}/novinky`} className="hidden sm:flex items-center gap-2 text-green-600 font-bold hover:gap-3 transition-all">
+              <Link href={`/${lang}/novinky`} className="hidden sm:flex items-center gap-2 text-green-600 dark:text-green-400 font-bold hover:gap-3 transition-all">
                 {dict.allNews} <ArrowRight size={20} />
               </Link>
             </header>
@@ -314,8 +314,8 @@ export default function HomePageClient({ lang }: HomePageClientProps) {
             <div className="grid sm:grid-cols-2 gap-8">
                {posts.length > 0 ? (
                  posts.map((post) => (
-                   <article key={post.id} className="bg-white p-6 rounded-[2.5rem] border border-stone-100 shadow-sm hover:shadow-xl transition-all duration-500 group">
-                      <div className="h-48 bg-stone-100 rounded-[2rem] mb-6 overflow-hidden relative">
+                   <article key={post.id} className="bg-white dark:bg-black p-6 rounded-[2.5rem] border-2 border-black dark:border-white transition-all duration-500 group">
+                      <div className="h-48 bg-white dark:bg-black rounded-[2rem] mb-6 overflow-hidden relative border-2 border-black dark:border-white">
                          {isSafeImageSrc(String(post.image_url ?? '')) ? (
                            String(post.image_url).startsWith('http') ? (
                              <Image
@@ -339,36 +339,36 @@ export default function HomePageClient({ lang }: HomePageClientProps) {
                              />
                            )
                          ) : (
-                           <div className="w-full h-full flex items-center justify-center bg-stone-50 text-stone-300">
+                           <div className="w-full h-full flex items-center justify-center bg-white dark:bg-black text-stone-300 dark:text-stone-600">
                              <ImageIcon size={48} />
                            </div>
                          )}
                       </div>
-                      <span className="text-[10px] font-black uppercase tracking-widest text-green-600 mb-2 block">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-green-600 dark:text-green-400 mb-2 block">
                         {post.category || (lang === 'en' ? 'News' : 'Novinka')} • {new Date(post.created_at).toLocaleDateString(lang === 'cs' ? 'cs-CZ' : 'en-US')}
                       </span>
-                      <h3 className="text-xl font-bold text-stone-900 mb-4 group-hover:text-green-600 transition-colors line-clamp-2">
+                      <h3 className="text-xl font-bold text-black dark:text-white mb-4 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors line-clamp-2">
                         {lang === 'en' && post.title_en ? post.title_en : post.title}
                       </h3>
-                      <p className="text-stone-500 text-sm mb-6 line-clamp-2">
+                      <p className="text-stone-500 dark:text-stone-400 text-sm mb-6 line-clamp-2">
                         {lang === 'en' && post.excerpt_en ? post.excerpt_en : post.excerpt}
                       </p>
-                      <Link href={`/${lang}/novinky/${post.id}`} className="inline-flex items-center gap-2 text-stone-900 font-black uppercase tracking-widest text-[10px] hover:text-green-600 transition">
+                      <Link href={`/${lang}/novinky/${post.id}`} className="inline-flex items-center gap-2 text-black dark:text-white font-black uppercase tracking-widest text-[10px] hover:text-green-600 dark:hover:text-green-400 transition">
                          {dict.readMore} <ArrowRight size={14} />
                       </Link>
                    </article>
                  ))
                ) : loading ? (
                  [1, 2].map((i) => (
-                   <div key={i} className="bg-white p-6 rounded-[2.5rem] border border-stone-100 shadow-sm animate-pulse">
-                     <div className="h-48 bg-stone-100 rounded-[2rem] mb-6" />
-                     <div className="h-4 w-24 bg-stone-100 rounded mb-4" />
-                     <div className="h-6 w-full bg-stone-100 rounded mb-4" />
-                     <div className="h-12 w-full bg-stone-100 rounded" />
+                   <div key={i} className="bg-white dark:bg-black p-6 rounded-[2.5rem] border-2 border-black dark:border-white animate-pulse">
+                     <div className="h-48 bg-stone-100 dark:bg-stone-900 rounded-[2rem] mb-6" />
+                     <div className="h-4 w-24 bg-stone-100 dark:bg-stone-900 rounded mb-4" />
+                     <div className="h-6 w-full bg-stone-100 dark:bg-stone-900 rounded mb-4" />
+                     <div className="h-12 w-full bg-stone-100 dark:bg-stone-900 rounded" />
                    </div>
                  ))
                ) : (
-                 <div className="col-span-2 py-12 text-center text-stone-400 font-medium">
+                 <div className="col-span-2 py-12 text-center text-stone-400 dark:text-stone-500 font-medium">
                    {dict.newsEmpty}
                  </div>
                )}
@@ -378,13 +378,13 @@ export default function HomePageClient({ lang }: HomePageClientProps) {
           <div className="space-y-8">
             <PollComponent lang={lang} />
             
-            <div className="bg-stone-900 p-10 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden group">
-               <div className="absolute top-0 right-0 p-8 text-white/5 opacity-20 group-hover:opacity-40 transition-opacity">
+            <div className="bg-black dark:bg-white p-10 rounded-[2.5rem] text-white dark:text-black relative overflow-hidden group border-2 border-black dark:border-white">
+               <div className="absolute top-0 right-0 p-8 text-white/5 dark:text-black/5 opacity-20 group-hover:opacity-40 transition-opacity">
                   <UserPlusIcon size={120} />
                </div>
                <h3 className="text-2xl font-black mb-4 leading-tight relative z-10">{dict.ctaJoinTitle}</h3>
-               <p className="text-stone-400 text-sm mb-8 relative z-10 leading-relaxed">{dict.ctaJoinSub}</p>
-               <Link href={`/${lang}/kontakt`} className="inline-flex items-center gap-2 bg-green-600 text-white px-6 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-700 transition relative z-10 shadow-lg shadow-green-900/50">
+               <p className="text-stone-300 dark:text-stone-600 text-sm mb-8 relative z-10 leading-relaxed">{dict.ctaJoinSub}</p>
+               <Link href={`/${lang}/kontakt`} className="inline-flex items-center gap-2 bg-green-600 text-white px-6 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-700 transition relative z-10 border-2 border-green-600 hover:border-green-700">
                   {dict.ctaJoinBtn} <ArrowRight size={16} />
                </Link>
             </div>

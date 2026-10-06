@@ -698,36 +698,36 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
 
   if (!dict) return null;
 
-  return (    <div className="min-h-screen bg-stone-50 pt-24 pb-32">
+  return (    <div className="min-h-screen bg-white dark:bg-black pt-24 pb-32 text-black dark:text-white">
       <div className="max-w-7xl mx-auto px-6">
         <header className="mb-16">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
             <div>
-              <div className="inline-flex p-3 bg-green-100 text-green-600 rounded-2xl mb-6 shadow-sm">
+              <div className="inline-flex p-3 bg-green-50 dark:bg-green-950 text-green-600 dark:text-green-400 rounded-2xl border-2 border-green-600 dark:border-green-400">
                 <CalendarDays size={32} />
               </div>
-              <h1 className="text-4xl md:text-6xl font-black text-stone-900 tracking-tighter mb-4">{dict.title}</h1>
-              <p className="text-stone-500 text-lg font-medium">{dict.subtitle}</p>
+              <h1 className="text-4xl md:text-6xl font-black text-black dark:text-white tracking-tighter mb-4">{dict.title}</h1>
+              <p className="text-stone-500 dark:text-stone-400 text-lg font-medium">{dict.subtitle}</p>
             </div>
 
             <div className="flex items-center gap-3">
               {viewMode === 'calendar' && (
-              <div className="hidden md:flex items-center gap-2 bg-white border border-stone-100 rounded-2xl p-1.5 shadow-sm">
+              <div className="hidden md:flex items-center gap-2 bg-white dark:bg-black border-2 border-black dark:border-white rounded-2xl p-1.5">
                 <button
                   type="button"
                   onClick={() => setCalendarDate(new Date(calendarYear, calendarMonth - 1, 1))}
-                  className="p-3 rounded-xl text-stone-400 hover:text-stone-700 hover:bg-stone-50 transition"
+                  className="p-3 rounded-xl text-stone-400 dark:text-stone-500 hover:text-black dark:hover:text-white hover:bg-green-50 dark:hover:bg-green-950 transition"
                   aria-label={lang === 'en' ? 'Previous month' : 'Předchozí měsíc'}
                 >
                   <ChevronLeft size={18} />
                 </button>
-                <div className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-stone-600">
+                <div className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-stone-600 dark:text-stone-300">
                   {monthName} {calendarYear}
                 </div>
                 <button
                   type="button"
                   onClick={() => setCalendarDate(new Date(calendarYear, calendarMonth + 1, 1))}
-                  className="p-3 rounded-xl text-stone-400 hover:text-stone-700 hover:bg-stone-50 transition"
+                  className="p-3 rounded-xl text-stone-400 dark:text-stone-500 hover:text-black dark:hover:text-white hover:bg-green-50 dark:hover:bg-green-950 transition"
                   aria-label={lang === 'en' ? 'Next month' : 'Další měsíc'}
                 >
                   <ChevronRight size={18} />
@@ -736,20 +736,20 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
               )}
               <a
                 href={`/api/ical/events?lang=${lang}`}
-                className="inline-flex items-center gap-2 rounded-2xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
+                className="inline-flex items-center gap-2 rounded-2xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border-2 border-black dark:border-white bg-white dark:bg-black text-black dark:text-white hover:bg-green-50 dark:hover:bg-green-950 transition"
               >
                 {lang === 'en' ? 'iCal feed' : 'Odběr iCal'}
               </a>
-              <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-stone-100">
+              <div className="flex bg-white dark:bg-black p-1.5 rounded-2xl border-2 border-black dark:border-white">
                 <button 
                   onClick={() => setActiveViewMode('list')}
-                  className={`p-3 rounded-xl transition ${viewMode === 'list' ? 'bg-green-600 text-white shadow-lg shadow-green-100' : 'text-stone-400 hover:text-stone-600'}`}
+                  className={`p-3 rounded-xl transition ${viewMode === 'list' ? 'bg-green-600 text-white' : 'text-stone-400 dark:text-stone-500 hover:text-black dark:hover:text-white hover:bg-green-50 dark:hover:bg-green-950'}`}
                 >
                   <LayoutGrid size={20} />
                 </button>
                 <button 
                   onClick={() => setActiveViewMode('calendar')}
-                  className={`p-3 rounded-xl transition ${viewMode === 'calendar' ? 'bg-green-600 text-white shadow-lg shadow-green-100' : 'text-stone-400 hover:text-stone-600'}`}
+                  className={`p-3 rounded-xl transition ${viewMode === 'calendar' ? 'bg-green-600 text-white' : 'text-stone-400 dark:text-stone-500 hover:text-black dark:hover:text-white hover:bg-green-50 dark:hover:bg-green-950'}`}
                 >
                   <Calendar size={20} />
                 </button>
@@ -758,21 +758,21 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
           </div>
 
           <div className="mt-10 flex flex-col md:flex-row gap-3">
-            <div className="flex items-center gap-2 bg-white border border-stone-200 rounded-2xl px-4 py-3 shadow-sm w-full md:w-[420px]">
-              <Search size={16} className="text-stone-400" />
+            <div className="flex items-center gap-2 bg-white dark:bg-black border-2 border-black dark:border-white rounded-2xl px-4 py-3 w-full md:w-[420px]">
+              <Search size={16} className="text-stone-400 dark:text-stone-500" />
               <input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={lang === 'en' ? 'Search events…' : 'Hledat akce…'}
-                className="w-full bg-transparent outline-none text-sm font-bold text-stone-700 placeholder:text-stone-400"
+                className="w-full bg-transparent outline-none text-sm font-bold text-black dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500"
               />
             </div>
-            <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-stone-100 w-full md:w-auto">
+            <div className="flex bg-white dark:bg-black p-1.5 rounded-2xl border-2 border-black dark:border-white w-full md:w-auto">
               <button
                 type="button"
                 onClick={() => setAudienceFilter('all')}
                 className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition ${
-                  audienceFilter === 'all' ? 'bg-green-600 text-white' : 'text-stone-500 hover:bg-stone-50'
+                  audienceFilter === 'all' ? 'bg-green-600 text-white' : 'text-stone-500 dark:text-stone-400 hover:bg-green-50 dark:hover:bg-green-950'
                 }`}
               >
                 {lang === 'en' ? 'All' : 'Vše'}
@@ -781,7 +781,7 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
                 type="button"
                 onClick={() => setAudienceFilter('public')}
                 className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition ${
-                  audienceFilter === 'public' ? 'bg-green-600 text-white' : 'text-stone-500 hover:bg-stone-50'
+                  audienceFilter === 'public' ? 'bg-green-600 text-white' : 'text-stone-500 dark:text-stone-400 hover:bg-green-50 dark:hover:bg-green-950'
                 }`}
               >
                 {lang === 'en' ? 'Public' : 'Veřejné'}
@@ -790,7 +790,7 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
                 type="button"
                 onClick={() => setAudienceFilter('members')}
                 className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition ${
-                  audienceFilter === 'members' ? 'bg-green-600 text-white' : 'text-stone-500 hover:bg-stone-50'
+                  audienceFilter === 'members' ? 'bg-green-600 text-white' : 'text-stone-500 dark:text-stone-400 hover:bg-green-50 dark:hover:bg-green-950'
                 }`}
               >
                 {lang === 'en' ? 'Members' : 'Členské'}
@@ -803,7 +803,7 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
-                className={`px-6 py-3 rounded-xl font-bold whitespace-nowrap transition ${activeCategory === cat ? 'bg-green-600 text-white shadow-lg shadow-green-100' : 'bg-white text-stone-500 hover:bg-stone-50'}`}
+                className={`px-6 py-3 rounded-xl font-bold whitespace-nowrap transition border-2 ${activeCategory === cat ? 'bg-green-600 text-white border-green-600' : 'bg-white dark:bg-black text-stone-500 dark:text-stone-400 border-black dark:border-white hover:bg-green-50 dark:hover:bg-green-950'}`}
               >
                 {dict.categories[cat] || cat}
               </button>

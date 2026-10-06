@@ -463,15 +463,15 @@ export default function LoginPageClient({ lang }: LoginPageClientProps) {
   if (showRoleSelection) {
     const t: LoginCopy = dict?.auth?.login ?? {};
     return (
-      <div className="min-h-screen flex items-center justify-center bg-stone-50 p-6">
-        <div className="bg-white p-12 rounded-[3rem] shadow-2xl w-full max-w-lg text-center border border-stone-100 animate-in fade-in zoom-in duration-500">
-          <div className="w-20 h-20 bg-green-50 text-green-600 rounded-full flex items-center justify-center mx-auto mb-8">
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-black p-6">
+        <div className="bg-white dark:bg-black p-12 rounded-[3rem] w-full max-w-lg text-center border-2 border-black dark:border-white animate-in fade-in zoom-in duration-500">
+          <div className="w-20 h-20 bg-green-50 dark:bg-green-950 text-green-600 dark:text-green-400 rounded-full flex items-center justify-center mx-auto mb-8 border-2 border-green-600 dark:border-green-400">
             <ShieldCheck size={40} />
           </div>
-          <h1 className="text-3xl font-black text-stone-900 mb-2 tracking-tight">
+          <h1 className="text-3xl font-black text-black dark:text-white mb-2 tracking-tight">
             {t.rolePickTitle || (lang === 'cs' ? 'Vyberte sekci' : 'Select Section')}
           </h1>
-          <p className="text-stone-500 mb-10 font-medium">
+          <p className="text-stone-500 dark:text-stone-400 mb-10 font-medium">
             {t.rolePickSubtitle || (lang === 'cs' ? 'Máte přístup do více částí portálu Pupen.' : 'You have access to multiple parts of the Pupen portal.')}
           </p>
           
@@ -481,10 +481,10 @@ export default function LoginPageClient({ lang }: LoginPageClientProps) {
                 await logSecurity('LOGIN_SUCCESS', { method: 'session', outcome: 'admin' });
                 router.push(`/${lang}/admin/dashboard`);
               }}
-              className="group flex items-center justify-between p-6 bg-stone-900 text-white rounded-[2rem] hover:bg-green-600 transition-all duration-300 shadow-xl shadow-stone-900/20"
+              className="group flex items-center justify-between p-6 bg-black dark:bg-white text-white dark:text-black rounded-[2rem] hover:bg-green-600 dark:hover:bg-green-600 hover:text-white dark:hover:text-white transition-all duration-300 border-2 border-black dark:border-white hover:border-green-600 dark:hover:border-green-600"
             >
               <div className="flex items-center gap-4">
-                <div className="p-3 bg-white/10 rounded-xl">
+                <div className="p-3 bg-white/10 dark:bg-black/10 rounded-xl border border-white/20 dark:border-black/20">
                   <Lock size={24} />
                 </div>
                 <div className="text-left">
@@ -500,14 +500,14 @@ export default function LoginPageClient({ lang }: LoginPageClientProps) {
                 await logSecurity('LOGIN_SUCCESS', { method: 'session', outcome: 'member' });
                 router.push(`/${lang}/clen`);
               }}
-              className="group flex items-center justify-between p-6 bg-white text-stone-900 rounded-[2rem] border-2 border-stone-100 hover:border-green-500 hover:text-green-600 transition-all duration-300 shadow-lg shadow-stone-200/50"
+              className="group flex items-center justify-between p-6 bg-white dark:bg-black text-black dark:text-white rounded-[2rem] border-2 border-black dark:border-white hover:border-green-500 hover:text-green-600 dark:hover:text-green-400 transition-all duration-300"
             >
               <div className="flex items-center gap-4">
-                <div className="p-3 bg-stone-50 rounded-xl group-hover:bg-green-50 group-hover:text-green-600 transition-colors">
+                <div className="p-3 bg-white dark:bg-black rounded-xl group-hover:bg-green-50 dark:group-hover:bg-green-950 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors border-2 border-black dark:border-white group-hover:border-green-500">
                   <ShieldCheck size={24} />
                 </div>
                 <div className="text-left">
-                  <p className="font-black uppercase tracking-widest text-[10px] text-stone-400">{t.roleMemberBadge || 'Member Section'}</p>
+                  <p className="font-black uppercase tracking-widest text-[10px] text-stone-400 dark:text-stone-500">{t.roleMemberBadge || 'Member Section'}</p>
                   <p className="text-xl font-bold">{t.roleMemberTitle || (lang === 'cs' ? 'Členský portál' : 'Member Portal')}</p>
                 </div>
               </div>
@@ -517,7 +517,7 @@ export default function LoginPageClient({ lang }: LoginPageClientProps) {
 
           <button 
             onClick={() => supabase.auth.signOut().then(() => setShowRoleSelection(false))}
-            className="mt-10 text-stone-400 font-bold hover:text-red-500 transition text-sm"
+            className="mt-10 text-stone-400 dark:text-stone-500 font-bold hover:text-red-500 dark:hover:text-red-400 transition text-sm"
           >
             {t.logout || (lang === 'cs' ? 'Odhlásit se' : 'Log out')}
           </button>
@@ -528,34 +528,34 @@ export default function LoginPageClient({ lang }: LoginPageClientProps) {
 
   const t: LoginCopy = dict?.auth?.login ?? {};
   return (
-    <div className="min-h-screen flex items-center justify-center bg-stone-50 p-6">
-      <div className="bg-white p-12 rounded-[3rem] shadow-2xl w-full max-w-md text-center border border-stone-100">
+    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-black p-6">
+      <div className="bg-white dark:bg-black p-12 rounded-[3rem] w-full max-w-md text-center border-2 border-black dark:border-white">
         <div className="flex justify-center mb-8">
-          <div className="bg-green-50 p-5 rounded-full shadow-inner">
-            <Leaf className="w-10 h-10 text-green-600" />
+          <div className="bg-green-50 dark:bg-green-950 p-5 rounded-full border-2 border-green-600 dark:border-green-400">
+            <Leaf className="w-10 h-10 text-green-600 dark:text-green-400" />
           </div>
         </div>
 
-        <h1 className="text-3xl font-black text-stone-900 mb-2 tracking-tight">
+        <h1 className="text-3xl font-black text-black dark:text-white mb-2 tracking-tight">
           {t.title || (lang === 'cs' ? 'Vítejte zpět' : 'Welcome back')}
         </h1>
-        <p className="text-stone-500 mb-10 font-medium">
+        <p className="text-stone-500 dark:text-stone-400 mb-10 font-medium">
           {t.subtitle || (lang === 'cs' ? 'Přihlášení do ekosystému Pupen' : 'Log in to the Pupen ecosystem')}
         </p>
         
         <form onSubmit={adminMfaEnroll ? verifyAdminMfaEnroll : mfa ? handleMfaVerify : handleLogin} className="space-y-4 text-left">
           {adminMfaEnroll ? (
             <div className="space-y-4">
-              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 px-1">
                 {lang === 'cs' ? 'Nastavení 2FA pro admin účet' : 'Set up 2FA for admin account'}
               </div>
               {adminMfaEnrollQr ? (
                 <div className="flex justify-center">
-                  <Image src={adminMfaEnrollQr} alt="2FA QR" width={192} height={192} className="w-48 h-48 rounded-2xl border border-stone-200" unoptimized />
+                  <Image src={adminMfaEnrollQr} alt="2FA QR" width={192} height={192} className="w-48 h-48 rounded-2xl border-2 border-black dark:border-white" unoptimized />
                 </div>
               ) : null}
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 px-1">
                   {t.mfaCodeLabel || (lang === 'cs' ? '2FA kód' : '2FA code')}
                 </label>
                 <input
@@ -564,10 +564,10 @@ export default function LoginPageClient({ lang }: LoginPageClientProps) {
                   value={adminMfaEnrollCode}
                   onChange={(e) => setAdminMfaEnrollCode(e.target.value)}
                   aria-invalid={error ? 'true' : 'false'}
-                  className="w-full bg-stone-50 border-none rounded-2xl px-4 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
+                  className="w-full bg-white dark:bg-black border-2 border-black dark:border-white rounded-2xl px-4 py-4 font-bold text-black dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:ring-2 focus:ring-green-500 transition outline-none"
                   placeholder="123456"
                 />
-                <div className="text-[9px] text-stone-400 italic px-1">
+                <div className="text-[9px] text-stone-400 dark:text-stone-500 italic px-1">
                   {t.mfaHint || (lang === 'cs' ? 'Zadejte kód z autentizační aplikace.' : 'Enter code from your authenticator app.')}
                 </div>
               </div>
@@ -581,14 +581,14 @@ export default function LoginPageClient({ lang }: LoginPageClientProps) {
                   setAdminMfaFactorId('');
                   setAdminMfaEnrollCode('');
                 }}
-                className="w-full bg-white text-stone-700 py-4 rounded-2xl font-black uppercase tracking-widest text-xs border border-stone-200 hover:bg-stone-50 transition disabled:opacity-50"
+                className="w-full bg-white dark:bg-black text-black dark:text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs border-2 border-black dark:border-white hover:bg-green-50 dark:hover:bg-green-950 transition disabled:opacity-50"
               >
                 {lang === 'cs' ? 'Zrušit' : 'Cancel'}
               </button>
             </div>
           ) : mfa ? (
             <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">
+              <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 px-1">
                 {t.mfaCodeLabel || (lang === 'cs' ? '2FA kód' : '2FA code')}
               </label>
               <input
@@ -597,52 +597,52 @@ export default function LoginPageClient({ lang }: LoginPageClientProps) {
                 value={mfaCode}
                 onChange={(e) => setMfaCode(e.target.value)}
                 aria-invalid={error ? 'true' : 'false'}
-                className="w-full bg-stone-50 border-none rounded-2xl px-4 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
+                className="w-full bg-white dark:bg-black border-2 border-black dark:border-white rounded-2xl px-4 py-4 font-bold text-black dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:ring-2 focus:ring-green-500 transition outline-none"
                 placeholder="123456"
               />
-              <div className="text-[9px] text-stone-400 italic px-1">
+              <div className="text-[9px] text-stone-400 dark:text-stone-500 italic px-1">
                 {t.mfaHint || (lang === 'cs' ? 'Zadejte kód z autentizační aplikace.' : 'Enter code from your authenticator app.')}
               </div>
             </div>
           ) : (
             <>
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 px-1">
                   {t.emailLabel || (lang === 'cs' ? 'E-mail' : 'Email')}
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-300" size={18} />
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 dark:text-stone-500" size={18} />
                   <input
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     aria-invalid={error ? 'true' : 'false'}
-                    className="w-full bg-stone-50 border-none rounded-2xl pl-12 pr-4 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
+                    className="w-full bg-white dark:bg-black border-2 border-black dark:border-white rounded-2xl pl-12 pr-4 py-4 font-bold text-black dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:ring-2 focus:ring-green-500 transition outline-none"
                     placeholder={t.emailPlaceholder || 'vas@email.cz'}
                   />
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 px-1">
                   {t.passwordLabel || (lang === 'cs' ? 'Heslo' : 'Password')}
                 </label>
                 <div className="relative">
-                  <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-300" size={18} />
+                  <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 dark:text-stone-500" size={18} />
                   <PasswordField
                     value={password}
                     onChange={setPassword}
                     required
                     ariaInvalid={!!error}
                     placeholder={t.passwordPlaceholder || '••••••••'}
-                    inputClassName="w-full bg-stone-50 border-none rounded-2xl pl-12 pr-12 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition"
-                    buttonClassName="absolute right-4 top-1/2 -translate-y-1/2 text-stone-300 hover:text-stone-700 transition"
+                    inputClassName="w-full bg-white dark:bg-black border-2 border-black dark:border-white rounded-2xl pl-12 pr-12 py-4 font-bold text-black dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:ring-2 focus:ring-green-500 transition outline-none"
+                    buttonClassName="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 dark:text-stone-500 hover:text-black dark:hover:text-white transition"
                     autoComplete="current-password"
                   />
                 </div>
               </div>
               <div className="flex items-center justify-end">
-                <Link href={`/${lang}/forgot`} className="text-stone-400 text-xs font-bold hover:text-green-600 transition">
+                <Link href={`/${lang}/forgot`} className="text-stone-400 dark:text-stone-500 text-xs font-bold hover:text-green-600 dark:hover:text-green-400 transition">
                   {t.forgotPassword || (lang === 'en' ? 'Forgot password?' : 'Zapomenuté heslo?')}
                 </Link>
               </div>
@@ -650,15 +650,15 @@ export default function LoginPageClient({ lang }: LoginPageClientProps) {
           )}
 
           {error && (
-            <div className="p-4 bg-red-50 rounded-2xl border border-red-100 animate-shake">
-              <p className="text-red-600 text-xs font-bold text-center">
+            <div className="p-4 bg-red-50 dark:bg-red-950 rounded-2xl border-2 border-red-200 dark:border-red-800 animate-shake">
+              <p className="text-red-600 dark:text-red-400 text-xs font-bold text-center">
                 {error}
               </p>
             </div>
           )}
           {info && (
-            <div className="p-4 bg-green-50 rounded-2xl border border-green-100">
-              <p className="text-green-700 text-xs font-bold text-center">{info}</p>
+            <div className="p-4 bg-green-50 dark:bg-green-950 rounded-2xl border-2 border-green-200 dark:border-green-800">
+              <p className="text-green-700 dark:text-green-400 text-xs font-bold text-center">{info}</p>
             </div>
           )}
 
@@ -671,7 +671,7 @@ export default function LoginPageClient({ lang }: LoginPageClientProps) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-green-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-green-700 transition shadow-xl shadow-green-600/20 flex items-center justify-center gap-2 disabled:opacity-50 mt-4"
+            className="w-full bg-green-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-green-700 transition border-2 border-green-600 hover:border-green-700 flex items-center justify-center gap-2 disabled:opacity-50 mt-4"
           >
             {loading ? <InlinePulse className="bg-white/80" size={14} /> : <Lock size={18} />}
             {mfa
@@ -690,7 +690,7 @@ export default function LoginPageClient({ lang }: LoginPageClientProps) {
                   type="button"
                   onClick={handleGoogle}
                   disabled={loading}
-                  className="w-full bg-white text-stone-700 py-4 rounded-2xl font-black uppercase tracking-widest text-xs border border-stone-200 hover:bg-stone-50 transition disabled:opacity-50"
+                  className="w-full bg-white dark:bg-black text-black dark:text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs border-2 border-black dark:border-white hover:bg-green-50 dark:hover:bg-green-950 transition disabled:opacity-50"
                 >
                   {t.google || (lang === 'cs' ? 'Pokračovat s Google' : 'Continue with Google')}
                 </button>
@@ -699,8 +699,8 @@ export default function LoginPageClient({ lang }: LoginPageClientProps) {
           )}
         </form>
 
-        <div className="mt-10 pt-8 border-t border-stone-50">
-          <Link href={`/${lang}/prihlaska`} className="text-stone-400 text-sm font-bold hover:text-green-600 transition">
+        <div className="mt-10 pt-8 border-t border-black/20 dark:border-white/20">
+          <Link href={`/${lang}/prihlaska`} className="text-stone-400 dark:text-stone-500 text-sm font-bold hover:text-green-600 dark:hover:text-green-400 transition">
             {t.applyLink || (lang === 'cs' ? 'Ještě nemáte účet? Podat přihlášku' : 'No account yet? Apply here')}
           </Link>
         </div>

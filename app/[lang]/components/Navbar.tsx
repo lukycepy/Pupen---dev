@@ -671,14 +671,14 @@ export default function Navbar({ lang, dict }: NavbarProps) {
           {/* MOBILNÍ HAMBURGER */}
           <div className="md:hidden flex items-center gap-3">
             <ThemeToggleButton />
-            <div className="flex items-center gap-1 bg-stone-100 p-1 rounded-xl border border-stone-200">
-              <Link href={getTransliteratedPath('cs')} className={`px-2 py-1 rounded-lg text-[9px] font-black transition focus:ring-2 focus:ring-green-500 focus:outline-none ${lang === 'cs' ? 'bg-white text-green-600 shadow-sm' : 'text-stone-400'}`}>CZ</Link>
-              <Link href={getTransliteratedPath('en')} className={`px-2 py-1 rounded-lg text-[9px] font-black transition focus:ring-2 focus:ring-green-500 focus:outline-none ${lang === 'en' ? 'bg-white text-green-600 shadow-sm' : 'text-stone-400'}`}>EN</Link>
+            <div className="flex items-center gap-1 bg-white dark:bg-black p-1 rounded-xl border border-black dark:border-white">
+              <Link href={getTransliteratedPath('cs')} className={`px-2 py-1 rounded-lg text-[9px] font-black transition focus:ring-2 focus:ring-green-500 focus:outline-none ${lang === 'cs' ? 'bg-green-600 text-white' : 'text-stone-400 hover:text-black dark:hover:text-white'}`}>CZ</Link>
+              <Link href={getTransliteratedPath('en')} className={`px-2 py-1 rounded-lg text-[9px] font-black transition focus:ring-2 focus:ring-green-500 focus:outline-none ${lang === 'en' ? 'bg-green-600 text-white' : 'text-stone-400 hover:text-black dark:hover:text-white'}`}>EN</Link>
             </div>
             
             <button 
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="text-stone-900 hover:text-green-600 transition p-2 bg-stone-100 rounded-xl border border-stone-200 focus:ring-2 focus:ring-green-500 focus:outline-none"
+              className="text-black dark:text-white hover:text-green-600 dark:hover:text-green-400 transition p-2 bg-white dark:bg-black rounded-xl border border-black dark:border-white focus:ring-2 focus:ring-green-500 focus:outline-none"
               aria-label={isMenuOpen ? "Zavřít menu" : "Otevřít menu"}
               aria-expanded={isMenuOpen}
             >
@@ -696,19 +696,19 @@ export default function Navbar({ lang, dict }: NavbarProps) {
           side="top"
           lockScroll={false}
           overlayClassName="md:hidden fixed inset-0 z-[9998] flex"
-          backdropClassName="absolute inset-0 bg-black/40 backdrop-blur-sm"
-          panelClassName="relative w-full mt-16 h-[calc(100dvh-4rem)] bg-white animate-in slide-in-from-top-10 duration-500 overflow-y-auto overscroll-contain touch-pan-y"
+          backdropClassName="absolute inset-0 bg-black/40"
+          panelClassName="relative w-full mt-16 h-[calc(100dvh-4rem)] bg-white dark:bg-black border-t border-black dark:border-white animate-in slide-in-from-top-10 duration-500 overflow-y-auto overscroll-contain touch-pan-y"
         >
-          <div className="flex flex-col p-5 sm:p-8 space-y-5 text-stone-800 pb-[max(2rem,env(safe-area-inset-bottom))]">
+          <div className="flex flex-col p-5 sm:p-8 space-y-5 text-black dark:text-white pb-[max(2rem,env(safe-area-inset-bottom))]">
             {/* MOBILNÍ SEARCH */}
             <div className="relative mb-4">
-              <Search className="absolute left-4 top-3.5 text-stone-500" size={20} />
+              <Search className="absolute left-4 top-3.5 text-stone-400 dark:text-stone-500" size={20} />
               <input 
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={searchPlaceholder}
-                className="w-full bg-stone-100 border-none rounded-2xl pl-12 pr-4 py-4 text-sm font-bold focus:ring-2 focus:ring-green-500 transition-all outline-none"
+                className="w-full bg-white dark:bg-black border border-black dark:border-white rounded-2xl pl-12 pr-4 py-4 text-sm font-bold text-black dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:ring-2 focus:ring-green-500 transition-all outline-none"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
@@ -719,11 +719,11 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                   }
                 }}
               />
-              {isSearching && <InlinePulse className="absolute right-5 top-5 bg-stone-300" size={14} />}
+              {isSearching && <InlinePulse className="absolute right-5 top-5 bg-stone-300 dark:bg-stone-600" size={14} />}
             </div>
 
             {searchQuery.trim().length >= 2 && !isSearching && (
-              <div className="bg-stone-50 border border-stone-100 rounded-2xl p-4">
+              <div className="bg-white dark:bg-black border border-black dark:border-white rounded-2xl p-4">
                 {(searchResults.pages.length > 0 ||
                   searchResults.events.length > 0 ||
                   searchResults.posts.length > 0 ||
@@ -735,20 +735,20 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                   <div className="space-y-4">
                     {searchResults.pages.length > 0 && (
                       <div>
-                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">{lang === 'en' ? 'Pages' : 'Stránky'}</div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-2">{lang === 'en' ? 'Pages' : 'Stránky'}</div>
                         <div className="space-y-1">
                           {searchResults.pages.slice(0, 3).map((p) => (
                             <Link
                               key={p.id || p.href}
                               href={String(p.href || `/${lang}`)}
                               onClick={() => setIsMenuOpen(false)}
-                              className="flex items-center gap-3 p-3 bg-stone-50 rounded-2xl hover:bg-green-50 transition"
+                              className="flex items-center gap-3 p-3 bg-white dark:bg-black rounded-2xl hover:bg-green-50 dark:hover:bg-green-950 transition border border-black dark:border-white"
                             >
-                              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-stone-100">
-                                <FileText size={16} className="text-stone-400" />
+                              <div className="w-10 h-10 bg-white dark:bg-black rounded-xl flex items-center justify-center border border-black dark:border-white">
+                                <FileText size={16} className="text-stone-400 dark:text-stone-500" />
                               </div>
                               <div className="flex-1">
-                                <div className="text-sm font-bold text-stone-800 truncate">{p.title || p.href}</div>
+                                <div className="text-sm font-bold text-black dark:text-white truncate">{p.title || p.href}</div>
                               </div>
                             </Link>
                           ))}
@@ -757,16 +757,16 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                     )}
                     {searchResults.events.length > 0 && (
                       <div>
-                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">Akce</div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-2">Akce</div>
                         <div className="space-y-1">
                           {searchResults.events.slice(0, 3).map((ev) => (
                             <Link
                               key={ev.id}
                               href={`/${lang}/akce/${ev.id}`}
                               onClick={() => setIsMenuOpen(false)}
-                              className="block rounded-xl px-3 py-2 bg-white border border-stone-100 hover:border-green-200 hover:bg-green-50 transition"
+                              className="block rounded-xl px-3 py-2 bg-white dark:bg-black border border-black dark:border-white hover:bg-green-50 dark:hover:bg-green-950 transition"
                             >
-                              <div className="text-sm font-bold text-stone-800 truncate">{ev.title}</div>
+                              <div className="text-sm font-bold text-black dark:text-white truncate">{ev.title}</div>
                             </Link>
                           ))}
                         </div>
@@ -774,16 +774,16 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                     )}
                     {searchResults.posts.length > 0 && (
                       <div>
-                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">Novinky</div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-2">Novinky</div>
                         <div className="space-y-1">
                           {searchResults.posts.slice(0, 3).map((po) => (
                             <Link
                               key={po.id}
                               href={`/${lang}/novinky/${po.id}`}
                               onClick={() => setIsMenuOpen(false)}
-                              className="block rounded-xl px-3 py-2 bg-white border border-stone-100 hover:border-green-200 hover:bg-green-50 transition"
+                              className="block rounded-xl px-3 py-2 bg-white dark:bg-black border border-black dark:border-white hover:bg-green-50 dark:hover:bg-green-950 transition"
                             >
-                              <div className="text-sm font-bold text-stone-800 truncate">{po.title}</div>
+                              <div className="text-sm font-bold text-black dark:text-white truncate">{po.title}</div>
                             </Link>
                           ))}
                         </div>
@@ -791,16 +791,16 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                     )}
                     {searchResults.faqs.length > 0 && (
                       <div>
-                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">FAQ</div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-2">FAQ</div>
                         <div className="space-y-1">
                           {searchResults.faqs.slice(0, 3).map((f) => (
                             <Link
                               key={f.id}
                               href={`/${lang}/faq?q=${encodeURIComponent(searchQuery.trim())}`}
                               onClick={() => setIsMenuOpen(false)}
-                              className="block rounded-xl px-3 py-2 bg-white border border-stone-100 hover:border-green-200 hover:bg-green-50 transition"
+                              className="block rounded-xl px-3 py-2 bg-white dark:bg-black border border-black dark:border-white hover:bg-green-50 dark:hover:bg-green-950 transition"
                             >
-                              <div className="text-sm font-bold text-stone-800 truncate">{f.question}</div>
+                              <div className="text-sm font-bold text-black dark:text-white truncate">{f.question}</div>
                             </Link>
                           ))}
                         </div>
@@ -809,27 +809,27 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                     <Link
                       href={`/${lang}/search?q=${encodeURIComponent(searchQuery.trim())}`}
                       onClick={() => setIsMenuOpen(false)}
-                      className="block text-center text-[10px] font-black uppercase tracking-widest text-green-700 hover:text-green-800"
+                      className="block text-center text-[10px] font-black uppercase tracking-widest text-green-700 dark:text-green-400 hover:text-green-800"
                     >
                       {lang === 'en' ? 'View all results' : 'Zobrazit všechny výsledky'}
                     </Link>
                   </div>
                 ) : (
-                  <div className="text-center text-xs font-bold text-stone-400 uppercase tracking-widest py-2">
+                  <div className="text-center text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest py-2">
                     {searchNoResults}
                   </div>
                 )}
               </div>
             )}
 
-            <Link href={`/${lang}`} onClick={() => setIsMenuOpen(false)} className={`flex items-center gap-4 text-base font-black uppercase tracking-[0.12em] ${pathname === `/${lang}` ? 'text-green-600' : ''}`}>
+            <Link href={`/${lang}`} onClick={() => setIsMenuOpen(false)} className={`flex items-center gap-4 text-base font-black uppercase tracking-[0.12em] ${pathname === `/${lang}` ? 'text-green-600 dark:text-green-400' : 'text-black dark:text-white'}`}>
               {dict?.home || (lang === 'en' ? 'Home' : 'Domů')}
             </Link>
             {isPageEnabled('akce') && showInNavbar('akce') && (
               <Link
                 href={`/${lang}/akce`}
                 onClick={() => setIsMenuOpen(false)}
-                className={`flex items-center gap-4 text-base font-black uppercase tracking-[0.12em] ${pathname.includes('/akce') ? 'text-green-600' : ''}`}
+                className={`flex items-center gap-4 text-base font-black uppercase tracking-[0.12em] ${pathname.includes('/akce') ? 'text-green-600 dark:text-green-400' : 'text-black dark:text-white'}`}
               >
                 {dict?.events || (lang === 'en' ? 'Events' : 'Akce')}
               </Link>
@@ -838,14 +838,14 @@ export default function Navbar({ lang, dict }: NavbarProps) {
               <Link
                 href={`/${lang}/novinky`}
                 onClick={() => setIsMenuOpen(false)}
-                className={`flex items-center gap-4 text-base font-black uppercase tracking-[0.12em] ${pathname.includes('/novinky') ? 'text-green-600' : ''}`}
+                className={`flex items-center gap-4 text-base font-black uppercase tracking-[0.12em] ${pathname.includes('/novinky') ? 'text-green-600 dark:text-green-400' : 'text-black dark:text-white'}`}
               >
                 {dict?.news || (lang === 'en' ? 'News' : 'Novinky')}
               </Link>
             )}
             
-            <div className="py-4 border-y border-stone-100">
-              <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-6">
+            <div className="py-4 border-y border-black dark:border-white">
+              <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-6">
                 {toolsTitle}
               </p>
               <div className="grid grid-cols-2 gap-x-4 gap-y-6">
@@ -854,9 +854,9 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                     key={tool.href}
                     href={`/${lang}${tool.href}`} 
                     onClick={() => setIsMenuOpen(false)} 
-                    className="text-[11px] font-black text-stone-700 hover:text-green-600 flex items-center gap-3"
+                    className="text-[11px] font-black text-black dark:text-white hover:text-green-600 dark:hover:text-green-400 flex items-center gap-3"
                   >
-                    <span className="text-stone-400">{tool.icon}</span>
+                    <span className="text-stone-400 dark:text-stone-500">{tool.icon}</span>
                     {navTools?.[tool.key]?.title || humanizeSlug(tool.slug)}
                   </Link>
                 ))}
@@ -867,7 +867,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
               <Link
                 href={`/${lang}/o-nas`}
                 onClick={() => setIsMenuOpen(false)}
-                className={`flex items-center gap-4 text-base font-black uppercase tracking-[0.12em] ${pathname.includes('/o-nas') ? 'text-green-600' : ''}`}
+                className={`flex items-center gap-4 text-base font-black uppercase tracking-[0.12em] ${pathname.includes('/o-nas') ? 'text-green-600 dark:text-green-400' : 'text-black dark:text-white'}`}
               >
                 {dict?.about || (lang === 'en' ? 'About' : 'O nás')}
               </Link>
@@ -876,7 +876,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
               <Link
                 href={`/${lang}/kontakt`}
                 onClick={() => setIsMenuOpen(false)}
-                className={`flex items-center gap-4 text-base font-black uppercase tracking-[0.12em] ${pathname.includes('/kontakt') ? 'text-green-600' : ''}`}
+                className={`flex items-center gap-4 text-base font-black uppercase tracking-[0.12em] ${pathname.includes('/kontakt') ? 'text-green-600 dark:text-green-400' : 'text-black dark:text-white'}`}
               >
                 {dict?.contact || (lang === 'en' ? 'Contact' : 'Kontakt')}
               </Link>
@@ -888,7 +888,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                   await supabase.auth.signOut();
                   window.location.href = `/${lang}/login`;
                 }}
-                className="flex items-center gap-4 text-base font-black uppercase tracking-[0.12em] text-red-600"
+                className="flex items-center gap-4 text-base font-black uppercase tracking-[0.12em] text-red-600 dark:text-red-400"
               >
                 <LogOut size={20} /> {lang === 'cs' ? 'Odhlásit se' : 'Log out'}
               </button>
@@ -898,7 +898,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
               <Link 
                 href={`/${lang}/login`} 
                 onClick={() => setIsMenuOpen(false)}
-                className="flex items-center gap-4 text-base font-black uppercase tracking-[0.12em] text-stone-500"
+                className="flex items-center gap-4 text-base font-black uppercase tracking-[0.12em] text-stone-400 dark:text-stone-500 hover:text-black dark:hover:text-white"
               >
                 <LockIcon size={20} /> {dict?.memberLogin}
               </Link>
@@ -908,7 +908,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
               <Link 
                 href={`/${lang}/prihlaska`} 
                 onClick={() => setIsMenuOpen(false)}
-                className="bg-green-600 text-white px-6 py-5 rounded-2xl font-black text-center mt-6 shadow-xl shadow-green-600/30"
+                className="bg-green-600 text-white px-6 py-5 rounded-2xl font-black text-center mt-6 border-2 border-green-600 hover:border-green-500"
               >
                 {lang === 'cs' ? 'Přidej se k nám' : 'Join us'}
               </Link>

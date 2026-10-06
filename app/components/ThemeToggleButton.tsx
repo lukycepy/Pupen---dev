@@ -45,7 +45,7 @@ export default function ThemeToggleButton({
       onClick={toggle}
       className={
         className ||
-        'h-10 w-10 flex items-center justify-center rounded-xl bg-stone-50 text-stone-600 hover:bg-stone-100 hover:text-stone-900 transition-all border border-stone-100 shadow-sm dark:bg-stone-900 dark:text-stone-200 dark:border-stone-800 dark:hover:bg-stone-800 dark:hover:text-stone-50'
+        'h-10 w-10 flex items-center justify-center rounded-xl bg-white dark:bg-black text-black dark:text-white hover:bg-green-50 dark:hover:bg-green-950 transition-all border border-black dark:border-white'
       }
       aria-label="Přepnout režim (světlý / tmavý / systém)"
       title={title}
