@@ -75,19 +75,19 @@ export default function TabPersonalizationDialog({
     <Dialog
       open={open}
       onClose={onClose}
-      overlayClassName="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[60000] flex items-center justify-center p-6 animate-in fade-in duration-300 text-left"
-      panelClassName="bg-white w-full max-w-3xl max-h-[85vh] rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col"
+      overlayClassName="fixed inset-0 bg-black/50 dark:bg-black/70 z-[60000] flex items-center justify-center p-6 animate-in fade-in duration-300 text-left"
+      panelClassName="bg-white dark:bg-black w-full max-w-3xl max-h-[85vh] rounded-[2.5rem] border-2 border-black dark:border-white overflow-hidden flex flex-col"
     >
-      <div className="p-8 border-b border-stone-200 flex items-start justify-between gap-6">
+      <div className="p-8 border-b-2 border-black dark:border-white flex items-start justify-between gap-6">
         <div className="min-w-0">
-          <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{labels?.defaultTab || 'Personalizace'}</div>
-          <h2 className="text-xl font-black text-stone-900 truncate">{title}</h2>
+          <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500">{labels?.defaultTab || 'Personalizace'}</div>
+          <h2 className="text-xl font-black text-black dark:text-white truncate">{title}</h2>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="h-10 px-4 rounded-2xl bg-stone-100 text-stone-800 text-[10px] font-black uppercase tracking-widest hover:bg-stone-200 transition"
+            className="h-10 px-4 rounded-2xl bg-white dark:bg-black border-2 border-black dark:border-white text-black dark:text-white text-[10px] font-black uppercase tracking-widest hover:bg-green-50 dark:hover:bg-green-950 hover:text-green-600 dark:hover:text-green-500 hover:border-green-600 dark:hover:border-green-500 transition"
             disabled={saving}
           >
             {labels?.cancel || 'Zrušit'}
@@ -103,7 +103,7 @@ export default function TabPersonalizationDialog({
                 setSaving(false);
               }
             }}
-            className="h-10 px-4 rounded-2xl bg-green-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-green-700 transition disabled:opacity-50"
+            className="h-10 px-4 rounded-2xl bg-green-600 dark:bg-green-500 text-white dark:text-black border-2 border-green-700 dark:border-green-500 text-[10px] font-black uppercase tracking-widest hover:bg-green-700 dark:hover:bg-green-400 transition disabled:opacity-50"
             disabled={saving}
           >
             {labels?.save || 'Uložit'}
@@ -112,12 +112,12 @@ export default function TabPersonalizationDialog({
       </div>
 
       <div className="p-8 overflow-y-auto custom-scrollbar space-y-6">
-        <div className="bg-stone-50 border border-stone-200 rounded-[2rem] p-5">
-          <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-3">{labels?.defaultTab || 'Výchozí tab'}</div>
+        <div className="bg-green-50/30 dark:bg-green-950/30 border-2 border-black dark:border-white rounded-[2rem] p-5">
+          <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-3">{labels?.defaultTab || 'Výchozí tab'}</div>
           <select
             value={defaultTab}
             onChange={(e) => setDefaultTab(e.target.value)}
-            className="w-full bg-white border border-stone-200 rounded-2xl px-4 py-3 font-bold text-stone-700 outline-none"
+            className="w-full bg-white dark:bg-black border-2 border-black dark:border-white rounded-2xl px-4 py-3 font-bold text-black dark:text-white outline-none focus:ring-2 focus:ring-green-500"
           >
             <option value="">—</option>
             {tabs.map((t) => (
@@ -130,13 +130,13 @@ export default function TabPersonalizationDialog({
 
         {grouped.map((g) => (
           <div key={g.group} className="space-y-2">
-            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{g.group}</div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 px-1">{g.group}</div>
             <div className="grid sm:grid-cols-2 gap-2">
               {g.items.map((t) => (
-                <div key={t.id} className="bg-white border border-stone-200 rounded-[1.5rem] p-4 flex items-center justify-between gap-3">
+                <div key={t.id} className="bg-white dark:bg-black border-2 border-black dark:border-white rounded-[1.5rem] p-4 flex items-center justify-between gap-3 hover:border-green-600 dark:hover:border-green-500 transition">
                   <div className="min-w-0">
-                    <div className="font-black text-stone-900 truncate">{t.label}</div>
-                    <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 truncate">{t.id}</div>
+                    <div className="font-black text-black dark:text-white truncate">{t.label}</div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 truncate">{t.id}</div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <button
@@ -144,8 +144,8 @@ export default function TabPersonalizationDialog({
                       onClick={() => togglePinned(t.id)}
                       className={
                         isPinned(t.id)
-                          ? 'h-10 w-10 rounded-2xl bg-stone-900 text-white flex items-center justify-center'
-                          : 'h-10 w-10 rounded-2xl bg-stone-100 text-stone-700 hover:bg-stone-200 flex items-center justify-center'
+                          ? 'h-10 w-10 rounded-2xl bg-green-600 dark:bg-green-500 text-white dark:text-black flex items-center justify-center border-2 border-green-700 dark:border-green-500'
+                          : 'h-10 w-10 rounded-2xl bg-white dark:bg-black text-black dark:text-white hover:bg-green-50 dark:hover:bg-green-950 hover:text-green-600 dark:hover:text-green-500 hover:border-green-600 dark:hover:border-green-500 flex items-center justify-center border-2 border-black dark:border-white transition'
                       }
                       title={isPinned(t.id) ? 'Odepnout' : 'Připnout'}
                       aria-label={isPinned(t.id) ? 'Odepnout' : 'Připnout'}
@@ -157,8 +157,8 @@ export default function TabPersonalizationDialog({
                       onClick={() => toggleHidden(t.id)}
                       className={
                         isHidden(t.id)
-                          ? 'h-10 w-10 rounded-2xl bg-stone-900 text-white flex items-center justify-center'
-                          : 'h-10 w-10 rounded-2xl bg-stone-100 text-stone-700 hover:bg-stone-200 flex items-center justify-center'
+                          ? 'h-10 w-10 rounded-2xl bg-black dark:bg-white text-white dark:text-black flex items-center justify-center border-2 border-black dark:border-white'
+                          : 'h-10 w-10 rounded-2xl bg-white dark:bg-black text-black dark:text-white hover:bg-green-50 dark:hover:bg-green-950 hover:text-green-600 dark:hover:text-green-500 hover:border-green-600 dark:hover:border-green-500 flex items-center justify-center border-2 border-black dark:border-white transition'
                       }
                       title={isHidden(t.id) ? 'Zobrazit' : 'Skrýt'}
                       aria-label={isHidden(t.id) ? 'Zobrazit' : 'Skrýt'}

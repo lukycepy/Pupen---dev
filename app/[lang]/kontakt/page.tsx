@@ -96,12 +96,12 @@ export default function KontaktPage() {
   if (!dict) return null;
 
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-900 font-sans">
+    <div className="min-h-screen bg-white dark:bg-black text-black dark:text-white font-sans">
       {page.html ? (
         <div className="max-w-5xl mx-auto px-6 pt-24">
-          <div className="bg-white border border-stone-100 rounded-[3rem] p-10 md:p-14 shadow-sm">
-            {page.title ? <div className="text-3xl md:text-5xl font-black text-stone-900 tracking-tight mb-8">{page.title}</div> : null}
-            <div className="prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: page.html }} />
+          <div className="bg-white dark:bg-black border-2 border-black dark:border-white rounded-[3rem] p-10 md:p-14">
+            {page.title ? <div className="text-3xl md:text-5xl font-black text-black dark:text-white tracking-tight mb-8">{page.title}</div> : null}
+            <div className="prose prose-stone dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: page.html }} />
           </div>
         </div>
       ) : null}
@@ -109,10 +109,10 @@ export default function KontaktPage() {
         
         {/* Hlavní nadpis */}
         <div className="text-center mb-16">
-          <h1 className="text-4xl md:text-5xl font-extrabold text-stone-900 mb-4">
+          <h1 className="text-4xl md:text-5xl font-extrabold text-black dark:text-white mb-4">
             {dict.title}
           </h1>
-          <p className="text-lg text-stone-600 max-w-2xl mx-auto">
+          <p className="text-lg text-stone-600 dark:text-stone-400 max-w-2xl mx-auto">
             {dict.subtitle}
           </p>
         </div>
@@ -121,43 +121,43 @@ export default function KontaktPage() {
           
           {/* LEVÁ STRANA: Kontaktní karty */}
           <div className="space-y-8">
-            <div className="bg-white p-8 rounded-2xl shadow-xl shadow-stone-200/50 flex items-start gap-4 hover:-translate-y-1 transition duration-300">
-              <div className="bg-green-100 p-3 rounded-full text-green-600"><Mail size={24} /></div>
+            <div className="bg-white dark:bg-black p-8 rounded-2xl border-2 border-black dark:border-white flex items-start gap-4 hover:-translate-y-1 hover:border-green-600 dark:hover:border-green-500 transition duration-300">
+              <div className="bg-green-50 dark:bg-green-950 p-3 rounded-full border-2 border-green-600 dark:border-green-500 text-green-600 dark:text-green-500"><Mail size={24} /></div>
               <div>
-                <h3 className="text-xl font-bold mb-1">{dict.emailTitle}</h3>
-                <p className="text-stone-500 mb-2">{dict.emailSub}</p>
-                <a href={`mailto:${dictGlobal?.contactEmail || 'info@pupen.org'}`} className="text-green-600 font-semibold hover:underline">{dictGlobal?.contactEmail || 'info@pupen.org'}</a>
+                <h3 className="text-xl font-bold mb-1 text-black dark:text-white">{dict.emailTitle}</h3>
+                <p className="text-stone-500 dark:text-stone-400 mb-2">{dict.emailSub}</p>
+                <a href={`mailto:${dictGlobal?.contactEmail || 'info@pupen.org'}`} className="text-green-600 dark:text-green-500 font-semibold hover:underline">{dictGlobal?.contactEmail || 'info@pupen.org'}</a>
               </div>
             </div>
 
-            <div className="bg-white p-8 rounded-2xl shadow-xl shadow-stone-200/50 flex items-start gap-4 hover:-translate-y-1 transition duration-300">
-              <div className="bg-green-100 p-3 rounded-full text-green-600"><Instagram size={24} /></div>
+            <div className="bg-white dark:bg-black p-8 rounded-2xl border-2 border-black dark:border-white flex items-start gap-4 hover:-translate-y-1 hover:border-green-600 dark:hover:border-green-500 transition duration-300">
+              <div className="bg-green-50 dark:bg-green-950 p-3 rounded-full border-2 border-green-600 dark:border-green-500 text-green-600 dark:text-green-500"><Instagram size={24} /></div>
               <div>
-                <h3 className="text-xl font-bold mb-1">{dict.socialTitle}</h3>
-                <p className="text-stone-500 mb-2">{dict.socialSub}</p>
-                <a href="https://instagram.com/pupenfappz/" target="_blank" rel="noopener noreferrer" className="text-green-600 font-semibold hover:underline">@pupenfappz</a>
+                <h3 className="text-xl font-bold mb-1 text-black dark:text-white">{dict.socialTitle}</h3>
+                <p className="text-stone-500 dark:text-stone-400 mb-2">{dict.socialSub}</p>
+                <a href="https://instagram.com/pupenfappz/" target="_blank" rel="noopener noreferrer" className="text-green-600 dark:text-green-500 font-semibold hover:underline">@pupenfappz</a>
               </div>
             </div>
 
-            <div className="bg-white p-8 rounded-2xl shadow-xl shadow-stone-200/50 flex items-start gap-4 hover:-translate-y-1 transition duration-300">
-              <div className="bg-green-100 p-3 rounded-full text-green-600"><MapPin size={24} /></div>
+            <div className="bg-white dark:bg-black p-8 rounded-2xl border-2 border-black dark:border-white flex items-start gap-4 hover:-translate-y-1 hover:border-green-600 dark:hover:border-green-500 transition duration-300">
+              <div className="bg-green-50 dark:bg-green-950 p-3 rounded-full border-2 border-green-600 dark:border-green-500 text-green-600 dark:text-green-500"><MapPin size={24} /></div>
               <div>
-                <h3 className="text-xl font-bold mb-1">{dict.addressTitle}</h3>
-                <p className="text-stone-500 whitespace-pre-line leading-relaxed">{dict.addressText}</p>
+                <h3 className="text-xl font-bold mb-1 text-black dark:text-white">{dict.addressTitle}</h3>
+                <p className="text-stone-500 dark:text-stone-400 whitespace-pre-line leading-relaxed">{dict.addressText}</p>
               </div>
             </div>
           </div>
 
           {/* PRAVÁ STRANA: Formulář */}
-          <div className="bg-white p-8 md:p-10 rounded-3xl shadow-2xl shadow-stone-200/50">
-            <h2 className="text-2xl font-bold mb-6">{dict.formTitle}</h2>
+          <div className="bg-white dark:bg-black p-8 md:p-10 rounded-3xl border-2 border-black dark:border-white">
+            <h2 className="text-2xl font-bold mb-6 text-black dark:text-white">{dict.formTitle}</h2>
             
             {status === 'success' ? (
-              <div className="bg-green-50 p-6 rounded-xl text-center border border-green-200 animate-in fade-in zoom-in duration-300">
-                <div className="flex justify-center mb-4"><CheckCircle size={48} className="text-green-600" /></div>
-                <h3 className="text-xl font-bold text-green-800 mb-2">{dict.successTitle}</h3>
-                <p className="text-green-700">{dict.successText}</p>
-                <button onClick={() => setStatus('idle')} className="mt-4 text-sm font-bold underline hover:text-green-900 transition">{dict.sendAnother}</button>
+              <div className="bg-green-50 dark:bg-green-950 p-6 rounded-xl text-center border-2 border-green-600 dark:border-green-500 animate-in fade-in zoom-in duration-300">
+                <div className="flex justify-center mb-4"><CheckCircle size={48} className="text-green-600 dark:text-green-500" /></div>
+                <h3 className="text-xl font-bold text-green-800 dark:text-green-300 mb-2">{dict.successTitle}</h3>
+                <p className="text-green-700 dark:text-green-400">{dict.successText}</p>
+                <button onClick={() => setStatus('idle')} className="mt-4 text-sm font-bold underline hover:text-green-900 dark:hover:text-green-200 transition">{dict.sendAnother}</button>
               </div>
             ) : (
               <form className="space-y-4" onSubmit={hookFormSubmit(onSubmit)}>
@@ -165,36 +165,36 @@ export default function KontaktPage() {
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-stone-600">{dict.labelName}</label>
-                    <input {...register('name')} type="text" className="w-full bg-stone-50 border border-stone-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 transition" placeholder={dict.placeholderName} />
-                    {errors.name && <p className="text-red-500 text-xs font-bold">{errors.name.message}</p>}
+                    <label className="text-sm font-semibold text-stone-600 dark:text-stone-400">{dict.labelName}</label>
+                    <input {...register('name')} type="text" className="w-full bg-white dark:bg-black border-2 border-black dark:border-white rounded-xl px-4 py-3 text-black dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-green-500 transition" placeholder={dict.placeholderName} />
+                    {errors.name && <p className="text-red-500 dark:text-red-400 text-xs font-bold">{errors.name.message}</p>}
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-stone-600">{dict.labelEmail}</label>
-                    <input {...register('email')} type="email" className="w-full bg-stone-50 border border-stone-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 transition" placeholder="jan@example.com" />
-                    {errors.email && <p className="text-red-500 text-xs font-bold">{errors.email.message}</p>}
+                    <label className="text-sm font-semibold text-stone-600 dark:text-stone-400">{dict.labelEmail}</label>
+                    <input {...register('email')} type="email" className="w-full bg-white dark:bg-black border-2 border-black dark:border-white rounded-xl px-4 py-3 text-black dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-green-500 transition" placeholder="jan@example.com" />
+                    {errors.email && <p className="text-red-500 dark:text-red-400 text-xs font-bold">{errors.email.message}</p>}
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-stone-600">{dict.labelSubject}</label>
-                  <input {...register('subject')} type="text" className="w-full bg-stone-50 border border-stone-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 transition" placeholder={dict.placeholderSubject} />
+                  <label className="text-sm font-semibold text-stone-600 dark:text-stone-400">{dict.labelSubject}</label>
+                  <input {...register('subject')} type="text" className="w-full bg-white dark:bg-black border-2 border-black dark:border-white rounded-xl px-4 py-3 text-black dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-green-500 transition" placeholder={dict.placeholderSubject} />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-stone-600">{dict.labelMessage}</label>
-                  <textarea {...register('message')} rows={4} className="w-full bg-stone-50 border border-stone-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 transition resize-none" placeholder={dict.placeholderMessage}></textarea>
-                  {errors.message && <p className="text-red-500 text-xs font-bold">{errors.message.message}</p>}
+                  <label className="text-sm font-semibold text-stone-600 dark:text-stone-400">{dict.labelMessage}</label>
+                  <textarea {...register('message')} rows={4} className="w-full bg-white dark:bg-black border-2 border-black dark:border-white rounded-xl px-4 py-3 text-black dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-green-500 transition resize-none" placeholder={dict.placeholderMessage}></textarea>
+                  {errors.message && <p className="text-red-500 dark:text-red-400 text-xs font-bold">{errors.message.message}</p>}
                 </div>
 
                 {/* MATEMATICKÁ CAPTCHA */}
-                <div className="bg-stone-50 border border-stone-200 p-4 rounded-xl mt-4">
+                <div className="bg-green-50/30 dark:bg-green-950/30 border-2 border-black dark:border-white p-4 rounded-xl mt-4">
                     <div className="flex items-center gap-2 mb-2">
-                      <ShieldCheck size={18} className="text-green-600" />
-                      <label className="text-sm font-bold text-stone-700">{dict.captchaLabel}</label>
+                      <ShieldCheck size={18} className="text-green-600 dark:text-green-500" />
+                      <label className="text-sm font-bold text-black dark:text-white">{dict.captchaLabel}</label>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="font-bold text-lg text-stone-900 bg-white px-3 py-1 rounded border border-stone-200">
+                      <span className="font-bold text-lg text-black dark:text-white bg-white dark:bg-black px-3 py-1 rounded-xl border-2 border-black dark:border-white">
                         {captcha.num1} + {captcha.num2} = ?
                       </span>
                       <input 
@@ -202,14 +202,14 @@ export default function KontaktPage() {
                         required
                         value={captcha.userAnswer}
                         onChange={(e) => setCaptcha({...captcha, userAnswer: e.target.value})}
-                        className="w-20 bg-white border border-stone-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 font-bold text-center"
+                        className="w-20 bg-white dark:bg-black border-2 border-black dark:border-white rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 font-bold text-center text-black dark:text-white"
                         placeholder="?"
                       />
                     </div>
                 </div>
 
                 {status === 'error' && (
-                  <div className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-lg text-sm font-bold border border-red-100">
+                  <div className="flex items-center gap-2 text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950 p-3 rounded-xl text-sm font-bold border-2 border-red-600 dark:border-red-500">
                     <AlertCircle size={18} /> {errorMessage || dict.errorText}
                   </div>
                 )}
@@ -217,7 +217,7 @@ export default function KontaktPage() {
                 <button 
                   type="submit" 
                   disabled={loading} 
-                  className="w-full bg-green-600 text-white font-bold py-4 rounded-xl hover:bg-green-700 transition flex items-center justify-center gap-2 mt-4 shadow-lg shadow-green-600/20 disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="w-full bg-green-600 text-white font-bold py-4 rounded-xl hover:bg-green-700 dark:hover:bg-green-500 transition flex items-center justify-center gap-2 mt-4 border-2 border-green-700 dark:border-green-500 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                    <Send size={18} />
                   {loading ? dict.btnSending : dict.btnSend}

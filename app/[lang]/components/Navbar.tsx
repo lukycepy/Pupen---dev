@@ -547,16 +547,16 @@ export default function Navbar({ lang, dict }: NavbarProps) {
             </div>
 
             {/* PŘEPÍNAČ JAZYKA */}
-            <div className="flex items-center gap-1 bg-white dark:bg-black p-1 rounded-xl border border-black dark:border-white">
+            <div className="flex items-center gap-1 bg-black text-white p-1 rounded-xl border-2 border-black dark:bg-white dark:text-black dark:border-white">
               <Link 
                 href={getTransliteratedPath('cs')}
-                className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black transition-all ${lang === 'cs' ? 'bg-green-600 text-white' : 'text-stone-400 hover:text-black dark:hover:text-white'}`}
+                className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black transition-all ${lang === 'cs' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : 'text-stone-400 dark:text-stone-500 hover:text-white dark:hover:text-black'}`}
               >
                 CZ
               </Link>
               <Link 
                 href={getTransliteratedPath('en')}
-                className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black transition-all ${lang === 'en' ? 'bg-green-600 text-white' : 'text-stone-400 hover:text-black dark:hover:text-white'}`}
+                className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black transition-all ${lang === 'en' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : 'text-stone-400 dark:text-stone-500 hover:text-white dark:hover:text-black'}`}
               >
                 EN
               </Link>
@@ -581,7 +581,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                 }}
                 aria-haspopup="menu"
                 aria-expanded={isUserMenuOpen}
-                className="px-3 py-2.5 bg-white dark:bg-black text-black dark:text-white rounded-xl hover:bg-green-50 dark:hover:bg-green-950 hover:text-black dark:hover:text-white transition-all border border-black dark:border-white inline-flex items-center gap-1.5"
+                className="px-3 py-2.5 bg-black text-white rounded-xl hover:bg-green-600 hover:text-white hover:border-green-600 transition-all border-2 border-black dark:bg-white dark:text-black dark:border-white dark:hover:bg-green-500 dark:hover:text-black dark:hover:border-green-500 inline-flex items-center gap-1.5"
                 title={userProfile ? (lang === 'cs' ? 'Účet' : 'Account') : (dict?.memberLogin || 'Login')}
               >
                 {userProfile ? (

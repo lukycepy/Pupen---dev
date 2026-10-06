@@ -32,26 +32,26 @@ export default function ConfirmModal({
   if (!isOpen) return null;
 
   const colors = {
-    danger: 'bg-red-600 hover:bg-red-700 text-white shadow-red-900/20',
-    warning: 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-900/20',
-    info: 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-900/20'
+    danger: 'bg-red-600 hover:bg-red-700 text-white border-2 border-red-700 dark:border-red-500',
+    warning: 'bg-amber-500 hover:bg-amber-600 text-white border-2 border-amber-600 dark:border-amber-400',
+    info: 'bg-blue-600 hover:bg-blue-700 text-white border-2 border-blue-700 dark:border-blue-500'
   };
 
   const iconColors = {
-    danger: 'text-red-600 bg-red-50',
-    warning: 'text-amber-500 bg-amber-50',
-    info: 'text-blue-600 bg-blue-50'
+    danger: 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950 border-2 border-red-600/20 dark:border-red-400/20',
+    warning: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950 border-2 border-amber-600/20 dark:border-amber-400/20',
+    info: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950 border-2 border-blue-600/20 dark:border-blue-400/20'
   };
 
   return (
     <Portal>
       <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6">
-        <div className="absolute inset-0 bg-stone-900/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose} />
+        <div className="absolute inset-0 bg-black/50 dark:bg-black/70 animate-in fade-in duration-300" onClick={onClose} />
 
         <div
           ref={panelRef}
           tabIndex={-1}
-          className="relative w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl border border-stone-100 overflow-hidden animate-in zoom-in slide-in-from-bottom-8 duration-300"
+          className="relative w-full max-w-md bg-white dark:bg-black rounded-[2.5rem] border-2 border-black dark:border-white overflow-hidden animate-in zoom-in slide-in-from-bottom-8 duration-300"
           role="dialog"
           aria-modal="true"
           aria-labelledby="modal-title"
@@ -64,17 +64,17 @@ export default function ConfirmModal({
               </div>
               <button
                 onClick={onClose}
-                className="p-2 text-stone-300 hover:text-stone-500 hover:bg-stone-50 rounded-xl transition focus:ring-2 focus:ring-stone-500 focus:outline-none"
+                className="p-2 bg-white dark:bg-black border-2 border-black dark:border-white text-black dark:text-white hover:bg-green-50 dark:hover:bg-green-950 hover:text-green-600 dark:hover:text-green-500 hover:border-green-600 dark:hover:border-green-500 rounded-xl transition focus:ring-2 focus:ring-green-500 focus:outline-none"
                 aria-label="Zavřít"
               >
                 <X size={20} />
               </button>
             </div>
 
-            <h3 id="modal-title" className="text-2xl font-black text-stone-900 mb-3 tracking-tight">
+            <h3 id="modal-title" className="text-2xl font-black text-black dark:text-white mb-3 tracking-tight">
               {title}
             </h3>
-            <p id="modal-desc" className="text-stone-500 font-medium leading-relaxed mb-8">
+            <p id="modal-desc" className="text-stone-500 dark:text-stone-400 font-medium leading-relaxed mb-8">
               {message}
             </p>
 
@@ -84,13 +84,13 @@ export default function ConfirmModal({
                   onConfirm();
                   onClose();
                 }}
-                className={`flex-grow py-4 px-6 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-lg hover:scale-[1.02] active:scale-[0.98] focus:ring-2 focus:ring-offset-2 focus:outline-none ${colors[variant]}`}
+                className={`flex-grow py-4 px-6 rounded-2xl font-black uppercase tracking-widest text-xs transition-all hover:scale-[1.02] active:scale-[0.98] focus:ring-2 focus:ring-offset-2 focus:outline-none ${colors[variant]}`}
               >
                 {confirmLabel}
               </button>
               <button
                 onClick={onClose}
-                className="flex-grow py-4 px-6 rounded-2xl font-black uppercase tracking-widest text-xs bg-stone-100 text-stone-500 hover:bg-stone-200 transition-all hover:scale-[1.02] active:scale-[0.98] focus:ring-2 focus:ring-stone-500 focus:outline-none"
+                className="flex-grow py-4 px-6 rounded-2xl font-black uppercase tracking-widest text-xs bg-white dark:bg-black text-black dark:text-white hover:bg-green-50 dark:hover:bg-green-950 hover:text-green-600 dark:hover:text-green-500 border-2 border-black dark:border-white hover:border-green-600 dark:hover:border-green-500 transition-all hover:scale-[1.02] active:scale-[0.98] focus:ring-2 focus:ring-green-500 focus:outline-none"
               >
                 {cancelLabel}
               </button>

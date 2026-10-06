@@ -816,7 +816,7 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {futureEvents.length === 0 ? (
-              <div className="col-span-full py-20 text-center text-stone-400 font-bold uppercase tracking-widest bg-white rounded-[3rem] border border-dashed border-stone-200">
+              <div className="col-span-full py-20 text-center text-stone-400 dark:text-stone-500 font-bold uppercase tracking-widest bg-white dark:bg-black rounded-[3rem] border-2 border-dashed border-black dark:border-white">
                 {dict.noEvents}
               </div>
             ) : (
@@ -824,14 +824,14 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
                 <div
                   id={`event-${event.id}`}
                   key={event.id}
-                  className="bg-white rounded-[2rem] sm:rounded-[3rem] overflow-hidden shadow-xl border border-stone-100 group hover:shadow-2xl transition-all duration-500 flex flex-col h-full cursor-pointer"
+                  className="bg-white dark:bg-black rounded-[2rem] sm:rounded-[3rem] overflow-hidden border-2 border-black dark:border-white group transition-all duration-500 flex flex-col h-full cursor-pointer"
                   onClick={(e) => {
                     const target = e.target as HTMLElement | null;
                     if (target?.closest('button, a, input, textarea, select, label')) return;
                     router.push(`/${lang}/akce/${event.id}`);
                   }}
                 >
-                  <div className="aspect-video relative overflow-hidden shrink-0">
+                  <div className="aspect-video relative overflow-hidden shrink-0 border-b-2 border-black dark:border-white">
                     {isSafeImageSrc(String(event.image_url ?? '')) ? (
                       String(event.image_url).startsWith('http') ? (
                       <Image
@@ -854,54 +854,54 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
                       />
                       )
                     ) : null}
-                    <div className="absolute top-4 left-4 sm:top-6 sm:left-6 px-3 py-1.5 sm:px-4 sm:py-2 bg-white/90 backdrop-blur rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-green-600">
+                    <div className="absolute top-4 left-4 sm:top-6 sm:left-6 px-3 py-1.5 sm:px-4 sm:py-2 bg-white dark:bg-black border-2 border-black dark:border-white rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-green-600 dark:text-green-400">
                       {dict.categories[event.category] || event.category}
                     </div>
                     {event.is_member_only ? (
-                      <div className="absolute top-4 right-4 sm:top-6 sm:right-6 px-3 py-1.5 sm:px-4 sm:py-2 bg-stone-900/80 backdrop-blur rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-white">
+                      <div className="absolute top-4 right-4 sm:top-6 sm:right-6 px-3 py-1.5 sm:px-4 sm:py-2 bg-black dark:bg-white border-2 border-black dark:border-white rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-white dark:text-black">
                         {lang === 'en' ? 'Members' : 'Členské'}
                       </div>
                     ) : null}
                     <Link href={`/${lang}/akce/${event.id}`} className="absolute inset-0" aria-label="Detail" />
                   </div>
                   <div className="p-6 sm:p-8 md:p-10 flex flex-col flex-grow">
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-stone-400 text-[9px] sm:text-[10px] font-black uppercase tracking-widest mb-4 sm:mb-6">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-stone-400 dark:text-stone-500 text-[9px] sm:text-[10px] font-black uppercase tracking-widest mb-4 sm:mb-6">
                       <div className="flex items-center gap-2"><Calendar size={14} className="shrink-0" /> {new Date(event.date).toLocaleDateString(lang === 'cs' ? 'cs-CZ' : 'en-US')}</div>
                       {event.time && <div className="flex items-center gap-2"><Clock size={14} className="shrink-0" /> {event.time}</div>}
                       {event.capacity && (
-                        <div className={`flex items-center gap-2 ${event.is_full ? 'text-amber-600' : 'text-stone-400'}`}>
+                        <div className={`flex items-center gap-2 ${event.is_full ? 'text-amber-600 dark:text-amber-400' : 'text-stone-400 dark:text-stone-500'}`}>
                           <Users size={14} className="shrink-0" /> {event.confirmed_count}/{event.capacity}
                         </div>
                       )}
                     </div>
-                    <h3 className="text-xl sm:text-2xl font-black text-stone-900 mb-3 sm:mb-4 group-hover:text-green-600 transition line-clamp-2 leading-tight">{lang === 'en' && event.title_en ? event.title_en : event.title}</h3>
-                    <p className="text-stone-500 text-xs sm:text-sm mb-6 sm:mb-8 line-clamp-3 leading-relaxed flex-grow">{getEventExcerpt(event, lang)}</p>
+                    <h3 className="text-xl sm:text-2xl font-black text-black dark:text-white mb-3 sm:mb-4 group-hover:text-green-600 dark:group-hover:text-green-400 transition line-clamp-2 leading-tight">{lang === 'en' && event.title_en ? event.title_en : event.title}</h3>
+                    <p className="text-stone-500 dark:text-stone-400 text-xs sm:text-sm mb-6 sm:mb-8 line-clamp-3 leading-relaxed flex-grow">{getEventExcerpt(event, lang)}</p>
                     
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between pt-6 sm:pt-8 border-t border-stone-50 gap-4 mt-auto">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between pt-6 sm:pt-8 border-t-2 border-black/20 dark:border-white/20 gap-4 mt-auto">
                       {event.capacity && event.capacity > 0 ? (
                         <button 
                           onClick={() => setRsvpOpen(event.id)} 
                           disabled={event.ticket_sale_end && new Date(event.ticket_sale_end) < new Date()}
-                          className={`${event.is_full ? 'text-amber-600' : 'text-green-600'} font-black uppercase tracking-widest text-[9px] sm:text-[10px] hover:translate-x-1 transition-transform flex items-center justify-center sm:justify-start gap-2 py-2 sm:py-0 disabled:opacity-50`}
+                          className={`${event.is_full ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-400'} font-black uppercase tracking-widest text-[9px] sm:text-[10px] hover:translate-x-1 transition-transform flex items-center justify-center sm:justify-start gap-2 py-2 sm:py-0 disabled:opacity-50`}
                         >
                           {event.ticket_sale_end && new Date(event.ticket_sale_end) < new Date() 
                             ? (lang === 'cs' ? 'Prodej ukončen' : 'Sale ended')
                             : event.is_full ? (lang === 'cs' ? 'Přidat se na čekací listinu' : 'Join waitlist') : dict.rsvpBtn} <ArrowRight size={14} />
                         </button>
                       ) : (
-                        <div className="text-stone-300 font-black uppercase tracking-widest text-[9px] sm:text-[10px] py-2 sm:py-0">
+                        <div className="text-stone-300 dark:text-stone-600 font-black uppercase tracking-widest text-[9px] sm:text-[10px] py-2 sm:py-0">
                           {lang === 'cs' ? 'Vstup zdarma' : 'Free entry'}
                         </div>
                       )}
                       <div className="flex justify-center sm:justify-end gap-2">
-                        <button onClick={() => addToCalendar(event)} className="p-2.5 sm:p-3 bg-stone-50 text-stone-400 rounded-lg sm:rounded-xl hover:bg-green-50 hover:text-green-600 transition flex-1 sm:flex-none flex justify-center"><Calendar size={18} /></button>
+                        <button onClick={() => addToCalendar(event)} className="p-2.5 sm:p-3 bg-white dark:bg-black border-2 border-black dark:border-white text-black dark:text-white rounded-lg sm:rounded-xl hover:bg-green-50 dark:hover:bg-green-950 hover:text-green-600 dark:hover:text-green-400 transition flex-1 sm:flex-none flex justify-center"><Calendar size={18} /></button>
                         <SocialShareMenu
                           title={lang === 'en' && event.title_en ? event.title_en : event.title}
                           url={buildEventShareUrl(event.id)}
                         />
                         <Link
                           href={`/${lang}/akce/${event.id}`}
-                          className="p-2.5 sm:p-3 bg-stone-50 text-stone-400 rounded-lg sm:rounded-xl hover:bg-green-50 hover:text-green-600 transition flex-1 sm:flex-none flex justify-center"
+                          className="p-2.5 sm:p-3 bg-white dark:bg-black border-2 border-black dark:border-white text-black dark:text-white rounded-lg sm:rounded-xl hover:bg-green-50 dark:hover:bg-green-950 hover:text-green-600 dark:hover:text-green-400 transition flex-1 sm:flex-none flex justify-center"
                           aria-label="Detail"
                         >
                           <ArrowRight size={18} />
@@ -919,15 +919,15 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
           <Dialog
             open={!!rsvpOpen}
             onClose={() => setRsvpOpen(null)}
-            overlayClassName="fixed inset-0 z-[10001] bg-stone-900/40 backdrop-blur-sm flex items-center justify-center p-6 overflow-y-auto"
-            panelClassName="bg-white w-full max-w-lg rounded-[2.5rem] p-10 shadow-2xl animate-in zoom-in-95 duration-300 my-8"
+            overlayClassName="fixed inset-0 z-[10001] bg-black/50 dark:bg-black/70 flex items-center justify-center p-6 overflow-y-auto"
+            panelClassName="bg-white dark:bg-black w-full max-w-lg rounded-[2.5rem] p-10 border-2 border-black dark:border-white animate-in zoom-in-95 duration-300 my-8"
           >
               {rsvpView === 'success' && rsvpResult ? (
                 <div>
-                  <h3 className="text-2xl font-black text-stone-900 mb-2">
+                  <h3 className="text-2xl font-black text-black dark:text-white mb-2">
                     {lang === 'en' ? 'Registration created' : 'Registrace vytvořena'}
                   </h3>
-                  <p className="text-stone-500 mb-8 font-medium">
+                  <p className="text-stone-500 dark:text-stone-400 mb-8 font-medium">
                     {rsvpResult.status === 'waitlist'
                       ? (lang === 'en'
                           ? 'You are on the waitlist.'
@@ -941,22 +941,22 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
                             : 'Jste registrovaný/á.')}
                   </p>
 
-                  <div className="bg-stone-50 border border-stone-100 rounded-2xl p-6 space-y-4">
+                  <div className="bg-green-50 dark:bg-green-950 border-2 border-green-600 dark:border-green-400 rounded-2xl p-6 space-y-4">
                     <div className="flex items-center justify-between gap-4">
                       <div>
-                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">
+                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-1">
                           {lang === 'en' ? 'Status' : 'Stav'}
                         </div>
-                        <div className="font-black text-stone-900">
+                        <div className="font-black text-black dark:text-white">
                           {String((dict?.rsvpStatus && (dict.rsvpStatus as any)[String(rsvpResult.status)]) || rsvpResult.status)}
                         </div>
                       </div>
                       {rsvpResult.expiresAt && (
                         <div className="text-right">
-                          <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">
+                          <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-1">
                             {lang === 'en' ? 'Valid until' : 'Platí do'}
                           </div>
-                          <div className="font-bold text-stone-700">
+                          <div className="font-bold text-black dark:text-white">
                             {new Date(rsvpResult.expiresAt).toLocaleString(lang === 'en' ? 'en-US' : 'cs-CZ')}
                           </div>
                         </div>
@@ -964,11 +964,11 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
                     </div>
 
                     {typeof rsvpResult.priceTotal === 'number' && rsvpResult.priceTotal > 0 ? (
-                      <div className="bg-white border border-stone-100 rounded-2xl p-4">
-                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">
+                      <div className="bg-white dark:bg-black border-2 border-black dark:border-white rounded-2xl p-4">
+                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-1">
                           {lang === 'en' ? 'Total price' : 'Celková cena'}
                         </div>
-                        <div className="font-black text-stone-900">
+                        <div className="font-black text-black dark:text-white">
                           {rsvpResult.priceTotal.toFixed(2)} CZK
                           {(lang === 'en' ? rsvpResult.pricingLabelEn : rsvpResult.pricingLabel) ? ` • ${lang === 'en' ? rsvpResult.pricingLabelEn : rsvpResult.pricingLabel}` : ''}
                         </div>
@@ -976,24 +976,24 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
                     ) : null}
 
                     {rsvpResult.variableSymbol ? (
-                      <div className="bg-white border border-stone-100 rounded-2xl p-4">
-                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">
+                      <div className="bg-white dark:bg-black border-2 border-black dark:border-white rounded-2xl p-4">
+                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-2">
                           {lang === 'en' ? 'Variable symbol' : 'Variabilní symbol'}
                         </div>
                         <div className="flex items-center justify-between gap-3">
-                          <div className="font-black tracking-widest text-stone-900 truncate">{rsvpResult.variableSymbol}</div>
-                          <CopyButton value={rsvpResult.variableSymbol} className="border-stone-200 bg-white text-stone-700 hover:bg-stone-50" />
+                          <div className="font-black tracking-widest text-black dark:text-white truncate">{rsvpResult.variableSymbol}</div>
+                          <CopyButton value={rsvpResult.variableSymbol} className="border-2 border-black dark:border-white bg-white dark:bg-black text-black dark:text-white hover:bg-green-50 dark:hover:bg-green-950" />
                         </div>
                       </div>
                     ) : null}
 
-                    <div className="bg-white border border-stone-100 rounded-2xl p-4">
-                      <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">
+                    <div className="bg-white dark:bg-black border-2 border-black dark:border-white rounded-2xl p-4">
+                      <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-2">
                         QR Token
                       </div>
                       <div className="flex items-center justify-between gap-3">
-                        <div className="font-black tracking-widest text-stone-900 truncate">{rsvpResult.qrToken}</div>
-                        <CopyButton value={rsvpResult.qrToken} className="border-stone-200 bg-white text-stone-700 hover:bg-stone-50" />
+                        <div className="font-black tracking-widest text-black dark:text-white truncate">{rsvpResult.qrToken}</div>
+                        <CopyButton value={rsvpResult.qrToken} className="border-2 border-black dark:border-white bg-white dark:bg-black text-black dark:text-white hover:bg-green-50 dark:hover:bg-green-950" />
                       </div>
                     </div>
                   </div>
@@ -1003,7 +1003,7 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
                       type="button"
                       onClick={cancelRsvp}
                       disabled={rsvpCancelLoading || rsvpLoading === rsvpOpen}
-                      className="w-full bg-white border border-stone-200 text-stone-700 py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-stone-50 transition disabled:opacity-50"
+                      className="w-full bg-white dark:bg-black border-2 border-black dark:border-white text-black dark:text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-green-50 dark:hover:bg-green-950 transition disabled:opacity-50"
                     >
                       {rsvpCancelLoading ? <InlinePulse className="bg-stone-400/70" size={14} /> : null}
                       {lang === 'en' ? 'Cancel registration' : 'Zrušit registraci'}
@@ -1016,7 +1016,7 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
                         setRsvpResult(null);
                         setRsvpForm(EMPTY_RSVP_FORM);
                       }}
-                      className="w-full bg-green-600 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-green-100 outline-none focus:ring-2 focus:ring-green-500"
+                      className="w-full bg-green-600 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 border-2 border-green-600 hover:border-green-700 hover:bg-green-700 transition outline-none focus:ring-2 focus:ring-green-500"
                     >
                       {lang === 'en' ? 'Done' : 'Hotovo'}
                     </button>
@@ -1024,13 +1024,13 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
                 </div>
               ) : (
                 <div>
-                  <h3 className="text-2xl font-black text-stone-900 mb-2">{dict.rsvpTitle}</h3>
-                  <p className="text-stone-500 mb-8 font-medium">{dict.rsvpSub || (lang === 'cs' ? 'Zadej údaje pro rezervaci vstupenek.' : 'Enter details for ticket reservation.')}</p>
+                  <h3 className="text-2xl font-black text-black dark:text-white mb-2">{dict.rsvpTitle}</h3>
+                  <p className="text-stone-500 dark:text-stone-400 mb-8 font-medium">{dict.rsvpSub || (lang === 'cs' ? 'Zadej údaje pro rezervaci vstupenek.' : 'Enter details for ticket reservation.')}</p>
                   
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Kontaktní jméno</label>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 px-1">Kontaktní jméno</label>
                         <input 
                           type="text"
                           required
@@ -1038,11 +1038,11 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
                           placeholder={globalDict?.contactPage?.labelName || (lang === 'cs' ? 'Jméno' : 'Name')} 
                           value={rsvpForm.name} 
                           onChange={e => setRsvpFormWithDraft({ ...rsvpForm, name: e.target.value }, rsvpOpen)} 
-                          className="w-full bg-stone-50 border-none rounded-xl px-6 py-4 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500"
+                          className="w-full bg-white dark:bg-black border-2 border-black dark:border-white rounded-xl px-6 py-4 font-bold text-black dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 outline-none focus:ring-2 focus:ring-green-500"
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Kontaktní e‑mail</label>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 px-1">Kontaktní e‑mail</label>
                         <input 
                           type="email"
                           required
@@ -1050,7 +1050,7 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
                           placeholder="Email" 
                           value={rsvpForm.email} 
                           onChange={e => setRsvpFormWithDraft({ ...rsvpForm, email: e.target.value }, rsvpOpen)} 
-                          className="w-full bg-stone-50 border-none rounded-xl px-6 py-4 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500"
+                          className="w-full bg-white dark:bg-black border-2 border-black dark:border-white rounded-xl px-6 py-4 font-bold text-black dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 outline-none focus:ring-2 focus:ring-green-500"
                         />
                       </div>
                     </div>
@@ -1058,13 +1058,13 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
                     <div className="space-y-4">
                       <div className="grid grid-cols-1 gap-4">
                         <div className="space-y-1">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 px-1">
                             {lang === 'en' ? 'Tickets (max 3)' : 'Počet vstupenek (max 3)'}
                           </label>
                           <select
                             value={Number(rsvpForm.attendeesCount || 1)}
                             onChange={(e) => setAttendeesCount(Number(e.target.value))}
-                            className="w-full bg-stone-50 border-none rounded-xl px-6 py-4 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500"
+                            className="w-full bg-white dark:bg-black border-2 border-black dark:border-white rounded-xl px-6 py-4 font-bold text-black dark:text-white outline-none focus:ring-2 focus:ring-green-500"
                           >
                             <option value={1}>1</option>
                             <option value={2}>2</option>
@@ -1073,33 +1073,33 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
                         </div>
                       </div>
                       {rsvpEventConfig && (
-                        <div className="rounded-2xl border border-stone-100 bg-stone-50 px-5 py-4 space-y-2">
+                        <div className="rounded-2xl border-2 border-green-600 dark:border-green-400 bg-green-50 dark:bg-green-950 px-5 py-4 space-y-2">
                           {activePriceRule ? (
                             <div className="flex items-center justify-between gap-4 text-sm">
                               <div>
-                                <div className="font-black text-stone-900">
+                                <div className="font-black text-black dark:text-white">
                                   {lang === 'en'
                                     ? activePriceRule.label_en || activePriceRule.label
                                     : activePriceRule.label}
                                 </div>
-                                <div className="text-xs font-bold text-stone-500">
+                                <div className="text-xs font-bold text-stone-500 dark:text-stone-400">
                                   {Number(activePriceRule.amount_czk || 0).toFixed(2)} CZK / {lang === 'en' ? 'person' : 'osoba'}
                                 </div>
                               </div>
                               <div className="text-right">
-                                <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">
+                                <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500">
                                   {lang === 'en' ? 'Estimated total' : 'Odhad ceny'}
                                 </div>
-                                <div className="font-black text-stone-900">{estimatedPrice.toFixed(2)} CZK</div>
+                                <div className="font-black text-black dark:text-white">{estimatedPrice.toFixed(2)} CZK</div>
                               </div>
                             </div>
                           ) : (
-                            <div className="text-sm font-bold text-stone-600">
+                            <div className="text-sm font-bold text-black dark:text-white">
                               {lang === 'en' ? 'Registration is currently free.' : 'Registrace je aktuálně bez poplatku.'}
                             </div>
                           )}
                           {(rsvpEventConfig.minAge != null || rsvpEventConfig.maxAge != null) && (
-                            <div className="text-xs font-bold text-amber-700">
+                            <div className="text-xs font-bold text-amber-700 dark:text-amber-400">
                               {lang === 'en'
                                 ? `Age limit: ${rsvpEventConfig.minAge != null ? `${rsvpEventConfig.minAge}+` : ''}${rsvpEventConfig.minAge != null && rsvpEventConfig.maxAge != null ? ' / ' : ''}${rsvpEventConfig.maxAge != null ? `up to ${rsvpEventConfig.maxAge}` : ''}`
                                 : `Věkové omezení: ${rsvpEventConfig.minAge != null ? `${rsvpEventConfig.minAge}+ let` : ''}${rsvpEventConfig.minAge != null && rsvpEventConfig.maxAge != null ? ' / ' : ''}${rsvpEventConfig.maxAge != null ? `max. ${rsvpEventConfig.maxAge} let` : ''}`}
@@ -1109,7 +1109,7 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
                       )}
                       {Number(rsvpForm.attendeesCount || 1) > 1 ? (
                         <div className="space-y-2">
-                          <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">
+                          <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 px-1">
                             {lang === 'en' ? 'Additional attendees (optional)' : 'Další účastníci (volitelné)'}
                           </div>
                           {Array.from({ length: Math.max(0, Number(rsvpForm.attendeesCount || 1) - 1) }).map((_, i) => (
@@ -1119,14 +1119,14 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
                               placeholder={lang === 'en' ? `Attendee ${i + 2}` : `Účastník ${i + 2}`}
                               value={String(rsvpForm.attendees?.[i + 1]?.name || '')}
                               onChange={(e) => updateAttendee(i + 1, { name: e.target.value })}
-                              className="w-full bg-stone-50 border-none rounded-xl px-6 py-3 font-bold text-sm text-stone-700 outline-none focus:ring-2 focus:ring-green-500"
+                              className="w-full bg-white dark:bg-black border-2 border-black dark:border-white rounded-xl px-6 py-3 font-bold text-sm text-black dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 outline-none focus:ring-2 focus:ring-green-500"
                             />
                           ))}
                         </div>
                       ) : null}
                       {(rsvpEventConfig?.minAge != null || rsvpEventConfig?.maxAge != null) && (
                         <div className="space-y-2">
-                          <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">
+                          <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 px-1">
                             {lang === 'en' ? 'Date of birth for attendees' : 'Datum narození účastníků'}
                           </div>
                           {Array.from({ length: Math.max(1, Number(rsvpForm.attendeesCount || 1)) }).map((_, i) => (
@@ -1135,7 +1135,7 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
                               type="date"
                               value={String(rsvpForm.attendees?.[i]?.birth_date || '')}
                               onChange={(e) => updateAttendee(i, { birth_date: e.target.value || null })}
-                              className="w-full bg-stone-50 border-none rounded-xl px-6 py-3 font-bold text-sm text-stone-700 outline-none focus:ring-2 focus:ring-green-500"
+                              className="w-full bg-white dark:bg-black border-2 border-black dark:border-white rounded-xl px-6 py-3 font-bold text-sm text-black dark:text-white outline-none focus:ring-2 focus:ring-green-500"
                             />
                           ))}
                         </div>
@@ -1143,39 +1143,39 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{lang === 'en' ? 'Payment method' : 'Způsob platby'}</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 px-1">{lang === 'en' ? 'Payment method' : 'Způsob platby'}</label>
                       <div className="grid grid-cols-2 gap-3">
                         <button 
                           type="button"
                           onClick={() => setRsvpFormWithDraft({ ...rsvpForm, payment_method: 'hotove' }, rsvpOpen)}
-                          className={`py-3 px-4 rounded-xl font-bold text-sm border-2 transition outline-none focus:ring-2 focus:ring-green-500 ${rsvpForm.payment_method === 'hotove' ? 'bg-green-50 border-green-600 text-green-700' : 'bg-white border-stone-100 text-stone-400'}`}
+                          className={`py-3 px-4 rounded-xl font-bold text-sm border-2 transition outline-none focus:ring-2 focus:ring-green-500 ${rsvpForm.payment_method === 'hotove' ? 'bg-green-50 dark:bg-green-950 border-green-600 dark:border-green-400 text-green-700 dark:text-green-400' : 'bg-white dark:bg-black border-black dark:border-white text-black dark:text-white hover:bg-green-50 dark:hover:bg-green-950'}`}
                         >
                           {lang === 'en' ? 'Cash on site' : 'Hotově na místě'}
                         </button>
                         <button 
                           type="button"
                           onClick={() => setRsvpFormWithDraft({ ...rsvpForm, payment_method: 'prevod' }, rsvpOpen)}
-                          className={`py-3 px-4 rounded-xl font-bold text-sm border-2 transition outline-none focus:ring-2 focus:ring-green-500 ${rsvpForm.payment_method === 'prevod' ? 'bg-green-50 border-green-600 text-green-700' : 'bg-white border-stone-100 text-stone-400'}`}
+                          className={`py-3 px-4 rounded-xl font-bold text-sm border-2 transition outline-none focus:ring-2 focus:ring-green-500 ${rsvpForm.payment_method === 'prevod' ? 'bg-green-50 dark:bg-green-950 border-green-600 dark:border-green-400 text-green-700 dark:text-green-400' : 'bg-white dark:bg-black border-black dark:border-white text-black dark:text-white hover:bg-green-50 dark:hover:bg-green-950'}`}
                         >
                           {lang === 'en' ? 'Bank transfer (QR)' : 'Převodem (QR kód)'}
                         </button>
                       </div>
                       {rsvpForm.payment_method === 'prevod' && (
-                        <p className="text-[10px] text-amber-600 font-bold italic px-1">
+                        <p className="text-[10px] text-amber-700 dark:text-amber-400 font-bold italic px-1">
                           * {lang === 'en' ? 'For bank transfer, the reservation is valid for 24 hours.' : 'Rezervace při platbě převodem platí 24 hodin od vytvoření.'}
                         </p>
                       )}
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 px-1">
                         {lang === 'en' ? 'Promo code (optional)' : 'Promo kód (volitelné)'}
                       </label>
                       <input
                         type="text"
                         value={(rsvpForm as any).promo_code || ''}
                         onChange={(e) => setRsvpFormWithDraft({ ...(rsvpForm as any), promo_code: e.target.value }, rsvpOpen)}
-                        className="w-full bg-stone-50 border-none rounded-xl px-6 py-4 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500"
+                        className="w-full bg-white dark:bg-black border-2 border-black dark:border-white rounded-xl px-6 py-4 font-bold text-black dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 outline-none focus:ring-2 focus:ring-green-500"
                         placeholder={lang === 'en' ? 'e.g. PUPEN2026' : 'např. PUPEN2026'}
                       />
                     </div>
@@ -1188,7 +1188,7 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
 
                       return (
                         <div key={field.field_key} className="space-y-1">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 px-1">
                             {fieldLabel}
                             {field.is_required ? ' *' : ''}
                           </label>
@@ -1198,10 +1198,10 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
                               value={typeof value === 'string' ? value : ''}
                               onChange={(e) => updateFormAnswer(field.field_key, e.target.value)}
                               placeholder={fieldPlaceholder || ''}
-                              className="w-full bg-stone-50 border-none rounded-xl px-6 py-4 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 resize-y"
+                              className="w-full bg-white dark:bg-black border-2 border-black dark:border-white rounded-xl px-6 py-4 font-bold text-black dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 outline-none focus:ring-2 focus:ring-green-500 resize-y"
                             />
                           ) : field.field_type === 'checkbox' ? (
-                            <label className="flex items-start gap-3 bg-stone-50 border border-stone-100 rounded-2xl px-5 py-4">
+                            <label className="flex items-start gap-3 bg-white dark:bg-black border-2 border-black dark:border-white rounded-2xl px-5 py-4">
                               <input
                                 type="checkbox"
                                 checked={value === true}
@@ -1209,15 +1209,15 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
                                 className="mt-1"
                               />
                               <div className="min-w-0">
-                                <div className="font-black text-stone-900 text-sm">{fieldLabel}</div>
-                                {helperText ? <div className="text-xs font-bold text-stone-500">{helperText}</div> : null}
+                                <div className="font-black text-black dark:text-white text-sm">{fieldLabel}</div>
+                                {helperText ? <div className="text-xs font-bold text-stone-500 dark:text-stone-400">{helperText}</div> : null}
                               </div>
                             </label>
                           ) : field.field_type === 'select' ? (
                             <select
                               value={typeof value === 'string' ? value : ''}
                               onChange={(e) => updateFormAnswer(field.field_key, e.target.value)}
-                              className="w-full bg-stone-50 border-none rounded-xl px-6 py-4 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500"
+                              className="w-full bg-white dark:bg-black border-2 border-black dark:border-white rounded-xl px-6 py-4 font-bold text-black dark:text-white outline-none focus:ring-2 focus:ring-green-500"
                             >
                               <option value="">{lang === 'en' ? 'Select option' : 'Vyberte možnost'}</option>
                               {(field.options || []).map((option) => (
@@ -1232,17 +1232,17 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
                               value={typeof value === 'string' ? value : ''}
                               onChange={(e) => updateFormAnswer(field.field_key, e.target.value)}
                               placeholder={fieldPlaceholder || ''}
-                              className="w-full bg-stone-50 border-none rounded-xl px-6 py-4 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500"
+                              className="w-full bg-white dark:bg-black border-2 border-black dark:border-white rounded-xl px-6 py-4 font-bold text-black dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 outline-none focus:ring-2 focus:ring-green-500"
                             />
                           )}
                           {helperText && field.field_type !== 'checkbox' ? (
-                            <div className="text-xs font-bold text-stone-500 px-1">{helperText}</div>
+                            <div className="text-xs font-bold text-stone-500 dark:text-stone-400 px-1">{helperText}</div>
                           ) : null}
                         </div>
                       );
                     })}
 
-                    <label className="flex items-start gap-3 bg-stone-50 border border-stone-100 rounded-2xl px-5 py-4">
+                    <label className="flex items-start gap-3 bg-white dark:bg-black border-2 border-black dark:border-white rounded-2xl px-5 py-4">
                       <input
                         type="checkbox"
                         checked={!!(rsvpForm as any).subscribe_newsletter}
@@ -1250,8 +1250,8 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
                         className="mt-1"
                       />
                       <div className="min-w-0">
-                        <div className="font-black text-stone-900 text-sm">{lang === 'en' ? 'Subscribe to newsletter' : 'Chci odebírat newsletter'}</div>
-                        <div className="text-xs font-bold text-stone-500">{lang === 'en' ? 'You can unsubscribe anytime.' : 'Z odběru se můžete kdykoliv odhlásit.'}</div>
+                        <div className="font-black text-black dark:text-white text-sm">{lang === 'en' ? 'Subscribe to newsletter' : 'Chci odebírat newsletter'}</div>
+                        <div className="text-xs font-bold text-stone-500 dark:text-stone-400">{lang === 'en' ? 'You can unsubscribe anytime.' : 'Z odběru se můžete kdykoliv odhlásit.'}</div>
                       </div>
                     </label>
 
@@ -1259,7 +1259,7 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
                       <button
                         type="button"
                         onClick={() => setRsvpOpen(null)}
-                        className="flex-grow bg-stone-100 text-stone-500 py-4 rounded-xl font-bold outline-none focus:ring-2 focus:ring-green-500"
+                        className="flex-grow bg-white dark:bg-black border-2 border-black dark:border-white text-black dark:text-white py-4 rounded-xl font-bold hover:bg-green-50 dark:hover:bg-green-950 transition outline-none focus:ring-2 focus:ring-green-500"
                       >
                         {globalDict?.admin?.btnCancel || (lang === 'cs' ? 'Zrušit' : 'Cancel')}
                       </button>
@@ -1271,7 +1271,7 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
                           !rsvpForm.name.trim() ||
                           !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rsvpForm.email.trim())
                         }
-                        className="flex-grow bg-green-600 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-green-100 disabled:opacity-50 outline-none focus:ring-2 focus:ring-green-500"
+                        className="flex-grow bg-green-600 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 border-2 border-green-600 hover:border-green-700 hover:bg-green-700 transition disabled:opacity-50 outline-none focus:ring-2 focus:ring-green-500"
                       >
                         {rsvpLoading === rsvpOpen ? <InlinePulse className="bg-white/80" size={14} /> : <CheckCircle size={20} />}
                         {dict.rsvpBtn || (lang === 'cs' ? 'Rezervovat' : 'Reserve')}

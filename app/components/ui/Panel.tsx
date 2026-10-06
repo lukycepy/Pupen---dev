@@ -16,7 +16,7 @@ export default function Panel({
   const r = radius === 'xl' ? 'rounded-xl' : radius === '2xl' ? 'rounded-[2rem]' : 'rounded-[3rem]';
   return (
     <div
-      className={['bg-white border border-stone-100 shadow-sm dark:bg-stone-950 dark:border-stone-800', r, padded ? 'p-8' : '', className]
+      className={['bg-white dark:bg-black border-2 border-black dark:border-white', r, padded ? 'p-8' : '', className]
         .filter(Boolean)
         .join(' ')}
     >

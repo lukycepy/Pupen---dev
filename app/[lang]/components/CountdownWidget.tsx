@@ -40,9 +40,9 @@ export default function CountdownWidget({ targetDate, title, lang, showPrefix = 
   }[lang as 'cs' | 'en'] || { days: 'Dní', hours: 'Hod', minutes: 'Min', seconds: 'Sek' };
 
   return (
-    <div className="bg-green-600 text-white p-6 rounded-[2.5rem] shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="bg-green-600 text-white p-6 rounded-[2.5rem] border-2 border-green-600 flex flex-col md:flex-row items-center justify-between gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center gap-4">
-        <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
+        <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center border-2 border-white/30">
           <Clock className="animate-pulse" size={24} />
         </div>
         <div>
@@ -61,7 +61,7 @@ export default function CountdownWidget({ targetDate, title, lang, showPrefix = 
           { value: timeLeft.seconds, label: labels.seconds },
         ].map((unit, idx) => (
           <div key={idx} className="flex flex-col items-center">
-            <div className="w-14 h-14 bg-white text-green-600 rounded-2xl flex items-center justify-center text-xl font-black shadow-inner">
+            <div className="w-14 h-14 bg-white text-green-600 rounded-2xl flex items-center justify-center text-xl font-black border-2 border-white">
               {unit.value.toString().padStart(2, '0')}
             </div>
             <p className="text-[10px] font-black uppercase tracking-widest mt-2 opacity-80">{unit.label}</p>

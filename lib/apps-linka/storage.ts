@@ -76,10 +76,17 @@ export function writeKontaktyJsonAtomically(payload: LinkaPayload): { path: stri
   JSON.parse(json);
 
   const tmpName = `.kontakty-${process.pid}-${Date.now()}-${crypto.randomBytes(4).toString('hex')}.tmp`;
-  const tmpPath = path.join(os.tmpdir(), tmpName);
+  const tmpPath = path.join(path.dirname(filePath), tmpName);
   try {
     fs.writeFileSync(tmpPath, json, { encoding: 'utf8', flag: 'w' });
     fs.renameSync(tmpPath, filePath);
+  } catch (renameErr) {
+    if ((renameErr as NodeJS.ErrnoException)?.code === 'EXDEV') {
+      fs.copyFileSync(tmpPath, filePath);
+      try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
+    } else {
+      throw renameErr;
+    }
   } finally {
     try {
       if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath);

@@ -477,44 +477,44 @@ export default function AdminDashboard() {
           <Dialog
             open={isProfileOpen}
             onClose={() => setIsProfileOpen(false)}
-            overlayClassName="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[10000] flex items-center justify-center p-6 animate-in fade-in duration-300 text-left"
-            panelClassName="bg-white w-full max-w-md rounded-[2rem] p-8 shadow-2xl animate-in zoom-in-95 duration-300"
+            overlayClassName="fixed inset-0 bg-black/50 dark:bg-black/70 z-[10000] flex items-center justify-center p-6 animate-in fade-in duration-300 text-left"
+            panelClassName="bg-white dark:bg-black w-full max-w-md rounded-[2rem] p-8 border-2 border-black dark:border-white animate-in zoom-in-95 duration-300"
           >
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-black text-stone-900">{dict.member.profileSettings}</h2>
-              <button onClick={() => setIsProfileOpen(false)} className="p-2 hover:bg-stone-100 rounded-full transition text-stone-400">
+              <h2 className="text-xl font-black text-black dark:text-white">{dict.member.profileSettings}</h2>
+              <button onClick={() => setIsProfileOpen(false)} className="p-2 bg-white dark:bg-black border-2 border-black dark:border-white hover:bg-green-50 dark:hover:bg-green-950 hover:text-green-600 dark:hover:text-green-500 hover:border-green-600 dark:hover:border-green-500 rounded-full transition text-black dark:text-white">
                 <X size={24} />
               </button>
             </div>
 
             <form onSubmit={handleUpdateProfile} className="space-y-4">
               <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.member.firstName}</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 px-1">{dict.member.firstName}</label>
                 <input
                   type="text"
                   required
                   value={editProfile.first_name}
                   onChange={(e) => setEditProfile({ ...editProfile, first_name: e.target.value })}
-                  className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none"
+                  className="w-full bg-white dark:bg-black border-2 border-black dark:border-white rounded-xl px-4 py-3 font-bold text-black dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:ring-2 focus:ring-green-500 transition outline-none"
                 />
               </div>
               <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.member.lastName}</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 px-1">{dict.member.lastName}</label>
                 <input
                   type="text"
                   required
                   value={editProfile.last_name}
                   onChange={(e) => setEditProfile({ ...editProfile, last_name: e.target.value })}
-                  className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none"
+                  className="w-full bg-white dark:bg-black border-2 border-black dark:border-white rounded-xl px-4 py-3 font-bold text-black dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:ring-2 focus:ring-green-500 transition outline-none"
                 />
               </div>
               <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.member.emailLabel}</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 px-1">{dict.member.emailLabel}</label>
                 <input
                   type="email"
                   disabled
                   value={currentUser?.email || ''}
-                  className="w-full bg-stone-100 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-400 cursor-not-allowed outline-none"
+                  className="w-full bg-green-50/30 dark:bg-green-950/30 border-2 border-black dark:border-white rounded-xl px-4 py-3 font-bold text-stone-500 dark:text-stone-400 cursor-not-allowed outline-none"
                 />
               </div>
 
@@ -522,14 +522,14 @@ export default function AdminDashboard() {
                 <button
                   type="button"
                   onClick={() => setIsProfileOpen(false)}
-                  className="flex-1 py-3 bg-stone-100 text-stone-600 rounded-xl font-bold hover:bg-stone-200 transition"
+                  className="flex-1 py-3 bg-white dark:bg-black text-black dark:text-white border-2 border-black dark:border-white rounded-xl font-bold hover:bg-green-50 dark:hover:bg-green-950 hover:text-green-600 dark:hover:text-green-500 hover:border-green-600 dark:hover:border-green-500 transition"
                 >
                   {dict.common.cancel}
                 </button>
                 <button
                   type="submit"
                   disabled={isSavingProfile}
-                  className="flex-[2] py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition shadow-lg shadow-green-600/20 flex items-center justify-center gap-2"
+                  className="flex-[2] py-3 bg-green-600 dark:bg-green-500 text-white dark:text-black border-2 border-green-700 dark:border-green-500 rounded-xl font-bold hover:bg-green-700 dark:hover:bg-green-400 transition flex items-center justify-center gap-2 disabled:opacity-70"
                 >
                   {isSavingProfile ? <Loader2 size={20} className="animate-spin" /> : <ShieldCheck size={20} />}
                   {dict.common.saveChanges}

@@ -64,25 +64,25 @@ export default function NewsletterForm({ lang }: { lang: string }) {
 
   if (success) {
     return (
-      <div className="bg-green-50 border border-green-100 p-8 rounded-[2.5rem] text-center animate-in zoom-in duration-500">
-        <CheckCircle className="text-green-600 mx-auto mb-4" size={48} />
-        <h3 className="text-xl font-bold text-green-900 mb-2">{lang === 'cs' ? 'Vítejte v Pupen komunitě!' : 'Welcome to Pupen community!'}</h3>
-        <p className="text-green-700 text-sm">{lang === 'cs' ? 'Brzy vám pošleme první novinky.' : 'We will send you news soon.'}</p>
+      <div className="bg-green-50 dark:bg-green-950 border-2 border-green-600 dark:border-green-400 p-8 rounded-[2.5rem] text-center animate-in zoom-in duration-500">
+        <CheckCircle className="text-green-600 dark:text-green-400 mx-auto mb-4" size={48} />
+        <h3 className="text-xl font-bold text-black dark:text-white mb-2">{lang === 'cs' ? 'Vítejte v Pupen komunitě!' : 'Welcome to Pupen community!'}</h3>
+        <p className="text-stone-500 dark:text-stone-400 text-sm">{lang === 'cs' ? 'Brzy vám pošleme první novinky.' : 'We will send you news soon.'}</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white p-8 sm:p-12 rounded-[3rem] border shadow-2xl shadow-green-900/5 relative overflow-hidden group">
+    <div className="bg-white dark:bg-black p-8 sm:p-12 rounded-[3rem] border-2 border-black dark:border-white relative overflow-hidden group">
       <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform duration-700">
-        <Mail size={120} className="text-green-600" />
+        <Mail size={120} className="text-green-600 dark:text-green-400" />
       </div>
       
       <div className="relative z-10 max-w-xl mx-auto text-center">
-        <h3 className="text-2xl sm:text-3xl font-black text-stone-900 mb-4 tracking-tight">
+        <h3 className="text-2xl sm:text-3xl font-black text-black dark:text-white mb-4 tracking-tight">
           {lang === 'cs' ? 'Newsletter na míru' : 'Custom Newsletter'}
         </h3>
-        <p className="text-stone-500 mb-8 font-medium text-sm sm:text-base">
+        <p className="text-stone-500 dark:text-stone-400 mb-8 font-medium text-sm sm:text-base">
           {lang === 'cs' ? 'Dostávej jen to, co tě opravdu zajímá. Vyber si kategorie:' : 'Get only what you care about. Pick categories:'}
         </p>
 
@@ -102,7 +102,7 @@ export default function NewsletterForm({ lang }: { lang: string }) {
                 key={cat.id}
                 type="button"
                 onClick={() => toggleCat(cat.id)}
-                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border-2 ${selectedCats.includes(cat.id) ? 'bg-green-600 border-green-600 text-white shadow-lg' : 'bg-stone-50 border-stone-100 text-stone-400 hover:border-green-200'}`}
+                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border-2 ${selectedCats.includes(cat.id) ? 'bg-green-600 dark:bg-green-500 border-green-600 dark:border-green-500 text-white' : 'bg-white dark:bg-black border-black dark:border-white text-black dark:text-white hover:border-green-600 dark:hover:border-green-400 hover:text-green-600 dark:hover:text-green-400'}`}
               >
                 {lang === 'cs' ? cat.label : cat.labelEn}
               </button>
@@ -116,14 +116,14 @@ export default function NewsletterForm({ lang }: { lang: string }) {
               placeholder={lang === 'cs' ? 'Tvůj e-mail...' : 'Your email...'}
               value={email}
               onChange={e => setEmail(e.target.value)}
-              className="flex-grow px-6 py-4 rounded-2xl bg-stone-50 border-none focus:ring-2 focus:ring-green-600 font-bold text-stone-700 shadow-inner"
+              className="flex-grow px-6 py-4 rounded-2xl bg-white dark:bg-black border-2 border-black dark:border-white focus:ring-2 focus:ring-green-500 font-bold text-black dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 outline-none"
             />
             <button
               disabled={loading}
-              className="bg-stone-900 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-green-600 transition shadow-xl disabled:opacity-50 flex items-center justify-center gap-2 group"
+              className="bg-black dark:bg-white text-white dark:text-black px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-green-600 dark:hover:bg-green-500 hover:text-white dark:hover:text-white transition border-2 border-black dark:border-white hover:border-green-600 dark:hover:border-green-500 disabled:opacity-50 flex items-center justify-center gap-2 group"
             >
               {loading ? (
-                <InlinePulse className="bg-white/80" size={14} />
+                <InlinePulse className="bg-white/80 dark:bg-black/80" size={14} />
               ) : (
                 <>
                   <Send

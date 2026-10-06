@@ -408,14 +408,14 @@ export default function LinkaTab() {
               type="button"
               onClick={loadData}
               disabled={loading}
-              className="bg-stone-50 text-stone-800 px-5 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-stone-100 transition border border-stone-200 disabled:opacity-50"
+              className="bg-white dark:bg-black text-black dark:text-white px-5 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-green-50 dark:hover:bg-green-950 hover:text-green-600 dark:hover:text-green-500 hover:border-green-600 dark:hover:border-green-500 transition border-2 border-black dark:border-white disabled:opacity-50"
             >
-              {loading ? <InlinePulse className="bg-stone-200" size={16} /> : <RefreshCw size={18} />} Znovu načíst
+              {loading ? <InlinePulse className="bg-green-500 dark:bg-green-400" size={16} /> : <RefreshCw size={18} />} Znovu načíst
             </button>
             <button
               type="button"
               onClick={openPreview}
-              className="bg-stone-50 text-stone-800 px-5 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-stone-100 transition border border-stone-200"
+              className="bg-white dark:bg-black text-black dark:text-white px-5 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-green-50 dark:hover:bg-green-950 hover:text-green-600 dark:hover:text-green-500 hover:border-green-600 dark:hover:border-green-500 transition border-2 border-black dark:border-white"
             >
               <ExternalLink size={18} /> Náhled JSON
             </button>
@@ -423,9 +423,9 @@ export default function LinkaTab() {
               type="button"
               onClick={triggerImport}
               disabled={importing}
-              className="bg-amber-50 text-amber-800 px-5 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-amber-100 transition border border-amber-200 disabled:opacity-50"
+              className="bg-amber-50 dark:bg-amber-950 text-amber-800 dark:text-amber-400 px-5 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-amber-100 dark:hover:bg-amber-900 transition border-2 border-amber-700 dark:border-amber-500 disabled:opacity-50"
             >
-              {importing ? <InlinePulse className="bg-amber-200" size={16} /> : <Upload size={18} />} Import CSV/JSON
+              {importing ? <InlinePulse className="bg-amber-500" size={16} /> : <Upload size={18} />} Import CSV/JSON
             </button>
             <input
               ref={importFileRef}
@@ -437,32 +437,32 @@ export default function LinkaTab() {
                 if (f) onImportFile(f);
               }}
             />
-            <div className="flex rounded-2xl overflow-hidden border border-stone-200">
+            <div className="flex rounded-2xl overflow-hidden border-2 border-black dark:border-white">
               <button
                 type="button"
                 onClick={() => runExport('json')}
                 disabled={exporting}
-                className="bg-white text-stone-800 px-5 py-3 font-bold flex items-center gap-2 hover:bg-stone-50 transition disabled:opacity-50"
+                className="bg-white dark:bg-black text-black dark:text-white px-5 py-3 font-bold flex items-center gap-2 hover:bg-green-50 dark:hover:bg-green-950 hover:text-green-600 dark:hover:text-green-500 transition disabled:opacity-50"
               >
-                {exporting ? <InlinePulse className="bg-stone-200" size={16} /> : <FileJson size={18} />} JSON
+                {exporting ? <InlinePulse className="bg-green-500 dark:bg-green-400" size={16} /> : <FileJson size={18} />} JSON
               </button>
-              <div className="w-px bg-stone-200" />
+              <div className="w-px bg-black dark:bg-white" />
               <button
                 type="button"
                 onClick={() => runExport('csv')}
                 disabled={exporting}
-                className="bg-white text-stone-800 px-5 py-3 font-bold flex items-center gap-2 hover:bg-stone-50 transition disabled:opacity-50"
+                className="bg-white dark:bg-black text-black dark:text-white px-5 py-3 font-bold flex items-center gap-2 hover:bg-green-50 dark:hover:bg-green-950 hover:text-green-600 dark:hover:text-green-500 transition disabled:opacity-50"
               >
-                {exporting ? <InlinePulse className="bg-stone-200" size={16} /> : <FileSpreadsheet size={18} />} CSV
+                {exporting ? <InlinePulse className="bg-green-500 dark:bg-green-400" size={16} /> : <FileSpreadsheet size={18} />} CSV
               </button>
             </div>
             <button
               type="button"
               onClick={saveAll}
               disabled={saving || loading}
-              className="bg-green-600 text-white px-6 py-3 rounded-2xl font-black flex items-center gap-2 hover:bg-green-700 transition shadow-lg shadow-green-600/20 disabled:opacity-50"
+              className="bg-green-600 dark:bg-green-500 text-white dark:text-black px-6 py-3 rounded-2xl font-black flex items-center gap-2 hover:bg-green-700 dark:hover:bg-green-400 transition border-2 border-green-700 dark:border-green-500 disabled:opacity-50"
             >
-              {saving ? <InlinePulse className="bg-green-200" size={16} /> : <Save size={18} />} ULOŽIT (verze {version || '?'})
+              {saving ? <InlinePulse className="bg-white dark:bg-black" size={16} /> : <Save size={18} />} ULOŽIT (verze {version || '?'})
             </button>
           </div>
         }
@@ -470,34 +470,34 @@ export default function LinkaTab() {
 
       <AdminPanel className="p-6 md:p-8 rounded-[2.5rem] space-y-6">
         <div className="grid md:grid-cols-3 gap-4">
-          <div className="p-5 rounded-[2rem] bg-green-50 border border-green-100">
-            <div className="text-[10px] font-black uppercase tracking-widest text-green-600">Verze dat</div>
-            <div className="text-green-900 font-black text-2xl mt-1">{version || 0}</div>
-            <div className="text-green-700 font-bold text-xs mt-1">
+          <div className="p-5 rounded-[2rem] bg-green-50/30 dark:bg-green-950/30 border-2 border-green-600 dark:border-green-500">
+            <div className="text-[10px] font-black uppercase tracking-widest text-green-600 dark:text-green-500">Verze dat</div>
+            <div className="text-black dark:text-white font-black text-2xl mt-1">{version || 0}</div>
+            <div className="text-stone-600 dark:text-stone-400 font-bold text-xs mt-1">
               {lastUpdated ? 'Naposledy: ' + new Date(lastUpdated).toLocaleString('cs-CZ') : 'Zatím neuloženo'}
             </div>
           </div>
-          <div className="p-5 rounded-[2rem] bg-blue-50 border border-blue-100">
-            <div className="text-[10px] font-black uppercase tracking-widest text-blue-600">Počet kontaktů</div>
-            <div className="text-blue-900 font-black text-2xl mt-1">{contacts.length}</div>
-            <div className="text-blue-700 font-bold text-xs mt-1">
+          <div className="p-5 rounded-[2rem] bg-blue-50/30 dark:bg-blue-950/30 border-2 border-blue-600 dark:border-blue-500">
+            <div className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-500">Počet kontaktů</div>
+            <div className="text-black dark:text-white font-black text-2xl mt-1">{contacts.length}</div>
+            <div className="text-stone-600 dark:text-stone-400 font-bold text-xs mt-1">
               Filtrováno: {countFiltered}
             </div>
           </div>
-          <div className="p-5 rounded-[2rem] bg-stone-50 border border-stone-100">
-            <div className="text-[10px] font-black uppercase tracking-widest text-stone-500">Cesta k souboru</div>
-            <div className="text-stone-800 font-bold text-sm mt-1 break-all">
+          <div className="p-5 rounded-[2rem] bg-stone-50/50 dark:bg-stone-950/50 border-2 border-black dark:border-white">
+            <div className="text-[10px] font-black uppercase tracking-widest text-stone-500 dark:text-stone-400">Cesta k souboru</div>
+            <div className="text-black dark:text-white font-bold text-sm mt-1 break-all">
               {sourcePath || '— zatím neuvedeno'}
             </div>
           </div>
         </div>
 
         {warnedEmpty && (
-          <div className="p-5 rounded-[2rem] bg-amber-50 border border-amber-200 flex items-start gap-3">
-            <AlertTriangle className="text-amber-600 shrink-0 mt-0.5" size={20} />
+          <div className="p-5 rounded-[2rem] bg-amber-50/30 dark:bg-amber-950/30 border-2 border-amber-600 dark:border-amber-500 flex items-start gap-3">
+            <AlertTriangle className="text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" size={20} />
             <div>
-              <div className="font-black text-amber-900">Upozornění: pole kontaktů je prázdné</div>
-              <div className="font-bold text-amber-700 text-sm mt-1">
+              <div className="font-black text-amber-800 dark:text-amber-400">Upozornění: pole kontaktů je prázdné</div>
+              <div className="font-bold text-amber-700 dark:text-amber-300 text-sm mt-1">
                 Aplikace si poradí, ale uživatelé nemusí vidět žádné lince.
               </div>
             </div>
@@ -505,53 +505,53 @@ export default function LinkaTab() {
         )}
 
         {globalErrors.length > 0 && (
-          <div className="p-5 rounded-[2rem] bg-red-50 border border-red-200 space-y-1">
-            <div className="font-black text-red-900 flex items-center gap-2">
+          <div className="p-5 rounded-[2rem] bg-red-50/30 dark:bg-red-950/30 border-2 border-red-600 dark:border-red-500 space-y-1">
+            <div className="font-black text-red-800 dark:text-red-400 flex items-center gap-2">
               <AlertTriangle size={18} /> Chyby (nelze uložit)
             </div>
             {globalErrors.map((e, i) => (
-              <div key={i} className="font-bold text-red-700 text-sm pl-7">• {e}</div>
+              <div key={i} className="font-bold text-red-700 dark:text-red-400 text-sm pl-7">• {e}</div>
             ))}
           </div>
         )}
 
         <div className="flex flex-col lg:flex-row gap-3">
           <label className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400" size={18} />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 dark:text-stone-500" size={18} />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Vyhledat v jménu, lince, katedře, místnosti, e-mailu… (bez diakritiky)"
-              className="w-full pl-12 pr-4 py-4 rounded-2xl border border-stone-200 bg-white font-bold text-stone-800 placeholder-stone-400 focus:ring-2 focus:ring-green-500 outline-none"
+              className="w-full pl-12 pr-4 py-4 rounded-2xl border-2 border-black dark:border-white bg-white dark:bg-black font-bold text-black dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:ring-2 focus:ring-green-500 outline-none"
             />
           </label>
           <button
             type="button"
             onClick={() => startEdit(null)}
-            className="bg-green-50 text-green-700 px-6 py-4 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-green-100 transition border border-green-200"
+            className="bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 px-6 py-4 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-green-100 dark:hover:bg-green-900 transition border-2 border-green-600 dark:border-green-500"
           >
             <Plus size={18} /> Přidat kontakt
           </button>
         </div>
 
         <div className="space-y-3">
-          <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">
+          <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500">
             Seznam kontaktů · {countFiltered} z {contacts.length}
           </div>
           {loading ? (
-            <div className="p-10 rounded-[2rem] bg-stone-50 border border-stone-100 flex items-center gap-3 text-stone-500 font-bold">
-              <InlinePulse className="bg-stone-200" size={20} /> Načítám data…
+            <div className="p-10 rounded-[2rem] bg-green-50/30 dark:bg-green-950/30 border-2 border-black dark:border-white flex items-center gap-3 text-stone-600 dark:text-stone-400 font-bold">
+              <InlinePulse className="bg-green-500 dark:bg-green-400" size={20} /> Načítám data…
             </div>
           ) : countFiltered === 0 ? (
-            <div className="p-10 rounded-[2rem] bg-stone-50 border border-stone-100 text-stone-600 font-bold text-center">
+            <div className="p-10 rounded-[2rem] bg-green-50/30 dark:bg-green-950/30 border-2 border-dashed border-black dark:border-white text-stone-600 dark:text-stone-400 font-bold text-center">
               {hasAny ? 'Žádné výsledky vyhledávání.' : 'Zatím zde nejsou žádné kontakty. Přidejte první tlačítkem nahoře.'}
             </div>
           ) : (
             <div className="overflow-x-auto -mx-2 md:mx-0">
               <table className="min-w-full border-separate border-spacing-0">
                 <thead>
-                  <tr className="text-left text-[10px] font-black uppercase tracking-widest text-stone-400">
+                  <tr className="text-left text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500">
                     <th className="py-3 px-3 md:px-4">Jméno</th>
                     <th className="py-3 px-3 md:px-4">Oddělení</th>
                     <th className="py-3 px-3 md:px-4">Fakulta</th>
@@ -564,27 +564,27 @@ export default function LinkaTab() {
                 </thead>
                 <tbody>
                   {filtered.map((c) => (
-                    <tr key={c.id} className="hover:bg-stone-50 transition">
-                      <td className="py-3 px-3 md:px-4 border-t border-stone-100 align-top">
-                        <div className="font-black text-stone-900">{c.jmeno}</div>
-                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">#{c.id}</div>
+                    <tr key={c.id} className="hover:bg-green-50 dark:hover:bg-green-950/30 transition">
+                      <td className="py-3 px-3 md:px-4 border-t border-black/10 dark:border-white/10 align-top">
+                        <div className="font-black text-black dark:text-white">{c.jmeno}</div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500">#{c.id}</div>
                       </td>
-                      <td className="py-3 px-3 md:px-4 border-t border-stone-100 align-top font-bold text-stone-700">{c.oddeleni}</td>
-                      <td className="py-3 px-3 md:px-4 border-t border-stone-100 align-top font-bold text-stone-700">{c.fakulta}</td>
-                      <td className="py-3 px-3 md:px-4 border-t border-stone-100 align-top font-bold text-stone-700">{c.budova}</td>
-                      <td className="py-3 px-3 md:px-4 border-t border-stone-100 align-top font-bold text-stone-700">{c.mistnost}</td>
-                      <td className="py-3 px-3 md:px-4 border-t border-stone-100 align-top">
-                        <span className="inline-flex items-center gap-1 rounded-xl bg-green-50 border border-green-200 px-3 py-1 font-black text-green-800">
+                      <td className="py-3 px-3 md:px-4 border-t border-black/10 dark:border-white/10 align-top font-bold text-stone-700 dark:text-stone-400">{c.oddeleni}</td>
+                      <td className="py-3 px-3 md:px-4 border-t border-black/10 dark:border-white/10 align-top font-bold text-stone-700 dark:text-stone-400">{c.fakulta}</td>
+                      <td className="py-3 px-3 md:px-4 border-t border-black/10 dark:border-white/10 align-top font-bold text-stone-700 dark:text-stone-400">{c.budova}</td>
+                      <td className="py-3 px-3 md:px-4 border-t border-black/10 dark:border-white/10 align-top font-bold text-stone-700 dark:text-stone-400">{c.mistnost}</td>
+                      <td className="py-3 px-3 md:px-4 border-t border-black/10 dark:border-white/10 align-top">
+                        <span className="inline-flex items-center gap-1 rounded-xl bg-green-50 dark:bg-green-950 border-2 border-green-600 dark:border-green-500 px-3 py-1 font-black text-green-800 dark:text-green-400">
                           <Phone size={14} />{c.klapka}
                         </span>
                       </td>
-                      <td className="py-3 px-3 md:px-4 border-t border-stone-100 align-top font-bold text-stone-700 break-all max-w-xs">{c.email}</td>
-                      <td className="py-3 px-3 md:px-4 border-t border-stone-100 align-top text-right">
+                      <td className="py-3 px-3 md:px-4 border-t border-black/10 dark:border-white/10 align-top font-bold text-stone-700 dark:text-stone-400 break-all max-w-xs">{c.email}</td>
+                      <td className="py-3 px-3 md:px-4 border-t border-black/10 dark:border-white/10 align-top text-right">
                         <div className="inline-flex gap-2">
                           <button
                             type="button"
                             onClick={() => startEdit(c)}
-                            className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-stone-100 text-stone-700 hover:bg-stone-200 transition font-bold"
+                            className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-white dark:bg-black border-2 border-black dark:border-white text-black dark:text-white hover:bg-green-50 dark:hover:bg-green-950 hover:text-green-600 dark:hover:text-green-500 hover:border-green-600 dark:hover:border-green-500 transition font-bold"
                             aria-label="Upravit kontakt"
                           >
                             <Edit3 size={16} />
@@ -593,7 +593,7 @@ export default function LinkaTab() {
                           <button
                             type="button"
                             onClick={() => deleteContact(c.id)}
-                            className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-red-50 text-red-700 hover:bg-red-100 transition font-bold"
+                            className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-red-50 dark:bg-red-950 border-2 border-red-600 dark:border-red-500 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900 transition font-bold"
                             aria-label="Smazat kontakt"
                           >
                             <Trash2 size={16} />
@@ -611,17 +611,17 @@ export default function LinkaTab() {
       </AdminPanel>
 
       {(editing.idx != null || editing.dirty || Object.keys(editing.form).some((k) => (editing.form as any)[k])) && (
-        <AdminPanel className="p-6 md:p-8 rounded-[2.5rem] space-y-6 border-green-300">
+        <AdminPanel className="p-6 md:p-8 rounded-[2.5rem] space-y-6">
           <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-3 text-stone-900">
-              <div className="w-12 h-12 rounded-2xl bg-green-50 border border-green-200 flex items-center justify-center text-green-700">
+            <div className="flex items-center gap-3 text-black dark:text-white">
+              <div className="w-12 h-12 rounded-2xl bg-green-50 dark:bg-green-950 border-2 border-green-600 dark:border-green-500 flex items-center justify-center text-green-700 dark:text-green-400">
                 <Phone size={22} />
               </div>
               <div>
                 <div className="font-black text-xl">
                   {editing.idx != null || editing.form.id ? 'Upravit kontakt' : 'Přidat nový kontakt'}
                 </div>
-                <div className="font-bold text-stone-500 text-sm">
+                <div className="font-bold text-stone-500 dark:text-stone-400 text-sm">
                   Pole označená jako povinná. Uložení tlačítkem níže přidá kontakt do paměti, nezapomeň hlavní ULOŽIT.
                 </div>
               </div>
@@ -629,7 +629,7 @@ export default function LinkaTab() {
             <button
               type="button"
               onClick={cancelEdit}
-              className="inline-flex items-center gap-2 px-4 py-3 rounded-2xl bg-stone-50 text-stone-700 hover:bg-stone-100 transition font-bold border border-stone-200"
+              className="inline-flex items-center gap-2 px-4 py-3 rounded-2xl bg-white dark:bg-black text-black dark:text-white hover:bg-green-50 dark:hover:bg-green-950 hover:text-green-600 dark:hover:text-green-500 hover:border-green-600 dark:hover:border-green-500 transition font-bold border-2 border-black dark:border-white"
             >
               <X size={16} /> Zavřít
             </button>
@@ -642,11 +642,11 @@ export default function LinkaTab() {
               return (
                 <div key={key} className={key === 'email' ? 'md:col-span-2' : ''}>
                   <label className="flex items-center justify-between px-1 mb-2">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-stone-400">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500">
                       {FIELD_LABELS[key]}
                       <span className="text-red-500 ml-1">*</span>
                     </span>
-                    {err ? <span className="text-red-600 font-bold text-xs">{err}</span> : null}
+                    {err ? <span className="text-red-600 dark:text-red-400 font-bold text-xs">{err}</span> : null}
                   </label>
                   <input
                     type={key === 'email' ? 'email' : 'text'}
@@ -656,10 +656,10 @@ export default function LinkaTab() {
                     onChange={(e) => updateField(key, e.target.value, false)}
                     onBlur={(e) => updateField(key, e.target.value, true)}
                     placeholder={FIELD_PLACEHOLDERS[key]}
-                    className={`w-full rounded-2xl px-5 py-4 border font-bold text-stone-800 outline-none transition ${
+                    className={`w-full rounded-2xl px-5 py-4 border-2 font-bold outline-none transition ${
                       err
-                        ? 'border-red-300 bg-red-50 focus:ring-2 focus:ring-red-400'
-                        : 'border-stone-200 bg-white focus:ring-2 focus:ring-green-500'
+                        ? 'border-red-600 dark:border-red-500 bg-red-50/30 dark:bg-red-950/30 text-black dark:text-white focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400'
+                        : 'border-black dark:border-white bg-white dark:bg-black text-black dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:ring-2 focus:ring-green-500'
                     }`}
                   />
                 </div>
@@ -671,14 +671,14 @@ export default function LinkaTab() {
             <button
               type="button"
               onClick={cancelEdit}
-              className="px-6 py-3 rounded-2xl bg-stone-100 text-stone-700 hover:bg-stone-200 transition font-black"
+              className="px-6 py-3 rounded-2xl bg-white dark:bg-black text-black dark:text-white hover:bg-green-50 dark:hover:bg-green-950 hover:text-green-600 dark:hover:text-green-500 hover:border-green-600 dark:hover:border-green-500 transition font-black border-2 border-black dark:border-white"
             >
               Zrušit
             </button>
             <button
               type="button"
               onClick={commitEdit}
-              className="px-8 py-3 rounded-2xl bg-green-600 text-white hover:bg-green-700 transition font-black shadow-lg shadow-green-600/20 flex items-center gap-2"
+              className="px-8 py-3 rounded-2xl bg-green-600 dark:bg-green-500 text-white dark:text-black hover:bg-green-700 dark:hover:bg-green-400 transition font-black border-2 border-green-700 dark:border-green-500 flex items-center gap-2"
             >
               <Check size={18} />
               {editing.idx != null || editing.form.id ? 'Uložit změny' : 'Přidat do seznamu'}

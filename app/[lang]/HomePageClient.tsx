@@ -394,19 +394,19 @@ export default function HomePageClient({ lang }: HomePageClientProps) {
 
       {/* --- PŘIDÁNO: ZTRÁTY A NÁLEZY --- */}
       {widgets.lostFound !== false && (
-        <section className="py-20 sm:py-24 bg-stone-100">
+        <section className="py-20 sm:py-24 bg-white dark:bg-black">
           <div className="max-w-6xl mx-auto px-6">
             <div className="text-center mb-12 sm:mb-16">
-              <span className="text-blue-600 font-bold uppercase tracking-widest text-sm mb-3 block">{lang === 'en' ? 'Lost & Found' : 'Ztráty a nálezy'}</span>
-              <h2 className="text-3xl sm:text-5xl font-black text-stone-900 tracking-tight">
+              <span className="text-blue-600 dark:text-blue-400 font-bold uppercase tracking-widest text-sm mb-3 block">{lang === 'en' ? 'Lost & Found' : 'Ztráty a nálezy'}</span>
+              <h2 className="text-3xl sm:text-5xl font-black text-black dark:text-white tracking-tight">
                 {lang === 'en' ? 'Did you lose something?' : 'Ztratili jste něco?'}
               </h2>
-              <p className="text-stone-500 mt-4 max-w-2xl mx-auto">
+              <p className="text-stone-500 dark:text-stone-400 mt-4 max-w-2xl mx-auto">
                 {lang === 'en' ? 'Check our public list of lost and found items from our events.' : 'Podívejte se na náš veřejný seznam ztrát a nálezů z našich akcí.'}
               </p>
             </div>
             <div className="flex justify-center">
-              <Link href={`/${lang}/ztraty-a-nalezy`} className="inline-flex items-center gap-3 bg-white text-stone-900 px-8 py-4 rounded-2xl font-bold hover:bg-stone-50 transition shadow-sm border border-stone-200">
+              <Link href={`/${lang}/ztraty-a-nalezy`} className="inline-flex items-center gap-3 bg-white dark:bg-black text-black dark:text-white px-8 py-4 rounded-2xl font-bold hover:bg-green-50 dark:hover:bg-green-950 transition border-2 border-black dark:border-white">
                 {lang === 'en' ? 'View Lost & Found' : 'Otevřít Ztráty a nálezy'} <ArrowRight size={20} />
               </Link>
             </div>
@@ -415,20 +415,20 @@ export default function HomePageClient({ lang }: HomePageClientProps) {
       )}
 
       {/* --- 4.5 RYCHLÉ ODKAZY --- */}
-      <section className="py-20 bg-stone-100">
+      <section className="py-20 bg-white dark:bg-black">
         <div className="max-w-6xl mx-auto px-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-            <Link href={`/${lang}/archiv`} className="bg-white p-8 rounded-[2rem] flex flex-col items-center text-center group hover:bg-green-600 transition-colors duration-500 shadow-sm hover:shadow-xl hover:shadow-green-100">
-               <div className="p-4 bg-stone-50 text-green-600 rounded-2xl mb-4 group-hover:bg-white/20 group-hover:text-white transition-colors"><Archive size={32} /></div>
-               <span className="font-black text-stone-900 group-hover:text-white transition-colors uppercase tracking-widest text-xs">{dict.archiveAktivit}</span>
+            <Link href={`/${lang}/archiv`} className="bg-white dark:bg-black p-8 rounded-[2rem] flex flex-col items-center text-center group hover:bg-green-600 dark:hover:bg-green-600 transition-colors duration-500 border-2 border-black dark:border-white">
+               <div className="p-4 bg-white dark:bg-black text-green-600 dark:text-green-400 rounded-2xl mb-4 group-hover:bg-white/20 group-hover:text-white transition-colors border-2 border-black dark:border-white group-hover:border-white group-hover:dark:border-white"><Archive size={32} /></div>
+               <span className="font-black text-black dark:text-white group-hover:text-white transition-colors uppercase tracking-widest text-xs">{dict.archiveAktivit}</span>
             </Link>
-            <Link href={`/${lang}/mapa`} className="bg-white p-8 rounded-[2rem] flex flex-col items-center text-center group hover:bg-green-600 transition-colors duration-500 shadow-sm hover:shadow-xl hover:shadow-green-100">
-               <div className="p-4 bg-stone-50 text-green-600 rounded-2xl mb-4 group-hover:bg-white/20 group-hover:text-white transition-colors"><MapIcon size={32} /></div>
-               <span className="font-black text-stone-900 group-hover:text-white transition-colors uppercase tracking-widest text-xs">{dict.mapaAreálu}</span>
+            <Link href={`/${lang}/mapa`} className="bg-white dark:bg-black p-8 rounded-[2rem] flex flex-col items-center text-center group hover:bg-green-600 dark:hover:bg-green-600 transition-colors duration-500 border-2 border-black dark:border-white">
+               <div className="p-4 bg-white dark:bg-black text-green-600 dark:text-green-400 rounded-2xl mb-4 group-hover:bg-white/20 group-hover:text-white transition-colors border-2 border-black dark:border-white group-hover:border-white group-hover:dark:border-white"><MapIcon size={32} /></div>
+               <span className="font-black text-black dark:text-white group-hover:text-white transition-colors uppercase tracking-widest text-xs">{dict.mapaAreálu}</span>
             </Link>
-            <Link href={`/${lang}/galerie`} className="bg-white p-8 rounded-[2rem] flex flex-col items-center text-center group hover:bg-green-600 transition-colors duration-500 shadow-sm hover:shadow-xl hover:shadow-green-100">
-               <div className="p-4 bg-stone-50 text-green-600 rounded-2xl mb-4 group-hover:bg-white/20 group-hover:text-white transition-colors"><ImageIcon size={32} /></div>
-               <span className="font-black text-stone-900 group-hover:text-white transition-colors uppercase tracking-widest text-xs">{dict.fotogalerie}</span>
+            <Link href={`/${lang}/galerie`} className="bg-white dark:bg-black p-8 rounded-[2rem] flex flex-col items-center text-center group hover:bg-green-600 dark:hover:bg-green-600 transition-colors duration-500 border-2 border-black dark:border-white">
+               <div className="p-4 bg-white dark:bg-black text-green-600 dark:text-green-400 rounded-2xl mb-4 group-hover:bg-white/20 group-hover:text-white transition-colors border-2 border-black dark:border-white group-hover:border-white group-hover:dark:border-white"><ImageIcon size={32} /></div>
+               <span className="font-black text-black dark:text-white group-hover:text-white transition-colors uppercase tracking-widest text-xs">{dict.fotogalerie}</span>
             </Link>
           </div>
         </div>
@@ -436,8 +436,8 @@ export default function HomePageClient({ lang }: HomePageClientProps) {
 
       {/* --- 5. FAQ --- */}
       {faqs.length > 0 && (
-        <section className="py-20 sm:py-32 px-6 max-w-3xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-12 sm:mb-16 flex items-center justify-center gap-3 text-stone-900">
+        <section className="py-20 sm:py-32 px-6 max-w-3xl mx-auto bg-white dark:bg-black">
+          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-12 sm:mb-16 flex items-center justify-center gap-3 text-black dark:text-white">
             <HelpCircle className="text-green-600 flex-shrink-0" /> {dict.faqTitle}
           </h2>
           
@@ -447,14 +447,14 @@ export default function HomePageClient({ lang }: HomePageClientProps) {
               const question = lang === 'en' && faq.question_en ? faq.question_en : faq.question;
               const answer = lang === 'en' && faq.answer_en ? faq.answer_en : faq.answer;
               return (
-                <div key={faq.id} className={`bg-white border rounded-xl overflow-hidden transition-all duration-300 ${isOpen ? 'border-green-500 shadow-xl' : 'border-stone-200'}`}>
-                  <button onClick={() => toggleFaq(faq.id)} className="w-full flex justify-between items-center p-5 sm:p-6 text-left font-bold text-stone-900 hover:bg-stone-50 transition-colors">
+                <div key={faq.id} className={`bg-white dark:bg-black border-2 rounded-xl overflow-hidden transition-all duration-300 ${isOpen ? 'border-green-600 dark:border-green-500' : 'border-black dark:border-white'}`}>
+                  <button onClick={() => toggleFaq(faq.id)} className="w-full flex justify-between items-center p-5 sm:p-6 text-left font-bold text-black dark:text-white hover:bg-green-50 dark:hover:bg-green-950 transition-colors">
                     <span className="text-base sm:text-lg pr-6">{question}</span>
-                    <div className="flex-shrink-0">{isOpen ? <ChevronUp className="text-green-600" /> : <ChevronDown className="text-stone-400" />}</div>
+                    <div className="flex-shrink-0">{isOpen ? <ChevronUp className="text-green-600" /> : <ChevronDown className="text-stone-400 dark:text-stone-500" />}</div>
                   </button>
                   <div className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                     <div className="overflow-hidden">
-                      <div className="p-5 sm:p-6 pt-0 text-stone-600 leading-relaxed border-t border-stone-50 text-sm sm:text-base whitespace-pre-wrap">
+                      <div className="p-5 sm:p-6 pt-0 text-stone-600 dark:text-stone-400 leading-relaxed border-t border-black/20 dark:border-white/20 text-sm sm:text-base whitespace-pre-wrap">
                         {answer}
                       </div>
                     </div>
@@ -468,8 +468,8 @@ export default function HomePageClient({ lang }: HomePageClientProps) {
 
       {widgets.testimonials !== false &&
         (testimonialsHtml ? (
-          <section className="py-20 px-6 max-w-6xl mx-auto">
-            <div className="bg-white border border-stone-100 shadow-sm rounded-[3rem] p-10 md:p-16 prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: testimonialsHtml }} />
+          <section className="py-20 px-6 max-w-6xl mx-auto bg-white dark:bg-black">
+            <div className="bg-white dark:bg-black border-2 border-black dark:border-white rounded-[3rem] p-10 md:p-16 prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: testimonialsHtml }} />
           </section>
         ) : (
           <TestimonialsSlider lang={lang} />
@@ -480,13 +480,13 @@ export default function HomePageClient({ lang }: HomePageClientProps) {
 
       {/* --- 5.5 PARTNEŘI --- */}
       {widgets.partners !== false && partners.length > 0 && (
-        <section className="py-20 bg-white border-y border-stone-100">
+        <section className="py-20 bg-white dark:bg-black border-y-2 border-black dark:border-white">
           <div className="max-w-6xl mx-auto px-6">
-            <h2 className="text-center text-[10px] font-black uppercase tracking-[0.3em] text-stone-400 mb-12">Spolupracujeme s</h2>
+            <h2 className="text-center text-[10px] font-black uppercase tracking-[0.3em] text-stone-400 dark:text-stone-500 mb-12">Spolupracujeme s</h2>
             {partners.length > 5 ? (
               <div className="relative overflow-hidden">
-                <div className="pointer-events-none absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-white to-transparent z-10" />
-                <div className="pointer-events-none absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-white to-transparent z-10" />
+                <div className="pointer-events-none absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-white dark:from-black to-transparent z-10" />
+                <div className="pointer-events-none absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-white dark:from-black to-transparent z-10" />
                 <div className="partner-marquee flex items-center gap-16 md:gap-24 w-max">
                   {[...partners, ...partners].map((p, i) => (
                     <a
@@ -501,12 +501,12 @@ export default function HomePageClient({ lang }: HomePageClientProps) {
                           <Image src={p.logo_url} alt={p.name} fill className="object-contain" />
                         </div>
                       ) : (
-                        <span className="font-black text-xl text-stone-300 group-hover:text-green-600 transition">{p.name}</span>
+                        <span className="font-black text-xl text-stone-300 dark:text-stone-600 group-hover:text-green-600 dark:group-hover:text-green-400 transition">{p.name}</span>
                       )}
                       {p.link_url && (
                         <ExternalLink
                           size={10}
-                          className="absolute -top-2 -right-4 text-stone-300 opacity-0 group-hover:opacity-100 transition"
+                          className="absolute -top-2 -right-4 text-stone-300 dark:text-stone-600 opacity-0 group-hover:opacity-100 transition"
                         />
                       )}
                     </a>
@@ -541,12 +541,12 @@ export default function HomePageClient({ lang }: HomePageClientProps) {
                         <Image src={p.logo_url} alt={p.name} fill className="object-contain" />
                       </div>
                     ) : (
-                      <span className="font-black text-xl text-stone-300 group-hover:text-green-600 transition">{p.name}</span>
+                      <span className="font-black text-xl text-stone-300 dark:text-stone-600 group-hover:text-green-600 dark:group-hover:text-green-400 transition">{p.name}</span>
                     )}
                     {p.link_url && (
                       <ExternalLink
                         size={10}
-                        className="absolute -top-2 -right-4 text-stone-300 opacity-0 group-hover:opacity-100 transition"
+                        className="absolute -top-2 -right-4 text-stone-300 dark:text-stone-600 opacity-0 group-hover:opacity-100 transition"
                       />
                     )}
                   </a>
@@ -559,36 +559,36 @@ export default function HomePageClient({ lang }: HomePageClientProps) {
 
       {/* --- 5.6 NEWSLETTER --- */}
       {widgets.newsletter !== false && (
-        <section className="py-20 px-6 max-w-4xl mx-auto">
+        <section className="py-20 px-6 max-w-4xl mx-auto bg-white dark:bg-black">
           <NewsletterForm lang={lang} />
         </section>
       )}
 
       {/* --- 6. CTA --- */}
       {widgets.cta !== false && (
-      <section className="py-24 sm:py-32 px-6 text-center bg-stone-50 relative overflow-hidden">
+      <section className="py-24 sm:py-32 px-6 text-center bg-white dark:bg-black relative overflow-hidden border-t-2 border-black dark:border-white">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-[radial-gradient(circle_at_center,rgba(22,163,74,0.08)_0%,transparent_70%)] pointer-events-none" />
         <div className="relative z-10 max-w-4xl mx-auto">
-          <span className="block text-green-600 font-bold uppercase tracking-widest text-xs sm:text-sm mb-4">
+          <span className="block text-green-600 dark:text-green-400 font-bold uppercase tracking-widest text-xs sm:text-sm mb-4">
             {(lang === 'en' ? (ctaCfg as any).badge_en : (ctaCfg as any).badge_cs) || dict.ctaBadge}
           </span>
-          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-stone-900 mb-8 leading-tight tracking-tight">
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-black dark:text-white mb-8 leading-tight tracking-tight">
             {(lang === 'en' ? (ctaCfg as any).title_en : (ctaCfg as any).title_cs) || dict.ctaTitle}
           </h2>
-          <p className="text-stone-600 text-base sm:text-xl mb-12 leading-relaxed max-w-2xl mx-auto px-4 font-light">
+          <p className="text-stone-500 dark:text-stone-400 text-base sm:text-xl mb-12 leading-relaxed max-w-2xl mx-auto px-4 font-light">
             {(lang === 'en' ? (ctaCfg as any).sub_en : (ctaCfg as any).sub_cs) || dict.ctaSub}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center px-6">
             <Link 
               href={String(((ctaCfg as any).primary_href || '').trim()) ? String((ctaCfg as any).primary_href).trim() : `/${lang}/kontakt`} 
-              className="bg-green-600 text-white px-10 py-4 rounded-xl font-bold hover:bg-green-700 transition-all shadow-lg shadow-green-900/20 flex items-center justify-center gap-2 group hover:scale-105 active:scale-95 w-full sm:w-auto"
+              className="bg-green-600 text-white px-10 py-4 rounded-xl font-bold hover:bg-green-700 transition-all flex items-center justify-center gap-2 group hover:scale-105 active:scale-95 w-full sm:w-auto border-2 border-green-600 hover:border-green-700"
             >
               {(lang === 'en' ? (ctaCfg as any).primary_label_en : (ctaCfg as any).primary_label_cs) || dict.ctaBtnJoin}{' '}
               <ArrowRight className="group-hover:translate-x-1 transition-transform" size={20} />
             </Link>
             <Link 
               href={String(((ctaCfg as any).secondary_href || '').trim()) ? String((ctaCfg as any).secondary_href).trim() : `/${lang}/akce`} 
-              className="bg-white border-2 border-stone-200 text-stone-700 px-10 py-4 rounded-xl font-bold hover:border-green-600 hover:text-green-600 transition-all flex items-center justify-center hover:scale-105 active:scale-95 w-full sm:w-auto shadow-sm"
+              className="bg-white dark:bg-black border-2 border-black dark:border-white text-black dark:text-white px-10 py-4 rounded-xl font-bold hover:border-green-600 dark:hover:border-green-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-950 transition-all flex items-center justify-center hover:scale-105 active:scale-95 w-full sm:w-auto"
             >
               {(lang === 'en' ? (ctaCfg as any).secondary_label_en : (ctaCfg as any).secondary_label_cs) || dict.ctaBtnEvents}
             </Link>

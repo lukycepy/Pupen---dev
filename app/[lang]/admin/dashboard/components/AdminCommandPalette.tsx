@@ -89,15 +89,15 @@ export default function AdminCommandPalette({
     <Dialog
       open={open}
       onClose={onClose}
-      overlayClassName="fixed inset-0 z-[10001] flex items-start justify-center p-4 sm:p-8 bg-black/60 backdrop-blur-sm"
-      panelClassName="relative w-full max-w-2xl bg-white rounded-[2rem] border border-stone-100 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+      overlayClassName="fixed inset-0 z-[10001] flex items-start justify-center p-4 sm:p-8 bg-black/50 dark:bg-black/70"
+      panelClassName="relative w-full max-w-2xl bg-white dark:bg-black rounded-[2rem] border-2 border-black dark:border-white overflow-hidden animate-in fade-in zoom-in-95 duration-200"
     >
-          <div className="p-5 border-b border-stone-100 flex items-center gap-3">
-            <div className="w-10 h-10 bg-stone-50 rounded-2xl border border-stone-100 flex items-center justify-center text-stone-400">
+          <div className="p-5 border-b-2 border-black dark:border-white flex items-center gap-3">
+            <div className="w-10 h-10 bg-green-50 dark:bg-green-950 rounded-2xl border-2 border-green-600 dark:border-green-500 flex items-center justify-center text-green-600 dark:text-green-500">
               <Command size={18} />
             </div>
             <div className="flex-grow relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-300" size={18} />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 dark:text-stone-500" size={18} />
               <input
                 ref={inputRef}
                 value={query}
@@ -106,15 +106,15 @@ export default function AdminCommandPalette({
                   setActiveIndex(0);
                 }}
                 placeholder="Hledat modul…"
-                className="w-full bg-stone-50 border-none rounded-2xl pl-12 pr-4 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition outline-none"
+                className="w-full bg-white dark:bg-black border-2 border-black dark:border-white rounded-2xl pl-12 pr-4 py-4 font-bold text-black dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:ring-2 focus:ring-green-500 transition outline-none"
               />
             </div>
-            <div className="text-[10px] font-black uppercase tracking-widest text-stone-300 hidden sm:block">Esc</div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 hidden sm:block">Esc</div>
           </div>
 
           <div className="max-h-[60vh] overflow-y-auto p-3">
             {filtered.length === 0 ? (
-              <div className="p-10 text-center text-stone-400 font-bold uppercase tracking-widest text-xs">Nic nenalezeno</div>
+              <div className="p-10 text-center text-stone-400 dark:text-stone-500 font-bold uppercase tracking-widest text-xs">Nic nenalezeno</div>
             ) : (
               <div className="space-y-1">
                 {filtered.map((it, idx) => (
@@ -126,15 +126,17 @@ export default function AdminCommandPalette({
                       onClose();
                     }}
                     className={`w-full flex items-center gap-4 p-4 rounded-2xl text-left transition ${
-                      idx === activeIndex ? 'bg-green-50 border border-green-200' : 'hover:bg-stone-50'
+                      idx === activeIndex
+                        ? 'bg-green-50 dark:bg-green-950 border-2 border-green-600 dark:border-green-500'
+                        : 'bg-white dark:bg-black border-2 border-transparent hover:border-black dark:hover:border-white hover:bg-green-50/50 dark:hover:bg-green-950/50'
                     }`}
                   >
-                    <div className="w-10 h-10 rounded-2xl bg-white border border-stone-100 flex items-center justify-center text-green-600 shadow-sm shrink-0">
+                    <div className="w-10 h-10 rounded-2xl bg-white dark:bg-black border-2 border-black dark:border-white flex items-center justify-center text-green-600 dark:text-green-500 shrink-0">
                       <it.icon size={18} />
                     </div>
                     <div className="min-w-0">
-                      <div className="font-black text-stone-900">{it.label}</div>
-                      <div className="text-[10px] font-black uppercase tracking-widest text-stone-300 truncate">{it.groupTitle}</div>
+                      <div className="font-black text-black dark:text-white">{it.label}</div>
+                      <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 truncate">{it.groupTitle}</div>
                     </div>
                   </button>
                 ))}
@@ -142,7 +144,7 @@ export default function AdminCommandPalette({
             )}
           </div>
 
-          <div className="p-4 border-t border-stone-100 text-[10px] font-black uppercase tracking-widest text-stone-400 flex items-center justify-between">
+          <div className="p-4 border-t-2 border-black dark:border-white text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 flex items-center justify-between">
             <span>↑↓ výběr, Enter otevřít</span>
             <span>{dict?.admin?.tabAnalytics ? 'Ctrl+K / ⌘K' : 'Ctrl+K'}</span>
           </div>

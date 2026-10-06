@@ -36,31 +36,31 @@ export default function TestimonialsSlider({ lang }: { lang: string }) {
   const item = items[index];
 
   return (
-    <section className="py-20 px-6 max-w-6xl mx-auto">
+    <section className="py-20 px-6 max-w-6xl mx-auto bg-white dark:bg-black">
       <div className="text-center mb-12">
-        <div className="text-[10px] font-black uppercase tracking-[0.3em] text-stone-400 mb-4">
+        <div className="text-[10px] font-black uppercase tracking-[0.3em] text-stone-400 dark:text-stone-500 mb-4">
           {lang === 'en' ? 'Testimonials' : 'Reference'}
         </div>
-        <h2 className="text-3xl md:text-5xl font-black text-stone-900 tracking-tight">
+        <h2 className="text-3xl md:text-5xl font-black text-black dark:text-white tracking-tight">
           {lang === 'en' ? 'What people say' : 'Co o nás říkají'}
         </h2>
       </div>
 
-      <div className="bg-white border border-stone-100 shadow-sm rounded-[3rem] p-10 md:p-16 relative overflow-hidden">
+      <div className="bg-white dark:bg-black border-2 border-black dark:border-white rounded-[3rem] p-10 md:p-16 relative overflow-hidden">
         <div className="absolute -top-10 -left-10 w-64 h-64 bg-green-600/5 rounded-full blur-[60px]" />
         <div className="absolute -bottom-10 -right-10 w-64 h-64 bg-green-600/5 rounded-full blur-[60px]" />
 
         <div className="relative">
-          <div className="w-12 h-12 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center shadow-inner mb-8">
+          <div className="w-12 h-12 bg-green-50 dark:bg-green-950 text-green-600 dark:text-green-400 rounded-2xl flex items-center justify-center border-2 border-green-600 dark:border-green-400 mb-8">
             <Quote size={22} />
           </div>
-          <p className="text-2xl md:text-3xl font-bold text-stone-800 leading-snug tracking-tight">
-            “{item.quote}”
+          <p className="text-2xl md:text-3xl font-bold text-black dark:text-white leading-snug tracking-tight">
+            "{item.quote}"
           </p>
           <div className="mt-10 flex items-center justify-between gap-6">
             <div>
-              <div className="font-black text-stone-900">{item.name}</div>
-              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{item.meta}</div>
+              <div className="font-black text-black dark:text-white">{item.name}</div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500">{item.meta}</div>
             </div>
             <div className="flex items-center gap-2">
               {items.map((_, i) => (
@@ -69,8 +69,8 @@ export default function TestimonialsSlider({ lang }: { lang: string }) {
                   type="button"
                   onClick={() => setIndex(i)}
                   aria-label={`Slide ${i + 1}`}
-                  className={`h-2.5 rounded-full transition ${
-                    i === index ? 'w-10 bg-green-600' : 'w-2.5 bg-stone-200 hover:bg-stone-300'
+                  className={`h-2.5 rounded-full transition border-2 ${
+                    i === index ? 'w-10 bg-green-600 dark:bg-green-500 border-green-600 dark:border-green-500' : 'w-2.5 bg-white dark:bg-black border-black dark:border-white hover:bg-green-50 dark:hover:bg-green-950'
                   }`}
                 />
               ))}

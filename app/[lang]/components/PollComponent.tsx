@@ -81,21 +81,21 @@ export default function PollComponent({ lang }: { lang: string }) {
 
   if (authMissing) {
     return (
-      <div className="bg-white p-10 rounded-[2.5rem] border border-stone-100 shadow-2xl shadow-green-900/5 relative overflow-hidden group">
-        <div className="absolute top-0 right-0 p-8 text-green-100 group-hover:text-green-200 transition-colors">
+      <div className="bg-white dark:bg-black p-10 rounded-[2.5rem] border-2 border-black dark:border-white relative overflow-hidden group">
+        <div className="absolute top-0 right-0 p-8 text-green-100 dark:text-green-950 group-hover:text-green-200 dark:group-hover:text-green-900 transition-colors">
           <HelpCircle size={80} />
         </div>
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-green-100 text-green-600 rounded-xl">
+            <div className="p-2 bg-green-50 dark:bg-green-950 text-green-600 dark:text-green-400 rounded-xl border-2 border-green-600 dark:border-green-400">
               <CheckCircle size={18} />
             </div>
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-green-600">Anketa</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-green-600 dark:text-green-400">Anketa</span>
           </div>
-          <h3 className="text-2xl font-black text-stone-900 mb-4 leading-tight">
+          <h3 className="text-2xl font-black text-black dark:text-white mb-4 leading-tight">
             {lang === 'cs' ? 'Anketa je pro přihlášené členy' : 'Poll is for signed-in members'}
           </h3>
-          <p className="text-stone-600 font-medium leading-relaxed">
+          <p className="text-stone-500 dark:text-stone-400 font-medium leading-relaxed">
             {lang === 'cs'
               ? 'Přihlas se a můžeš hlasovat.'
               : 'Sign in to vote.'}
@@ -103,7 +103,7 @@ export default function PollComponent({ lang }: { lang: string }) {
           <div className="mt-6">
             <Link
               href={`/${lang}/login`}
-              className="inline-flex items-center gap-2 rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-widest border border-green-200 bg-green-600 text-white hover:bg-green-700 transition"
+              className="inline-flex items-center gap-2 rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-widest border-2 border-green-600 dark:border-green-400 bg-green-600 dark:bg-green-500 text-white hover:bg-green-700 dark:hover:bg-green-600 transition"
             >
               {lang === 'cs' ? 'Přihlásit se' : 'Sign in'} <ArrowRight size={16} />
             </Link>
@@ -118,20 +118,20 @@ export default function PollComponent({ lang }: { lang: string }) {
   const totalVotes = poll.poll_options.reduce((acc: number, o: any) => acc + (o.votes || 0), 0);
 
   return (
-    <div className="bg-white p-10 rounded-[2.5rem] border border-stone-100 shadow-2xl shadow-green-900/5 relative overflow-hidden group">
-      <div className="absolute top-0 right-0 p-8 text-green-100 group-hover:text-green-200 transition-colors">
+    <div className="bg-white dark:bg-black p-10 rounded-[2.5rem] border-2 border-black dark:border-white relative overflow-hidden group">
+      <div className="absolute top-0 right-0 p-8 text-green-100 dark:text-green-950 group-hover:text-green-200 dark:group-hover:text-green-900 transition-colors">
         <HelpCircle size={80} />
       </div>
       
       <div className="relative z-10">
         <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-green-100 text-green-600 rounded-xl">
+          <div className="p-2 bg-green-50 dark:bg-green-950 text-green-600 dark:text-green-400 rounded-xl border-2 border-green-600 dark:border-green-400">
             <CheckCircle size={18} />
           </div>
-          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-green-600">Anketa</span>
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-green-600 dark:text-green-400">Anketa</span>
         </div>
 
-        <h3 className="text-2xl font-black text-stone-900 mb-8 max-w-[80%] leading-tight">
+        <h3 className="text-2xl font-black text-black dark:text-white mb-8 max-w-[80%] leading-tight">
           {lang === 'en' && poll.question_en ? poll.question_en : poll.question}
         </h3>
 
@@ -143,8 +143,8 @@ export default function PollComponent({ lang }: { lang: string }) {
                 <button
                   disabled={voted || votingId !== null}
                   onClick={() => handleVote(opt.id)}
-                  className={`w-full text-left p-5 rounded-2xl font-bold transition-all relative overflow-hidden flex justify-between items-center group/opt ${
-                    voted ? 'bg-stone-50 text-stone-400 cursor-default' : 'bg-stone-50 text-stone-700 hover:bg-green-50 hover:text-green-700 hover:scale-[1.02]'
+                  className={`w-full text-left p-5 rounded-2xl font-bold transition-all relative overflow-hidden flex justify-between items-center group/opt border-2 ${
+                    voted ? 'bg-white dark:bg-black border-black/20 dark:border-white/20 text-stone-400 dark:text-stone-500 cursor-default' : 'bg-white dark:bg-black border-black dark:border-white text-black dark:text-white hover:bg-green-50 dark:hover:bg-green-950 hover:border-green-600 dark:hover:border-green-400 hover:text-green-700 dark:hover:text-green-400 hover:scale-[1.02]'
                   }`}
                 >
                   <span className="relative z-10">{lang === 'en' && opt.option_text_en ? opt.option_text_en : opt.option_text}</span>
@@ -152,11 +152,11 @@ export default function PollComponent({ lang }: { lang: string }) {
                   
                   {voted && (
                     <div 
-                      className="absolute left-0 top-0 bottom-0 bg-green-100/50 transition-all duration-1000" 
+                      className="absolute left-0 top-0 bottom-0 bg-green-100/50 dark:bg-green-900/30 transition-all duration-1000" 
                       style={{ width: `${percentage}%` }} 
                     />
                   )}
-                  {votingId === opt.id && <InlinePulse className="bg-green-600/40" size={12} />}
+                  {votingId === opt.id && <InlinePulse className="bg-green-600/40 dark:bg-green-500/40" size={12} />}
                 </button>
               </div>
             );
@@ -164,7 +164,7 @@ export default function PollComponent({ lang }: { lang: string }) {
         </div>
 
         {voted && (
-          <p className="mt-6 text-[10px] font-black uppercase tracking-widest text-stone-300 text-center">
+          <p className="mt-6 text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 text-center">
             Celkem hlasovalo: {totalVotes} studentů
           </p>
         )}

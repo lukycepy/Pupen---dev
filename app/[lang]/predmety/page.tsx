@@ -68,10 +68,10 @@ export default function PredmetyPage() {
 
   if (!dict) {
     return (
-      <div className="min-h-screen bg-stone-50 pt-24 pb-32">
+      <div className="min-h-screen bg-white dark:bg-black pt-24 pb-32">
         <div className="max-w-6xl mx-auto px-6">
           <header className="text-center mb-16">
-            <div className="inline-flex p-3 bg-green-100 text-green-600 rounded-2xl mb-6 shadow-sm">
+            <div className="inline-flex p-3 bg-green-50 dark:bg-green-950 border-2 border-green-600 dark:border-green-500 text-green-600 dark:text-green-500 rounded-2xl mb-6">
               <BookOpen size={32} />
             </div>
             <div className="space-y-4">
@@ -86,19 +86,19 @@ export default function PredmetyPage() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 pt-24 pb-32">
+    <div className="min-h-screen bg-white dark:bg-black pt-24 pb-32">
       <div className="max-w-6xl mx-auto px-6">
         <header className="text-center mb-16">
-          <div className="inline-flex p-3 bg-green-100 text-green-600 rounded-2xl mb-6 shadow-sm">
+          <div className="inline-flex p-3 bg-green-50 dark:bg-green-950 border-2 border-green-600 dark:border-green-500 text-green-600 dark:text-green-500 rounded-2xl mb-6">
             <BookOpen size={32} />
           </div>
-          <h1 className="text-4xl md:text-6xl font-black text-stone-900 tracking-tighter mb-4">{dict.title}</h1>
-          <p className="text-stone-500 text-lg font-medium">{dict.subtitle}</p>
+          <h1 className="text-4xl md:text-6xl font-black text-black dark:text-white tracking-tighter mb-4">{dict.title}</h1>
+          <p className="text-stone-500 dark:text-stone-400 text-lg font-medium">{dict.subtitle}</p>
         </header>
 
         <div className="flex flex-col md:flex-row gap-6 mb-12">
           <div className="relative flex-grow" ref={mainSearchRef}>
-            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-stone-300" size={20} />
+            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-stone-400 dark:text-stone-500" size={20} />
             <input 
               type="text" 
               placeholder={dict.searchPlaceholder}
@@ -108,7 +108,7 @@ export default function PredmetyPage() {
                 setShowMainSuggestions(true);
               }}
               onFocus={() => setShowMainSuggestions(true)}
-              className="w-full pl-16 pr-8 py-5 bg-white border-none rounded-[2rem] shadow-xl text-stone-700 font-bold focus:ring-2 focus:ring-green-500 transition"
+              className="w-full pl-16 pr-8 py-5 bg-white dark:bg-black border-2 border-black dark:border-white rounded-[2rem] text-black dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 font-bold focus:ring-2 focus:ring-green-500 transition outline-none"
             />
             
             <Popover
@@ -119,7 +119,7 @@ export default function PredmetyPage() {
               offset={8}
               matchWidth
               zIndex={100}
-              panelClassName="bg-white border border-stone-100 shadow-2xl rounded-[2rem] overflow-hidden max-h-64 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200"
+              panelClassName="bg-white dark:bg-black border-2 border-black dark:border-white rounded-[2rem] overflow-hidden max-h-64 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200"
             >
                 {subjects
                   .filter(s => 
@@ -134,14 +134,14 @@ export default function PredmetyPage() {
                         setSearchTerm(`${s.name} (${s.code}) [${s.type}]`);
                         setShowMainSuggestions(false);
                       }}
-                      className="w-full text-left px-8 py-4 hover:bg-green-50 transition border-b border-stone-50 last:border-0 group"
+                      className="w-full text-left px-8 py-4 hover:bg-green-50 dark:hover:bg-green-950 transition border-b border-black/10 dark:border-white/10 last:border-0 group"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex flex-col">
-                          <span className="font-bold text-stone-700 group-hover:text-green-700 transition">{s.name}</span>
+                          <span className="font-bold text-black dark:text-white group-hover:text-green-700 dark:group-hover:text-green-400 transition">{s.name}</span>
                           <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest">{s.code}</span>
                         </div>
-                        <span className="text-[10px] font-black text-green-600 bg-green-50 px-2 py-1 rounded-md">{s.type}</span>
+                        <span className="text-[10px] font-black text-green-600 dark:text-green-500 bg-green-50 dark:bg-green-950 px-2 py-1 rounded-md border border-green-600/20 dark:border-green-500/20">{s.type}</span>
                       </div>
                     </button>
                   ))
@@ -150,7 +150,7 @@ export default function PredmetyPage() {
                   s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                   s.code.toLowerCase().includes(searchTerm.toLowerCase())
                 ).length === 0 && (
-                  <div className="px-8 py-6 text-stone-400 font-bold text-center">
+                  <div className="px-8 py-6 text-stone-400 dark:text-stone-500 font-bold text-center">
                     {lang === 'cs' ? 'Nebyly nalezeny žádné odpovídající předměty.' : 'No matching subjects found.'}
                   </div>
                 )}
@@ -158,19 +158,19 @@ export default function PredmetyPage() {
           </div>
           <button 
             onClick={() => setIsAdding(!isAdding)}
-            className="bg-green-600 text-white px-8 py-5 rounded-[2rem] font-black uppercase tracking-widest hover:bg-green-500 transition shadow-xl shadow-green-900/20 flex items-center justify-center gap-2 whitespace-nowrap"
+            className="bg-green-600 text-white px-8 py-5 rounded-[2rem] font-black uppercase tracking-widest hover:bg-green-700 dark:hover:bg-green-500 transition border-2 border-green-700 dark:border-green-500 flex items-center justify-center gap-2 whitespace-nowrap"
           >
             <Plus size={20} /> {dict.addReview}
           </button>
         </div>
 
         {isAdding && (
-          <div className="bg-white p-8 md:p-12 rounded-[3rem] shadow-2xl mb-12 border border-green-100 animate-in fade-in slide-in-from-top-8 duration-500">
-            <h2 className="text-2xl font-black mb-8 text-stone-900">{dict.newReview}</h2>
+          <div className="bg-white dark:bg-black p-8 md:p-12 rounded-[3rem] border-2 border-black dark:border-white mb-12 animate-in fade-in slide-in-from-top-8 duration-500">
+            <h2 className="text-2xl font-black mb-8 text-black dark:text-white">{dict.newReview}</h2>
             <div className="grid md:grid-cols-2 gap-8">
               <div className="space-y-6">
                 <div className="relative" ref={formSuggestRef}>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.labelSubject}</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 px-1">{dict.labelSubject}</label>
                   <input 
                     type="text" 
                     value={formData.subject_name} 
@@ -180,7 +180,7 @@ export default function PredmetyPage() {
                     }} 
                     onFocus={() => setShowFormSuggestions(true)}
                     onBlur={() => window.setTimeout(() => setShowFormSuggestions(false), 120)}
-                    className="w-full bg-stone-50 border-none rounded-2xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition" 
+                    className="w-full bg-white dark:bg-black border-2 border-black dark:border-white rounded-2xl px-6 py-4 font-bold text-black dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:ring-2 focus:ring-green-500 transition outline-none" 
                     placeholder={dict.placeholderSubject} 
                   />
                   <Popover
@@ -195,7 +195,7 @@ export default function PredmetyPage() {
                     offset={8}
                     matchWidth
                     zIndex={200}
-                    panelClassName="bg-white border border-stone-100 shadow-2xl rounded-2xl overflow-hidden max-h-48 overflow-y-auto"
+                    panelClassName="bg-white dark:bg-black border-2 border-black dark:border-white rounded-2xl overflow-hidden max-h-48 overflow-y-auto"
                   >
                       {subjects
                         .filter(s => 
@@ -211,11 +211,11 @@ export default function PredmetyPage() {
                               setFormData({...formData, subject_name: `${s.name} (${s.code}) [${s.type}]`});
                               setShowFormSuggestions(false);
                             }}
-                            className="w-full text-left px-6 py-3 hover:bg-green-50 transition border-b border-stone-50 last:border-0"
+                            className="w-full text-left px-6 py-3 hover:bg-green-50 dark:hover:bg-green-950 transition border-b border-black/10 dark:border-white/10 last:border-0"
                           >
-                            <span className="font-bold text-stone-700">{s.name}</span>
-                            <span className="ml-2 text-xs font-black text-green-600 uppercase">{s.code}</span>
-                            <span className="ml-2 text-[10px] font-black text-stone-300">{s.type}</span>
+                            <span className="font-bold text-black dark:text-white">{s.name}</span>
+                            <span className="ml-2 text-xs font-black text-green-600 dark:text-green-500 uppercase">{s.code}</span>
+                            <span className="ml-2 text-[10px] font-black text-stone-400 dark:text-stone-500">{s.type}</span>
                           </button>
                         ))
                       }
@@ -223,38 +223,38 @@ export default function PredmetyPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.labelRating}</label>
-                    <div className="flex gap-1 bg-stone-50 p-3 rounded-2xl justify-center">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 px-1">{dict.labelRating}</label>
+                    <div className="flex gap-1 bg-green-50/30 dark:bg-green-950/30 p-3 rounded-2xl border-2 border-black dark:border-white justify-center">
                       {[1,2,3,4,5].map(star => (
                         <button key={star} onClick={() => setFormData({...formData, rating: star})}>
-                          <Star size={24} className={star <= formData.rating ? 'fill-amber-400 text-amber-400' : 'text-stone-200'} />
+                          <Star size={24} className={star <= formData.rating ? 'fill-amber-400 text-amber-400' : 'text-stone-300 dark:text-stone-600'} />
                         </button>
                       ))}
                     </div>
                   </div>
                   <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.labelDifficulty}</label>
-                    <input type="range" min="1" max="5" value={formData.difficulty} onChange={e => setFormData({...formData, difficulty: parseInt(e.target.value)})} className="w-full h-12 accent-green-600" />
-                    <div className="flex justify-between text-[10px] font-black text-stone-300 uppercase px-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 px-1">{dict.labelDifficulty}</label>
+                    <input type="range" min="1" max="5" value={formData.difficulty} onChange={e => setFormData({...formData, difficulty: parseInt(e.target.value)})} className="w-full h-12 accent-green-600 dark:accent-green-500" />
+                    <div className="flex justify-between text-[10px] font-black text-stone-400 dark:text-stone-500 uppercase px-1">
                       <span>EASY</span>
                       <span>HARD</span>
                     </div>
                   </div>
                 </div>
                 <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{lang === 'cs' ? 'Jméno (nepovinné)' : 'Name (optional)'}</label>
-                  <input type="text" value={formData.author_name} onChange={e => setFormData({...formData, author_name: e.target.value})} className="w-full bg-stone-50 border-none rounded-2xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition" placeholder={lang === 'cs' ? 'Anonym' : 'Anonymous'} />
+                  <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 px-1">{lang === 'cs' ? 'Jméno (nepovinné)' : 'Name (optional)'}</label>
+                  <input type="text" value={formData.author_name} onChange={e => setFormData({...formData, author_name: e.target.value})} className="w-full bg-white dark:bg-black border-2 border-black dark:border-white rounded-2xl px-6 py-4 font-bold text-black dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:ring-2 focus:ring-green-500 transition outline-none" placeholder={lang === 'cs' ? 'Anonym' : 'Anonymous'} />
                 </div>
               </div>
               <div className="space-y-6">
                 <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.labelComment}</label>
-                  <textarea value={formData.comment} onChange={e => setFormData({...formData, comment: e.target.value})} className="w-full bg-stone-50 border-none rounded-2xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition h-[180px]" placeholder={lang === 'cs' ? 'Co by měli ostatní vědět? Jací jsou vyučující? Jak probíhá zkouška?' : 'What should others know? Who are the teachers? How is the exam?'} />
+                  <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 px-1">{dict.labelComment}</label>
+                  <textarea value={formData.comment} onChange={e => setFormData({...formData, comment: e.target.value})} className="w-full bg-white dark:bg-black border-2 border-black dark:border-white rounded-2xl px-6 py-4 font-bold text-black dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:ring-2 focus:ring-green-500 transition outline-none h-[180px]" placeholder={lang === 'cs' ? 'Co by měli ostatní vědět? Jací jsou vyučující? Jak probíhá zkouška?' : 'What should others know? Who are the teachers? How is the exam?'} />
                 </div>
                 <button 
                   onClick={() => addMutation.mutate(formData)}
                   disabled={!formData.subject_name || !formData.comment}
-                  className="w-full bg-stone-900 text-white py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-stone-800 disabled:opacity-50 transition shadow-xl"
+                  className="w-full bg-black dark:bg-white text-white dark:text-black py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-green-600 dark:hover:bg-green-500 hover:text-white dark:hover:text-black border-2 border-black dark:border-white hover:border-green-600 dark:hover:border-green-500 disabled:opacity-50 transition"
                 >
                   {lang === 'cs' ? 'Odeslat ke schválení' : 'Submit for approval'}
                 </button>
@@ -268,34 +268,34 @@ export default function PredmetyPage() {
         ) : (
           <div className="grid gap-8">
             {filteredReviews.length === 0 ? (
-              <div className="bg-white p-20 rounded-[3rem] border-2 border-dashed border-stone-200 text-center">
-                <AlertCircle className="mx-auto text-stone-200 mb-4" size={48} />
-                <p className="text-stone-400 font-bold uppercase tracking-widest">{dict.empty}</p>
+              <div className="bg-white dark:bg-black p-20 rounded-[3rem] border-2 border-dashed border-black dark:border-white text-center">
+                <AlertCircle className="mx-auto text-stone-300 dark:text-stone-600 mb-4" size={48} />
+                <p className="text-stone-400 dark:text-stone-500 font-bold uppercase tracking-widest">{dict.empty}</p>
               </div>
             ) : (
               filteredReviews.map((review: any) => (
-                <div key={review.id} className="bg-white p-8 md:p-10 rounded-[3rem] shadow-xl border border-stone-100 group transition hover:shadow-2xl hover:border-green-100">
+                <div key={review.id} className="bg-white dark:bg-black p-8 md:p-10 rounded-[3rem] border-2 border-black dark:border-white group transition hover:border-green-600 dark:hover:border-green-500">
                   <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
                     <div className="flex-grow">
                       <div className="flex items-center gap-4 mb-4">
                         <div className="flex gap-0.5">
                           {[...Array(5)].map((_, i) => (
-                            <Star key={i} size={16} className={i < review.rating ? 'fill-amber-400 text-amber-400' : 'text-stone-100'} />
+                            <Star key={i} size={16} className={i < review.rating ? 'fill-amber-400 text-amber-400' : 'text-stone-200 dark:text-stone-700'} />
                           ))}
                         </div>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-stone-300">
-                          {lang === 'cs' ? 'Náročnost' : 'Difficulty'}: <span className="text-stone-900">{review.difficulty}/5</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500">
+                          {lang === 'cs' ? 'Náročnost' : 'Difficulty'}: <span className="text-black dark:text-white">{review.difficulty}/5</span>
                         </span>
                       </div>
-                      <h3 className="text-2xl font-black text-stone-900 mb-4 group-hover:text-green-600 transition">{review.subject_name}</h3>
-                      <p className="text-stone-600 text-lg font-medium leading-relaxed italic">
+                      <h3 className="text-2xl font-black text-black dark:text-white mb-4 group-hover:text-green-600 dark:group-hover:text-green-500 transition">{review.subject_name}</h3>
+                      <p className="text-stone-600 dark:text-stone-400 text-lg font-medium leading-relaxed italic">
                         "{review.comment}"
                       </p>
                       <div className="mt-8 flex items-center gap-3">
-                        <div className="w-8 h-8 bg-stone-100 rounded-full flex items-center justify-center text-stone-400">
+                        <div className="w-8 h-8 bg-green-50 dark:bg-green-950 rounded-full flex items-center justify-center border-2 border-green-600/20 dark:border-green-500/20 text-stone-500 dark:text-stone-400">
                           <MessageSquare size={14} />
                         </div>
-                        <span className="text-sm font-bold text-stone-400">{review.author_name || (lang === 'cs' ? 'Anonym' : 'Anonymous')} • {new Date(review.created_at).toLocaleDateString()}</span>
+                        <span className="text-sm font-bold text-stone-400 dark:text-stone-500">{review.author_name || (lang === 'cs' ? 'Anonym' : 'Anonymous')} • {new Date(review.created_at).toLocaleDateString()}</span>
                       </div>
                     </div>
                   </div>
