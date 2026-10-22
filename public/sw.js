@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pupen-shell-v1';
+const CACHE_NAME = 'pupen-shell-v2';
 const PRECACHE_URLS = ['/', '/offline', '/manifest.json', '/logo.png'];
 
 self.addEventListener('install', (event) => {
@@ -25,6 +25,10 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
+
+  // Build assety Next.js (chunky, HMR, fonty) se nekešují - jinak service worker
+  // servíruje zastaralé chunky a klient spadne na "module factory is not available".
+  if (url.pathname.startsWith('/_next/')) return;
 
   const accept = req.headers.get('accept') || '';
   const isNavigation = req.mode === 'navigate' || accept.includes('text/html');

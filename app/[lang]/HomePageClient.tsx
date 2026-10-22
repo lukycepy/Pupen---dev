@@ -17,7 +17,7 @@ import TestimonialsSlider from './components/TestimonialsSlider';
 import InstagramFeedGrid from './components/InstagramFeedGrid';
 
 const PollComponent = dynamic(() => import('./components/PollComponent'), {
-  loading: () => <div className="h-48 bg-white rounded-[2.5rem] animate-pulse border border-stone-100 shadow-sm" />,
+  loading: () => <div className="h-48 rounded-[2.5rem] border-2 border-black bg-white animate-pulse dark:border-white dark:bg-black" />,
   ssr: false
 });
 const passthroughLoader = ({ src }: { src: string }) => src;
@@ -249,15 +249,14 @@ export default function HomePageClient({ lang }: HomePageClientProps) {
           ].map((item, i) => (
             <div 
               key={i} 
-              className="group relative bg-white dark:bg-black rounded-[2rem] p-8 text-center transition-all duration-500 hover:-translate-y-3 border-2 border-black dark:border-white"
+              className="group rounded-[2rem] border-2 border-black bg-white p-8 text-center transition-all duration-300 hover:-translate-y-2 hover:border-green-600 hover:bg-green-50 dark:border-white dark:bg-black dark:hover:border-green-500 dark:hover:bg-green-950"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-green-50/0 to-green-50/0 group-hover:from-green-50/50 dark:group-hover:from-green-950/50 group-hover:to-white dark:group-hover:to-black transition-all duration-500 rounded-[2rem]" />
-              <div className="relative z-10">
+              <div>
                 <div className="w-14 h-14 mx-auto bg-white dark:bg-black rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-green-600 dark:group-hover:bg-green-600 transition-all duration-500 border-2 border-black dark:border-white group-hover:border-green-600 dark:group-hover:border-green-600">
                   <item.Icon className="w-7 h-7 text-green-600 dark:text-green-400 group-hover:text-white dark:group-hover:text-white transition-colors duration-500" />
                 </div>
                 <h3 className="text-xl font-bold mb-3 text-black dark:text-white tracking-tight">{item.title}</h3>
-                <p className="text-stone-500 dark:text-stone-400 text-sm leading-relaxed px-2">{item.text}</p>
+                <p className="text-black dark:text-white text-sm leading-relaxed px-2">{item.text}</p>
                 <div className="w-0 h-1 bg-green-500 mx-auto mt-6 rounded-full group-hover:w-12 transition-all duration-500" />
               </div>
             </div>

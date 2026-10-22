@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { requireAdmin, requireUser } from '@/lib/server-auth';
-import { getServerSupabase } from '@/lib/supabase-server';
+import { getBearerToken, requireAdmin, requireUser } from '@/lib/server-auth';
+import { getRlsSupabase } from '@/lib/supabase-rls';
 import { CMS_PAGES } from '@/lib/site/cms-pages-registry';
 
 export const dynamic = 'force-dynamic';
@@ -33,8 +33,10 @@ function getErrorMessage(error: unknown) {
 export async function GET(req: Request) {
   try {
     await requireAdmin(req);
+    const token = getBearerToken(req);
+    if (!token) throw new Error('Unauthorized');
     const user = await requireUser(req);
-    const supabase = getServerSupabase();
+    const supabase = getRlsSupabase(token);
 
     const profRes = await supabase
       .from('profiles')

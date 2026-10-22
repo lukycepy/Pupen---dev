@@ -1,10 +1,32 @@
 import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import { getServerSupabase } from '@/lib/supabase-server';
-import { getMailerWithSettingsOrQueueTransporter, getSenderFromSettings } from '@/lib/email/mailer';
+import { getMailerWithSettings, getSenderFromSettings } from '@/lib/email/mailer';
 import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
-import { sendMailWithQueueFallback } from '@/lib/email/queue';
 import { guardPublicJsonPostSilentOk } from '@/lib/public-post-guard';
 import { getPublicBaseUrl } from '@/lib/public-base-url';
+
+function getResetBaseUrl(req: Request) {
+  try {
+    const url = new URL(req.url);
+    if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+      return url.origin;
+    }
+  } catch {}
+  return getPublicBaseUrl();
+}
+
+function getPublicSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) throw new Error('Missing Supabase env');
+  return createClient(url, key, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+}
 
 export async function POST(req: Request) {
   try {
@@ -26,31 +48,27 @@ export async function POST(req: Request) {
     }
 
     const supabase = getServerSupabase();
-
-    const redirectTo = `${getPublicBaseUrl()}/${lang}/reset-password`;
-    const gen = await supabase.auth.admin.generateLink({
-      type: 'recovery',
-      email,
-      options: { redirectTo },
-    });
-    if (gen.error) {
-      return NextResponse.json({ ok: true });
-    }
-    const resetUrl = String((gen.data as any)?.properties?.action_link || '');
-    if (!resetUrl) return NextResponse.json({ ok: true });
-
-    const { subject, html } = await renderEmailTemplateWithDbOverride('password_reset', { email, resetUrl, lang });
-    const transporter = await getMailerWithSettingsOrQueueTransporter();
-    const from = await getSenderFromSettings();
-
+    const redirectTo = `${getResetBaseUrl(req)}/${lang}/reset-password`;
     try {
-      await sendMailWithQueueFallback({
-        transporter,
-        supabase,
-        meta: { kind: 'password_reset' },
-        message: { from, to: email, subject, html },
+      const transporter = await getMailerWithSettings();
+      const gen = await supabase.auth.admin.generateLink({
+        type: 'recovery',
+        email,
+        options: { redirectTo },
       });
-    } catch {}
+      if (gen.error) throw gen.error;
+
+      const resetUrl = String((gen.data as any)?.properties?.action_link || '');
+      if (!resetUrl) throw new Error('Missing reset URL');
+
+      const { subject, html } = await renderEmailTemplateWithDbOverride('password_reset', { email, resetUrl, lang });
+      const from = await getSenderFromSettings();
+      await transporter.sendMail({ from, to: email, subject, html });
+    } catch {
+      const publicSupabase = getPublicSupabase();
+      const recovery = await publicSupabase.auth.resetPasswordForEmail(email, { redirectTo });
+      if (recovery.error) throw recovery.error;
+    }
 
     return NextResponse.json({ ok: true });
   } catch {

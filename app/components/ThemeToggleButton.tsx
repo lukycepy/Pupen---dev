@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Monitor, Moon, Sun } from 'lucide-react';
+import { Moon, Sun } from 'lucide-react';
 import type { AppTheme, ResolvedTheme } from './theme';
 import { applyThemeToDom, readStoredTheme, resolveTheme, writeStoredTheme } from './theme';
 
@@ -12,7 +12,7 @@ export default function ThemeToggleButton({
   className?: string;
   testId?: string;
 }) {
-  const [preference, setPreference] = React.useState<AppTheme>('system');
+  const [, setPreference] = React.useState<AppTheme>('system');
   const [resolved, setResolved] = React.useState<ResolvedTheme>('light');
 
   React.useEffect(() => {
@@ -28,16 +28,15 @@ export default function ThemeToggleButton({
   }, []);
 
   const toggle = () => {
-    const stored = (readStoredTheme() || 'system') satisfies AppTheme;
-    const next: AppTheme = stored === 'light' ? 'dark' : stored === 'dark' ? 'system' : 'light';
+    const next: AppTheme = resolved === 'dark' ? 'light' : 'dark';
     writeStoredTheme(next);
     applyThemeToDom(next);
     setPreference(next);
     setResolved(resolveTheme(next));
   };
 
-  const icon = preference === 'system' ? <Monitor size={18} /> : resolved === 'dark' ? <Sun size={18} /> : <Moon size={18} />;
-  const title = preference === 'system' ? 'Režim: systém' : resolved === 'dark' ? 'Režim: tmavý' : 'Režim: světlý';
+  const icon = resolved === 'dark' ? <Sun size={18} /> : <Moon size={18} />;
+  const title = resolved === 'dark' ? 'Přepnout na světlý režim' : 'Přepnout na tmavý režim';
 
   return (
     <button
@@ -45,9 +44,9 @@ export default function ThemeToggleButton({
       onClick={toggle}
       className={
         className ||
-        'h-10 w-10 flex items-center justify-center rounded-xl bg-black text-white border-2 border-black hover:bg-green-600 hover:border-green-600 hover:text-white transition-all dark:bg-white dark:text-black dark:border-white dark:hover:bg-green-500 dark:hover:border-green-500 dark:hover:text-black'
+        'inline-flex h-10 w-10 items-center justify-center rounded-xl border-2 border-black bg-black text-white transition-all hover:border-green-600 hover:bg-green-600 hover:text-white dark:border-white dark:bg-white dark:text-black dark:hover:border-green-500 dark:hover:bg-green-500 dark:hover:text-black'
       }
-      aria-label="Přepnout režim (světlý / tmavý / systém)"
+      aria-label={title}
       title={title}
       data-testid={testId}
     >

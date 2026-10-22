@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { useServerInsertedHTML } from 'next/navigation';
 import {
   applyThemeToDom,
   onStorageThemeChange,
@@ -10,8 +11,17 @@ import {
   THEME_STORAGE_KEY,
 } from './theme';
 
+const THEME_BOOTSTRAP_SCRIPT = `(function(){try{var k='${THEME_STORAGE_KEY}';var v=localStorage.getItem(k);var p=(v==='dark'||v==='light'||v==='system')?v:'system';var hasMM=typeof window.matchMedia==='function';var r=(p==='system'&&hasMM)?(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):(p==='dark'?'dark':'light');var root=document.documentElement;root.dataset.theme=r;root.dataset.themePreference=p;try{root.style.colorScheme=r;}catch(e){}if(r==='dark'){root.classList.add('dark');}else{root.classList.remove('dark');}}catch(e){}})();`;
+
 export default function ThemeSync() {
   const lastPreferenceRef = useRef<string | null>(null);
+
+  // Bootstrap skript se vkládá do SSR HTML mimo React strom, aby React 19
+  // nehlásil "Encountered a script tag while rendering React component"
+  // a zároveň nedošlo k probliknutí špatného tématu před hydratací.
+  useServerInsertedHTML(() => (
+    <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }} />
+  ));
 
   useEffect(() => {
     const syncTheme = (opts?: { transition?: boolean; force?: boolean }) => {

@@ -1,9 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 type CacheEntry = { banned: boolean; atMs: number };
+type Locale = 'cs' | 'en';
 
 const cache: Map<string, CacheEntry> = (globalThis as any).__PUPEN_EDGE_BAN_CACHE__ || new Map();
 (globalThis as any).__PUPEN_EDGE_BAN_CACHE__ = cache;
+const LOCALE_COOKIE = 'NEXT_LOCALE';
 
 function getClientIp(req: NextRequest) {
   const xff = req.headers.get('x-forwarded-for');
@@ -70,6 +72,30 @@ async function isBanned(ip: string | null, identityId: string | null) {
   return banned;
 }
 
+function isLocale(value: string | null | undefined): value is Locale {
+  return value === 'cs' || value === 'en';
+}
+
+function getPreferredLocale(req: NextRequest): Locale {
+  const cookieLocale = req.cookies.get(LOCALE_COOKIE)?.value;
+  if (isLocale(cookieLocale)) return cookieLocale;
+
+  const acceptLanguage = String(req.headers.get('accept-language') || '').toLowerCase();
+  const parts = acceptLanguage
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => {
+      const [tag, ...params] = part.split(';').map((item) => item.trim());
+      const q = params.find((param) => param.startsWith('q='))?.slice(2);
+      return { tag, q: q ? Number(q) : 1 };
+    })
+    .sort((a, b) => b.q - a.q);
+
+  const englishPreferred = parts.some(({ tag }) => tag === 'en' || tag.startsWith('en-'));
+  return englishPreferred ? 'en' : 'cs';
+}
+
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
@@ -107,12 +133,28 @@ export async function proxy(req: NextRequest) {
 
   const hasLocale = pathname === '/cs' || pathname.startsWith('/cs/') || pathname === '/en' || pathname.startsWith('/en/');
   if (!hasLocale) {
+    const locale = getPreferredLocale(req);
     const url = req.nextUrl.clone();
-    url.pathname = `/cs${pathname === '/' ? '' : pathname}`;
-    return NextResponse.redirect(url);
+    url.pathname = `/${locale}${pathname === '/' ? '' : pathname}`;
+    const response = NextResponse.redirect(url);
+    response.cookies.set(LOCALE_COOKIE, locale, {
+      path: '/',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 365,
+    });
+    return response;
   }
 
-  return NextResponse.next();
+  const locale = pathname.startsWith('/en') ? 'en' : 'cs';
+  const response = NextResponse.next();
+  if (req.cookies.get(LOCALE_COOKIE)?.value !== locale) {
+    response.cookies.set(LOCALE_COOKIE, locale, {
+      path: '/',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 365,
+    });
+  }
+  return response;
 }
 
 export default proxy;

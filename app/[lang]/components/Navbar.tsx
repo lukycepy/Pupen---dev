@@ -44,6 +44,10 @@ export default function Navbar({ lang, dict }: NavbarProps) {
   const navHome = t?.home || (lang === 'en' ? 'Home' : 'Domů');
   const navEvents = t?.events || (lang === 'en' ? 'Events' : 'Akce');
   const navNews = t?.news || (lang === 'en' ? 'News' : 'Novinky');
+  const utilityButtonClass =
+    'inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-xl border-2 border-black bg-white px-3 text-black transition-all hover:border-green-600 hover:bg-green-600 hover:text-white dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-500 dark:hover:text-black';
+  const utilityGroupClass =
+    'flex h-10 shrink-0 items-center gap-1 rounded-xl border-2 border-black bg-white p-1 text-black dark:border-white dark:bg-black dark:text-white';
 
   const humanizeSlug = (s: string) => String(s || '').replace(/-/g, ' ');
 
@@ -113,7 +117,6 @@ export default function Navbar({ lang, dict }: NavbarProps) {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const toolsRef = useRef<HTMLDivElement>(null);
   const toolsCloseTimerRef = useRef<number | null>(null);
-  const userCloseTimerRef = useRef<number | null>(null);
 
   const cancelToolsClose = () => {
     if (toolsCloseTimerRef.current) window.clearTimeout(toolsCloseTimerRef.current);
@@ -122,15 +125,6 @@ export default function Navbar({ lang, dict }: NavbarProps) {
   const scheduleToolsClose = () => {
     cancelToolsClose();
     toolsCloseTimerRef.current = window.setTimeout(() => setIsToolsOpen(false), 120);
-  };
-
-  const cancelUserClose = () => {
-    if (userCloseTimerRef.current) window.clearTimeout(userCloseTimerRef.current);
-    userCloseTimerRef.current = null;
-  };
-  const scheduleUserClose = () => {
-    cancelUserClose();
-    userCloseTimerRef.current = window.setTimeout(() => setIsUserMenuOpen(false), 120);
   };
 
   useEffect(() => {
@@ -217,7 +211,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
   if (isAppSection) return null;
 
   return (
-    <nav className="sticky top-0 z-[10001] w-full bg-white dark:bg-black border-b border-black dark:border-white">
+    <nav className="sticky top-0 z-[10001] w-full bg-white dark:bg-black border-b-2 border-black dark:border-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex justify-between items-center h-16">
           
@@ -231,13 +225,13 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                 className="object-cover"
               />
             </div>
-            <span className="hidden sm:inline font-bold text-base sm:text-lg tracking-tight text-stone-900 dark:text-stone-50 group-hover:text-green-600 transition truncate max-w-[150px] sm:max-w-none">
+            <span className="hidden sm:inline max-w-[180px] truncate font-bold text-base tracking-tight text-black transition group-hover:text-green-600 sm:max-w-none sm:text-lg dark:text-white">
               Studentský spolek Pupen, z.s.
             </span>
           </Link>
 
           {/* DESKTOP MENU */}
-          <div className="hidden xl:flex items-center gap-6 font-medium text-[13px] tracking-normal text-stone-600 dark:text-stone-300">
+          <div className="hidden xl:flex items-center gap-6 font-medium text-[13px] tracking-normal text-black dark:text-white">
             {[ 
               { slug: 'home', href: `/${lang}`, label: navHome, active: pathname === `/${lang}` },
               { slug: 'akce', href: `/${lang}/akce`, label: navEvents, active: pathname.includes('/akce') },
@@ -251,7 +245,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                 className={`relative text-xs font-black uppercase tracking-[0.2em] transition-all duration-300 py-2 group whitespace-nowrap ${
                   item.active 
                     ? 'text-green-600' 
-                    : 'text-stone-500 hover:text-stone-900 dark:text-stone-200/80 dark:hover:text-stone-50'
+                    : 'text-black hover:text-green-600 dark:text-white dark:hover:text-green-500'
                 }`}
               >
                 {item.label}
@@ -282,7 +276,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                 aria-haspopup="menu"
                 aria-expanded={isToolsOpen}
                 className={`relative group flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.2em] transition-all duration-300 py-2 whitespace-nowrap ${
-                  isToolsOpen ? 'text-green-600' : 'text-stone-500 hover:text-stone-900 dark:text-stone-200/80 dark:hover:text-stone-50'
+                  isToolsOpen ? 'text-green-600' : 'text-black hover:text-green-600 dark:text-white dark:hover:text-green-500'
                 }`}
               >
                 {toolsTitle}
@@ -302,24 +296,24 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                   zIndex={10000}
                   onPanelMouseEnter={cancelToolsClose}
                   onPanelMouseLeave={scheduleToolsClose}
-                  panelClassName="w-[520px] bg-white dark:bg-black border border-black dark:border-white rounded-[2.5rem] p-8 animate-in fade-in slide-in-from-top-2 duration-300"
+                  panelClassName="w-[520px] bg-white dark:bg-black border-2 border-black dark:border-white rounded-[2.5rem] p-8 animate-in fade-in slide-in-from-top-2 duration-300"
                 >
                   <div className="grid grid-cols-2 gap-3">
                     {TOOLS.filter((t) => isPageEnabled(t.slug) && showInTools(t.slug)).map((tool) => (
                       <Link 
                         key={tool.href}
                         href={`/${lang}${tool.href}`} 
-                        className="flex items-center gap-4 p-4 hover:bg-green-50 dark:hover:bg-green-950 rounded-2xl transition group/tool"
+                        className="flex items-center gap-4 rounded-2xl border-2 border-transparent p-4 transition group/tool hover:border-green-600 hover:bg-green-50 dark:hover:border-green-500 dark:hover:bg-green-950"
                         onClick={() => setIsToolsOpen(false)}
                       >
-                        <div className="w-12 h-12 bg-white dark:bg-black rounded-xl flex items-center justify-center text-stone-400 dark:text-stone-500 group-hover/tool:bg-green-600 group-hover/tool:text-white dark:group-hover/tool:bg-green-600 dark:group-hover/tool:text-white transition-all duration-300 border border-black dark:border-white">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-black bg-white text-black transition-all duration-300 group-hover/tool:border-green-600 group-hover/tool:bg-green-600 group-hover/tool:text-white dark:border-white dark:bg-black dark:text-white dark:group-hover/tool:border-green-500 dark:group-hover/tool:bg-green-500 dark:group-hover/tool:text-black">
                           {tool.icon}
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-sm font-bold text-stone-900 leading-tight mb-0.5 normal-case">
+                          <span className="mb-0.5 text-sm font-bold leading-tight text-black normal-case dark:text-white">
                             {navTools?.[tool.key]?.title || humanizeSlug(tool.slug)}
                           </span>
-                          <span className="text-[10px] text-stone-400 font-medium group-hover/tool:text-green-600 transition-colors">
+                          <span className="text-[10px] font-medium text-black transition-colors group-hover/tool:text-green-600 dark:text-white dark:group-hover/tool:text-green-500">
                             {navTools?.[tool.key]?.sub || ''}
                           </span>
                         </div>
@@ -342,7 +336,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                 className={`relative text-xs font-black uppercase tracking-[0.2em] transition-all duration-300 py-2 group whitespace-nowrap ${
                   item.active 
                     ? 'text-green-600' 
-                    : 'text-stone-500 hover:text-stone-900 dark:text-stone-200/80 dark:hover:text-stone-50'
+                    : 'text-black hover:text-green-600 dark:text-white dark:hover:text-green-500'
                 }`}
               >
                 {item.label}
@@ -354,12 +348,13 @@ export default function Navbar({ lang, dict }: NavbarProps) {
           </div>
 
           {/* ACTION BUTTONS */}
-          <div className="hidden md:flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-3">
             {/* SEARCH */}
             <div className="relative" ref={searchRef}>
               <button 
                 onClick={() => setIsSearchOpen(!isSearchOpen)}
-                className={`p-2 transition-all duration-300 ${isSearchOpen ? 'text-stone-900 dark:text-stone-50' : 'text-stone-400 hover:text-green-600 dark:text-stone-200/80 dark:hover:text-green-400'}`}
+                className={`${utilityButtonClass} w-10 px-0 ${isSearchOpen ? 'border-green-600 bg-green-600 text-white dark:border-green-500 dark:bg-green-500 dark:text-black' : ''}`}
+                aria-label={isSearchOpen ? (lang === 'cs' ? 'Zavřít vyhledávání' : 'Close search') : (lang === 'cs' ? 'Otevřít vyhledávání' : 'Open search')}
               >
                 {isSearchOpen ? <X size={20} /> : <Search size={20} />}
               </button>
@@ -371,7 +366,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                   placement="bottom-end"
                   offset={16}
                   zIndex={10001}
-                  panelClassName="w-96 bg-white dark:bg-black border border-black dark:border-white rounded-3xl p-6 animate-in slide-in-from-top-2 duration-300"
+                  panelClassName="w-96 bg-white dark:bg-black border-2 border-black dark:border-white rounded-3xl p-6 animate-in slide-in-from-top-2 duration-300"
                 >
                   <div className="relative mb-6">
                     <input 
@@ -380,7 +375,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder={searchPlaceholder}
-                      className="w-full bg-white dark:bg-black border border-black dark:border-white rounded-2xl px-5 py-4 text-sm font-bold text-black dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:ring-2 focus:ring-green-500 transition outline-none"
+                      className="w-full rounded-2xl border-2 border-black bg-white px-5 py-4 text-sm font-bold text-black transition outline-none placeholder:text-black dark:border-white dark:bg-black dark:text-white dark:placeholder:text-white focus:ring-2 focus:ring-green-500"
                     />
                     {isSearching && <InlinePulse className="absolute right-5 top-5 bg-stone-300 dark:bg-stone-600" size={14} />}
                   </div>
@@ -547,16 +542,16 @@ export default function Navbar({ lang, dict }: NavbarProps) {
             </div>
 
             {/* PŘEPÍNAČ JAZYKA */}
-            <div className="flex items-center gap-1 bg-black text-white p-1 rounded-xl border-2 border-black dark:bg-white dark:text-black dark:border-white">
+            <div className={utilityGroupClass}>
               <Link 
                 href={getTransliteratedPath('cs')}
-                className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black transition-all ${lang === 'cs' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : 'text-stone-400 dark:text-stone-500 hover:text-white dark:hover:text-black'}`}
+                className={`rounded-lg px-2.5 py-1.5 text-[10px] font-black transition-all ${lang === 'cs' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : 'text-black hover:text-green-600 dark:text-white dark:hover:text-green-500'}`}
               >
                 CZ
               </Link>
               <Link 
                 href={getTransliteratedPath('en')}
-                className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black transition-all ${lang === 'en' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : 'text-stone-400 dark:text-stone-500 hover:text-white dark:hover:text-black'}`}
+                className={`rounded-lg px-2.5 py-1.5 text-[10px] font-black transition-all ${lang === 'en' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : 'text-black hover:text-green-600 dark:text-white dark:hover:text-green-500'}`}
               >
                 EN
               </Link>
@@ -565,23 +560,15 @@ export default function Navbar({ lang, dict }: NavbarProps) {
             <div
               className="relative"
               ref={userMenuRef}
-              onMouseEnter={() => {
-                cancelUserClose();
-                setIsUserMenuOpen(true);
-              }}
-              onMouseLeave={() => {
-                scheduleUserClose();
-              }}
             >
               <button
                 type="button"
                 onClick={() => {
-                  cancelUserClose();
                   setIsUserMenuOpen((v) => !v);
                 }}
                 aria-haspopup="menu"
                 aria-expanded={isUserMenuOpen}
-                className="px-3 py-2.5 bg-black text-white rounded-xl hover:bg-green-600 hover:text-white hover:border-green-600 transition-all border-2 border-black dark:bg-white dark:text-black dark:border-white dark:hover:bg-green-500 dark:hover:text-black dark:hover:border-green-500 inline-flex items-center gap-1.5"
+                className={`${utilityButtonClass} gap-1.5`}
                 title={userProfile ? (lang === 'cs' ? 'Účet' : 'Account') : (dict?.memberLogin || 'Login')}
               >
                 {userProfile ? (
@@ -602,9 +589,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                   placement="bottom-end"
                   offset={12}
                   zIndex={10001}
-                  onPanelMouseEnter={cancelUserClose}
-                  onPanelMouseLeave={scheduleUserClose}
-                  panelClassName="w-64 bg-white dark:bg-black border border-black dark:border-white rounded-3xl p-2"
+                  panelClassName="w-64 rounded-3xl border-2 border-black bg-white p-2 text-black dark:border-white dark:bg-black dark:text-white"
                 >
                   {(userProfile?.is_member || userProfile?.is_admin || userProfile?.can_manage_admins || userProfile?.can_view_member_portal || userProfile?.can_edit_member_portal) && (
                     <Link
@@ -656,12 +641,12 @@ export default function Navbar({ lang, dict }: NavbarProps) {
               )}
             </div>
 
-            <ThemeToggleButton />
+            <ThemeToggleButton className={utilityButtonClass} />
 
             {isPageEnabled('prihlaska') && (
               <Link 
                 href={`/${lang}/prihlaska`} 
-                className="inline-flex items-center justify-center whitespace-nowrap bg-green-600 text-white px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-[0.12em] hover:bg-green-500 transition-all border-2 border-green-600 hover:border-green-500"
+                className="inline-flex h-11 items-center justify-center whitespace-nowrap rounded-2xl border-2 border-green-600 bg-green-600 px-5 text-[11px] font-black uppercase tracking-[0.12em] text-white transition-all hover:border-green-500 hover:bg-green-500"
               >
                 {lang === 'cs' ? 'Přidej se' : 'Join us'}
               </Link>
@@ -670,15 +655,15 @@ export default function Navbar({ lang, dict }: NavbarProps) {
 
           {/* MOBILNÍ HAMBURGER */}
           <div className="md:hidden flex items-center gap-3">
-            <ThemeToggleButton />
-            <div className="flex items-center gap-1 bg-white dark:bg-black p-1 rounded-xl border border-black dark:border-white">
-              <Link href={getTransliteratedPath('cs')} className={`px-2 py-1 rounded-lg text-[9px] font-black transition focus:ring-2 focus:ring-green-500 focus:outline-none ${lang === 'cs' ? 'bg-green-600 text-white' : 'text-stone-400 hover:text-black dark:hover:text-white'}`}>CZ</Link>
-              <Link href={getTransliteratedPath('en')} className={`px-2 py-1 rounded-lg text-[9px] font-black transition focus:ring-2 focus:ring-green-500 focus:outline-none ${lang === 'en' ? 'bg-green-600 text-white' : 'text-stone-400 hover:text-black dark:hover:text-white'}`}>EN</Link>
+            <ThemeToggleButton className={utilityButtonClass} />
+            <div className={utilityGroupClass}>
+              <Link href={getTransliteratedPath('cs')} className={`px-2 py-1 rounded-lg text-[9px] font-black transition focus:ring-2 focus:ring-green-500 focus:outline-none ${lang === 'cs' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : 'text-black hover:text-green-600 dark:text-white dark:hover:text-green-500'}`}>CZ</Link>
+              <Link href={getTransliteratedPath('en')} className={`px-2 py-1 rounded-lg text-[9px] font-black transition focus:ring-2 focus:ring-green-500 focus:outline-none ${lang === 'en' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : 'text-black hover:text-green-600 dark:text-white dark:hover:text-green-500'}`}>EN</Link>
             </div>
             
             <button 
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="text-black dark:text-white hover:text-green-600 dark:hover:text-green-400 transition p-2 bg-white dark:bg-black rounded-xl border border-black dark:border-white focus:ring-2 focus:ring-green-500 focus:outline-none"
+              className={`${utilityButtonClass} p-2 focus:ring-2 focus:ring-green-500 focus:outline-none`}
               aria-label={isMenuOpen ? "Zavřít menu" : "Otevřít menu"}
               aria-expanded={isMenuOpen}
             >
@@ -697,7 +682,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
           lockScroll={false}
           overlayClassName="md:hidden fixed inset-0 z-[9998] flex"
           backdropClassName="absolute inset-0 bg-black/40"
-          panelClassName="relative w-full mt-16 h-[calc(100dvh-4rem)] bg-white dark:bg-black border-t border-black dark:border-white animate-in slide-in-from-top-10 duration-500 overflow-y-auto overscroll-contain touch-pan-y"
+          panelClassName="relative w-full mt-16 h-[calc(100dvh-4rem)] bg-white dark:bg-black border-t-2 border-black dark:border-white animate-in slide-in-from-top-10 duration-500 overflow-y-auto overscroll-contain touch-pan-y"
         >
           <div className="flex flex-col p-5 sm:p-8 space-y-5 text-black dark:text-white pb-[max(2rem,env(safe-area-inset-bottom))]">
             {/* MOBILNÍ SEARCH */}
@@ -708,7 +693,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={searchPlaceholder}
-                className="w-full bg-white dark:bg-black border border-black dark:border-white rounded-2xl pl-12 pr-4 py-4 text-sm font-bold text-black dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:ring-2 focus:ring-green-500 transition-all outline-none"
+                className="w-full rounded-2xl border-2 border-black bg-white pl-12 pr-4 py-4 text-sm font-bold text-black outline-none transition-all placeholder:text-black dark:border-white dark:bg-black dark:text-white dark:placeholder:text-white focus:ring-2 focus:ring-green-500"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
@@ -723,7 +708,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
             </div>
 
             {searchQuery.trim().length >= 2 && !isSearching && (
-              <div className="bg-white dark:bg-black border border-black dark:border-white rounded-2xl p-4">
+              <div className="rounded-2xl border-2 border-black bg-white p-4 dark:border-white dark:bg-black">
                 {(searchResults.pages.length > 0 ||
                   searchResults.events.length > 0 ||
                   searchResults.posts.length > 0 ||

@@ -17,6 +17,19 @@ interface LoginPageClientProps {
 
 type LoginCopy = Partial<Dictionary['auth']['login']>;
 
+function getLoginErrorMessage(loginError: { message?: string | null; status?: number | null } | null | undefined, fallback: string, offline: string) {
+  if (!loginError) return fallback;
+  const message = String(loginError.message || '').toLowerCase();
+  const status = Number(loginError.status || 0);
+  if (status === 0 || message.includes('fetch failed') || message.includes('failed to fetch')) {
+    return offline;
+  }
+  if (message.includes('invalid login credentials') || message.includes('invalid_credentials')) {
+    return fallback;
+  }
+  return String(loginError.message || fallback);
+}
+
 export default function LoginPageClient({ lang }: LoginPageClientProps) {
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
   const googleAuthEnabled = process.env.NEXT_PUBLIC_ENABLE_GOOGLE_AUTH === 'true';
@@ -355,7 +368,13 @@ export default function LoginPageClient({ lang }: LoginPageClientProps) {
     });
 
     if (loginError) {
-      setError((dict?.auth?.login?.loginError as string) || (lang === 'cs' ? 'Chyba přihlášení. Zkontrolujte údaje.' : 'Login error. Please check your credentials.'));
+      setError(
+        getLoginErrorMessage(
+          loginError,
+          (dict?.auth?.login?.loginError as string) || (lang === 'cs' ? 'Chyba přihlášení. Zkontrolujte údaje.' : 'Login error. Please check your credentials.'),
+          lang === 'cs' ? 'Přihlášení teď nemůže kontaktovat server. Zkuste to znovu za chvíli.' : 'Login cannot reach the server right now. Please try again shortly.',
+        ),
+      );
       setLoading(false);
     } else if ((data as any)?.mfa && !(data as any)?.session) {
       try {
@@ -471,7 +490,7 @@ export default function LoginPageClient({ lang }: LoginPageClientProps) {
           <h1 className="text-3xl font-black text-black dark:text-white mb-2 tracking-tight">
             {t.rolePickTitle || (lang === 'cs' ? 'Vyberte sekci' : 'Select Section')}
           </h1>
-          <p className="text-stone-500 dark:text-stone-400 mb-10 font-medium">
+          <p className="text-black dark:text-white/80 mb-10 font-medium">
             {t.rolePickSubtitle || (lang === 'cs' ? 'Máte přístup do více částí portálu Pupen.' : 'You have access to multiple parts of the Pupen portal.')}
           </p>
           
@@ -517,7 +536,7 @@ export default function LoginPageClient({ lang }: LoginPageClientProps) {
 
           <button 
             onClick={() => supabase.auth.signOut().then(() => setShowRoleSelection(false))}
-            className="mt-10 text-stone-400 dark:text-stone-500 font-bold hover:text-red-500 dark:hover:text-red-400 transition text-sm"
+            className="mt-10 text-black dark:text-white/80 font-bold hover:text-red-500 dark:hover:text-red-400 transition text-sm"
           >
             {t.logout || (lang === 'cs' ? 'Odhlásit se' : 'Log out')}
           </button>
@@ -539,14 +558,14 @@ export default function LoginPageClient({ lang }: LoginPageClientProps) {
         <h1 className="text-3xl font-black text-black dark:text-white mb-2 tracking-tight">
           {t.title || (lang === 'cs' ? 'Vítejte zpět' : 'Welcome back')}
         </h1>
-        <p className="text-stone-500 dark:text-stone-400 mb-10 font-medium">
+        <p className="text-black dark:text-white/80 mb-10 font-medium">
           {t.subtitle || (lang === 'cs' ? 'Přihlášení do ekosystému Pupen' : 'Log in to the Pupen ecosystem')}
         </p>
         
         <form onSubmit={adminMfaEnroll ? verifyAdminMfaEnroll : mfa ? handleMfaVerify : handleLogin} className="space-y-4 text-left">
           {adminMfaEnroll ? (
             <div className="space-y-4">
-              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 px-1">
+              <div className="text-[10px] font-black uppercase tracking-widest text-black dark:text-white px-1">
                 {lang === 'cs' ? 'Nastavení 2FA pro admin účet' : 'Set up 2FA for admin account'}
               </div>
               {adminMfaEnrollQr ? (
@@ -555,7 +574,7 @@ export default function LoginPageClient({ lang }: LoginPageClientProps) {
                 </div>
               ) : null}
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 px-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-black dark:text-white px-1">
                   {t.mfaCodeLabel || (lang === 'cs' ? '2FA kód' : '2FA code')}
                 </label>
                 <input
@@ -563,11 +582,10 @@ export default function LoginPageClient({ lang }: LoginPageClientProps) {
                   inputMode="numeric"
                   value={adminMfaEnrollCode}
                   onChange={(e) => setAdminMfaEnrollCode(e.target.value)}
-                  aria-invalid={error ? 'true' : 'false'}
                   className="w-full bg-white dark:bg-black border-2 border-black dark:border-white rounded-2xl px-4 py-4 font-bold text-black dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:ring-2 focus:ring-green-500 transition outline-none"
                   placeholder="123456"
                 />
-                <div className="text-[9px] text-stone-400 dark:text-stone-500 italic px-1">
+                <div className="text-[9px] text-black dark:text-white/70 italic px-1">
                   {t.mfaHint || (lang === 'cs' ? 'Zadejte kód z autentizační aplikace.' : 'Enter code from your authenticator app.')}
                 </div>
               </div>
@@ -588,7 +606,7 @@ export default function LoginPageClient({ lang }: LoginPageClientProps) {
             </div>
           ) : mfa ? (
             <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 px-1">
+              <label className="text-[10px] font-black uppercase tracking-widest text-black dark:text-white px-1">
                 {t.mfaCodeLabel || (lang === 'cs' ? '2FA kód' : '2FA code')}
               </label>
               <input
@@ -596,18 +614,17 @@ export default function LoginPageClient({ lang }: LoginPageClientProps) {
                 inputMode="numeric"
                 value={mfaCode}
                 onChange={(e) => setMfaCode(e.target.value)}
-                aria-invalid={error ? 'true' : 'false'}
                 className="w-full bg-white dark:bg-black border-2 border-black dark:border-white rounded-2xl px-4 py-4 font-bold text-black dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:ring-2 focus:ring-green-500 transition outline-none"
                 placeholder="123456"
               />
-              <div className="text-[9px] text-stone-400 dark:text-stone-500 italic px-1">
+              <div className="text-[9px] text-black dark:text-white/70 italic px-1">
                 {t.mfaHint || (lang === 'cs' ? 'Zadejte kód z autentizační aplikace.' : 'Enter code from your authenticator app.')}
               </div>
             </div>
           ) : (
             <>
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 px-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-black dark:text-white px-1">
                   {t.emailLabel || (lang === 'cs' ? 'E-mail' : 'Email')}
                 </label>
                 <div className="relative">
@@ -617,14 +634,13 @@ export default function LoginPageClient({ lang }: LoginPageClientProps) {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    aria-invalid={error ? 'true' : 'false'}
                     className="w-full bg-white dark:bg-black border-2 border-black dark:border-white rounded-2xl pl-12 pr-4 py-4 font-bold text-black dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:ring-2 focus:ring-green-500 transition outline-none"
                     placeholder={t.emailPlaceholder || 'vas@email.cz'}
                   />
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 px-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-black dark:text-white px-1">
                   {t.passwordLabel || (lang === 'cs' ? 'Heslo' : 'Password')}
                 </label>
                 <div className="relative">
@@ -633,7 +649,6 @@ export default function LoginPageClient({ lang }: LoginPageClientProps) {
                     value={password}
                     onChange={setPassword}
                     required
-                    ariaInvalid={!!error}
                     placeholder={t.passwordPlaceholder || '••••••••'}
                     inputClassName="w-full bg-white dark:bg-black border-2 border-black dark:border-white rounded-2xl pl-12 pr-12 py-4 font-bold text-black dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:ring-2 focus:ring-green-500 transition outline-none"
                     buttonClassName="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 dark:text-stone-500 hover:text-black dark:hover:text-white transition"
@@ -642,7 +657,7 @@ export default function LoginPageClient({ lang }: LoginPageClientProps) {
                 </div>
               </div>
               <div className="flex items-center justify-end">
-                <Link href={`/${lang}/forgot`} className="text-stone-400 dark:text-stone-500 text-xs font-bold hover:text-green-600 dark:hover:text-green-400 transition">
+                <Link href={`/${lang}/forgot`} className="text-black dark:text-white/80 text-xs font-bold hover:text-green-600 dark:hover:text-green-400 transition">
                   {t.forgotPassword || (lang === 'en' ? 'Forgot password?' : 'Zapomenuté heslo?')}
                 </Link>
               </div>
@@ -700,7 +715,7 @@ export default function LoginPageClient({ lang }: LoginPageClientProps) {
         </form>
 
         <div className="mt-10 pt-8 border-t border-black/20 dark:border-white/20">
-          <Link href={`/${lang}/prihlaska`} className="text-stone-400 dark:text-stone-500 text-sm font-bold hover:text-green-600 dark:hover:text-green-400 transition">
+          <Link href={`/${lang}/prihlaska`} className="text-black dark:text-white/80 text-sm font-bold hover:text-green-600 dark:hover:text-green-400 transition">
             {t.applyLink || (lang === 'cs' ? 'Ještě nemáte účet? Podat přihlášku' : 'No account yet? Apply here')}
           </Link>
         </div>

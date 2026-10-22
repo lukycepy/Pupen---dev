@@ -1,6 +1,6 @@
-import { getServerSupabase } from '@/lib/supabase-server';
 import { getClientIp } from '@/lib/rate-limit';
 import { isRequestBanned } from '@/lib/security/bans';
+import { getRlsSupabase } from '@/lib/supabase-rls';
 
 interface AdminProfileRow {
   is_admin?: boolean | null;
@@ -32,8 +32,8 @@ export function getBearerToken(req: Request) {
 export async function requireUser(req: Request) {
   const token = getBearerToken(req);
   if (!token) throw new Error('Unauthorized');
-  const supabase = getServerSupabase();
-  const res = await supabase.auth.getUser(token);
+  const supabase = getRlsSupabase(token);
+  const res = await supabase.auth.getUser();
   const user = res.data?.user;
   if (!user) throw new Error('Unauthorized');
   const ip = getClientIp(req) || 'unknown';
@@ -42,8 +42,10 @@ export async function requireUser(req: Request) {
 }
 
 export async function requireAdmin(req: Request) {
+  const token = getBearerToken(req);
+  if (!token) throw new Error('Unauthorized');
+  const supabase = getRlsSupabase(token);
   const user = await requireUser(req);
-  const supabase = getServerSupabase();
   const { data: profile, error } = await supabase
     .from('profiles')
     .select('is_admin, can_manage_admins')
@@ -61,8 +63,10 @@ export async function requireSuperadmin(req: Request) {
 }
 
 export async function requireMember(req: Request) {
+  const token = getBearerToken(req);
+  if (!token) throw new Error('Unauthorized');
+  const supabase = getRlsSupabase(token);
   const user = await requireUser(req);
-  const supabase = getServerSupabase();
   const { data: profile, error } = await supabase
     .from('profiles')
     .select('is_admin, is_member, can_view_member_portal, can_edit_member_portal')
@@ -74,8 +78,10 @@ export async function requireMember(req: Request) {
 }
 
 export async function requireTrustBoxAdmin(req: Request) {
+  const token = getBearerToken(req);
+  if (!token) throw new Error('Unauthorized');
+  const supabase = getRlsSupabase(token);
   const user = await requireUser(req);
-  const supabase = getServerSupabase();
   const profRes = await supabase.from('profiles').select('can_manage_admins').eq('id', user.id).maybeSingle<AdminProfileRow>();
   if (profRes.error) throw profRes.error;
   const isSuperadmin = !!profRes.data?.can_manage_admins;
