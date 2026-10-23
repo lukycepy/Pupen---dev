@@ -10,6 +10,7 @@ import { Plus, Trash2, Edit3, Image as ImageIcon, Loader2, Link as LinkIcon, X, 
 import Image from 'next/image';
 import { useToast } from '../../../../context/ToastContext';
 import ConfirmModal from '@/app/components/ConfirmModal';
+import Dialog from '@/app/components/ui/Dialog';
 import { SkeletonTabContent } from '../../../components/Skeleton';
 
 const partnerSchema = z.object({
@@ -20,7 +21,7 @@ const partnerSchema = z.object({
 
 type PartnerFormValues = z.infer<typeof partnerSchema>;
 
-export default function PartnersTab({ dict, uploadImage }: { dict: any, uploadImage: (file: File, bucket: string) => Promise<string> }) {
+export default function PartnersTab({ dict, uploadImage, readOnly = false }: { dict: any, uploadImage: (file: File, bucket: string) => Promise<string>, readOnly?: boolean }) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [editingPartner, setEditingPartner] = useState<any>(null);
@@ -106,6 +107,8 @@ export default function PartnersTab({ dict, uploadImage }: { dict: any, uploadIm
     reset();
   };
 
+  const isFormOpen = !!editingPartner || (!readOnly && !isLoading && partners.length === 0);
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* ACTION BAR */}
@@ -126,17 +129,28 @@ export default function PartnersTab({ dict, uploadImage }: { dict: any, uploadIm
 
       <div className="grid lg:grid-cols-12 gap-8 items-start">
         {/* FORM SECTION */}
-        {(editingPartner || !isLoading && partners.length === 0) && (
-          <div className="lg:col-span-5 xl:col-span-4 bg-white p-8 rounded-[2.5rem] shadow-sm border border-stone-100 animate-in slide-in-from-left duration-500 sticky top-8">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-xl font-black text-stone-900 flex items-center gap-3">
-                <div className="p-2 bg-green-50 text-green-600 rounded-lg">
-                  {editingPartner?.id ? <Edit3 size={20} /> : <Plus size={20} />} 
+        <Dialog
+          open={isFormOpen}
+          onClose={handleCancel}
+          overlayClassName="fixed inset-0 z-[30000] flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-6"
+          panelClassName="w-full max-w-3xl rounded-t-[2rem] border-2 border-black bg-white p-6 sm:rounded-[2.5rem] sm:p-8 dark:border-white dark:bg-black max-h-[92dvh] overflow-y-auto"
+        >
+          <div className="space-y-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="flex items-center gap-3 text-black dark:text-white">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-green-600 bg-green-50 text-green-700 dark:border-green-500 dark:bg-green-950 dark:text-green-400">
+                  {editingPartner?.id ? <Edit3 size={22} /> : <Plus size={22} />}
                 </div>
-                {editingPartner?.id ? dict.admin.editPartner : dict.admin.newPartner}
-              </h2>
-              <button onClick={handleCancel} className="p-2 hover:bg-stone-50 rounded-full transition text-stone-400">
-                <X size={20} />
+                <div className="text-xl font-black">
+                  {editingPartner?.id ? dict.admin.editPartner : dict.admin.newPartner}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="inline-flex items-center gap-2 rounded-2xl border-2 border-black bg-white px-4 py-3 font-bold text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
+              >
+                <X size={16} /> {dict.admin.btnCancel || 'Zavřít'}
               </button>
             </div>
 
@@ -192,10 +206,10 @@ export default function PartnersTab({ dict, uploadImage }: { dict: any, uploadIm
               </div>
             </form>
           </div>
-        )}
+        </Dialog>
 
         {/* LIST SECTION */}
-        <div className={`${editingPartner ? 'lg:col-span-7 xl:col-span-8' : 'lg:col-span-12'} bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-sm overflow-hidden`}>
+        <div className="lg:col-span-12 bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-sm overflow-hidden">
           <h2 className="text-xl font-black text-stone-900 mb-8">{dict.admin.listPartners || 'Seznam partnerů'}</h2>
           
           {isLoading ? (

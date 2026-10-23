@@ -5,9 +5,10 @@ import { supabase } from '@/lib/supabase';
 import { useFieldArray, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Trash2, Receipt, Search, RefreshCcw, Save, FilePlus2, ArrowRightLeft, XCircle, BadgeCheck, Mail } from 'lucide-react';
+import { Plus, Trash2, Receipt, Search, RefreshCcw, Save, FilePlus2, ArrowRightLeft, XCircle, BadgeCheck, Mail, X } from 'lucide-react';
 import InlinePulse from '@/app/components/InlinePulse';
 import ConfirmModal from '@/app/components/ConfirmModal';
+import Dialog from '@/app/components/ui/Dialog';
 import { useToast } from '@/app/context/ToastContext';
 import { billingInvoiceCreateSchema, type BillingInvoiceStatus, type BillingInvoiceType } from '@/lib/validations/billing';
 import type { BillingInvoiceDto, BillingInvoiceItemDto } from '@/lib/billing/invoices';
@@ -77,6 +78,7 @@ export default function BillingTab({ dict }: any) {
   const uiLang = (params?.lang as string) === 'en' ? 'en' : 'cs';
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [q, setQ] = useState('');
   const [status, setStatus] = useState<'all' | BillingInvoiceStatus>('all');
   const [type, setType] = useState<'all' | BillingInvoiceType>('all');
@@ -350,6 +352,11 @@ export default function BillingTab({ dict }: any) {
     else createMutation.mutate(values);
   });
 
+  const closeEditor = () => {
+    setIsEditorOpen(false);
+    setSelectedId(null);
+  };
+
   const rows = listQuery.data?.rows || [];
   const count = listQuery.data?.count;
   const canPrev = page > 0;
@@ -371,6 +378,7 @@ export default function BillingTab({ dict }: any) {
             onClick={() => {
               setSelectedId(null);
               reset({ invoice: { type: 'invoice', currency: 'CZK', vs: '' }, items: [{ position: 1, title: '', quantity: 1, unitPrice: 0 }] });
+              setIsEditorOpen(true);
             }}
             className="inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
           >
@@ -380,36 +388,38 @@ export default function BillingTab({ dict }: any) {
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-12 gap-8 items-start">
-        <div className="lg:col-span-5 xl:col-span-4 bg-white p-8 rounded-[2.5rem] shadow-sm border border-stone-100 sticky top-8">
-          <div className="flex items-start justify-between gap-4 mb-6">
-            <div className="min-w-0">
-              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">Detail</div>
-              <div className="text-xl font-black text-stone-900 truncate">
-                {selectedInvoice?.number || (selectedInvoice ? 'Bez čísla' : 'Nová faktura')}
-              </div>
-              {selectedInvoice ? (
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${statusBadge(selectedInvoice.status)}`}>
-                    {selectedInvoice.status}
-                  </span>
-                  <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${typeBadge(selectedInvoice.type)}`}>
-                    {selectedInvoice.type}
-                  </span>
-                </div>
-              ) : null}
+      <Dialog
+        open={isEditorOpen}
+        onClose={closeEditor}
+        overlayClassName="fixed inset-0 z-[9000] flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-6"
+        panelClassName="w-full max-w-4xl rounded-t-[2rem] border-2 border-black bg-white p-6 sm:rounded-[2.5rem] sm:p-8 dark:border-white dark:bg-black max-h-[92dvh] overflow-y-auto"
+      >
+        <div className="flex items-start justify-between gap-4 mb-6">
+          <div className="min-w-0">
+            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">Detail</div>
+            <div className="text-xl font-black text-black dark:text-white truncate">
+              {selectedInvoice?.number || (selectedInvoice ? 'Bez čísla' : 'Nová faktura')}
             </div>
-            {selectedId ? (
-              <button
-                type="button"
-                onClick={() => setSelectedId(null)}
-                className="p-2 hover:bg-stone-50 rounded-full transition text-stone-400"
-                title="Zavřít detail"
-              >
-                <XCircle size={20} />
-              </button>
+            {selectedInvoice ? (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${statusBadge(selectedInvoice.status)}`}>
+                  {selectedInvoice.status}
+                </span>
+                <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${typeBadge(selectedInvoice.type)}`}>
+                  {selectedInvoice.type}
+                </span>
+              </div>
             ) : null}
           </div>
+          <button
+            type="button"
+            onClick={closeEditor}
+            className="inline-flex items-center justify-center rounded-2xl border-2 border-black bg-white p-3 text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
+            title="Zavřít detail"
+          >
+            <X size={20} />
+          </button>
+        </div>
 
           {detailQuery.isLoading && selectedId ? (
             <div className="py-10 flex items-center justify-center">
@@ -709,9 +719,9 @@ export default function BillingTab({ dict }: any) {
               </div>
             </form>
           )}
-        </div>
+      </Dialog>
 
-        <div className="lg:col-span-7 xl:col-span-8 bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-sm overflow-hidden">
+      <div className="bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-sm overflow-hidden">
           <div className="mb-8 grid lg:grid-cols-12 gap-4 items-end">
             <div className="lg:col-span-5 relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-300" size={18} />
@@ -799,7 +809,7 @@ export default function BillingTab({ dict }: any) {
           ) : listQuery.error ? (
             <div className="py-16 text-center text-stone-400 font-bold uppercase tracking-widest text-xs">Nelze načíst faktury.</div>
           ) : rows.length === 0 ? (
-            <div className="py-16 text-center text-stone-400 font-bold uppercase tracking-widest text-xs">Zatím žádné faktury.</div>
+            <div className="py-16 text-center text-stone-400 font-bold uppercase tracking-widest text-xs">Žádné faktury.</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left">
@@ -820,7 +830,10 @@ export default function BillingTab({ dict }: any) {
                       <tr
                         key={r.id}
                         className={`border-t border-stone-100 transition cursor-pointer ${active ? 'bg-green-50/30' : 'hover:bg-stone-50'}`}
-                        onClick={() => setSelectedId(r.id)}
+                        onClick={() => {
+                          setSelectedId(r.id);
+                          setIsEditorOpen(true);
+                        }}
                       >
                         <td className="py-4 px-4">
                           <div className="font-black tracking-widest text-stone-900">{r.number || '—'}</div>
@@ -845,6 +858,7 @@ export default function BillingTab({ dict }: any) {
                             onClick={(e) => {
                               e.stopPropagation();
                               setSelectedId(r.id);
+                              setIsEditorOpen(true);
                             }}
                             className="inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
                           >
@@ -890,7 +904,6 @@ export default function BillingTab({ dict }: any) {
             </div>
           </div>
         </div>
-      </div>
 
       <ConfirmModal
         isOpen={confirmOpen}

@@ -551,7 +551,7 @@ export default function ApplicationsTab({ dict, readOnly }: { dict: any; readOnl
         data?.applicationsBlockedByDbGuard
           ? isEn
             ? ' DB guard still blocks application relink.'
-            : ' DB guard zatím blokuje relink přihlášek.'
+            : ' DB guard stále blokuje relink přihlášek.'
           : '';
       showToast(
         isEn
@@ -577,12 +577,12 @@ export default function ApplicationsTab({ dict, readOnly }: { dict: any; readOnl
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <AdminModuleHeader
         title={dict?.admin?.tabApplications || (isEn ? 'Applications' : 'Přihlášky')}
-        description={dict?.admin?.appsSubtitle || (isEn ? 'Membership applications review' : 'Správa a schvalování členských přihlášek (v2)')}
+        description={dict?.admin?.appsSubtitle || (isEn ? 'Membership applications review' : 'Správa a schvalování členských přihlášek')}
       />
 
       {summaryQuery.data ? (
         <>
-          <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
             {[
               {
                 label: isEn ? 'Pending applications' : 'Čekající přihlášky',
@@ -620,13 +620,13 @@ export default function ApplicationsTab({ dict, readOnly }: { dict: any; readOnl
                 bg: 'bg-emerald-50',
               },
             ].map((card) => (
-              <div key={card.label} className="bg-white p-6 rounded-[2rem] border border-stone-100 shadow-sm flex items-center gap-4">
+              <div key={card.label} className="flex items-center gap-4 rounded-[2rem] border-2 border-black bg-white p-5 dark:border-white dark:bg-black">
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${card.bg} ${card.tone}`}>
                   <card.icon size={22} />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{card.label}</div>
-                  <div className="text-2xl font-black text-stone-900">{card.value}</div>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500">{card.label}</div>
+                  <div className="text-2xl font-black text-black dark:text-white">{card.value}</div>
                 </div>
               </div>
             ))}
@@ -886,12 +886,12 @@ export default function ApplicationsTab({ dict, readOnly }: { dict: any; readOnl
         onClose={() => setSelectedId(null)}
         side="right"
         overlayClassName="fixed inset-0 z-[25000] flex"
-        panelClassName="relative h-full w-[980px] max-w-[95vw] bg-white border-l border-stone-100 overflow-y-auto"
+        panelClassName="relative h-full w-[1040px] max-w-[96vw] overflow-y-auto border-l-2 border-black bg-white dark:border-white dark:bg-black"
       >
-        <div className="p-8 border-b border-stone-100 flex items-start justify-between gap-6 sticky top-0 bg-white z-10">
+        <div className="sticky top-0 z-10 flex items-start justify-between gap-6 border-b-2 border-black bg-white p-6 dark:border-white dark:bg-black">
           <div className="min-w-0">
             <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{dict?.admin?.appDetail || (isEn ? 'Application detail' : 'Detail přihlášky')}</div>
-            <div className="text-2xl font-black text-stone-900 truncate">
+            <div className="truncate text-2xl font-black text-black dark:text-white">
               {selectedMeta?.first_name || ''} {selectedMeta?.last_name || ''}{!selectedMeta?.first_name && !selectedMeta?.last_name ? (selectedApplication?.name || '—') : ''}
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -906,7 +906,7 @@ export default function ApplicationsTab({ dict, readOnly }: { dict: any; readOnl
           <button
             type="button"
             onClick={() => setSelectedId(null)}
-            className="p-2 hover:bg-stone-50 rounded-full transition text-stone-400"
+            className="rounded-full border-2 border-black p-2 text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
             title={dict?.common?.close || (isEn ? 'Close' : 'Zavřít')}
           >
             <XCircle size={22} />

@@ -13,6 +13,7 @@ import { useToast } from '../../../../context/ToastContext';
 import { logAdminAction } from '@/lib/admin-logger';
 import AdminModuleHeader from './ui/AdminModuleHeader';
 import ConfirmModal from '@/app/components/ConfirmModal';
+import Dialog from '@/app/components/ui/Dialog';
 import { seoSuggestions, suggestEnglishText } from '@/lib/ai/pilot';
 
 const Editor = dynamic(() => import('../../../components/Editor'), { 
@@ -244,21 +245,27 @@ export default function NewsTab({ dict, uploadImage, currentUser, userProfile, r
         }
       />
 
-      <div className="grid lg:grid-cols-12 gap-8 items-start">
-        {/* FORM SECTION */}
-        {editingPost && (
-          <div className="lg:col-span-6 bg-white p-8 rounded-[2.5rem] shadow-sm border border-stone-100 animate-in slide-in-from-left duration-500">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-xl font-black text-stone-900 flex items-center gap-3">
-                <div className="p-2 bg-green-50 text-green-600 rounded-lg">
-                  {editingPost?.id ? <Edit3 size={20} /> : <Plus size={20} />} 
-                </div>
-                {editingPost?.id ? dict.admin.editPost : dict.admin.newPost}
-              </h2>
-              <button onClick={handleCancel} className="p-2 hover:bg-stone-50 rounded-full transition text-stone-400">
-                <X size={20} />
-              </button>
+      <Dialog
+        open={!!editingPost}
+        onClose={handleCancel}
+        overlayClassName="fixed inset-0 z-[30000] flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-6"
+        panelClassName="w-full max-w-3xl rounded-t-[2rem] border-2 border-black bg-white p-6 sm:rounded-[2.5rem] sm:p-8 dark:border-white dark:bg-black max-h-[92dvh] overflow-y-auto"
+      >
+        <div className="flex items-start justify-between gap-4 mb-6">
+          <h2 className="text-xl font-black text-black dark:text-white flex items-center gap-3">
+            <div className="p-2 bg-green-50 text-green-600 rounded-lg dark:bg-green-950 dark:text-green-400">
+              {editingPost?.id ? <Edit3 size={20} /> : <Plus size={20} />} 
             </div>
+            {editingPost?.id ? dict.admin.editPost : dict.admin.newPost}
+          </h2>
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="inline-flex items-center gap-2 rounded-2xl border-2 border-black bg-white px-4 py-3 font-bold text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
+          >
+            <X size={16} /> {dict.admin.btnCancel || 'Zavřít'}
+          </button>
+        </div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div className="space-y-4">
@@ -394,18 +401,17 @@ export default function NewsTab({ dict, uploadImage, currentUser, userProfile, r
                 <button 
                   type="submit"
                   disabled={saveMutation.isPending}
-                  className="flex-[2] bg-green-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-700 transition-all shadow-lg shadow-green-600/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="flex-[2] bg-green-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {saveMutation.isPending ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
                   {editingPost?.id ? dict.admin.btnUpdatePost : dict.admin.btnSavePost}
                 </button>
               </div>
             </form>
-          </div>
-        )}
+      </Dialog>
 
-        {/* LIST SECTION */}
-        <div className={`${editingPost ? 'lg:col-span-6' : 'lg:col-span-12'} bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-sm overflow-hidden transition-all duration-500`}>
+      {/* LIST SECTION */}
+      <div className="bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-sm overflow-hidden transition-all duration-500">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
             <h2 className="text-xl font-black text-stone-900">{dict.admin.listPosts}</h2>
             <div className="flex items-center gap-4">
@@ -469,7 +475,6 @@ export default function NewsTab({ dict, uploadImage, currentUser, userProfile, r
               </div>
             )}
           </div>
-        </div>
       </div>
       
       <ConfirmModal 

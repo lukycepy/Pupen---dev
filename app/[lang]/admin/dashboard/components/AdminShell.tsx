@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Search, ChevronRight, ShieldCheck, SlidersHorizontal } from 'lucide-react';
+import { Search, ChevronRight, ShieldCheck, SlidersHorizontal, LogOut } from 'lucide-react';
 import AdminSidebar from './AdminSidebar';
 import AppShell from '@/app/[lang]/components/appshell/AppShell';
 import AppLanguageSwitch from '@/app/[lang]/components/appshell/AppLanguageSwitch';
@@ -106,17 +106,17 @@ export default function AdminShell({
             <button
               type="button"
               onClick={onOpenCommandPalette}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl border border-stone-200 dark:border-stone-700 bg-white/80 dark:bg-stone-900/80 hover:bg-stone-50 dark:hover:bg-stone-800 text-stone-700 dark:text-stone-200 font-bold shadow-sm"
+              className="inline-flex items-center gap-2 rounded-2xl border-2 border-black bg-white px-3 py-2 font-bold text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
             >
-              <Search size={16} className="text-stone-400 dark:text-stone-400" />
+              <Search size={16} className="text-current" />
               <span className="hidden sm:inline">{dict.common.search}</span>
-              <span className="hidden md:inline text-[10px] font-black uppercase tracking-widest text-stone-300 dark:text-stone-500">Ctrl K</span>
+              <span className="hidden text-[10px] font-black uppercase tracking-widest text-black/50 dark:text-white/50 md:inline">Ctrl K</span>
             </button>
             {onOpenTabPersonalization ? (
               <button
                 type="button"
                 onClick={onOpenTabPersonalization}
-                className="h-10 w-10 rounded-2xl bg-white/80 dark:bg-stone-900/80 border border-stone-200 dark:border-stone-700 shadow-sm flex items-center justify-center text-stone-700 dark:text-stone-200 hover:bg-stone-50 dark:hover:bg-stone-800"
+                className="flex h-10 w-10 items-center justify-center rounded-2xl border-2 border-black bg-white text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
                 aria-label={dict.common.customize}
                 title={dict.common.customize}
               >
@@ -138,6 +138,16 @@ export default function AdminShell({
                 await persistTheme(next);
               }}
             />
+            <button
+              type="button"
+              onClick={onLogout}
+              className="inline-flex items-center gap-2 rounded-2xl border-2 border-red-600 bg-white px-3 py-2 font-bold text-red-700 transition hover:bg-red-50 dark:border-red-500 dark:bg-black dark:text-red-400 dark:hover:bg-red-950/40"
+              aria-label={dict.common.logout}
+              title={dict.common.logout}
+            >
+              <LogOut size={16} />
+              <span className="hidden lg:inline">{dict.common.logout}</span>
+            </button>
             <AppUserMenu
               profile={userProfile}
               onOpenProfile={onOpenProfile}

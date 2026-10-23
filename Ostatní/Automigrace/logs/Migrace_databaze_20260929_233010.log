@@ -1,0 +1,159 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20260929233010
+Username: LUKY-LEGION\Lukas
+RunAs User: LUKY-LEGION\Lukas
+Configuration Name: 
+Machine: LUKY-LEGION (Microsoft Windows NT 10.0.26200.0)
+Host Application: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File C:\Users\Lukas\Downloads\pupen 4.0\Automigrace\Migrace_databaze.ps1
+Process ID: 34196
+PSVersion: 5.1.26100.9549
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.9549
+BuildVersion: 10.0.26100.9549
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+Log: C:\Users\Lukas\Downloads\pupen 4.0\Automigrace\logs\Migrace_databaze_20260929_233010.log
+Repo: C:\Users\Lukas\Downloads\pupen 4.0
+Supabase dir: C:\Users\Lukas\Downloads\pupen 4.0\supabase
+Nacitam konfiguraci z .env + .env.local (+ produkcni/staging varianty)...
+Project ref: ojnpqxfaiuyfpsogthhx
+DB heslo: pouzivam SUPABASE_DB_PASSWORD z prostredi/.env.local/.env.
+DB heslo: delka=15, posledni 3 znaky=************21*
+DATABASE_URL (z env): postgresql://postgres:***@db.ojnpqxfaiuyfpsogthhx.supabase.co:5432/postgres?sslmode=require
+
+Linkuji projekt: ojnpqxfaiuyfpsogthhx
+
+> npx supabase --workdir C:\Users\Lukas\Downloads\pupen 4.0 link --project-ref ojnpqxfaiuyfpsogthhx --yes
+Finished supabase link.
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+A new version of Supabase CLI is available: v2.118.0 (currently installed v2.101.0)
+
+Detekuji databazovou infrastrukturu z --linked debug vystupu...
+
+> npx supabase --workdir C:\Users\Lukas\Downloads\pupen 4.0 db query --linked --debug --log-level debug select 1 as ok;
+┌────┐
+│ ok │
+├────┤
+│ 1  │
+└────┘
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+A new version of Supabase CLI is available: v2.118.0 (currently installed v2.101.0)
+2026/09/29 23:30:20 HTTP POST: https://eu.i.posthog.com/batch/
+2026/09/29 23:30:19 HTTP POST: https://api.supabase.com/v1/projects/ojnpqxfaiuyfpsogthhx/database/query
+Using access token for profile: supabase
+Loading project ref from flag: ojnpqxfaiuyfpsogthhx
+Using access token for profile: supabase
+Using profile: supabase (supabase.co)
+Supabase CLI 2.101.0
+Using database password from env var...
+Using connection pooler: postgresql://postgres.ojnpqxfaiuyfpsogthhx@aws-1-eu-west-1.pooler.supabase.com:5432/postgres
+Loading project ref from file: supabase\.temp\project-ref
+open C:\Users\Lukas\.supabase\profile: The system cannot find the file specified.
+Pooler URL: postgresql://postgres.ojnpqxfaiuyfpsogthhx@aws-1-eu-west-1.pooler.supabase.com:5432/postgres
+Pooler uzivatel: postgres.ojnpqxfaiuyfpsogthhx
+Pooler hostitel: aws-1-eu-west-1.pooler.supabase.com:5432
+Region prefix: aws-1-eu-west-1
+
+Sestavuji kandidatni DB URL a testuji je (connection probe)...
+Pocet kandidatu: 5
+
+Probe [1/5]: postgresql://postgres:***@db.ojnpqxfaiuyfpsogthhx.supabase.co:5432/postgres?sslmode=require
+
+> npx supabase --workdir C:\Users\Lukas\Downloads\pupen 4.0 db query --db-url *** --log-level error select 1 as ok;
+Try rerunning the command with --debug to troubleshoot the error.
+failed to connect to postgres: failed to connect to `host=db.ojnpqxfaiuyfpsogthhx.supabase.co user=postgres database=postgres`: hostname resolving error (lookup db.ojnpqxfaiuyfpsogthhx.supabase.co: no such host)
+Connecting to remote database...
+ -> SELHALO: Try rerunning the command with --debug to troubleshoot the error.
+
+Probe [2/5]: postgresql://postgres.ojnpqxfaiuyfpsogthhx:***@aws-1-eu-west-1.pooler.supabase.com:5432/postgres?sslmode=require
+
+> npx supabase --workdir C:\Users\Lukas\Downloads\pupen 4.0 db query --db-url *** --log-level error select 1 as ok;
+Connect to your database by setting the env var correctly: SUPABASE_DB_PASSWORD
+failed to connect to postgres: failed to connect to `host=aws-1-eu-west-1.pooler.supabase.com user=postgres.ojnpqxfaiuyfpsogthhx database=postgres`: failed SASL auth (FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01))
+Connecting to remote database...
+ -> SELHALO: Connect to your database by setting the env var correctly: SUPABASE_DB_PASSWORD
+
+Probe [3/5]: postgresql://postgres.ojnpqxfaiuyfpsogthhx:***@aws-1-eu-west-1.db.supabase.com:5432/postgres?sslmode=require
+
+> npx supabase --workdir C:\Users\Lukas\Downloads\pupen 4.0 db query --db-url *** --log-level error select 1 as ok;
+Try rerunning the command with --debug to troubleshoot the error.
+failed to connect to postgres: failed to connect to `host=aws-1-eu-west-1.db.supabase.com user=postgres.ojnpqxfaiuyfpsogthhx database=postgres`: hostname resolving error (lookup aws-1-eu-west-1.db.supabase.com: no such host)
+Connecting to remote database...
+ -> SELHALO: Try rerunning the command with --debug to troubleshoot the error.
+
+Probe [4/5]: postgresql://postgres:***@aws-1-eu-west-1.pooler.supabase.com:5432/postgres?sslmode=require
+
+> npx supabase --workdir C:\Users\Lukas\Downloads\pupen 4.0 db query --db-url *** --log-level error select 1 as ok;
+Try rerunning the command with --debug to troubleshoot the error.
+failed to connect to postgres: failed to connect to `host=aws-1-eu-west-1.pooler.supabase.com user=postgres database=postgres`: server error (FATAL: (ENOIDENTIFIER) no tenant identifier provided (external_id or sni_hostname required) (SQLSTATE XX000))
+Connecting to remote database...
+ -> SELHALO: Try rerunning the command with --debug to troubleshoot the error.
+
+Probe [5/5]: postgresql://postgres.ojnpqxfaiuyfpsogthhx:***@db.ojnpqxfaiuyfpsogthhx.supabase.co:5432/postgres?sslmode=require
+
+> npx supabase --workdir C:\Users\Lukas\Downloads\pupen 4.0 db query --db-url *** --log-level error select 1 as ok;
+Try rerunning the command with --debug to troubleshoot the error.
+failed to connect to postgres: failed to connect to `host=db.ojnpqxfaiuyfpsogthhx.supabase.co user=postgres.ojnpqxfaiuyfpsogthhx database=postgres`: hostname resolving error (lookup db.ojnpqxfaiuyfpsogthhx.supabase.co: no such host)
+Connecting to remote database...
+ -> SELHALO: Try rerunning the command with --debug to troubleshoot the error.
+
+ZADNA z kandidatnich URL neprosla. Pokousim se --linked fallback (pooler pres SUPABASE_DB_PASSWORD env)...
+
+> npx supabase --workdir C:\Users\Lukas\Downloads\pupen 4.0 db query --linked --log-level error select 1 as ok;
+┌────┐
+│ ok │
+├────┤
+│ 1  │
+└────┘
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+A new version of Supabase CLI is available: v2.118.0 (currently installed v2.101.0)
+ -> OK, --linked pooler cesta funguje. Budu pouzivat --linked pro db push a migration list.
+
+Aplikuji migrace na remote DB (db push pres --linked)...
+
+> npx supabase --workdir C:\Users\Lukas\Downloads\pupen 4.0 db push --linked --include-all --yes --log-level info --output-format json
+Connect to your database by setting the env var correctly: SUPABASE_DB_PASSWORD
+failed to connect to postgres: failed to connect to `host=aws-1-eu-west-1.pooler.supabase.com user=postgres.ojnpqxfaiuyfpsogthhx database=postgres`: failed SASL auth (FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01))
+Connecting to remote database...
+
+CHYBA: db push selhal (ExitCode=1). Pouzity rezim: --linked pooler
+Connect to your database by setting the env var correctly: SUPABASE_DB_PASSWORD
+failed to connect to postgres: failed to connect to `host=aws-1-eu-west-1.pooler.supabase.com user=postgres.ojnpqxfaiuyfpsogthhx database=postgres`: failed SASL auth (FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01))
+Connecting to remote database...
+
+ ===============================================================================
+  | DUVOD SELHANI (28P01 password authentication failed)                      |
+  |                                                                             |
+  | db query --linked: OK (nepouziva pooler, jde pres REST API, overi jen token|
+  | db push --linked : SELHA (pouziva SKUTECNE PostgreSQL pooler pripojeni a   |
+  |                     overi DB heslo. Tim se ukazuje, ze heslo neni spravne). |
+  |                                                                             |
+  | Pouzity rezim: --linked pooler |
+  |                                                                             |
+  | NejÄŤastÄ›jĹˇĂ­ pĹ™Ă­ÄŤina: SUPABASE_DB_PASSWORD obsahuje heslo z DALSĂŤHO      |
+  | Supabase projektu a pro tento projekt (ojnpqxfaiuyfpsogthhx) je JINE!    |
+  |                                                                             |
+  | RESENI (3 kroky):                                                           |
+  |                                                                             |
+  |  1. OtevĹ™i nastavenĂ­ DB hesla:                                              |
+  |     https://supabase.com/dashboard/project/ojnpqxfaiuyfpsogthhx/settings/database    |
+  |                                                                             |
+  |  2. Sekce Database password:                                                |
+  |     - bud ZOBRAZ a zkopĂ­ruj EXISTUJĂŤCĂŤ heslo (pokud ho znĂˇĹˇ)                |
+  |     - nebo klikni na 'Reset database password' a zvol NOVE heslo            |
+  |                                                                             |
+  |  3. UloĹľ do .env.local DVA radky se STEJNYM heslem:                         |
+  |     SUPABASE_DB_PASSWORD="tvoje_nove_heslo"                                |
+  |     DATABASE_URL="postgresql://postgres:tvoje_nove_heslo@X:5432/postgres" |
+ ===============================================================================
+
+   -> POZNAMKA: Uzivatel pro pripojeni muze byt 'postgres' nebo 'postgres.<project-ref>' dle infrakstruktury; heslo je ale stejne pro oba.
+   -> DUVOD: Supabase CLI nenasel SUPABASE_DB_PASSWORD / --db-url parametr neni platny.
+**********************
+Windows PowerShell transcript end
+End time: 20260929233046
+**********************

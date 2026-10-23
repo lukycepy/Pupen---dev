@@ -111,7 +111,7 @@ export default function FeedbackTab({ dict }: { dict: any }) {
       <div className="grid gap-4">
         {feedback.length === 0 ? (
           <div className="bg-white p-20 rounded-[3rem] border border-dashed border-stone-200 text-center">
-            <p className="text-stone-400 font-bold uppercase tracking-widest text-xs">Zatím žádná zpětná vazba</p>
+            <p className="text-stone-400 font-bold uppercase tracking-widest text-xs">Žádná zpětná vazba</p>
           </div>
         ) : (
           feedback.map((item: any) => (

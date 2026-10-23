@@ -504,7 +504,7 @@ export default function TrustBoxTab({ dict }: { dict: Dictionary }) {
       )}
 
       {filtered.length === 0 ? (
-        <AdminEmptyState icon={Inbox} title="Žádné podněty" description="Zatím tu nejsou žádná vlákna." />
+        <AdminEmptyState icon={Inbox} title="Žádné podněty" description="Nejsou tu žádná vlákna." />
       ) : (
         <div className="space-y-3">
           {filtered.map((t) => (

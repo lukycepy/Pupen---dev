@@ -5,10 +5,10 @@ import { supabase } from '@/lib/supabase';
 import { useToast } from '@/app/context/ToastContext';
 import InlinePulse from '@/app/components/InlinePulse';
 import ConfirmModal from '@/app/components/ConfirmModal';
-import { Siren, Plus, Save, Trash2, Eye, EyeOff, Phone, Mail, Link as LinkIcon, Tag } from 'lucide-react';
+import Dialog from '@/app/components/ui/Dialog';
+import { Siren, Plus, Save, Trash2, Eye, EyeOff, Phone, Mail, Link as LinkIcon, Tag, X } from 'lucide-react';
 import AdminModuleHeader from './ui/AdminModuleHeader';
 import AdminEmptyState from './ui/AdminEmptyState';
-import AdminPanel from './ui/AdminPanel';
 
 type Item = {
   id: string;
@@ -170,24 +170,31 @@ export default function SosTab() {
         }
       />
 
-      <div className="grid lg:grid-cols-12 gap-8 items-start">
-        <div className="lg:col-span-5 xl:col-span-4">
-          {editing ? (
-            <AdminPanel className="p-8 rounded-[2.5rem] sticky top-8">
-              <div className="flex items-center justify-between mb-6">
-                <div className="font-black text-stone-900 text-lg flex items-center gap-2">
-                  <Siren className="text-red-600" size={18} /> {editing.id ? 'Upravit' : 'Nový kontakt'}
+      <Dialog
+        open={!!editing}
+        onClose={() => setEditing(null)}
+        overlayClassName="fixed inset-0 z-[30000] flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-6"
+        panelClassName="w-full max-w-2xl rounded-t-[2rem] border-2 border-black bg-white p-6 sm:rounded-[2.5rem] sm:p-8 dark:border-white dark:bg-black max-h-[92dvh] overflow-y-auto"
+      >
+        {editing && (
+          <div className="space-y-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="flex items-center gap-3 text-black dark:text-white">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-red-600 bg-red-50 text-red-700 dark:border-red-500 dark:bg-red-950 dark:text-red-400">
+                  <Siren size={22} />
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setEditing(null)}
-                  className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
-                >
-                  Zrušit
-                </button>
+                <div className="text-xl font-black">{editing.id ? 'Upravit kontakt' : 'Nový kontakt'}</div>
               </div>
+              <button
+                type="button"
+                onClick={() => setEditing(null)}
+                className="inline-flex items-center gap-2 rounded-2xl border-2 border-black bg-white px-4 py-3 font-bold text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
+              >
+                <X size={16} /> Zavřít
+              </button>
+            </div>
 
-              <div className="space-y-4">
+            <div className="space-y-4">
                 <div>
                   <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Název</div>
                   <input
@@ -274,17 +281,12 @@ export default function SosTab() {
                   {saving ? <InlinePulse className="bg-white/80" size={16} /> : <Save size={18} />} Uložit
                 </button>
               </div>
-            </AdminPanel>
-          ) : (
-            <AdminPanel className="p-8 rounded-[2.5rem]">
-              <div className="text-stone-900 font-black">Vyber kontakt nebo přidej nový</div>
-              <div className="text-stone-400 font-medium mt-2">Udržuj kategorie a pořadí pro rychlou orientaci.</div>
-            </AdminPanel>
-          )}
-        </div>
+          </div>
+        )}
+      </Dialog>
 
-        <div className="lg:col-span-7 xl:col-span-8">
-          {loading ? (
+      <div>
+        {loading ? (
             <div className="py-20 flex items-center justify-center">
               <InlinePulse className="bg-stone-200" size={20} />
             </div>
@@ -355,7 +357,6 @@ export default function SosTab() {
               ))}
             </div>
           )}
-        </div>
       </div>
 
       <ConfirmModal

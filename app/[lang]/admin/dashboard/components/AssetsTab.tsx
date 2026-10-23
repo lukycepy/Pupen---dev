@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Box, Plus, Trash2, MapPin, Hash, Edit2, Loader2, Save, X } from 'lucide-react';
 import { useToast } from '../../../../context/ToastContext';
 import ConfirmModal from '@/app/components/ConfirmModal';
+import Dialog from '@/app/components/ui/Dialog';
 import { SkeletonTabContent } from '../../../components/Skeleton';
 
 export default function AssetsTab({ dict }: { dict: any }) {
@@ -119,18 +120,51 @@ export default function AssetsTab({ dict }: { dict: any }) {
         </h2>
         <button 
           onClick={() => {
-            if (isAdding || editingItem) handleCancel();
-            else setIsAdding(true);
+            setEditingItem(null);
+            setFormData({ 
+              name: '', 
+              name_en: '', 
+              description: '', 
+              description_en: '', 
+              quantity: 1, 
+              location: '',
+              location_en: '' 
+            });
+            setIsAdding(true);
           }}
-          className="bg-green-600 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-green-500 transition shadow-lg shadow-green-900/20"
+          className="bg-green-600 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-green-500 transition"
         >
-          {isAdding || editingItem ? <X size={20} /> : <Plus size={20} />}
-          {isAdding || editingItem ? (dict.admin?.btnCancel || 'Zrušit') : (dict.admin?.addAsset || 'Přidat majetek')}
+          <Plus size={20} />
+          {dict.admin?.addAsset || 'Přidat majetek'}
         </button>
       </div>
 
       {isAdding && (
-        <div className="bg-white p-8 rounded-[2.5rem] border shadow-xl animate-in fade-in slide-in-from-top-4 duration-300">
+        <Dialog
+          open={isAdding || !!editingItem}
+          onClose={handleCancel}
+          overlayClassName="fixed inset-0 z-[30000] flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-6"
+          panelClassName="w-full max-w-3xl rounded-t-[2rem] border-2 border-black bg-white p-6 sm:rounded-[2.5rem] sm:p-8 dark:border-white dark:bg-black max-h-[92dvh] overflow-y-auto"
+        >
+        <div className="space-y-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex items-center gap-3 text-black dark:text-white">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-green-600 bg-green-50 text-green-700 dark:border-green-500 dark:bg-green-950 dark:text-green-400">
+                <Box size={22} />
+              </div>
+              <div className="text-xl font-black">
+                {editingItem ? (dict.admin?.btnUpdate || 'Upravit položku') : (dict.admin?.addAsset || 'Přidat majetek')}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="inline-flex items-center gap-2 rounded-2xl border-2 border-black bg-white px-4 py-3 font-bold text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
+            >
+              <X size={16} /> {dict.admin?.btnCancel || 'Zavřít'}
+            </button>
+          </div>
+
           <div className="grid md:grid-cols-2 gap-6">
             <div>
               <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.admin?.assetName || 'Název'} (CZ)</label>
@@ -205,7 +239,7 @@ export default function AssetsTab({ dict }: { dict: any }) {
               <button 
                 onClick={() => saveMutation.mutate(formData)}
                 disabled={!formData.name || saveMutation.isPending}
-                className="w-full bg-green-600 text-white py-3 rounded-xl font-black uppercase tracking-widest hover:bg-green-500 disabled:opacity-50 transition shadow-lg shadow-green-900/20 flex items-center justify-center gap-2"
+                className="w-full bg-green-600 text-white py-3 rounded-xl font-black uppercase tracking-widest hover:bg-green-500 disabled:opacity-50 transition flex items-center justify-center gap-2"
               >
                 {saveMutation.isPending ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
                 {editingItem ? (dict.admin?.btnUpdate || 'Aktualizovat položku') : (dict.admin?.btnSave || 'Uložit položku')}
@@ -213,6 +247,7 @@ export default function AssetsTab({ dict }: { dict: any }) {
             </div>
           </div>
         </div>
+        </Dialog>
       )}
 
       <div className="grid gap-4">

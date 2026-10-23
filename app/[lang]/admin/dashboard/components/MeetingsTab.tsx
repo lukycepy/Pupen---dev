@@ -7,6 +7,7 @@ import { Users, Plus, Trash2, Calendar, MapPin, Loader2, Save, X, Edit3, CheckCi
 import { useToast } from '../../../../context/ToastContext';
 import dynamic from 'next/dynamic';
 import ConfirmModal from '@/app/components/ConfirmModal';
+import Dialog from '@/app/components/ui/Dialog';
 import { richTextToClientHtml } from '@/lib/richtext-client';
 import { SkeletonTabContent } from '../../../components/Skeleton';
 import { summarizeHtmlToBullets } from '@/lib/ai/pilot';
@@ -263,17 +264,44 @@ export default function MeetingsTab({ dict }: { dict: any }) {
             placeholder={dict.admin.searchPlaceholder || 'Vyhledat…'}
           />
           <button 
-            onClick={() => setIsAdding(!isAdding)}
-            className="bg-green-600 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-green-500 transition shadow-lg shadow-green-900/20"
+            onClick={() => {
+              handleCancel();
+              setIsAdding(true);
+            }}
+            className="bg-green-600 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-green-500 transition"
           >
-            {isAdding ? <X size={20} /> : <Plus size={20} />}
-            {isAdding ? 'Zrušit' : 'Nový zápis'}
+            <Plus size={20} />
+            Nový zápis
           </button>
         </div>
       </div>
 
       {isAdding && (
-        <div className="bg-white p-8 rounded-[2.5rem] border shadow-xl animate-in fade-in slide-in-from-top-4 duration-300">
+        <Dialog
+          open={isAdding || !!editingItem}
+          onClose={handleCancel}
+          overlayClassName="fixed inset-0 z-[30000] flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-6"
+          panelClassName="w-full max-w-3xl rounded-t-[2rem] border-2 border-black bg-white p-6 sm:rounded-[2.5rem] sm:p-8 dark:border-white dark:bg-black max-h-[92dvh] overflow-y-auto"
+        >
+        <div className="space-y-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex items-center gap-3 text-black dark:text-white">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-green-600 bg-green-50 text-green-700 dark:border-green-500 dark:bg-green-950 dark:text-green-400">
+                <Users size={22} />
+              </div>
+              <div className="text-xl font-black">
+                {editingItem ? 'Aktualizovat zápis' : 'Nový zápis'}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="inline-flex items-center gap-2 rounded-2xl border-2 border-black bg-white px-4 py-3 font-bold text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
+            >
+              <X size={16} /> Zavřít
+            </button>
+          </div>
+
           <div className="grid md:grid-cols-2 gap-6 mb-8">
             <div className="md:col-span-2">
               <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Název schůze</label>
@@ -362,12 +390,13 @@ export default function MeetingsTab({ dict }: { dict: any }) {
           <button 
             onClick={() => saveMutation.mutate({ newData: formData, agendaText: agenda })}
             disabled={!formData.title || !formData.date || saveMutation.isPending}
-            className="w-full bg-green-600 text-white py-4 rounded-xl font-black uppercase tracking-widest hover:bg-green-500 disabled:opacity-50 transition shadow-lg shadow-green-900/20 flex items-center justify-center gap-2"
+            className="w-full bg-green-600 text-white py-4 rounded-xl font-black uppercase tracking-widest hover:bg-green-500 disabled:opacity-50 transition flex items-center justify-center gap-2"
           >
             {saveMutation.isPending ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />} 
             {editingItem ? 'Aktualizovat zápis' : 'Uložit zápis'}
           </button>
         </div>
+        </Dialog>
       )}
 
       <div className="grid gap-6">

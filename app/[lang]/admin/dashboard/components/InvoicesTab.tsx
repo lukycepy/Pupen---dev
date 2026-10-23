@@ -212,7 +212,7 @@ export default function InvoicesTab() {
           </div>
         ) : rows.length === 0 ? (
           <div className="py-16 text-center text-stone-400 font-bold uppercase tracking-widest text-xs">
-            Zatím žádné žádosti.
+            Žádné žádosti.
           </div>
         ) : (
           <div className="overflow-x-auto">

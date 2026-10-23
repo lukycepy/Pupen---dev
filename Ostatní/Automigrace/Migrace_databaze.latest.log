@@ -1,0 +1,391 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20261006153549
+Username: LUKY-LEGION\Lukas
+RunAs User: LUKY-LEGION\Lukas
+Configuration Name: 
+Machine: LUKY-LEGION (Microsoft Windows NT 10.0.26300.0)
+Host Application: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File C:\Users\Lukas\Downloads\pupen 4.0\Automigrace\Migrace_databaze.ps1
+Process ID: 39392
+PSVersion: 5.1.26100.9549
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.9549
+BuildVersion: 10.0.26100.9549
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+Log: C:\Users\Lukas\Downloads\pupen 4.0\Automigrace\logs\Migrace_databaze_20261006_153549.log
+Repo: C:\Users\Lukas\Downloads\pupen 4.0
+Supabase dir: C:\Users\Lukas\Downloads\pupen 4.0\supabase
+Nacitam konfiguraci z .env + .env.local (+ produkcni/staging varianty)...
+Project ref: aakbezmiacnwxzdutxjw
+DB heslo: pouzivam SUPABASE_DB_PASSWORD z prostredi/.env.local/.env.
+DB heslo: delka=15, posledni 3 znaky=************21*
+DATABASE_URL (z env): postgresql://postgres:***@db.aakbezmiacnwxzdutxjw.supabase.co:5432/postgres?sslmode=require
+
+Linkuji projekt: aakbezmiacnwxzdutxjw
+
+> npx supabase --workdir C:\Users\Lukas\Downloads\pupen 4.0 link --project-ref aakbezmiacnwxzdutxjw --yes
+Finished supabase link.
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+A new version of Supabase CLI is available: v2.119.0 (currently installed v2.101.0)
+
+Detekuji databazovou infrastrukturu z --linked debug vystupu...
+
+> npx supabase --workdir C:\Users\Lukas\Downloads\pupen 4.0 db query --linked --debug --log-level debug select 1 as ok;
+┌────┐
+│ ok │
+├────┤
+│ 1  │
+└────┘
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+A new version of Supabase CLI is available: v2.119.0 (currently installed v2.101.0)
+2026/10/06 15:35:58 HTTP POST: https://eu.i.posthog.com/batch/
+2026/10/06 15:35:56 HTTP POST: https://api.supabase.com/v1/projects/aakbezmiacnwxzdutxjw/database/query
+Using access token for profile: supabase
+Loading project ref from flag: aakbezmiacnwxzdutxjw
+Using access token for profile: supabase
+Using profile: supabase (supabase.co)
+Supabase CLI 2.101.0
+Using database password from env var...
+Using connection pooler: postgresql://postgres.aakbezmiacnwxzdutxjw@aws-1-eu-west-1.pooler.supabase.com:5432/postgres
+Loading project ref from file: supabase\.temp\project-ref
+open C:\Users\Lukas\.supabase\profile: The system cannot find the file specified.
+Pooler URL: postgresql://postgres.aakbezmiacnwxzdutxjw@aws-1-eu-west-1.pooler.supabase.com:5432/postgres
+Pooler uzivatel: postgres.aakbezmiacnwxzdutxjw
+Pooler hostitel: aws-1-eu-west-1.pooler.supabase.com:5432
+Region prefix: aws-1-eu-west-1
+
+Sestavuji kandidatni DB URL a testuji je (connection probe)...
+Pocet kandidatu: 5
+
+Probe [1/5]: postgresql://postgres:***@db.aakbezmiacnwxzdutxjw.supabase.co:5432/postgres?sslmode=require
+
+> npx supabase --workdir C:\Users\Lukas\Downloads\pupen 4.0 db query --db-url *** --log-level error select 1 as ok;
+Try rerunning the command with --debug to troubleshoot the error.
+failed to connect to postgres: failed to connect to `host=db.aakbezmiacnwxzdutxjw.supabase.co user=postgres database=postgres`: hostname resolving error (lookup db.aakbezmiacnwxzdutxjw.supabase.co: no such host)
+Connecting to remote database...
+ -> SELHALO: Try rerunning the command with --debug to troubleshoot the error.
+
+Probe [2/5]: postgresql://postgres.aakbezmiacnwxzdutxjw:***@aws-1-eu-west-1.pooler.supabase.com:5432/postgres?sslmode=require
+
+> npx supabase --workdir C:\Users\Lukas\Downloads\pupen 4.0 db query --db-url *** --log-level error select 1 as ok;
+┌────┐
+│ ok │
+├────┤
+│ 1  │
+└────┘
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+A new version of Supabase CLI is available: v2.119.0 (currently installed v2.101.0)
+Connecting to remote database...
+ -> OK
+
+Pouzivam DB URL: postgresql://postgres.aakbezmiacnwxzdutxjw:***@aws-1-eu-west-1.pooler.supabase.com:5432/postgres?sslmode=require
+
+Overuji pripojeni (db query pres vybrane --db-url)...
+
+> npx supabase --workdir C:\Users\Lukas\Downloads\pupen 4.0 db query --db-url *** --log-level error select 1 as ok;
+┌────┐
+│ ok │
+├────┤
+│ 1  │
+└────┘
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+A new version of Supabase CLI is available: v2.119.0 (currently installed v2.101.0)
+Connecting to remote database...
+
+Aplikuji migrace na remote DB (db push pres --db-url)...
+
+> npx supabase --workdir C:\Users\Lukas\Downloads\pupen 4.0 db push --db-url *** --include-all --yes --log-level info
+Finished supabase db push.
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+A new version of Supabase CLI is available: v2.119.0 (currently installed v2.101.0)
+Applying migration 20260623130000_91_membership_applications_v2_technical_updates.sql...
+Applying migration 20260622174000_90_rsvp_guardian_consent.sql...
+Applying migration 20260622161000_89_waitlist_offers.sql...
+Applying migration 20260622142000_88_event_orders_and_vs.sql...
+Applying migration 20260622123000_87_event_registration_pricing.sql...
+Applying migration 20260523161000_86_membership_application_page_content.sql...
+Applying migration 20260523160000_85_membership_applications_v2_immutable.sql...
+Applying migration 20260523150000_84_billing_invoice_matching.sql...
+NOTICE (42P07): relation "bank_transactions_runs_started_at_idx" already exists, skipping
+NOTICE (42P07): relation "bank_transactions_runs" already exists, skipping
+Applying migration 20260523140000_83_bank_transactions_runs.sql...
+Applying migration 20260523130000_82_billing_invoices_pdf.sql...
+NOTICE (42P07): relation "bank_transactions_vs_idx" already exists, skipping
+NOTICE (42P07): relation "bank_transactions_booked_at_idx" already exists, skipping
+NOTICE (42P07): relation "bank_transactions_provider_tx_unique" already exists, skipping
+NOTICE (42P07): relation "bank_transactions" already exists, skipping
+Applying migration 20260523121600_83_bank_transactions.sql...
+NOTICE (42710): extension "pgcrypto" already exists, skipping
+Applying migration 20260523121500_80_billing_invoices.sql...
+Applying migration 20260523120000_81_billing_invoices_and_membership_applications_v2.sql...
+Applying migration 20260522150000_80_site_page_permissions.sql...
+NOTICE (42710): extension "pgcrypto" already exists, skipping
+Applying migration 20260522140000_79_security_bans.sql...
+NOTICE (00000): policy "Logs delete error_logs" for relation "public.error_logs" does not exist, skipping
+NOTICE (00000): policy "Logs read error_logs" for relation "public.error_logs" does not exist, skipping
+NOTICE (00000): policy "Logs delete server_logs" for relation "public.server_logs" does not exist, skipping
+NOTICE (00000): policy "Logs read server_logs" for relation "public.server_logs" does not exist, skipping
+NOTICE (00000): policy "Admin delete server_logs" for relation "public.server_logs" does not exist, skipping
+NOTICE (00000): policy "Admin read server_logs" for relation "public.server_logs" does not exist, skipping
+Applying migration 20260522133000_78_server_logs.sql...
+Applying migration 20260522123000_site_page_contents_blocks.sql...
+Applying migration 20260522120000_34_analytics_rls_policies.sql...
+Applying migration 20260420100000_team_facebook.sql...
+Applying migration 20260419212000_trustbox_owner.sql...
+Applying migration 20260419203000_lost_found_claims_and_pin.sql...
+Applying migration 20260419194500_newsletter_doi.sql...
+NOTICE (42701): column "checked_in_at" of relation "rsvp" already exists, skipping
+Applying migration 20260419190000_rsvp_checked_in.sql...
+Applying migration 20260417201000_trustbox_access_code.sql...
+Applying migration 20260417200000_legal_pages_content.sql...
+NOTICE (00000): policy "profiles_admin_all" for relation "public.profiles" does not exist, skipping
+Applying migration 20260417195500_profiles_rls_no_recursion.sql...
+Applying migration 20260417195000_newsletter_subscriptions_updated_at.sql...
+Applying migration 20260417190000_site_config_permissions.sql...
+Applying migration 20260417183000_events_activity_archive.sql...
+Applying migration 20260416223000_profiles_member_directory_policy.sql...
+Applying migration 20260416220000_rbac_governance_module.sql...
+Applying migration 20260414224000_site_page_contents.sql...
+Applying migration 20260414223000_rbac_more_modules.sql...
+Applying migration 20260414220100_trustbox_message_author.sql...
+Applying migration 20260414220000_email_audit_logs.sql...
+Applying migration 20260414195400_dm_unread_reminders.sql...
+Applying migration 20260414195200_dm_schema_upgrade.sql...
+Applying migration 20260414195010_admin_schema_health_rpc.sql...
+Applying migration 20260414194731_77_shared_rate_limit.sql...
+NOTICE (42701): column "status" of relation "student_blog" already exists, skipping
+Applying migration 20260414194730_76_content_moderation_status.sql...
+Applying migration 20260414194729_75_trust_box_audit_logs.sql...
+Applying migration 20260414194728_74_trust_box_core.sql...
+Applying migration 20260414194727_73_trust_box_storage_bucket.sql...
+Applying migration 20260414194726_72_drop_public_inserts.sql...
+Applying migration 20260414194725_71_applications_public_insert_rls_fix.sql...
+Applying migration 20260414194724_70_email_settings_application_notifications_v2.sql...
+Applying migration 20260414194723_69_email_settings_application_notifications.sql...
+Applying migration 20260414194722_68_email_send_queue_headers_text.sql...
+Applying migration 20260414194721_67_newsletter_unsubscribe_reason.sql...
+Applying migration 20260414194720_66_rsvp_qr_code.sql...
+Applying migration 20260414194719_65_events_ticket_sale_end.sql...
+Applying migration 20260414194718_64_seed_team_members.sql...
+Applying migration 20260414194717_63_applications_exclusion.sql...
+Applying migration 20260414194716_62_newsletter_ab_constraints.sql...
+Applying migration 20260414194715_61_newsletter_drafts_ab.sql...
+Applying migration 20260414194714_60_newsletter_ab_and_variants.sql...
+Applying migration 20260414194713_59_newsletter_stats.sql...
+Applying migration 20260414194712_58_team_and_gallery.sql...
+Applying migration 20260414194711_57_newsletter_extensions.sql...
+Applying migration 20260414194710_56_inbox_triage.sql...
+Applying migration 20260414194709_55_webhooks.sql...
+Applying migration 20260414194708_54_feature_flags.sql...
+Applying migration 20260414194707_53_error_logs.sql...
+Applying migration 20260414194706_52_gamification_badges.sql...
+ [Y/n] y
+System.Management.Automation.RemoteException
+ • 20260623130000_91_membership_applications_v2_technical_updates.sql
+ • 20260622174000_90_rsvp_guardian_consent.sql
+ • 20260622161000_89_waitlist_offers.sql
+ • 20260622142000_88_event_orders_and_vs.sql
+ • 20260622123000_87_event_registration_pricing.sql
+ • 20260523161000_86_membership_application_page_content.sql
+ • 20260523160000_85_membership_applications_v2_immutable.sql
+ • 20260523150000_84_billing_invoice_matching.sql
+ • 20260523140000_83_bank_transactions_runs.sql
+ • 20260523130000_82_billing_invoices_pdf.sql
+ • 20260523121600_83_bank_transactions.sql
+ • 20260523121500_80_billing_invoices.sql
+ • 20260523120000_81_billing_invoices_and_membership_applications_v2.sql
+ • 20260522150000_80_site_page_permissions.sql
+ • 20260522140000_79_security_bans.sql
+ • 20260522133000_78_server_logs.sql
+ • 20260522123000_site_page_contents_blocks.sql
+ • 20260522120000_34_analytics_rls_policies.sql
+ • 20260420100000_team_facebook.sql
+ • 20260419212000_trustbox_owner.sql
+ • 20260419203000_lost_found_claims_and_pin.sql
+ • 20260419194500_newsletter_doi.sql
+ • 20260419190000_rsvp_checked_in.sql
+ • 20260417201000_trustbox_access_code.sql
+ • 20260417200000_legal_pages_content.sql
+ • 20260417195500_profiles_rls_no_recursion.sql
+ • 20260417195000_newsletter_subscriptions_updated_at.sql
+ • 20260417190000_site_config_permissions.sql
+ • 20260417183000_events_activity_archive.sql
+ • 20260416223000_profiles_member_directory_policy.sql
+ • 20260416220000_rbac_governance_module.sql
+ • 20260414224000_site_page_contents.sql
+ • 20260414223000_rbac_more_modules.sql
+ • 20260414220100_trustbox_message_author.sql
+ • 20260414220000_email_audit_logs.sql
+ • 20260414195400_dm_unread_reminders.sql
+ • 20260414195200_dm_schema_upgrade.sql
+ • 20260414195010_admin_schema_health_rpc.sql
+ • 20260414194731_77_shared_rate_limit.sql
+ • 20260414194730_76_content_moderation_status.sql
+ • 20260414194729_75_trust_box_audit_logs.sql
+ • 20260414194728_74_trust_box_core.sql
+ • 20260414194727_73_trust_box_storage_bucket.sql
+ • 20260414194726_72_drop_public_inserts.sql
+ • 20260414194725_71_applications_public_insert_rls_fix.sql
+ • 20260414194724_70_email_settings_application_notifications_v2.sql
+ • 20260414194723_69_email_settings_application_notifications.sql
+ • 20260414194722_68_email_send_queue_headers_text.sql
+ • 20260414194721_67_newsletter_unsubscribe_reason.sql
+ • 20260414194720_66_rsvp_qr_code.sql
+ • 20260414194719_65_events_ticket_sale_end.sql
+ • 20260414194718_64_seed_team_members.sql
+ • 20260414194717_63_applications_exclusion.sql
+ • 20260414194716_62_newsletter_ab_constraints.sql
+ • 20260414194715_61_newsletter_drafts_ab.sql
+ • 20260414194714_60_newsletter_ab_and_variants.sql
+ • 20260414194713_59_newsletter_stats.sql
+ • 20260414194712_58_team_and_gallery.sql
+ • 20260414194711_57_newsletter_extensions.sql
+ • 20260414194710_56_inbox_triage.sql
+ • 20260414194709_55_webhooks.sql
+ • 20260414194708_54_feature_flags.sql
+ • 20260414194707_53_error_logs.sql
+ • 20260414194706_52_gamification_badges.sql
+Do you want to push these migrations to the remote database?
+Connecting to remote database...
+
+Kontroluji stav migraci (migration list)...
+
+> npx supabase --workdir C:\Users\Lukas\Downloads\pupen 4.0 migration list --db-url *** --log-level none
+
+
+   Local          | Remote         | Time (UTC)
+  ----------------|----------------|---------------------
+   20260414174610 | 20260414174610 | 2026-04-14 17:46:10
+   20260414174611 | 20260414174611 | 2026-04-14 17:46:11
+   20260414174612 | 20260414174612 | 2026-04-14 17:46:12
+   20260414174613 | 20260414174613 | 2026-04-14 17:46:13
+   20260414174614 | 20260414174614 | 2026-04-14 17:46:14
+   20260414174615 | 20260414174615 | 2026-04-14 17:46:15
+   20260414174616 | 20260414174616 | 2026-04-14 17:46:16
+   20260414174617 | 20260414174617 | 2026-04-14 17:46:17
+   20260414174618 | 20260414174618 | 2026-04-14 17:46:18
+   20260414174619 | 20260414174619 | 2026-04-14 17:46:19
+   20260414174620 | 20260414174620 | 2026-04-14 17:46:20
+   20260414174621 | 20260414174621 | 2026-04-14 17:46:21
+   20260414174622 | 20260414174622 | 2026-04-14 17:46:22
+   20260414174623 | 20260414174623 | 2026-04-14 17:46:23
+   20260414174624 | 20260414174624 | 2026-04-14 17:46:24
+   20260414174625 | 20260414174625 | 2026-04-14 17:46:25
+   20260414174626 | 20260414174626 | 2026-04-14 17:46:26
+   20260414174627 | 20260414174627 | 2026-04-14 17:46:27
+   20260414174628 | 20260414174628 | 2026-04-14 17:46:28
+   20260414174629 | 20260414174629 | 2026-04-14 17:46:29
+   20260414174630 | 20260414174630 | 2026-04-14 17:46:30
+   20260414174631 | 20260414174631 | 2026-04-14 17:46:31
+   20260414174632 | 20260414174632 | 2026-04-14 17:46:32
+   20260414174633 | 20260414174633 | 2026-04-14 17:46:33
+   20260414174634 | 20260414174634 | 2026-04-14 17:46:34
+   20260414174635 | 20260414174635 | 2026-04-14 17:46:35
+   20260414174636 | 20260414174636 | 2026-04-14 17:46:36
+   20260414174637 | 20260414174637 | 2026-04-14 17:46:37
+   20260414174638 | 20260414174638 | 2026-04-14 17:46:38
+   20260414174639 | 20260414174639 | 2026-04-14 17:46:39
+   20260414174640 | 20260414174640 | 2026-04-14 17:46:40
+   20260414174641 | 20260414174641 | 2026-04-14 17:46:41
+   20260414174642 | 20260414174642 | 2026-04-14 17:46:42
+   20260414174643 | 20260414174643 | 2026-04-14 17:46:43
+   20260414174644 | 20260414174644 | 2026-04-14 17:46:44
+   20260414174645 | 20260414174645 | 2026-04-14 17:46:45
+   20260414174646 | 20260414174646 | 2026-04-14 17:46:46
+   20260414174647 | 20260414174647 | 2026-04-14 17:46:47
+   20260414174648 | 20260414174648 | 2026-04-14 17:46:48
+   20260414174649 | 20260414174649 | 2026-04-14 17:46:49
+   20260414174650 | 20260414174650 | 2026-04-14 17:46:50
+   20260414174651 | 20260414174651 | 2026-04-14 17:46:51
+   20260414174652 | 20260414174652 | 2026-04-14 17:46:52
+   20260414174653 | 20260414174653 | 2026-04-14 17:46:53
+   20260414174654 | 20260414174654 | 2026-04-14 17:46:54
+   20260414174655 | 20260414174655 | 2026-04-14 17:46:55
+   20260414174656 | 20260414174656 | 2026-04-14 17:46:56
+   20260414174657 | 20260414174657 | 2026-04-14 17:46:57
+   20260414174658 | 20260414174658 | 2026-04-14 17:46:58
+   20260414174659 | 20260414174659 | 2026-04-14 17:46:59
+   20260414194700 | 20260414194700 | 2026-04-14 19:47:00
+   20260414194701 | 20260414194701 | 2026-04-14 19:47:01
+   20260414194702 | 20260414194702 | 2026-04-14 19:47:02
+   20260414194703 | 20260414194703 | 2026-04-14 19:47:03
+   20260414194704 | 20260414194704 | 2026-04-14 19:47:04
+   20260414194705 | 20260414194705 | 2026-04-14 19:47:05
+   20260414194706 | 20260414194706 | 2026-04-14 19:47:06
+   20260414194707 | 20260414194707 | 2026-04-14 19:47:07
+   20260414194708 | 20260414194708 | 2026-04-14 19:47:08
+   20260414194709 | 20260414194709 | 2026-04-14 19:47:09
+   20260414194710 | 20260414194710 | 2026-04-14 19:47:10
+   20260414194711 | 20260414194711 | 2026-04-14 19:47:11
+   20260414194712 | 20260414194712 | 2026-04-14 19:47:12
+   20260414194713 | 20260414194713 | 2026-04-14 19:47:13
+   20260414194714 | 20260414194714 | 2026-04-14 19:47:14
+   20260414194715 | 20260414194715 | 2026-04-14 19:47:15
+   20260414194716 | 20260414194716 | 2026-04-14 19:47:16
+   20260414194717 | 20260414194717 | 2026-04-14 19:47:17
+   20260414194718 | 20260414194718 | 2026-04-14 19:47:18
+   20260414194719 | 20260414194719 | 2026-04-14 19:47:19
+   20260414194720 | 20260414194720 | 2026-04-14 19:47:20
+   20260414194721 | 20260414194721 | 2026-04-14 19:47:21
+   20260414194722 | 20260414194722 | 2026-04-14 19:47:22
+   20260414194723 | 20260414194723 | 2026-04-14 19:47:23
+   20260414194724 | 20260414194724 | 2026-04-14 19:47:24
+   20260414194725 | 20260414194725 | 2026-04-14 19:47:25
+   20260414194726 | 20260414194726 | 2026-04-14 19:47:26
+   20260414194727 | 20260414194727 | 2026-04-14 19:47:27
+   20260414194728 | 20260414194728 | 2026-04-14 19:47:28
+   20260414194729 | 20260414194729 | 2026-04-14 19:47:29
+   20260414194730 | 20260414194730 | 2026-04-14 19:47:30
+   20260414194731 | 20260414194731 | 2026-04-14 19:47:31
+   20260414195010 | 20260414195010 | 2026-04-14 19:50:10
+   20260414195200 | 20260414195200 | 2026-04-14 19:52:00
+   20260414195400 | 20260414195400 | 2026-04-14 19:54:00
+   20260414220000 | 20260414220000 | 2026-04-14 22:00:00
+   20260414220100 | 20260414220100 | 2026-04-14 22:01:00
+   20260414223000 | 20260414223000 | 2026-04-14 22:30:00
+   20260414224000 | 20260414224000 | 2026-04-14 22:40:00
+   20260416220000 | 20260416220000 | 2026-04-16 22:00:00
+   20260416223000 | 20260416223000 | 2026-04-16 22:30:00
+   20260417183000 | 20260417183000 | 2026-04-17 18:30:00
+   20260417190000 | 20260417190000 | 2026-04-17 19:00:00
+   20260417195000 | 20260417195000 | 2026-04-17 19:50:00
+   20260417195500 | 20260417195500 | 2026-04-17 19:55:00
+   20260417200000 | 20260417200000 | 2026-04-17 20:00:00
+   20260417201000 | 20260417201000 | 2026-04-17 20:10:00
+   20260419190000 | 20260419190000 | 2026-04-19 19:00:00
+   20260419194500 | 20260419194500 | 2026-04-19 19:45:00
+   20260419203000 | 20260419203000 | 2026-04-19 20:30:00
+   20260419212000 | 20260419212000 | 2026-04-19 21:20:00
+   20260420100000 | 20260420100000 | 2026-04-20 10:00:00
+   20260522120000 | 20260522120000 | 2026-05-22 12:00:00
+   20260522123000 | 20260522123000 | 2026-05-22 12:30:00
+   20260522133000 | 20260522133000 | 2026-05-22 13:30:00
+   20260522140000 | 20260522140000 | 2026-05-22 14:00:00
+   20260522150000 | 20260522150000 | 2026-05-22 15:00:00
+   20260523120000 | 20260523120000 | 2026-05-23 12:00:00
+   20260523121500 | 20260523121500 | 2026-05-23 12:15:00
+   20260523121600 | 20260523121600 | 2026-05-23 12:16:00
+   20260523130000 | 20260523130000 | 2026-05-23 13:00:00
+   20260523140000 | 20260523140000 | 2026-05-23 14:00:00
+   20260523150000 | 20260523150000 | 2026-05-23 15:00:00
+   20260523160000 | 20260523160000 | 2026-05-23 16:00:00
+   20260523161000 | 20260523161000 | 2026-05-23 16:10:00
+   20260622123000 | 20260622123000 | 2026-06-22 12:30:00
+   20260622142000 | 20260622142000 | 2026-06-22 14:20:00
+   20260622161000 | 20260622161000 | 2026-06-22 16:10:00
+   20260622174000 | 20260622174000 | 2026-06-22 17:40:00
+   20260623130000 | 20260623130000 | 2026-06-23 13:00:00
+
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+A new version of Supabase CLI is available: v2.119.0 (currently installed v2.101.0)
+Connecting to remote database...
+
+Hotovo.
+**********************
+Windows PowerShell transcript end
+End time: 20261006153618
+**********************

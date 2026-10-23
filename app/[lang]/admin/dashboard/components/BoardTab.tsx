@@ -2,8 +2,9 @@
 
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users, Plus, Edit2, Trash2, Loader2, Image as ImageIcon, Mail, Phone, Linkedin, Twitter, Instagram } from 'lucide-react';
+import { Users, Plus, Edit2, Trash2, Loader2, Image as ImageIcon, Mail, Phone, Linkedin, Twitter, Instagram, X } from 'lucide-react';
 import { SkeletonTabContent } from '../../../components/Skeleton';
+import Dialog from '@/app/components/ui/Dialog';
 import AdminModuleHeader from './ui/AdminModuleHeader';
 import AdminEmptyState from './ui/AdminEmptyState';
 import AdminPanel from './ui/AdminPanel';
@@ -153,10 +154,32 @@ export default function BoardTab({ uploadImage }: { uploadImage: (file: File, bu
       />
 
       {isEditing && (
-        <AdminPanel className="p-8 border-green-500 ring-4 ring-green-50 animate-in zoom-in-95 duration-300">
+        <Dialog
+          open={!!isEditing}
+          onClose={() => setIsEditing(null)}
+          overlayClassName="fixed inset-0 z-[30000] flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-6"
+          panelClassName="w-full max-w-3xl rounded-t-[2rem] border-2 border-black bg-white p-6 sm:rounded-[2.5rem] sm:p-8 dark:border-white dark:bg-black max-h-[92dvh] overflow-y-auto"
+        >
+          <div className="space-y-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="flex items-center gap-3 text-black dark:text-white">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-green-600 bg-green-50 text-green-700 dark:border-green-500 dark:bg-green-950 dark:text-green-400">
+                  <Users size={22} />
+                </div>
+                <div className="text-xl font-black">
+                  {isEditing === 'new' ? 'Nový člen týmu' : 'Úprava člena'}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEditing(null)}
+                className="inline-flex items-center gap-2 rounded-2xl border-2 border-black bg-white px-4 py-3 font-bold text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
+              >
+                <X size={16} /> Zavřít
+              </button>
+            </div>
+
           <form onSubmit={(e) => { e.preventDefault(); saveMutation.mutate(isEditing === 'new' ? formData : { ...formData, id: isEditing.id }); }} className="space-y-6">
-            <h3 className="text-xl font-black text-stone-900 mb-6">{isEditing === 'new' ? 'Nový člen týmu' : 'Úprava člena'}</h3>
-            
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Jméno a příjmení</label>
@@ -293,21 +316,22 @@ export default function BoardTab({ uploadImage }: { uploadImage: (file: File, bu
               <button type="button" onClick={() => setIsEditing(null)} className="px-6 py-3 rounded-xl font-bold text-stone-600 bg-stone-100 hover:bg-stone-200 transition">
                 Zrušit
               </button>
-              <button type="submit" disabled={saveMutation.isPending} className="px-6 py-3 rounded-xl font-bold text-white bg-green-600 hover:bg-green-700 transition flex items-center gap-2 shadow-lg shadow-green-600/20">
+              <button type="submit" disabled={saveMutation.isPending} className="px-6 py-3 rounded-xl font-bold text-white bg-green-600 hover:bg-green-700 transition flex items-center gap-2">
                 {saveMutation.isPending && <Loader2 size={18} className="animate-spin" />} Uložit člena
               </button>
             </div>
           </form>
-        </AdminPanel>
+          </div>
+        </Dialog>
       )}
 
-      {!isEditing && team.length === 0 ? (
+      {team.length === 0 ? (
         <AdminEmptyState
           icon={Users}
           title="Žádní členové týmu"
-          description="Zatím jste nepřidali žádné členy týmu. Začněte přidáním prvního."
+          description="Seznam týmu je prázdný. Přidejte první položku."
         />
-      ) : !isEditing && (
+      ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {team.map((member: any) => (
             <AdminPanel key={member.id} className={`p-0 overflow-hidden relative group hover:shadow-lg transition ${!member.is_active ? 'opacity-60 grayscale' : ''}`}>

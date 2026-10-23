@@ -2,11 +2,12 @@
 
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Award, Plus, Edit2, Trash2, Loader2, Image as ImageIcon } from 'lucide-react';
+import { Award, Plus, Edit2, Trash2, Loader2, Image as ImageIcon, X } from 'lucide-react';
 import { SkeletonTabContent } from '../../../components/Skeleton';
 import AdminModuleHeader from './ui/AdminModuleHeader';
 import AdminEmptyState from './ui/AdminEmptyState';
 import AdminPanel from './ui/AdminPanel';
+import Dialog from '@/app/components/ui/Dialog';
 import { useToast } from '../../../../context/ToastContext';
 import Image from 'next/image';
 
@@ -99,12 +100,25 @@ export default function BadgesTab({ uploadImage }: { uploadImage: (file: File, b
         }
       />
 
-      {isEditing && (
-        <AdminPanel className="p-8 border-amber-500 ring-4 ring-amber-50 animate-in zoom-in-95 duration-300">
-          <form onSubmit={(e) => { e.preventDefault(); saveMutation.mutate(isEditing === 'new' ? formData : { ...formData, id: isEditing.id }); }} className="space-y-6">
-            <h3 className="text-xl font-black text-stone-900 mb-6">{isEditing === 'new' ? 'Nový odznak' : 'Úprava odznaku'}</h3>
-            
-            <div className="grid md:grid-cols-2 gap-6">
+      <Dialog
+        open={!!isEditing}
+        onClose={() => setIsEditing(null)}
+        overlayClassName="fixed inset-0 z-[30000] flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-6"
+        panelClassName="w-full max-w-3xl rounded-t-[2rem] border-2 border-black bg-white p-6 sm:rounded-[2.5rem] sm:p-8 dark:border-white dark:bg-black max-h-[92dvh] overflow-y-auto"
+      >
+        <form onSubmit={(e) => { e.preventDefault(); saveMutation.mutate(isEditing === 'new' ? formData : { ...formData, id: isEditing.id }); }} className="space-y-6">
+          <div className="flex items-start justify-between gap-4">
+            <h3 className="text-xl font-black text-black dark:text-white">{isEditing === 'new' ? 'Nový odznak' : 'Úprava odznaku'}</h3>
+            <button
+              type="button"
+              onClick={() => setIsEditing(null)}
+              className="inline-flex items-center gap-2 rounded-2xl border-2 border-black bg-white px-4 py-3 font-bold text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
+            >
+              <X size={16} /> Zavřít
+            </button>
+          </div>
+          
+          <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Název odznaku</label>
                 <input
@@ -183,17 +197,16 @@ export default function BadgesTab({ uploadImage }: { uploadImage: (file: File, b
                 {saveMutation.isPending && <Loader2 size={18} className="animate-spin" />} Uložit odznak
               </button>
             </div>
-          </form>
-        </AdminPanel>
-      )}
+        </form>
+      </Dialog>
 
-      {!isEditing && badges.length === 0 ? (
+      {badges.length === 0 ? (
         <AdminEmptyState
           icon={Award}
           title="Žádné odznaky"
-          description="Zatím jste nevytvořili žádné odznaky. Začněte přidáním prvního."
+          description="Seznam odznaků je prázdný. Přidejte první položku."
         />
-      ) : !isEditing && (
+      ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {badges.map((badge: any) => (
             <AdminPanel key={badge.id} className="p-6 relative overflow-hidden group hover:shadow-lg transition">

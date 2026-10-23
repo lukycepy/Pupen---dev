@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/app/context/ToastContext';
 import InlinePulse from '@/app/components/InlinePulse';
-import { Globe, Save, ShieldAlert, ShieldCheck, Trash2 } from 'lucide-react';
+import { Globe, Save, Search, ShieldAlert, ShieldCheck, Trash2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { SITE_PAGES } from '@/lib/site/pages-registry';
 import { CMS_PAGES } from '@/lib/site/cms-pages-registry';
@@ -127,7 +127,9 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
   const [pageEnHtml, setPageEnHtml] = useState('');
   const [pageCsBlocks, setPageCsBlocks] = useState<PageBlocks>([]);
   const [pageEnBlocks, setPageEnBlocks] = useState<PageBlocks>([]);
-  const [pageContentMode, setPageContentMode] = useState<'html' | 'blocks'>('html');
+  const [pageContentMode, setPageContentMode] = useState<'html' | 'blocks'>('blocks');
+  const [pageEditorLang, setPageEditorLang] = useState<'cs' | 'en'>('cs');
+  const [pagePickerQuery, setPagePickerQuery] = useState('');
 
   const [pageAccess, setPageAccess] = useState<{
     loaded: boolean;
@@ -579,6 +581,14 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
     : pageAccess.allView
       ? contentSlugs
       : contentSlugs.filter((s) => pageAccess.viewSlugs.includes(s));
+
+  const filteredContentSlugs = (() => {
+    const q = pagePickerQuery.trim().toLowerCase();
+    if (!q) return availableContentSlugs;
+    const matched = availableContentSlugs.filter((s) => `${pageMeta.get(s)?.label || ''} ${s}`.toLowerCase().includes(q));
+    // Aktuálně vybranou stránku držím v seznamu, aby select neztratil hodnotu.
+    return matched.includes(pageEditorSlug) ? matched : [pageEditorSlug, ...matched];
+  })();
 
   const permGrouped = useMemo(() => {
     const bySlug = new Map<string, any[]>();
@@ -1492,47 +1502,45 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
           <div className="text-sm text-stone-600 font-medium mt-1 dark:text-stone-300">{t.content.subtitle}</div>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-4 items-end">
-          <div className="md:col-span-2">
-            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 dark:text-stone-500">{t.content.pageLabel}</div>
-            <select
-              value={pageEditorSlug}
-              onChange={(e) => setPageEditorSlug(e.target.value)}
-              className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition dark:bg-stone-900/60 dark:text-stone-100"
-            >
-              {(['Navbar', 'Nástroje', 'Ostatní', 'CMS'] as const).map((g) => {
-                const slugs = availableContentSlugs.filter((s) => pageMeta.get(s)?.group === g);
-                if (!slugs.length) return null;
-                const label =
-                  g === 'Navbar' ? t.pages.groups.navbar : g === 'Nástroje' ? t.pages.groups.tools : g === 'Ostatní' ? t.pages.groups.other : t.pages.groups.cms;
-                return (
-                  <optgroup key={g} label={label}>
-                    {slugs.map((s) => (
-                      <option key={s} value={s}>
-                        {pageMeta.get(s)?.label || s} /{s}
-                      </option>
-                    ))}
-                  </optgroup>
-                );
-              })}
-            </select>
-          </div>
-          <div className="flex items-end">
-            <button
-              type="button"
-              onClick={() => {
-                setPageCsTitle('');
-                setPageCsHtml('');
-                setPageEnTitle('');
-                setPageEnHtml('');
-                setPageCsBlocks([]);
-                setPageEnBlocks([]);
-                setPageContentMode('html');
-              }}
-              className="w-full px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition bg-white text-stone-700 border-stone-200 hover:bg-stone-50 dark:bg-stone-950 dark:text-stone-200 dark:border-stone-800 dark:hover:bg-stone-900/60"
-            >
-              {t.content.clear}
-            </button>
+        <div className="bg-stone-50 border border-stone-100 rounded-2xl p-4 dark:bg-stone-900/60 dark:border-stone-800">
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 mb-2 dark:text-stone-500">{t.content.pageLabel}</div>
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 dark:text-stone-500" size={16} />
+                <input
+                  type="text"
+                  value={pagePickerQuery}
+                  onChange={(e) => setPagePickerQuery(e.target.value)}
+                  placeholder={dict.admin.searchPlaceholder || 'Vyhledat…'}
+                  className="w-full bg-white border border-stone-200 rounded-xl pl-11 pr-4 py-3 font-bold text-stone-700 outline-none transition focus:ring-2 focus:ring-green-500 dark:bg-stone-950 dark:text-stone-100 dark:border-stone-800"
+                />
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 mb-2 dark:text-stone-500">{t.content.editorLabel}</div>
+              <select
+                value={pageEditorSlug}
+                onChange={(e) => setPageEditorSlug(e.target.value)}
+                className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 outline-none transition focus:ring-2 focus:ring-green-500 dark:bg-stone-950 dark:text-stone-100 dark:border-stone-800"
+              >
+                {(['Navbar', 'Nástroje', 'Ostatní', 'CMS'] as const).map((g) => {
+                  const slugs = filteredContentSlugs.filter((s) => pageMeta.get(s)?.group === g);
+                  if (!slugs.length) return null;
+                  const label =
+                    g === 'Navbar' ? t.pages.groups.navbar : g === 'Nástroje' ? t.pages.groups.tools : g === 'Ostatní' ? t.pages.groups.other : t.pages.groups.cms;
+                  return (
+                    <optgroup key={g} label={label}>
+                      {slugs.map((s) => (
+                        <option key={s} value={s}>
+                          {pageMeta.get(s)?.label || s} /{s}
+                        </option>
+                      ))}
+                    </optgroup>
+                  );
+                })}
+              </select>
+            </div>
           </div>
         </div>
 
@@ -1606,97 +1614,109 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
           </div>
         </div>
 
-        <div className="bg-stone-50 border border-stone-100 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 dark:bg-stone-900/60 dark:border-stone-800">
-          <div className="min-w-0">
-            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500">{t.content.editorLabel}</div>
-            <div className="text-xs font-bold text-stone-700 truncate dark:text-stone-200">
-              {pageContentMode === 'blocks' ? t.content.modeBlocks : t.content.modeHtml}
+        <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden dark:bg-stone-950 dark:border-stone-800">
+          <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-stone-100 dark:border-stone-800">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1 rounded-2xl border border-stone-200 bg-stone-50 p-1 dark:border-stone-800 dark:bg-stone-900/60">
+                {(['cs', 'en'] as const).map((l) => (
+                  <button
+                    key={l}
+                    type="button"
+                    onClick={() => setPageEditorLang(l)}
+                    className={`rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest transition ${
+                      pageEditorLang === l
+                        ? 'bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900'
+                        : 'text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-900/60'
+                    }`}
+                  >
+                    {l === 'cs' ? 'CZ' : 'EN'}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-1 rounded-2xl border border-stone-200 bg-stone-50 p-1 dark:border-stone-800 dark:bg-stone-900/60">
+                {(['blocks', 'html'] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => {
+                      setPageContentMode(m);
+                      if (m === 'html') {
+                        setPageCsHtml((prev) => (prev.trim() ? prev : pageCsBlocks.length ? pageBlocksToHtml(pageCsBlocks) : ''));
+                        setPageEnHtml((prev) => (prev.trim() ? prev : pageEnBlocks.length ? pageBlocksToHtml(pageEnBlocks) : ''));
+                      } else {
+                        setPageCsBlocks((prev) => (prev.length ? prev : pageCsHtml.trim() ? [{ id: newId(), type: 'rich_text', html: pageCsHtml }] : []));
+                        setPageEnBlocks((prev) => (prev.length ? prev : pageEnHtml.trim() ? [{ id: newId(), type: 'rich_text', html: pageEnHtml }] : []));
+                      }
+                    }}
+                    className={`rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest transition ${
+                      pageContentMode === m
+                        ? 'bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900'
+                        : 'text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-900/60'
+                    }`}
+                  >
+                    {m === 'blocks' ? t.content.modeBlocks : t.content.modeHtml}
+                  </button>
+                ))}
+              </div>
             </div>
+            <button
+              type="button"
+              onClick={() => {
+                setPageCsTitle('');
+                setPageCsHtml('');
+                setPageEnTitle('');
+                setPageEnHtml('');
+                setPageCsBlocks([]);
+                setPageEnBlocks([]);
+              }}
+              className="inline-flex items-center gap-2 px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition bg-white text-stone-700 border-stone-200 hover:bg-stone-50 dark:bg-stone-950 dark:text-stone-200 dark:border-stone-800 dark:hover:bg-stone-900/60"
+            >
+              <Trash2 size={14} />
+              {t.content.clear}
+            </button>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setPageContentMode('html');
-                setPageCsHtml((prev) => (prev.trim() ? prev : pageCsBlocks.length ? pageBlocksToHtml(pageCsBlocks) : ''));
-                setPageEnHtml((prev) => (prev.trim() ? prev : pageEnBlocks.length ? pageBlocksToHtml(pageEnBlocks) : ''));
-              }}
-              className={`px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition ${
-                pageContentMode === 'html'
-                  ? 'bg-stone-900 text-white border-stone-900 dark:bg-stone-100 dark:text-stone-900 dark:border-stone-100'
-                  : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-50 dark:bg-stone-950 dark:text-stone-200 dark:border-stone-800 dark:hover:bg-stone-900/60'
-              }`}
-            >
-              {t.content.modeHtml}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setPageContentMode('blocks');
-                setPageCsBlocks((prev) => (prev.length ? prev : pageCsHtml.trim() ? [{ id: newId(), type: 'rich_text', html: pageCsHtml }] : []));
-                setPageEnBlocks((prev) => (prev.length ? prev : pageEnHtml.trim() ? [{ id: newId(), type: 'rich_text', html: pageEnHtml }] : []));
-              }}
-              className={`px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition ${
-                pageContentMode === 'blocks'
-                  ? 'bg-stone-900 text-white border-stone-900 dark:bg-stone-100 dark:text-stone-900 dark:border-stone-100'
-                  : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-50 dark:bg-stone-950 dark:text-stone-200 dark:border-stone-800 dark:hover:bg-stone-900/60'
-              }`}
-            >
-              {t.content.modeBlocks}
-            </button>
+
+          <div className="p-4 space-y-4">
+            {pageEditorLoading ? (
+              <div className="flex items-center justify-center p-10">
+                <InlinePulse className="bg-stone-200 dark:bg-stone-800" size={18} />
+              </div>
+            ) : (
+              <>
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 mb-2 dark:text-stone-500">
+                    {pageEditorLang === 'cs' ? t.content.titleCsLabel : t.content.titleEnLabel}
+                  </div>
+                  <input
+                    value={pageEditorLang === 'cs' ? pageCsTitle : pageEnTitle}
+                    onChange={(e) => (pageEditorLang === 'cs' ? setPageCsTitle(e.target.value) : setPageEnTitle(e.target.value))}
+                    className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 outline-none transition focus:ring-2 focus:ring-green-500 dark:bg-stone-900/60 dark:text-stone-100"
+                  />
+                </div>
+                {pageContentMode === 'blocks' ? (
+                  <SitePageBlocksEditor
+                    key={pageEditorLang}
+                    blocks={pageEditorLang === 'cs' ? pageCsBlocks : pageEnBlocks}
+                    onChange={pageEditorLang === 'cs' ? setPageCsBlocks : setPageEnBlocks}
+                    disabled={pageEditorSaving}
+                  />
+                ) : (
+                  <div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 mb-2 dark:text-stone-500">
+                      {pageEditorLang === 'cs' ? t.content.htmlCsLabel : t.content.htmlEnLabel}
+                    </div>
+                    <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden dark:bg-stone-950 dark:border-stone-800">
+                      <Editor
+                        value={pageEditorLang === 'cs' ? pageCsHtml : pageEnHtml}
+                        onChange={(v: string) => (pageEditorLang === 'cs' ? setPageCsHtml(v) : setPageEnHtml(v))}
+                      />
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
-
-        {pageEditorLoading ? (
-          <div className="flex items-center justify-center p-10">
-            <InlinePulse className="bg-stone-200 dark:bg-stone-800" size={18} />
-          </div>
-        ) : (
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="space-y-3">
-              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 dark:text-stone-500">{t.content.titleCsLabel}</div>
-              <input
-                value={pageCsTitle}
-                onChange={(e) => setPageCsTitle(e.target.value)}
-                className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition dark:bg-stone-900/60 dark:text-stone-100"
-              />
-              {pageContentMode === 'blocks' ? (
-                <div className="space-y-3">
-                  <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 dark:text-stone-500">{t.content.blocksCsLabel}</div>
-                  <SitePageBlocksEditor blocks={pageCsBlocks} onChange={setPageCsBlocks} disabled={pageEditorSaving} />
-                </div>
-              ) : (
-                <>
-                  <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 dark:text-stone-500">{t.content.htmlCsLabel}</div>
-                  <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden dark:bg-stone-950 dark:border-stone-800">
-                    <Editor value={pageCsHtml} onChange={(v: string) => setPageCsHtml(v)} />
-                  </div>
-                </>
-              )}
-            </div>
-            <div className="space-y-3">
-              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 dark:text-stone-500">{t.content.titleEnLabel}</div>
-              <input
-                value={pageEnTitle}
-                onChange={(e) => setPageEnTitle(e.target.value)}
-                className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition dark:bg-stone-900/60 dark:text-stone-100"
-              />
-              {pageContentMode === 'blocks' ? (
-                <div className="space-y-3">
-                  <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 dark:text-stone-500">{t.content.blocksEnLabel}</div>
-                  <SitePageBlocksEditor blocks={pageEnBlocks} onChange={setPageEnBlocks} disabled={pageEditorSaving} />
-                </div>
-              ) : (
-                <>
-                  <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 dark:text-stone-500">{t.content.htmlEnLabel}</div>
-                  <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden dark:bg-stone-950 dark:border-stone-800">
-                    <Editor value={pageEnHtml} onChange={(v: string) => setPageEnHtml(v)} />
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        )}
       </div>
       )}
 

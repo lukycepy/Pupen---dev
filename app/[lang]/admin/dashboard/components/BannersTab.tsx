@@ -7,6 +7,7 @@ import { Megaphone, Plus, Trash2, Power, Edit3, Loader2, Save, X } from 'lucide-
 import dynamic from 'next/dynamic';
 import { useToast } from '../../../../context/ToastContext';
 import ConfirmModal from '@/app/components/ConfirmModal';
+import Dialog from '@/app/components/ui/Dialog';
 import { SkeletonTabContent } from '../../../components/Skeleton';
 import { richTextToClientHtml } from '@/lib/richtext-client';
 
@@ -19,6 +20,7 @@ export default function BannersTab({ dict }: { dict: any }) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [editingBanner, setEditingBanner] = useState<any>(null);
+  const [formOpen, setFormOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState<{ title: string; message: string; onConfirm: () => void }>({
     title: '',
@@ -110,6 +112,7 @@ export default function BannersTab({ dict }: { dict: any }) {
 
   const handleEdit = (b: any) => {
     setEditingBanner(b);
+    setFormOpen(true);
     setFormData({ 
       text: b.text, 
       text_en: b.text_en || '', 
@@ -123,6 +126,7 @@ export default function BannersTab({ dict }: { dict: any }) {
 
   const handleCancel = () => {
     setEditingBanner(null);
+    setFormOpen(false);
     setFormData({ 
       text: '', 
       text_en: '', 
@@ -149,27 +153,39 @@ export default function BannersTab({ dict }: { dict: any }) {
               <span className="text-[10px] font-black uppercase tracking-widest text-green-700">Aktivní banner</span>
             </div>
           )}
+          <button
+            type="button"
+            onClick={() => { handleCancel(); setFormOpen(true); }}
+            className="flex items-center gap-2 rounded-xl border-2 border-black bg-white px-5 py-3 font-black uppercase tracking-widest text-[10px] text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
+          >
+            <Plus size={16} /> {dict.admin.newBanner}
+          </button>
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-12 gap-8 items-start">
-        {/* FORM SECTION */}
-        <div className="lg:col-span-5 xl:col-span-4 bg-white p-8 rounded-[2.5rem] shadow-sm border border-stone-100 animate-in slide-in-from-left duration-500 sticky top-8">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-xl font-black text-stone-900 flex items-center gap-3">
-              <div className="p-2 bg-green-50 text-green-600 rounded-lg">
-                {editingBanner ? <Edit3 size={20} /> : <Plus size={20} />} 
-              </div>
-              {editingBanner ? dict.admin.editBanner : dict.admin.newBanner}
-            </h2>
-            {editingBanner && (
-              <button onClick={handleCancel} className="p-2 hover:bg-stone-50 rounded-full transition text-stone-400">
-                <X size={20} />
-              </button>
-            )}
-          </div>
+      <Dialog
+        open={formOpen || !!editingBanner}
+        onClose={handleCancel}
+        overlayClassName="fixed inset-0 z-[30000] flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-6"
+        panelClassName="w-full max-w-3xl rounded-t-[2rem] border-2 border-black bg-white p-6 sm:rounded-[2.5rem] sm:p-8 dark:border-white dark:bg-black max-h-[92dvh] overflow-y-auto"
+      >
+        <div className="flex items-start justify-between gap-4 mb-6">
+          <h2 className="text-xl font-black text-black dark:text-white flex items-center gap-3">
+            <div className="p-2 bg-green-50 text-green-600 rounded-lg dark:bg-green-950 dark:text-green-400">
+              {editingBanner ? <Edit3 size={20} /> : <Plus size={20} />} 
+            </div>
+            {editingBanner ? dict.admin.editBanner : dict.admin.newBanner}
+          </h2>
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="inline-flex items-center gap-2 rounded-2xl border-2 border-black bg-white px-4 py-3 font-bold text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
+          >
+            <X size={16} /> Zavřít
+          </button>
+        </div>
 
-          <div className="space-y-6">
+        <div className="space-y-6">
             <div className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.admin.bannerText} (CZ)</label>
@@ -234,17 +250,17 @@ export default function BannersTab({ dict }: { dict: any }) {
               <button 
                 onClick={() => saveMutation.mutate(formData)} 
                 disabled={!formData.text || saveMutation.isPending} 
-                className="flex-[2] bg-green-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-700 transition-all shadow-lg shadow-green-600/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-[2] bg-green-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {saveMutation.isPending ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
                 {editingBanner ? dict.admin.btnUpdateBanner : dict.admin.btnSaveBanner}
               </button>
             </div>
-          </div>
         </div>
+      </Dialog>
 
-        {/* LIST SECTION */}
-        <div className="lg:col-span-7 xl:col-span-8 bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-sm overflow-hidden">
+      {/* LIST SECTION */}
+      <div className="bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-sm overflow-hidden">
           <h2 className="text-xl font-black text-stone-900 mb-8">{dict.admin.listBanners || 'Seznam bannerů'}</h2>
           
           {isLoading ? (
@@ -296,7 +312,6 @@ export default function BannersTab({ dict }: { dict: any }) {
               )}
             </div>
           )}
-        </div>
       </div>
       
       <ConfirmModal 

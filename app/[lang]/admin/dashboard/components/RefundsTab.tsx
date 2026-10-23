@@ -9,6 +9,7 @@ import { useToast } from '@/app/context/ToastContext';
 import AdminModuleHeader from './ui/AdminModuleHeader';
 import AdminPanel from './ui/AdminPanel';
 import AdminEmptyState from './ui/AdminEmptyState';
+import Dialog from '@/app/components/ui/Dialog';
 
 export default function RefundsTab({ dict }: { dict: any }) {
   const qc = useQueryClient();
@@ -259,59 +260,7 @@ export default function RefundsTab({ dict }: { dict: any }) {
                       {wf?.note && <div className="mt-2 text-sm font-medium text-stone-600 whitespace-pre-line">{String(wf.note)}</div>}
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      {editingId === r.id ? (
-                        <div className="bg-white border border-stone-200 rounded-2xl p-4 w-full md:w-[360px] space-y-3">
-                          <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">
-                            {editingStatus === 'approved'
-                              ? 'Schválit'
-                              : editingStatus === 'denied'
-                                ? 'Zamítnout'
-                                : editingStatus === 'paid'
-                                  ? 'Označit vyplaceno'
-                                  : 'Otevřít'}
-                          </div>
-                          {editingStatus === 'paid' && (
-                            <div>
-                              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">Částka (CZK)</div>
-                              <input
-                                value={amount}
-                                onChange={(e) => setAmount(e.target.value)}
-                                className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition"
-                                inputMode="decimal"
-                                placeholder="0"
-                              />
-                            </div>
-                          )}
-                          <div>
-                            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">Poznámka</div>
-                            <input
-                              value={note}
-                              onChange={(e) => setNote(e.target.value)}
-                              className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition"
-                              placeholder="Volitelné"
-                            />
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={submitEdit}
-                              disabled={updateMutation.isPending}
-                              className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-green-200 bg-green-600 text-white hover:bg-green-700 transition disabled:opacity-50"
-                            >
-                              {updateMutation.isPending ? <InlinePulse className="bg-white/80" size={12} /> : <CheckCircle size={16} />}
-                              Potvrdit
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setEditingId(null)}
-                              disabled={updateMutation.isPending}
-                              className="inline-flex items-center justify-center rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
-                            >
-                              <X size={16} />
-                            </button>
-                          </div>
-                        </div>
-                      ) : st !== 'paid' ? (
+                      {editingId !== r.id && st !== 'paid' && (
                         <button
                           type="button"
                           onClick={() => startEdit(r.id, 'approved')}
@@ -321,7 +270,7 @@ export default function RefundsTab({ dict }: { dict: any }) {
                           <CheckCircle size={16} />
                           Schválit
                         </button>
-                      ) : null}
+                      )}
                       {editingId !== r.id && st !== 'paid' && (
                         <button
                           type="button"
@@ -363,6 +312,86 @@ export default function RefundsTab({ dict }: { dict: any }) {
           </div>
         )}
       </AdminPanel>
+
+      <Dialog
+        open={!!editingId}
+        onClose={() => setEditingId(null)}
+        overlayClassName="fixed inset-0 z-[30000] flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-6"
+        panelClassName="w-full max-w-lg rounded-t-[2rem] border-2 border-black bg-white p-6 sm:rounded-[2.5rem] sm:p-8 dark:border-white dark:bg-black max-h-[92dvh] overflow-y-auto"
+      >
+        <div className="space-y-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex items-center gap-3 text-black dark:text-white">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-green-600 bg-green-50 text-green-700 dark:border-green-500 dark:bg-green-950 dark:text-green-400">
+                <RefreshCcw size={22} />
+              </div>
+              <div>
+                <div className="text-xl font-black">
+                  {editingStatus === 'approved'
+                    ? 'Schválit'
+                    : editingStatus === 'denied'
+                      ? 'Zamítnout'
+                      : editingStatus === 'paid'
+                        ? 'Označit vyplaceno'
+                        : 'Otevřít'}
+                </div>
+                <div className="text-sm font-bold text-stone-400 dark:text-stone-500">Refundy</div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setEditingId(null)}
+              className="inline-flex items-center gap-2 rounded-2xl border-2 border-black bg-white px-4 py-3 font-bold text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
+            >
+              <X size={16} /> Zavřít
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {editingStatus === 'paid' && (
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">Částka (CZK)</div>
+                <input
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition"
+                  inputMode="decimal"
+                  placeholder="0"
+                />
+              </div>
+            )}
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">Poznámka</div>
+              <input
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition"
+                placeholder="Volitelné"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 justify-end">
+            <button
+              type="button"
+              onClick={() => setEditingId(null)}
+              disabled={updateMutation.isPending}
+              className="inline-flex items-center justify-center rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
+            >
+              Zrušit
+            </button>
+            <button
+              type="button"
+              onClick={submitEdit}
+              disabled={updateMutation.isPending}
+              className="inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-[10px] font-black uppercase tracking-widest border border-green-200 bg-green-600 text-white hover:bg-green-700 transition disabled:opacity-50"
+            >
+              {updateMutation.isPending ? <InlinePulse className="bg-white/80" size={12} /> : <CheckCircle size={16} />}
+              Potvrdit
+            </button>
+          </div>
+        </div>
+      </Dialog>
     </div>
   );
 }

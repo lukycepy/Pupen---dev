@@ -3,9 +3,10 @@
 import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Trash2, BookOpen, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Trash2, BookOpen, CheckCircle, XCircle, X } from 'lucide-react';
 import { useToast } from '@/app/context/ToastContext';
 import Skeleton from '@/app/[lang]/components/Skeleton';
+import Dialog from '@/app/components/ui/Dialog';
 
 export default function BooksTab({ dict }: { dict: any }) {
   const queryClient = useQueryClient();
@@ -82,21 +83,38 @@ export default function BooksTab({ dict }: { dict: any }) {
         </button>
       </div>
 
-      {isAdding && (
-        <div className="bg-white p-8 rounded-3xl border shadow-sm grid md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <input type="text" placeholder={dict.books.bookTitle} value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full bg-stone-50 p-4 rounded-xl font-bold" />
-            <input type="text" placeholder={dict.books.author} value={formData.author} onChange={e => setFormData({...formData, author: e.target.value})} className="w-full bg-stone-50 p-4 rounded-xl font-bold" />
+      <Dialog
+        open={isAdding}
+        onClose={() => { setIsAdding(false); setFormData({ title: '', author: '', price: '', contact: '' }); }}
+        overlayClassName="fixed inset-0 z-[30000] flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-6"
+        panelClassName="w-full max-w-3xl rounded-t-[2rem] border-2 border-black bg-white p-6 sm:rounded-[2.5rem] sm:p-8 dark:border-white dark:bg-black max-h-[92dvh] overflow-y-auto"
+      >
+        <div className="space-y-6">
+          <div className="flex items-start justify-between gap-4">
+            <h2 className="text-xl font-black text-black dark:text-white">{dict.books.newAd}</h2>
+            <button
+              type="button"
+              onClick={() => { setIsAdding(false); setFormData({ title: '', author: '', price: '', contact: '' }); }}
+              className="inline-flex items-center gap-2 rounded-2xl border-2 border-black bg-white px-4 py-3 font-bold text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
+            >
+              <X size={16} /> {dict.admin.btnCancel || 'Zavřít'}
+            </button>
           </div>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <input type="number" placeholder={dict.books.price} value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} className="w-full bg-stone-50 p-4 rounded-xl font-bold" />
-              <input type="text" placeholder={dict.books.contact} value={formData.contact} onChange={e => setFormData({...formData, contact: e.target.value})} className="w-full bg-stone-50 p-4 rounded-xl font-bold" />
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <input type="text" placeholder={dict.books.bookTitle} value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full bg-stone-50 p-4 rounded-xl font-bold" />
+              <input type="text" placeholder={dict.books.author} value={formData.author} onChange={e => setFormData({...formData, author: e.target.value})} className="w-full bg-stone-50 p-4 rounded-xl font-bold" />
             </div>
-            <button onClick={() => saveMutation.mutate(formData)} className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold">{dict.books.btnSave}</button>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <input type="number" placeholder={dict.books.price} value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} className="w-full bg-stone-50 p-4 rounded-xl font-bold" />
+                <input type="text" placeholder={dict.books.contact} value={formData.contact} onChange={e => setFormData({...formData, contact: e.target.value})} className="w-full bg-stone-50 p-4 rounded-xl font-bold" />
+              </div>
+              <button onClick={() => saveMutation.mutate(formData)} className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold">{dict.books.btnSave}</button>
+            </div>
           </div>
         </div>
-      )}
+      </Dialog>
 
       <div className="bg-white rounded-[2.5rem] border shadow-sm overflow-hidden">
         <table className="w-full text-left">

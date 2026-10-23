@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2, Archive, Loader2, X, Edit2, Save } from 'lucide-react';
 import { useToast } from '../../../../context/ToastContext';
+import Dialog from '@/app/components/ui/Dialog';
 
 export default function ArchiveTab({ dict }: { dict: any }) {
   const queryClient = useQueryClient();
@@ -91,9 +92,23 @@ export default function ArchiveTab({ dict }: { dict: any }) {
         </button>
       </div>
 
-      {isAdding && (
-        <div className="bg-white p-8 rounded-3xl border shadow-sm space-y-4">
-          <h2 className="text-xl font-bold">{editingItem ? 'Upravit záznam' : dict.archive.newEntry}</h2>
+      <Dialog
+        open={isAdding}
+        onClose={handleCancel}
+        overlayClassName="fixed inset-0 z-[30000] flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-6"
+        panelClassName="w-full max-w-3xl rounded-t-[2rem] border-2 border-black bg-white p-6 sm:rounded-[2.5rem] sm:p-8 dark:border-white dark:bg-black max-h-[92dvh] overflow-y-auto"
+      >
+        <div className="space-y-6">
+          <div className="flex items-start justify-between gap-4">
+            <h2 className="text-xl font-black text-black dark:text-white">{editingItem ? 'Upravit záznam' : dict.archive.newEntry}</h2>
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="inline-flex items-center gap-2 rounded-2xl border-2 border-black bg-white px-4 py-3 font-bold text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
+            >
+              <X size={16} /> {dict.admin.btnCancel || 'Zavřít'}
+            </button>
+          </div>
           <div className="grid md:grid-cols-3 gap-4">
             <input type="text" placeholder={dict.admin.labelTitle || 'Název'} value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full bg-stone-50 p-4 rounded-xl font-bold" />
             <input type="text" placeholder={dict.admin.labelTitleEn || 'Title (EN)'} value={formData.title_en} onChange={e => setFormData({...formData, title_en: e.target.value})} className="w-full bg-stone-50 p-4 rounded-xl font-bold" />
@@ -103,16 +118,18 @@ export default function ArchiveTab({ dict }: { dict: any }) {
             <textarea placeholder={dict.archive?.descriptionLabel || 'Popis (CZ)'} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full bg-stone-50 p-4 rounded-xl font-bold h-32" />
             <textarea placeholder={dict.archive?.descriptionLabelEn || 'Description (EN)'} value={formData.description_en} onChange={e => setFormData({...formData, description_en: e.target.value})} className="w-full bg-stone-50 p-4 rounded-xl font-bold h-32" />
           </div>
-          <button 
-            onClick={() => saveMutation.mutate(formData)}
-            disabled={!formData.title || saveMutation.isPending}
-            className="bg-green-600 text-white px-8 py-3 rounded-xl font-black uppercase tracking-widest hover:bg-green-500 disabled:opacity-50 transition shadow-lg shadow-green-900/20 flex items-center gap-2"
-          >
-            {saveMutation.isPending ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-            {editingItem ? dict.admin.btnUpdateArchive || 'Aktualizovat' : dict.admin.btnSaveArchive || 'Uložit do archivu'}
-          </button>
+          <div className="flex justify-end pt-2">
+            <button 
+              onClick={() => saveMutation.mutate(formData)}
+              disabled={!formData.title || saveMutation.isPending}
+              className="bg-green-600 text-white px-8 py-3 rounded-xl font-black uppercase tracking-widest hover:bg-green-500 disabled:opacity-50 transition flex items-center gap-2"
+            >
+              {saveMutation.isPending ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
+              {editingItem ? dict.admin.btnUpdateArchive || 'Aktualizovat' : dict.admin.btnSaveArchive || 'Uložit do archivu'}
+            </button>
+          </div>
         </div>
-      )}
+      </Dialog>
 
       <div className="grid gap-4">
         {archive.map((item: any) => (

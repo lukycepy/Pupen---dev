@@ -230,7 +230,7 @@ export default function GovernanceTab({ dict }: { dict: any }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin_governance_policies'] });
-      showToast(editingPolicy ? 'Policy uložena (nová verze)' : 'Policy vytvořena', 'success');
+      showToast(editingPolicy ? 'Policy uložena' : 'Policy vytvořena', 'success');
       resetPolicyForm();
     },
     onError: (e: any) => showToast(e?.message || 'Chyba', 'error'),
@@ -403,7 +403,7 @@ export default function GovernanceTab({ dict }: { dict: any }) {
               </div>
             ) : (decisions as Decision[]).length === 0 ? (
               <div className="bg-white p-20 rounded-[3rem] border border-dashed border-stone-200 text-center">
-                <p className="text-stone-400 font-bold uppercase tracking-widest text-xs">Zatím žádná rozhodnutí</p>
+                <p className="text-stone-400 font-bold uppercase tracking-widest text-xs">Žádná rozhodnutí</p>
               </div>
             ) : (
               (decisions as Decision[]).map((d) => (
@@ -536,7 +536,7 @@ export default function GovernanceTab({ dict }: { dict: any }) {
                   className="flex-1 bg-green-600 text-white py-4 rounded-xl font-black uppercase tracking-widest hover:bg-green-500 disabled:opacity-50 transition shadow-lg shadow-green-900/20 flex items-center justify-center gap-2"
                 >
                   {savePolicy.isPending ? <InlinePulse className="bg-white/80" size={16} /> : <Save size={18} />}
-                  {editingPolicy ? 'Uložit novou verzi' : 'Vytvořit policy'}
+                  {editingPolicy ? 'Uložit změny policy' : 'Vytvořit policy'}
                 </button>
                 <button
                   type="button"
@@ -557,7 +557,7 @@ export default function GovernanceTab({ dict }: { dict: any }) {
               </div>
             ) : (policies as Policy[]).length === 0 ? (
               <div className="bg-white p-20 rounded-[3rem] border border-dashed border-stone-200 text-center">
-                <p className="text-stone-400 font-bold uppercase tracking-widest text-xs">Zatím žádné policy</p>
+                <p className="text-stone-400 font-bold uppercase tracking-widest text-xs">Žádné policy</p>
               </div>
             ) : (
               (policies as Policy[]).map((p) => (
@@ -591,7 +591,7 @@ export default function GovernanceTab({ dict }: { dict: any }) {
                             headers: { Authorization: `Bearer ${token}` },
                           });
                           const json = await res.json().catch(() => ({}));
-                          if (!res.ok) throw new Error(json?.error || 'Načtení verze selhalo');
+                          if (!res.ok) throw new Error(json?.error || 'Načtení záznamu selhalo');
                           const latest = Array.isArray(json.versions) ? json.versions[0] : null;
                           if (latest?.content_html) {
                             setPolicyForm((prev) => ({ ...prev, contentHtml: String(latest.content_html) }));

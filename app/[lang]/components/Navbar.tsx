@@ -52,7 +52,6 @@ export default function Navbar({ lang, dict }: NavbarProps) {
   const humanizeSlug = (s: string) => String(s || '').replace(/-/g, ' ');
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResults>({
     pages: [],
@@ -113,7 +112,6 @@ export default function Navbar({ lang, dict }: NavbarProps) {
   }, []);
 
   const pathname = usePathname();
-  const searchRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const toolsRef = useRef<HTMLDivElement>(null);
   const toolsCloseTimerRef = useRef<number | null>(null);
@@ -129,7 +127,6 @@ export default function Navbar({ lang, dict }: NavbarProps) {
 
   useEffect(() => {
     setIsMenuOpen(false);
-    setIsSearchOpen(false);
     setIsToolsOpen(false);
     setIsUserMenuOpen(false);
   }, [pathname]);
@@ -349,197 +346,6 @@ export default function Navbar({ lang, dict }: NavbarProps) {
 
           {/* ACTION BUTTONS */}
             <div className="hidden md:flex items-center gap-3">
-            {/* SEARCH */}
-            <div className="relative" ref={searchRef}>
-              <button 
-                onClick={() => setIsSearchOpen(!isSearchOpen)}
-                className={`${utilityButtonClass} w-10 px-0 ${isSearchOpen ? 'border-green-600 bg-green-600 text-white dark:border-green-500 dark:bg-green-500 dark:text-black' : ''}`}
-                aria-label={isSearchOpen ? (lang === 'cs' ? 'Zavřít vyhledávání' : 'Close search') : (lang === 'cs' ? 'Otevřít vyhledávání' : 'Open search')}
-              >
-                {isSearchOpen ? <X size={20} /> : <Search size={20} />}
-              </button>
-              {isSearchOpen && (
-                <Popover
-                  open={isSearchOpen}
-                  onClose={() => setIsSearchOpen(false)}
-                  anchorRef={searchRef}
-                  placement="bottom-end"
-                  offset={16}
-                  zIndex={10001}
-                  panelClassName="w-96 bg-white dark:bg-black border-2 border-black dark:border-white rounded-3xl p-6 animate-in slide-in-from-top-2 duration-300"
-                >
-                  <div className="relative mb-6">
-                    <input 
-                      autoFocus
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder={searchPlaceholder}
-                      className="w-full rounded-2xl border-2 border-black bg-white px-5 py-4 text-sm font-bold text-black transition outline-none placeholder:text-black dark:border-white dark:bg-black dark:text-white dark:placeholder:text-white focus:ring-2 focus:ring-green-500"
-                    />
-                    {isSearching && <InlinePulse className="absolute right-5 top-5 bg-stone-300 dark:bg-stone-600" size={14} />}
-                  </div>
-
-                  {(searchResults.pages.length > 0 || searchResults.events.length > 0 || searchResults.posts.length > 0 || searchResults.faqs.length > 0 || searchResults.guide.length > 0 || searchResults.discounts.length > 0 || searchResults.books.length > 0 || searchResults.archive.length > 0) ? (
-                    <div className="space-y-6">
-                      {searchResults.pages.length > 0 && (
-                        <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-3 px-2">{lang === 'en' ? 'Pages' : 'Stránky'}</p>
-                          <div className="space-y-1">
-                            {searchResults.pages.map((p) => (
-                              <Link
-                                key={p.id || p.href}
-                                href={String(p.href || `/${lang}`)}
-                                onClick={() => setIsSearchOpen(false)}
-                                className="flex items-center gap-4 p-3 hover:bg-green-50 dark:hover:bg-green-950 rounded-2xl transition group/item"
-                              >
-                                <div className="w-10 h-10 bg-white dark:bg-black rounded-xl flex items-center justify-center text-stone-400 dark:text-stone-500 group-hover/item:bg-green-600 group-hover/item:text-white dark:group-hover/item:bg-green-600 dark:group-hover/item:text-white transition border border-black dark:border-white">
-                                  <FileText size={16} />
-                                </div>
-                                <span className="text-sm font-bold text-black dark:text-white truncate">{p.title || p.href}</span>
-                              </Link>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {searchResults.events.length > 0 && (
-                        <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-3 px-2">Akce</p>
-                          <div className="space-y-1">
-                            {searchResults.events.map(ev => (
-                              <Link 
-                                key={ev.id}
-                                href={`/${lang}/akce/${ev.id}`}
-                                onClick={() => setIsSearchOpen(false)}
-                                className="flex items-center gap-4 p-3 hover:bg-green-50 dark:hover:bg-green-950 rounded-2xl transition group/item"
-                              >
-                                <div className="w-10 h-10 bg-white dark:bg-black rounded-xl flex items-center justify-center text-stone-400 dark:text-stone-500 group-hover/item:bg-green-600 group-hover/item:text-white dark:group-hover/item:bg-green-600 dark:group-hover/item:text-white transition border border-black dark:border-white">
-                                  <Calendar size={16} />
-                                </div>
-                                <span className="text-sm font-bold text-black dark:text-white truncate">{ev.title}</span>
-                              </Link>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {searchResults.posts.length > 0 && (
-                        <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-3 px-2">Novinky</p>
-                          <div className="space-y-1">
-                            {searchResults.posts.map(po => (
-                              <Link 
-                                key={po.id}
-                                href={`/${lang}/novinky/${po.id}`}
-                                onClick={() => setIsSearchOpen(false)}
-                                className="flex items-center gap-4 p-3 hover:bg-green-50 dark:hover:bg-green-950 rounded-2xl transition group/item"
-                              >
-                                <div className="w-10 h-10 bg-white dark:bg-black rounded-xl flex items-center justify-center text-stone-400 dark:text-stone-500 group-hover/item:bg-green-600 group-hover/item:text-white dark:group-hover/item:bg-green-600 dark:group-hover/item:text-white transition border border-black dark:border-white">
-                                  <FileText size={16} />
-                                </div>
-                                <span className="text-sm font-bold text-black dark:text-white truncate">{po.title}</span>
-                              </Link>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {searchResults.faqs.length > 0 && (
-                        <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-3 px-2">FAQ</p>
-                          <div className="space-y-1">
-                            {searchResults.faqs.map(f => (
-                              <Link 
-                                key={f.id}
-                                href={`/${lang}/faq?q=${encodeURIComponent(searchQuery)}`}
-                                onClick={() => setIsSearchOpen(false)}
-                                className="flex items-center gap-4 p-3 hover:bg-green-50 dark:hover:bg-green-950 rounded-2xl transition group/item"
-                              >
-                                <div className="w-10 h-10 bg-white dark:bg-black rounded-xl flex items-center justify-center text-stone-400 dark:text-stone-500 group-hover/item:bg-green-600 group-hover/item:text-white dark:group-hover/item:bg-green-600 dark:group-hover/item:text-white transition border border-black dark:border-white">
-                                  <HelpCircle size={16} />
-                                </div>
-                                <span className="text-sm font-bold text-black dark:text-white truncate">{f.question}</span>
-                              </Link>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {searchResults.guide.length > 0 && (
-                        <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-3 px-2">{lang === 'en' ? 'Guide' : 'Průvodce'}</p>
-                          <div className="space-y-1">
-                            {searchResults.guide.map(a => (
-                              <Link 
-                                key={a.id}
-                                href={`/${lang}/pruvodce/${a.slug}`}
-                                onClick={() => setIsSearchOpen(false)}
-                                className="flex items-center gap-4 p-3 hover:bg-green-50 dark:hover:bg-green-950 rounded-2xl transition group/item"
-                              >
-                                <div className="w-10 h-10 bg-white dark:bg-black rounded-xl flex items-center justify-center text-stone-400 dark:text-stone-500 group-hover/item:bg-green-600 group-hover/item:text-white dark:group-hover/item:bg-green-600 dark:group-hover/item:text-white transition border border-black dark:border-white">
-                                  <BookOpen size={16} />
-                                </div>
-                                <span className="text-sm font-bold text-black dark:text-white truncate">{a.title}</span>
-                              </Link>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {searchResults.discounts.length > 0 && (
-                        <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-3 px-2">{lang === 'en' ? 'Discounts' : 'Slevy'}</p>
-                          <div className="space-y-1">
-                            {searchResults.discounts.map(d => (
-                              <Link 
-                                key={d.id}
-                                href={`/${lang}/slevy?q=${encodeURIComponent(searchQuery)}`}
-                                onClick={() => setIsSearchOpen(false)}
-                                className="flex items-center gap-4 p-3 hover:bg-green-50 dark:hover:bg-green-950 rounded-2xl transition group/item"
-                              >
-                                <div className="w-10 h-10 bg-white dark:bg-black rounded-xl flex items-center justify-center text-stone-400 dark:text-stone-500 group-hover/item:bg-green-600 group-hover/item:text-white dark:group-hover/item:bg-green-600 dark:group-hover/item:text-white transition border border-black dark:border-white">
-                                  <Tag size={16} />
-                                </div>
-                                <span className="text-sm font-bold text-black dark:text-white truncate">{d.title}</span>
-                              </Link>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {searchResults.archive.length > 0 && (
-                        <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-3 px-2">{lang === 'en' ? 'Archive' : 'Archiv'}</p>
-                          <div className="space-y-1">
-                            {searchResults.archive.map(a => (
-                              <Link 
-                                key={a.id}
-                                href={`/${lang}/archiv?q=${encodeURIComponent(searchQuery)}`}
-                                onClick={() => setIsSearchOpen(false)}
-                                className="flex items-center gap-4 p-3 hover:bg-green-50 dark:hover:bg-green-950 rounded-2xl transition group/item"
-                              >
-                                <div className="w-10 h-10 bg-white dark:bg-black rounded-xl flex items-center justify-center text-stone-400 dark:text-stone-500 group-hover/item:bg-green-600 group-hover/item:text-white dark:group-hover/item:bg-green-600 dark:group-hover/item:text-white transition border border-black dark:border-white">
-                                  <Archive size={16} />
-                                </div>
-                                <span className="text-sm font-bold text-black dark:text-white truncate">{a.title || (lang === 'en' ? 'Entry' : 'Záznam')}</span>
-                              </Link>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      <div className="pt-2">
-                        <Link
-                          href={`/${lang}/search?q=${encodeURIComponent(searchQuery)}`}
-                          onClick={() => setIsSearchOpen(false)}
-                          className="block text-center text-[10px] font-black uppercase tracking-widest text-green-600 hover:text-green-700 transition"
-                        >
-                          {lang === 'en' ? 'View all results' : 'Zobrazit všechny výsledky'}
-                        </Link>
-                      </div>
-                    </div>
-                  ) : searchQuery.length >= 2 && !isSearching && (
-                    <div className="text-center py-8">
-                      <p className="text-sm text-stone-400 dark:text-stone-500 font-bold">{searchNoResults}</p>
-                    </div>
-                  )}
-                </Popover>
-              )}
-            </div>
 
             {/* PŘEPÍNAČ JAZYKA */}
             <div className={utilityGroupClass}>

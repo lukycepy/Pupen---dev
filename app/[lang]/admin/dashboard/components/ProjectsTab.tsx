@@ -246,8 +246,8 @@ export default function ProjectsTab({
         <Dialog
           open={createOpen}
           onClose={() => setCreateOpen(false)}
-          overlayClassName="fixed inset-0 z-[10003] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
-          panelClassName="relative w-full max-w-2xl bg-white rounded-[2.5rem] border border-stone-100 shadow-2xl overflow-hidden"
+          overlayClassName="fixed inset-0 z-[30000] flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-6"
+          panelClassName="w-full max-w-2xl rounded-t-[2rem] border-2 border-black bg-white sm:rounded-[2.5rem] dark:border-white dark:bg-black max-h-[92dvh] overflow-y-auto"
         >
             <div className="p-6 border-b border-stone-100 flex items-center justify-between">
               <div className="font-black text-stone-900">Nový projekt</div>
@@ -301,8 +301,8 @@ export default function ProjectsTab({
         <Dialog
           open={!!editOpen}
           onClose={() => setEditOpen(null)}
-          overlayClassName="fixed inset-0 z-[10003] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
-          panelClassName="relative w-full max-w-2xl bg-white rounded-[2.5rem] border border-stone-100 shadow-2xl overflow-hidden"
+          overlayClassName="fixed inset-0 z-[30000] flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-6"
+          panelClassName="w-full max-w-2xl rounded-t-[2rem] border-2 border-black bg-white sm:rounded-[2.5rem] dark:border-white dark:bg-black max-h-[92dvh] overflow-y-auto"
         >
             <div className="p-6 border-b border-stone-100 flex items-center justify-between">
               <div className="font-black text-stone-900">Upravit projekt</div>

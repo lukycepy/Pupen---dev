@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Wallet, Plus, Trash2, Loader2, Save, X, Mail, Receipt } from 'lucide-react';
 import { useToast } from '../../../../context/ToastContext';
 import ConfirmModal from '@/app/components/ConfirmModal';
+import Dialog from '@/app/components/ui/Dialog';
 import { SkeletonTabContent } from '../../../components/Skeleton';
 
 export default function BudgetTab({ dict, uploadImage }: { dict: any, uploadImage?: (file: File, bucket: string) => Promise<string> }) {
@@ -201,16 +202,40 @@ export default function BudgetTab({ dict, uploadImage }: { dict: any, uploadImag
           </div>
         </div>
         <button 
-          onClick={() => setIsAdding(!isAdding)}
+          onClick={() => setIsAdding(true)}
           className="bg-green-600 text-white p-8 rounded-[2.5rem] font-black uppercase tracking-widest flex flex-col items-center justify-center gap-2 hover:bg-green-500 transition shadow-lg shadow-green-900/20"
         >
-          {isAdding ? <X size={32} /> : <Plus size={32} />}
-          {isAdding ? dict.admin.btnCancel : dict.admin.budget?.newEntry}
+          <Plus size={32} />
+          {dict.admin.budget?.newEntry}
         </button>
       </div>
 
-      {isAdding && (
-        <div className="bg-white p-8 rounded-[2.5rem] border shadow-xl animate-in fade-in slide-in-from-top-4 duration-300">
+      <Dialog
+        open={isAdding}
+        onClose={() => setIsAdding(false)}
+        overlayClassName="fixed inset-0 z-[30000] flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-6"
+        panelClassName="w-full max-w-4xl rounded-t-[2rem] border-2 border-black bg-white p-6 sm:rounded-[2.5rem] sm:p-8 dark:border-white dark:bg-black max-h-[92dvh] overflow-y-auto"
+      >
+        <div className="space-y-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex items-center gap-3 text-black dark:text-white">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-green-600 bg-green-50 text-green-700 dark:border-green-500 dark:bg-green-950 dark:text-green-400">
+                <Wallet size={22} />
+              </div>
+              <div>
+                <div className="text-xl font-black">{dict.admin.budget?.newEntry || 'Nová položka'}</div>
+                <div className="text-sm font-bold text-stone-400 dark:text-stone-500">{dict.admin.tabBudget}</div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsAdding(false)}
+              className="inline-flex items-center gap-2 rounded-2xl border-2 border-black bg-white px-4 py-3 font-bold text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
+            >
+              <X size={16} /> {dict.admin.btnCancel}
+            </button>
+          </div>
+
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
               <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.admin.budget?.labelTitle}</label>
@@ -293,7 +318,7 @@ export default function BudgetTab({ dict, uploadImage }: { dict: any, uploadImag
             </div>
           </div>
         </div>
-      )}
+      </Dialog>
 
       <div className="bg-white rounded-[2.5rem] border shadow-sm overflow-hidden">
         <div className="overflow-x-auto">

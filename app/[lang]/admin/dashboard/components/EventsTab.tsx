@@ -1158,7 +1158,7 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
                   </div>
                   <div className="space-y-3">
                     {registrationFieldDrafts.length === 0 ? (
-                      <div className="text-sm font-bold text-stone-500">Zatím bez vlastních polí.</div>
+                      <div className="text-sm font-bold text-stone-500">Bez vlastních polí.</div>
                     ) : registrationFieldDrafts.map((field, index) => (
                       <div key={`${field.id || 'new'}-${index}`} className="rounded-2xl border border-stone-200 bg-white p-4 space-y-3">
                         <div className="flex items-center justify-between gap-3">

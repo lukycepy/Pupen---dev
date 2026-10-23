@@ -10,6 +10,7 @@ import { normalizePromoCode } from '@/lib/promo/rules';
 import AdminModuleHeader from './ui/AdminModuleHeader';
 import AdminPanel from './ui/AdminPanel';
 import AdminEmptyState from './ui/AdminEmptyState';
+import Dialog from '@/app/components/ui/Dialog';
 
 type Rule = {
   code: string;
@@ -31,6 +32,7 @@ export default function PromoRulesTab({ dict }: { dict: any }) {
   const qc = useQueryClient();
   const { showToast } = useToast();
   const [editingCode, setEditingCode] = useState<string | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
   const [newRule, setNewRule] = useState({
     code: '',
     title: '',
@@ -151,6 +153,11 @@ export default function PromoRulesTab({ dict }: { dict: any }) {
     });
   };
 
+  const closeForm = () => {
+    resetForm();
+    setFormOpen(false);
+  };
+
   const startEdit = (r: Rule) => {
     setEditingCode(r.code);
     setNewRule({
@@ -168,6 +175,7 @@ export default function PromoRulesTab({ dict }: { dict: any }) {
       endsAt: r.endsAt || '',
       note: r.note || '',
     });
+    setFormOpen(true);
   };
 
   const add = () => {
@@ -208,7 +216,7 @@ export default function PromoRulesTab({ dict }: { dict: any }) {
     ];
 
     saveMutation.mutate(next);
-    resetForm();
+    closeForm();
   };
 
   const toggleActive = (code: string) => {
@@ -255,19 +263,54 @@ export default function PromoRulesTab({ dict }: { dict: any }) {
         title={dict?.admin?.tabPromoRules || 'Promo kódy'}
         description="Validace a limity použití promo kódů."
         actions={
-          <button
-            type="button"
-            onClick={downloadUsesCsv}
-            className="inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
-          >
-            <Download size={16} />
-            Export použití
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => { resetForm(); setFormOpen(true); }}
+              className="inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border-2 border-green-600 bg-green-600 text-white hover:bg-green-500 transition"
+            >
+              <Plus size={16} />
+              Přidat
+            </button>
+            <button
+              type="button"
+              onClick={downloadUsesCsv}
+              className="inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border-2 border-black bg-white text-black hover:bg-green-50 hover:border-green-600 hover:text-green-600 transition dark:border-white dark:bg-black dark:text-white dark:hover:bg-green-950 dark:hover:border-green-500 dark:hover:text-green-500"
+            >
+              <Download size={16} />
+              Export použití
+            </button>
+          </>
         }
       />
 
-      <AdminPanel className="p-8">
-        <div className="grid md:grid-cols-12 gap-3 items-end">
+      <Dialog
+        open={formOpen}
+        onClose={closeForm}
+        overlayClassName="fixed inset-0 z-[30000] flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-6"
+        panelClassName="w-full max-w-4xl rounded-t-[2rem] border-2 border-black bg-white p-6 sm:rounded-[2.5rem] sm:p-8 dark:border-white dark:bg-black max-h-[92dvh] overflow-y-auto"
+      >
+        <div className="space-y-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex items-center gap-3 text-black dark:text-white">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-green-600 bg-green-50 text-green-700 dark:border-green-500 dark:bg-green-950 dark:text-green-400">
+                <Tag size={22} />
+              </div>
+              <div>
+                <div className="text-xl font-black">{editingCode ? 'Upravit promo kód' : 'Přidat promo kód'}</div>
+                <div className="text-sm font-bold text-stone-400 dark:text-stone-500">Validace a limity použití promo kódů.</div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={closeForm}
+              className="inline-flex items-center gap-2 rounded-2xl border-2 border-black bg-white px-4 py-3 font-bold text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
+            >
+              <X size={16} /> Zavřít
+            </button>
+          </div>
+
+          <div className="grid md:grid-cols-12 gap-3 items-end">
           <div className="md:col-span-3">
             <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">Kód</div>
             <input
@@ -350,7 +393,7 @@ export default function PromoRulesTab({ dict }: { dict: any }) {
             {editingCode && (
               <button
                 type="button"
-                onClick={resetForm}
+                onClick={closeForm}
                 disabled={saveMutation.isPending}
                 className="inline-flex items-center justify-center rounded-2xl px-5 py-4 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
               >
@@ -403,8 +446,9 @@ export default function PromoRulesTab({ dict }: { dict: any }) {
               placeholder="Např. interní důvod / partner"
             />
           </div>
+          </div>
         </div>
-      </AdminPanel>
+      </Dialog>
 
       <AdminPanel className="p-6 overflow-hidden">
         {isLoading ? (

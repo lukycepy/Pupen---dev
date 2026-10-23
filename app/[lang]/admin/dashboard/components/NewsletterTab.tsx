@@ -932,7 +932,7 @@ export default function NewsletterTab({ dict }: { dict: any }) {
             ) : null}
             {sentCampaigns.length === 0 ? (
               <div className="p-8 text-center bg-stone-50 rounded-2xl border border-dashed border-stone-200 text-stone-400 font-bold">
-                Zatím nebyla odeslána žádná kampaň
+                Žádná odeslaná kampaň
               </div>
             ) : (
               <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">

@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Clock, Plus, Trash2, Save, X, Edit2 } from 'lucide-react';
 import { useToast } from '../../../../context/ToastContext';
 import ConfirmModal from '@/app/components/ConfirmModal';
+import Dialog from '@/app/components/ui/Dialog';
 import { SkeletonTabContent } from '../../../components/Skeleton';
 
 export default function OpeningHoursTab({ dict }: { dict: any }) {
@@ -113,6 +114,11 @@ export default function OpeningHoursTab({ dict }: { dict: any }) {
     setIsAdding(true);
   };
 
+  const handleCancel = () => {
+    setIsAdding(false);
+    setEditingItem(null);
+  };
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('opening_hours').delete().eq('id', id);
@@ -148,39 +154,58 @@ export default function OpeningHoursTab({ dict }: { dict: any }) {
         </div>
         <button 
           onClick={() => {
-            if (isAdding || editingItem) {
-              setIsAdding(false);
-              setEditingItem(null);
-              setFormData({ 
-                place_name: '', 
-                place_name_en: '',
-                hours_mon_fri: '', 
-                hours_sat_sun: '', 
-                note: '',
-                note_en: '',
-                daily_hours: [
-                  { day: 'Po', open: '', close: '', closed: false },
-                  { day: 'Út', open: '', close: '', closed: false },
-                  { day: 'St', open: '', close: '', closed: false },
-                  { day: 'Čt', open: '', close: '', closed: false },
-                  { day: 'Pá', open: '', close: '', closed: false },
-                  { day: 'So', open: '', close: '', closed: true },
-                  { day: 'Ne', open: '', close: '', closed: true },
-                ]
-              });
-            } else {
-              setIsAdding(true);
-            }
+            setEditingItem(null);
+            setFormData({ 
+              place_name: '', 
+              place_name_en: '',
+              hours_mon_fri: '', 
+              hours_sat_sun: '', 
+              note: '',
+              note_en: '',
+              daily_hours: [
+                { day: 'Po', open: '', close: '', closed: false },
+                { day: 'Út', open: '', close: '', closed: false },
+                { day: 'St', open: '', close: '', closed: false },
+                { day: 'Čt', open: '', close: '', closed: false },
+                { day: 'Pá', open: '', close: '', closed: false },
+                { day: 'So', open: '', close: '', closed: true },
+                { day: 'Ne', open: '', close: '', closed: true },
+              ]
+            });
+            setIsAdding(true);
           }}
-          className="bg-green-600 text-white px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-500 transition shadow-lg shadow-green-900/20 flex items-center gap-2"
+          className="bg-green-600 text-white px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-500 transition flex items-center gap-2"
         >
-          {isAdding || editingItem ? <X size="16" /> : <Plus size="16" />}
-          {isAdding || editingItem ? (dict.admin?.btnCancel || 'Zrušit') : (dict.admin?.addHoursPlace || 'Přidat místo')}
+          <Plus size="16" />
+          {dict.admin?.addHoursPlace || 'Přidat místo'}
         </button>
       </div>
 
-      {(isAdding || editingItem) && (
-        <div className="bg-white p-8 rounded-[2.5rem] border shadow-xl animate-in fade-in slide-in-from-top-4 duration-300">
+      <Dialog
+        open={isAdding || !!editingItem}
+        onClose={handleCancel}
+        overlayClassName="fixed inset-0 z-[30000] flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-6"
+        panelClassName="w-full max-w-4xl rounded-t-[2rem] border-2 border-black bg-white p-6 sm:rounded-[2.5rem] sm:p-8 dark:border-white dark:bg-black max-h-[92dvh] overflow-y-auto"
+      >
+        <div className="space-y-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex items-center gap-3 text-black dark:text-white">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-green-600 bg-green-50 text-green-700 dark:border-green-500 dark:bg-green-950 dark:text-green-400">
+                <Clock size={22} />
+              </div>
+              <div className="text-xl font-black">
+                {editingItem ? (dict.admin?.btnUpdatePost || 'Upravit') : (dict.admin?.addHoursPlace || 'Přidat místo')}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="inline-flex items-center gap-2 rounded-2xl border-2 border-black bg-white px-4 py-3 font-bold text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
+            >
+              <X size={16} /> {dict.admin?.btnCancel || 'Zavřít'}
+            </button>
+          </div>
+
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-1">
               <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.admin?.placeName || 'Název místa'} (CZ)</label>
@@ -273,7 +298,7 @@ export default function OpeningHoursTab({ dict }: { dict: any }) {
 
             <div className="md:col-span-2 flex justify-end gap-3">
               <button 
-                onClick={() => { setIsAdding(false); setEditingItem(null); }}
+                onClick={handleCancel}
                 className="px-6 py-3 rounded-xl font-bold text-stone-500 hover:bg-stone-100 transition"
               >
                 {dict.admin?.btnCancel || 'Zrušit'}
@@ -281,14 +306,14 @@ export default function OpeningHoursTab({ dict }: { dict: any }) {
               <button 
                 onClick={() => addMutation.mutate(formData)}
                 disabled={!formData.place_name}
-                className="bg-green-600 text-white px-8 py-3 rounded-xl font-black uppercase tracking-widest hover:bg-green-500 disabled:opacity-50 transition shadow-lg shadow-green-900/20 flex items-center gap-2"
+                className="bg-green-600 text-white px-8 py-3 rounded-xl font-black uppercase tracking-widest hover:bg-green-500 disabled:opacity-50 transition flex items-center gap-2"
               >
                 <Save size={18} /> {editingItem ? (dict.admin?.btnUpdatePost || 'Upravit') : (dict.admin?.btnSaveHours || 'Uložit')}
               </button>
             </div>
           </div>
         </div>
-      )}
+      </Dialog>
 
       <div className="grid gap-4">
         {hours.map((item: any) => (

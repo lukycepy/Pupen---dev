@@ -228,7 +228,7 @@ export default function ModerationTab({
           </div>
         ) : mode === 'reports' && rows.length === 0 ? (
           <div className="py-16 text-center text-stone-400 font-bold uppercase tracking-widest text-xs">
-            Zatím žádná hlášení.
+            Žádná hlášení.
           </div>
         ) : mode === 'reports' ? (
           <div className="space-y-3">
@@ -297,7 +297,7 @@ export default function ModerationTab({
           </div>
         ) : commentRows.length === 0 ? (
           <div className="py-16 text-center text-stone-400 font-bold uppercase tracking-widest text-xs">
-            Zatím žádné čekající komentáře.
+            Žádné čekající komentáře.
           </div>
         ) : (
           <div className="space-y-3">

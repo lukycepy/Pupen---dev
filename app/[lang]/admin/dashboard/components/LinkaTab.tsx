@@ -22,6 +22,7 @@ import AdminModuleHeader from './ui/AdminModuleHeader';
 import AdminPanel from './ui/AdminPanel';
 import InlinePulse from '@/app/components/InlinePulse';
 import { useToast } from '@/app/context/ToastContext';
+import Dialog from '@/app/components/ui/Dialog';
 import {
   LinkaContact,
   nextContactId,
@@ -92,6 +93,10 @@ export default function LinkaTab() {
   const [warnedEmpty, setWarnedEmpty] = useState(false);
 
   const importFileRef = useRef<HTMLInputElement | null>(null);
+  const isEditOpen =
+    editing.idx != null ||
+    editing.dirty ||
+    Object.values(editing.form).some((value) => String(value || '').trim().length > 0);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -280,7 +285,7 @@ export default function LinkaTab() {
         setContacts(json.data.contacts);
       }
       if (json.warnedEmpty) setWarnedEmpty(true);
-      showToast(`Data uložena, nová verze ${json.version}`, 'success');
+      showToast('Data uložena', 'success');
     } catch (e: any) {
       showToast(e?.message || 'Chyba', 'error');
     } finally {
@@ -400,8 +405,8 @@ export default function LinkaTab() {
   return (
     <div className="space-y-8 pb-16">
       <AdminModuleHeader
-        title="Aplikace Linka od Pupenu – kontakty"
-        description={`Správa kontaktů pro mobilní aplikaci. Veřejný JSON je vždy dostupný na /apps/kontakty.json, i během odstávky webu.`}
+        title="Aplikace Linka"
+        description="Správa kontaktů pro mobilní aplikaci. Veřejný JSON zůstává dostupný i při odstávce webu."
         actions={
           <div className="flex flex-wrap gap-3">
             <button
@@ -462,19 +467,21 @@ export default function LinkaTab() {
               disabled={saving || loading}
               className="bg-green-600 dark:bg-green-500 text-white dark:text-black px-6 py-3 rounded-2xl font-black flex items-center gap-2 hover:bg-green-700 dark:hover:bg-green-400 transition border-2 border-green-700 dark:border-green-500 disabled:opacity-50"
             >
-              {saving ? <InlinePulse className="bg-white dark:bg-black" size={16} /> : <Save size={18} />} ULOŽIT (verze {version || '?'})
+              {saving ? <InlinePulse className="bg-white dark:bg-black" size={16} /> : <Save size={18} />} Uložit změny
             </button>
           </div>
         }
       />
 
       <AdminPanel className="p-6 md:p-8 rounded-[2.5rem] space-y-6">
-        <div className="grid md:grid-cols-3 gap-4">
-          <div className="p-5 rounded-[2rem] bg-green-50/30 dark:bg-green-950/30 border-2 border-green-600 dark:border-green-500">
-            <div className="text-[10px] font-black uppercase tracking-widest text-green-600 dark:text-green-500">Verze dat</div>
-            <div className="text-black dark:text-white font-black text-2xl mt-1">{version || 0}</div>
-            <div className="text-stone-600 dark:text-stone-400 font-bold text-xs mt-1">
-              {lastUpdated ? 'Naposledy: ' + new Date(lastUpdated).toLocaleString('cs-CZ') : 'Zatím neuloženo'}
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="rounded-[2rem] border-2 border-green-600 bg-green-50/30 p-5 dark:border-green-500 dark:bg-green-950/30">
+            <div className="text-[10px] font-black uppercase tracking-widest text-green-600 dark:text-green-500">Poslední synchronizace</div>
+            <div className="mt-2 text-sm font-black text-black dark:text-white">
+              {lastUpdated ? new Date(lastUpdated).toLocaleString('cs-CZ') : 'Bez záznamu'}
+            </div>
+            <div className="mt-2 text-xs font-bold text-stone-600 dark:text-stone-400">
+              Stav exportu: {version > 0 ? 'uloženo' : 'čeká na první uložení'}
             </div>
           </div>
           <div className="p-5 rounded-[2rem] bg-blue-50/30 dark:bg-blue-950/30 border-2 border-blue-600 dark:border-blue-500">
@@ -487,7 +494,7 @@ export default function LinkaTab() {
           <div className="p-5 rounded-[2rem] bg-stone-50/50 dark:bg-stone-950/50 border-2 border-black dark:border-white">
             <div className="text-[10px] font-black uppercase tracking-widest text-stone-500 dark:text-stone-400">Cesta k souboru</div>
             <div className="text-black dark:text-white font-bold text-sm mt-1 break-all">
-              {sourcePath || '— zatím neuvedeno'}
+              {sourcePath || '— není dostupné'}
             </div>
           </div>
         </div>
@@ -498,7 +505,7 @@ export default function LinkaTab() {
             <div>
               <div className="font-black text-amber-800 dark:text-amber-400">Upozornění: pole kontaktů je prázdné</div>
               <div className="font-bold text-amber-700 dark:text-amber-300 text-sm mt-1">
-                Aplikace si poradí, ale uživatelé nemusí vidět žádné lince.
+        Aplikace zůstane dostupná, ale uživatelé neuvidí žádné linky.
               </div>
             </div>
           </div>
@@ -545,7 +552,7 @@ export default function LinkaTab() {
             </div>
           ) : countFiltered === 0 ? (
             <div className="p-10 rounded-[2rem] bg-green-50/30 dark:bg-green-950/30 border-2 border-dashed border-black dark:border-white text-stone-600 dark:text-stone-400 font-bold text-center">
-              {hasAny ? 'Žádné výsledky vyhledávání.' : 'Zatím zde nejsou žádné kontakty. Přidejte první tlačítkem nahoře.'}
+              {hasAny ? 'Žádné výsledky vyhledávání.' : 'Seznam kontaktů je prázdný. Přidejte první záznam tlačítkem výše.'}
             </div>
           ) : (
             <div className="overflow-x-auto -mx-2 md:mx-0">
@@ -610,43 +617,48 @@ export default function LinkaTab() {
         </div>
       </AdminPanel>
 
-      {(editing.idx != null || editing.dirty || Object.keys(editing.form).some((k) => (editing.form as any)[k])) && (
-        <AdminPanel className="p-6 md:p-8 rounded-[2.5rem] space-y-6">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
+      <Dialog
+        open={isEditOpen}
+        onClose={cancelEdit}
+        overlayClassName="fixed inset-0 z-[30000] flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-6"
+        panelClassName="w-full max-w-4xl rounded-t-[2rem] border-2 border-black bg-white p-6 sm:rounded-[2.5rem] sm:p-8 dark:border-white dark:bg-black max-h-[92dvh] overflow-y-auto"
+      >
+        <div className="space-y-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex items-center gap-3 text-black dark:text-white">
-              <div className="w-12 h-12 rounded-2xl bg-green-50 dark:bg-green-950 border-2 border-green-600 dark:border-green-500 flex items-center justify-center text-green-700 dark:text-green-400">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-green-600 bg-green-50 text-green-700 dark:border-green-500 dark:bg-green-950 dark:text-green-400">
                 <Phone size={22} />
               </div>
               <div>
-                <div className="font-black text-xl">
-                  {editing.idx != null || editing.form.id ? 'Upravit kontakt' : 'Přidat nový kontakt'}
+                <div className="text-xl font-black">
+                  {editing.idx != null || editing.form.id ? 'Upravit kontakt' : 'Přidat kontakt'}
                 </div>
-                <div className="font-bold text-stone-500 dark:text-stone-400 text-sm">
-                  Pole označená jako povinná. Uložení tlačítkem níže přidá kontakt do paměti, nezapomeň hlavní ULOŽIT.
+                <div className="text-sm font-bold text-stone-500 dark:text-stone-400">
+                  Změna se připraví do seznamu a uloží se společně hlavním tlačítkem nahoře.
                 </div>
               </div>
             </div>
             <button
               type="button"
               onClick={cancelEdit}
-              className="inline-flex items-center gap-2 px-4 py-3 rounded-2xl bg-white dark:bg-black text-black dark:text-white hover:bg-green-50 dark:hover:bg-green-950 hover:text-green-600 dark:hover:text-green-500 hover:border-green-600 dark:hover:border-green-500 transition font-bold border-2 border-black dark:border-white"
+              className="inline-flex items-center gap-2 rounded-2xl border-2 border-black bg-white px-4 py-3 font-bold text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
             >
               <X size={16} /> Zavřít
             </button>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid gap-4 md:grid-cols-2">
             {(['jmeno', 'oddeleni', 'fakulta', 'budova', 'mistnost', 'klapka', 'email'] as const).map((key) => {
               const value: string = String((editing.form as any)[key] || '');
               const err = editing.errors[key];
               return (
                 <div key={key} className={key === 'email' ? 'md:col-span-2' : ''}>
-                  <label className="flex items-center justify-between px-1 mb-2">
+                  <label className="mb-2 flex items-center justify-between px-1">
                     <span className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500">
                       {FIELD_LABELS[key]}
-                      <span className="text-red-500 ml-1">*</span>
+                      <span className="ml-1 text-red-500">*</span>
                     </span>
-                    {err ? <span className="text-red-600 dark:text-red-400 font-bold text-xs">{err}</span> : null}
+                    {err ? <span className="text-xs font-bold text-red-600 dark:text-red-400">{err}</span> : null}
                   </label>
                   <input
                     type={key === 'email' ? 'email' : 'text'}
@@ -656,10 +668,10 @@ export default function LinkaTab() {
                     onChange={(e) => updateField(key, e.target.value, false)}
                     onBlur={(e) => updateField(key, e.target.value, true)}
                     placeholder={FIELD_PLACEHOLDERS[key]}
-                    className={`w-full rounded-2xl px-5 py-4 border-2 font-bold outline-none transition ${
+                    className={`w-full rounded-2xl border-2 px-5 py-4 font-bold outline-none transition ${
                       err
-                        ? 'border-red-600 dark:border-red-500 bg-red-50/30 dark:bg-red-950/30 text-black dark:text-white focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400'
-                        : 'border-black dark:border-white bg-white dark:bg-black text-black dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:ring-2 focus:ring-green-500'
+                        ? 'border-red-600 bg-red-50/30 text-black focus:ring-2 focus:ring-red-500 dark:border-red-500 dark:bg-red-950/30 dark:text-white dark:focus:ring-red-400'
+                        : 'border-black bg-white text-black placeholder:text-stone-400 focus:ring-2 focus:ring-green-500 dark:border-white dark:bg-black dark:text-white dark:placeholder:text-stone-500'
                     }`}
                   />
                 </div>
@@ -671,25 +683,25 @@ export default function LinkaTab() {
             <button
               type="button"
               onClick={cancelEdit}
-              className="px-6 py-3 rounded-2xl bg-white dark:bg-black text-black dark:text-white hover:bg-green-50 dark:hover:bg-green-950 hover:text-green-600 dark:hover:text-green-500 hover:border-green-600 dark:hover:border-green-500 transition font-black border-2 border-black dark:border-white"
+              className="rounded-2xl border-2 border-black bg-white px-6 py-3 font-black text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
             >
               Zrušit
             </button>
             <button
               type="button"
               onClick={commitEdit}
-              className="px-8 py-3 rounded-2xl bg-green-600 dark:bg-green-500 text-white dark:text-black hover:bg-green-700 dark:hover:bg-green-400 transition font-black border-2 border-green-700 dark:border-green-500 flex items-center gap-2"
+              className="flex items-center gap-2 rounded-2xl border-2 border-green-700 bg-green-600 px-8 py-3 font-black text-white transition hover:bg-green-700 dark:border-green-500 dark:bg-green-500 dark:text-black dark:hover:bg-green-400"
             >
               <Check size={18} />
               {editing.idx != null || editing.form.id ? 'Uložit změny' : 'Přidat do seznamu'}
             </button>
           </div>
-        </AdminPanel>
-      )}
+        </div>
+      </Dialog>
 
       <footer className="pt-2">
         <div className="text-center text-xs font-bold text-stone-500">
-          Správa kontaktů pro aplikaci Linka od Pupenu · © Studentský spolek Pupen, z.s.
+          Správa kontaktů pro aplikaci Linka · © Studentský spolek Pupen, z.s.
         </div>
       </footer>
     </div>

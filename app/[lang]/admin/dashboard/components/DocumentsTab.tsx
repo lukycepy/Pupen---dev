@@ -9,6 +9,7 @@ import ConfirmModal from '@/app/components/ConfirmModal';
 import { SkeletonTabContent } from '../../../components/Skeleton';
 import AdminModuleHeader from './ui/AdminModuleHeader';
 import AdminEmptyState from './ui/AdminEmptyState';
+import Dialog from '@/app/components/ui/Dialog';
 
 export default function DocumentsTab({ dict, uploadFile }: { dict: any, uploadFile?: (file: File, bucket: string) => Promise<string> }) {
   const { showToast } = useToast();
@@ -222,8 +223,22 @@ export default function DocumentsTab({ dict, uploadFile }: { dict: any, uploadFi
         />
       ) : null}
 
-      {isAdding && (
-        <div className="bg-white p-8 rounded-[2.5rem] border shadow-xl animate-in fade-in slide-in-from-top-4 duration-300">
+      <Dialog
+        open={isAdding}
+        onClose={handleCancel}
+        overlayClassName="fixed inset-0 z-[30000] flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-6"
+        panelClassName="w-full max-w-3xl rounded-t-[2rem] border-2 border-black bg-white p-6 sm:rounded-[2.5rem] sm:p-8 dark:border-white dark:bg-black max-h-[92dvh] overflow-y-auto"
+      >
+        <div className="flex items-start justify-between gap-4 mb-6">
+          <h2 className="text-xl font-black text-black dark:text-white">{editingItem ? (dict.admin.editDocument || dict.admin.btnUpdateDocument || 'Upravit dokument') : (dict.admin.addDocument || 'Přidat dokument')}</h2>
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="inline-flex items-center gap-2 rounded-2xl border-2 border-black bg-white px-4 py-3 font-bold text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
+          >
+            <X size={16} /> {dict.admin.btnCancel || 'Zavřít'}
+          </button>
+        </div>
           <div className="grid md:grid-cols-2 gap-6 mb-8">
             <div className="md:col-span-2">
               <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Nahrát soubor (Drag & Drop)</label>
@@ -298,13 +313,12 @@ export default function DocumentsTab({ dict, uploadFile }: { dict: any, uploadFi
           <button 
             onClick={() => saveMutation.mutate(formData)}
             disabled={!formData.title || !formData.file_url || saveMutation.isPending}
-            className="w-full bg-green-600 text-white py-4 rounded-xl font-black uppercase tracking-widest hover:bg-green-500 disabled:opacity-50 transition shadow-lg shadow-green-900/20 flex items-center justify-center gap-2"
+            className="w-full bg-green-600 text-white py-4 rounded-xl font-black uppercase tracking-widest hover:bg-green-500 disabled:opacity-50 transition flex items-center justify-center gap-2"
           >
             {saveMutation.isPending ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
             {editingItem ? dict.admin.btnUpdateDocument : dict.admin.btnSaveDocument}
           </button>
-        </div>
-      )}
+      </Dialog>
 
       <div className="grid gap-4">
         {documents.length === 0 ? (
