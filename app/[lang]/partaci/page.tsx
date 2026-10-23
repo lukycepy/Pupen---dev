@@ -89,7 +89,7 @@ export default function PartaciPage() {
 
   return (
     <div className="min-h-screen bg-stone-50 pt-24 pb-32">
-      <div className="max-w-5xl mx-auto px-6">
+      <div className="max-w-6xl mx-auto px-6">
         <header className="text-center mb-16">
           <div className="inline-flex p-3 bg-green-100 text-green-600 rounded-2xl mb-6">
             <Dumbbell size={32} />

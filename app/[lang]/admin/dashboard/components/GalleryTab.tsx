@@ -3,10 +3,11 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { Folder, Plus, Trash2, Image as ImageIcon, Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { Folder, Plus, Trash2, Image as ImageIcon, Loader2, ArrowLeft, Eye, EyeOff, X } from 'lucide-react';
 import Image from 'next/image';
 import { useToast } from '../../../../context/ToastContext';
 import ConfirmModal from '@/app/components/ConfirmModal';
+import Dialog from '@/app/components/ui/Dialog';
 
 export default function GalleryTab(props: any) {
   const { uploadImage } = props;
@@ -223,17 +224,33 @@ export default function GalleryTab(props: any) {
           <p className="text-stone-400 text-[10px] font-black uppercase tracking-widest">Správa fotoalb z akcí</p>
         </div>
         <button 
-          onClick={() => setIsAddingAlbum(!isAddingAlbum)}
+          onClick={() => setIsAddingAlbum(true)}
           className="bg-green-600 text-white px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-500 transition shadow-lg shadow-green-900/20 flex items-center gap-2"
         >
           <Plus size={16} />
-          {isAddingAlbum ? 'Zrušit' : 'Nové album'}
+          Nové album
         </button>
       </div>
 
-      {isAddingAlbum && (
-        <div className="bg-white p-8 rounded-3xl border shadow-xl">
-          <h3 className="font-bold text-lg mb-4">Vytvořit nové album</h3>
+      <Dialog
+        open={isAddingAlbum}
+        onClose={() => setIsAddingAlbum(false)}
+        overlayClassName="fixed inset-0 z-[9000] flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-6"
+        panelClassName="w-full max-w-2xl rounded-t-[2rem] border-2 border-black bg-white p-6 sm:rounded-[2.5rem] sm:p-8 dark:border-white dark:bg-black max-h-[92dvh] overflow-y-auto"
+      >
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="font-black text-lg text-black dark:text-white flex items-center gap-3">
+            <ImageIcon className="text-green-600 dark:text-green-400" size={20} />
+            Vytvořit nové album
+          </h3>
+          <button
+            type="button"
+            onClick={() => setIsAddingAlbum(false)}
+            className="inline-flex items-center gap-2 rounded-2xl border-2 border-black bg-white px-4 py-3 font-bold text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
+          >
+            <X size={16} /> Zavřít
+          </button>
+        </div>
           <div className="grid md:grid-cols-2 gap-4 mb-4">
             <input 
               type="text" 
@@ -274,8 +291,7 @@ export default function GalleryTab(props: any) {
               <span className="text-sm font-bold text-stone-600">Veřejné</span>
             </label>
           </div>
-        </div>
-      )}
+      </Dialog>
 
       {loadingAlbums ? (
         <div className="flex justify-center p-12"><Loader2 className="animate-spin text-stone-300" size={32} /></div>

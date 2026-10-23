@@ -113,7 +113,7 @@ export default function MapaPage({ params }: { params: Promise<{ lang: string }>
 
   if (!dict) return (
     <div className="min-h-screen bg-stone-50 py-24 px-6">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         <div className="text-center mb-12 space-y-4">
           <Skeleton className="h-14 w-80 mx-auto rounded-2xl" />
           <Skeleton className="h-7 w-[520px] max-w-full mx-auto rounded-xl" />
@@ -148,7 +148,7 @@ export default function MapaPage({ params }: { params: Promise<{ lang: string }>
 
   return (
     <div className="min-h-screen bg-stone-50 py-24 px-6">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         <div className="text-center mb-12">
           <h1 className="text-5xl font-black text-stone-900 mb-4 uppercase tracking-tighter">
             {dict.map.title}

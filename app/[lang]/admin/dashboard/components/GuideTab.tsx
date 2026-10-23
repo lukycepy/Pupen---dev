@@ -7,7 +7,7 @@ import { BookOpen, Plus, Trash2, Loader2, Save, X } from 'lucide-react';
 import { useToast } from '../../../../context/ToastContext';
 import dynamic from 'next/dynamic';
 import ConfirmModal from '@/app/components/ConfirmModal';
-import Dialog from '@/app/components/ui/Dialog';
+import Drawer from '@/app/components/ui/Drawer';
 import { SkeletonTabContent } from '../../../components/Skeleton';
 
 const Editor = dynamic(() => import('../../../components/Editor'), { 
@@ -80,19 +80,20 @@ export default function GuideTab({ dict }: { dict: any }) {
           {dict.admin.tabGuide}
         </h2>
         <button 
-          onClick={() => setIsAdding(!isAdding)}
+          onClick={() => setIsAdding(true)}
           className="bg-green-600 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-green-500 transition shadow-lg shadow-green-900/20"
         >
-          {isAdding ? <X size={20} /> : <Plus size={20} />}
-          {isAdding ? 'Zrušit' : 'Nová sekce'}
+          <Plus size={20} />
+          Nová sekce
         </button>
       </div>
 
-      <Dialog
+      <Drawer
         open={isAdding}
         onClose={() => setIsAdding(false)}
-        overlayClassName="fixed inset-0 z-[30000] flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-6"
-        panelClassName="w-full max-w-4xl rounded-t-[2rem] border-2 border-black bg-white p-6 sm:rounded-[2.5rem] sm:p-8 dark:border-white dark:bg-black max-h-[92dvh] overflow-y-auto"
+        side="right"
+        overlayClassName="fixed inset-0 z-[9000] flex"
+        panelClassName="relative h-full w-[1000px] max-w-[96vw] overflow-y-auto border-l-2 border-black bg-white p-6 sm:p-8 dark:border-white dark:bg-black"
       >
         <div className="space-y-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -180,7 +181,7 @@ export default function GuideTab({ dict }: { dict: any }) {
             {dict.admin.btnSaveGuide}
           </button>
         </div>
-      </Dialog>
+      </Drawer>
 
       <div className="grid gap-4">
         {guide.map((item: any) => (

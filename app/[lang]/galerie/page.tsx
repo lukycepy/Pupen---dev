@@ -154,7 +154,7 @@ export default function GaleriePage() {
 
   return (
     <div className="min-h-screen bg-stone-50 pt-24 pb-32">
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="max-w-6xl mx-auto px-6">
         <header className="mb-16">
           <div className="flex flex-wrap items-center gap-3 mb-6">
             <Link

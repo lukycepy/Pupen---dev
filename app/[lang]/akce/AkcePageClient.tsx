@@ -699,7 +699,7 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
   if (!dict) return null;
 
   return (    <div className="min-h-screen bg-white dark:bg-black pt-24 pb-32 text-black dark:text-white">
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="max-w-6xl mx-auto px-6">
         <header className="mb-16">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
             <div>

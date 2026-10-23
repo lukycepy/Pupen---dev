@@ -40,7 +40,7 @@
 }
 
 html {
-  font-size: calc(16px * var(--font-scale));
+  font-size: calc(15px * var(--font-scale));
 }
 
 h1, h2, h3, h4, h5, h6 {

@@ -127,7 +127,7 @@ export default function NewsPageClient({ lang }: { lang: string }) {
 
   return (
     <div className="min-h-screen bg-stone-50 pt-16 pb-24 selection:bg-green-100 selection:text-green-900 overflow-x-hidden">
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="max-w-6xl mx-auto px-6">
         
         {/* --- HEADER --- */}
         <header className="mb-12">

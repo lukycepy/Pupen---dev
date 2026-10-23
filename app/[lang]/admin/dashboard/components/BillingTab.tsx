@@ -8,7 +8,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2, Receipt, Search, RefreshCcw, Save, FilePlus2, ArrowRightLeft, XCircle, BadgeCheck, Mail, X } from 'lucide-react';
 import InlinePulse from '@/app/components/InlinePulse';
 import ConfirmModal from '@/app/components/ConfirmModal';
-import Dialog from '@/app/components/ui/Dialog';
+import Drawer from '@/app/components/ui/Drawer';
 import { useToast } from '@/app/context/ToastContext';
 import { billingInvoiceCreateSchema, type BillingInvoiceStatus, type BillingInvoiceType } from '@/lib/validations/billing';
 import type { BillingInvoiceDto, BillingInvoiceItemDto } from '@/lib/billing/invoices';
@@ -388,11 +388,12 @@ export default function BillingTab({ dict }: any) {
         </div>
       </div>
 
-      <Dialog
+      <Drawer
         open={isEditorOpen}
         onClose={closeEditor}
-        overlayClassName="fixed inset-0 z-[9000] flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-6"
-        panelClassName="w-full max-w-4xl rounded-t-[2rem] border-2 border-black bg-white p-6 sm:rounded-[2.5rem] sm:p-8 dark:border-white dark:bg-black max-h-[92dvh] overflow-y-auto"
+        side="right"
+        overlayClassName="fixed inset-0 z-[9000] flex"
+        panelClassName="relative h-full w-[1100px] max-w-[96vw] overflow-y-auto border-l-2 border-black bg-white p-6 sm:p-8 dark:border-white dark:bg-black"
       >
         <div className="flex items-start justify-between gap-4 mb-6">
           <div className="min-w-0">
@@ -719,7 +720,7 @@ export default function BillingTab({ dict }: any) {
               </div>
             </form>
           )}
-      </Dialog>
+      </Drawer>
 
       <div className="bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-sm overflow-hidden">
           <div className="mb-8 grid lg:grid-cols-12 gap-4 items-end">

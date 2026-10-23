@@ -107,7 +107,7 @@ export default function PartnersTab({ dict, uploadImage, readOnly = false }: { d
     reset();
   };
 
-  const isFormOpen = !!editingPartner || (!readOnly && !isLoading && partners.length === 0);
+  const isFormOpen = !!editingPartner;
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -117,7 +117,7 @@ export default function PartnersTab({ dict, uploadImage, readOnly = false }: { d
           <h2 className="text-2xl font-black text-stone-900 tracking-tight">{dict.admin.tabPartners || 'Partneři'}</h2>
           <p className="text-stone-400 text-xs font-medium mt-1">Správa log a odkazů na partnerské organizace</p>
         </div>
-        {!editingPartner && (
+        {!readOnly && !editingPartner && (
           <button 
             onClick={() => setEditingPartner({})} 
             className="bg-green-600 text-white px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-green-700 transition-all shadow-lg shadow-green-600/20"

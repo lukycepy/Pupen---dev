@@ -74,7 +74,7 @@ export default function BlogPage() {
 
   return (
     <div className="min-h-screen bg-stone-50 pt-24 pb-32">
-      <div className="max-w-5xl mx-auto px-6">
+      <div className="max-w-6xl mx-auto px-6">
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-20">
           <div className="max-w-2xl">
             <div className="inline-flex p-3 bg-green-100 text-green-600 rounded-2xl mb-6">

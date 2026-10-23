@@ -12,6 +12,7 @@ import dynamic from 'next/dynamic';
 import { useToast } from '../../../../context/ToastContext';
 import { logAdminAction } from '@/lib/admin-logger';
 import ConfirmModal from '@/app/components/ConfirmModal';
+import Drawer from '@/app/components/ui/Drawer';
 import { draftEventDescriptionHtmlCz, draftEventDescriptionHtmlEn, seoSuggestions, suggestEnglishText } from '@/lib/ai/pilot';
 import AdminModuleHeader from './ui/AdminModuleHeader';
 import { DEFAULT_WAITLIST_CONFIG, normalizeWaitlistConfig } from '@/lib/rsvp/waitlistConfig';
@@ -984,21 +985,28 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
         </div>
       )}
 
-      <div className="grid lg:grid-cols-12 gap-8 items-start">
-        {/* FORM SECTION - ONLY SHOW WHEN ADDING/EDITING */}
-        {editingEvent && (
-          <div className="lg:col-span-5 xl:col-span-4 bg-white p-8 rounded-[2.5rem] shadow-sm border border-stone-100 animate-in slide-in-from-left duration-500 sticky top-8">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-xl font-black text-stone-900 flex items-center gap-3">
-                <div className="p-2 bg-green-50 text-green-600 rounded-lg">
+      <Drawer
+        open={!!editingEvent}
+        onClose={handleCancel}
+        side="right"
+        overlayClassName="fixed inset-0 z-[9000] flex"
+        panelClassName="relative h-full w-[1080px] max-w-[96vw] overflow-y-auto border-l-2 border-black bg-white p-6 sm:p-8 dark:border-white dark:bg-black"
+      >
+        <div className="flex items-start justify-between gap-4 mb-6">
+          <h2 className="text-xl font-black text-black dark:text-white flex items-center gap-3">
+            <div className="p-2 bg-green-50 text-green-600 rounded-lg dark:bg-green-950 dark:text-green-400">
                   {editingEvent?.id ? <Edit3 size={20} /> : <Plus size={20} />} 
                 </div>
                 {editingEvent?.id ? dict.admin.editEvent : dict.admin.newEvent}
               </h2>
-              <button onClick={handleCancel} className="p-2 hover:bg-stone-50 rounded-full transition text-stone-400">
-                <X size={20} />
-              </button>
-            </div>
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="inline-flex items-center gap-2 rounded-2xl border-2 border-black bg-white px-4 py-3 font-bold text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
+          >
+            <X size={16} /> {dict.admin.btnCancel || 'Zavřít'}
+          </button>
+        </div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div className="space-y-4">
@@ -1380,11 +1388,10 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
                 </button>
               </div>
             </form>
-          </div>
-        )}
+      </Drawer>
 
         {/* LIST SECTION */}
-        <div className={`${editingEvent ? 'lg:col-span-7 xl:col-span-8' : 'lg:col-span-12'} bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-sm overflow-hidden transition-all duration-500`}>
+        <div className="bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-sm overflow-hidden transition-all duration-500">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-black text-stone-900">Seznam akcí</h2>
@@ -1581,7 +1588,6 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
             </table>
           </div>
         </div>
-      </div>
       
       <ConfirmModal 
         isOpen={modalOpen}

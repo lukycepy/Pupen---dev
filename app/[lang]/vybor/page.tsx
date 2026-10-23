@@ -102,7 +102,7 @@ export default function BoardPage() {
 
   return (
     <div className="min-h-screen bg-stone-50 pt-16 pb-24">
-      <div className="max-w-5xl mx-auto px-6">
+      <div className="max-w-6xl mx-auto px-6">
         <PageHeader
           icon={Users}
           badge={t.badge || (isEn ? 'Faces' : 'Tváře spolku')}

@@ -69,7 +69,7 @@ export default function SearchClient({ lang, initialQ }: { lang: string; initial
 
   return (
     <div className="min-h-screen bg-stone-50 pt-24 pb-32">
-      <div className="max-w-5xl mx-auto px-6">
+      <div className="max-w-6xl mx-auto px-6">
         <div className="bg-white rounded-[2.5rem] border border-stone-100 shadow-sm p-8">
           <div className="flex items-start justify-between gap-6 flex-col md:flex-row">
             <div>

@@ -39,7 +39,7 @@ export default function OteviraciDobaPage() {
 
   return (
     <div className="min-h-screen bg-stone-50 pt-24 pb-32">
-      <div className="max-w-5xl mx-auto px-6">
+      <div className="max-w-6xl mx-auto px-6">
         {page.html ? (
           <div className="bg-white border border-stone-100 rounded-[2.5rem] p-8 md:p-10 shadow-sm mb-8">
             {page.title ? <div className="text-2xl md:text-4xl font-black text-stone-900 tracking-tight mb-6">{page.title}</div> : null}

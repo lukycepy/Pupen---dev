@@ -9,6 +9,7 @@ import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-q
 import { UserPlus, Edit3, Trash2, ShieldCheck, X, FileText, ExternalLink, Search, Download } from 'lucide-react';
 import { useToast } from '../../../../context/ToastContext';
 import ConfirmModal from '@/app/components/ConfirmModal';
+import Drawer from '@/app/components/ui/Drawer';
 import AdminModuleHeader from './ui/AdminModuleHeader';
 import AddressAutocomplete from '@/app/components/AddressAutocomplete';
 import { evaluatePassword, passwordScoreLabel } from '@/lib/auth/password-policy';
@@ -91,6 +92,7 @@ export default function UsersTab({ dict }: UsersTabProps) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [editingAdmin, setEditingAdmin] = useState<any>(null);
+  const [formOpen, setFormOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState<{ title: string; message: string; onConfirm: () => void }>({
     title: '',
@@ -518,6 +520,7 @@ export default function UsersTab({ dict }: UsersTabProps) {
     }
 
     setEditingAdmin(full);
+    setFormOpen(true);
     let trustboxAdmin = false;
     try {
       const tb = await supabase.from('trust_box_admins').select('user_id').eq('user_id', full.id).maybeSingle();
@@ -580,6 +583,7 @@ export default function UsersTab({ dict }: UsersTabProps) {
 
   const handleCancel = () => {
     setEditingAdmin(null);
+    setFormOpen(false);
     setScanDoc(null);
     setScanFile(null);
     reset();
@@ -662,21 +666,29 @@ export default function UsersTab({ dict }: UsersTabProps) {
         }
       />
 
-      <div className="grid lg:grid-cols-12 gap-8 items-start">
+      <div className="space-y-8">
         {/* FORM SECTION */}
-        <div className="lg:col-span-5 xl:col-span-4 bg-white p-8 rounded-[2.5rem] shadow-sm border border-stone-100 animate-in slide-in-from-left duration-500 sticky top-8">
+        <Drawer
+          open={formOpen}
+          onClose={handleCancel}
+          side="right"
+          overlayClassName="fixed inset-0 z-[9000] flex"
+          panelClassName="relative h-full w-[1080px] max-w-[96vw] overflow-y-auto border-l-2 border-black bg-white p-6 sm:p-8 dark:border-white dark:bg-black"
+        >
           <div className="flex items-center justify-between mb-8">
-            <h2 className="text-xl font-black text-stone-900 flex items-center gap-3">
-              <div className="p-2 bg-green-50 text-green-600 rounded-lg">
+            <h2 className="text-xl font-black text-black dark:text-white flex items-center gap-3">
+              <div className="p-2 bg-green-50 text-green-600 rounded-lg dark:bg-green-950 dark:text-green-400">
                 {editingAdmin ? <Edit3 size={20} /> : <UserPlus size={20} />} 
               </div>
               {editingAdmin ? dict.admin.editUser : dict.admin.addUser}
             </h2>
-            {editingAdmin && (
-              <button onClick={handleCancel} className="p-2 hover:bg-stone-50 rounded-full transition text-stone-400">
-                <X size={20} />
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="inline-flex items-center gap-2 rounded-2xl border-2 border-black bg-white px-4 py-3 font-bold text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
+            >
+              <X size={16} /> {dict.admin.btnCancel || 'Zavřít'}
+            </button>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -961,10 +973,10 @@ export default function UsersTab({ dict }: UsersTabProps) {
               </button>
             </div>
           </form>
-        </div>
+        </Drawer>
 
         {/* LIST SECTION */}
-        <div className="lg:col-span-7 xl:col-span-8 bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-sm overflow-hidden">
+        <div className="bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-sm overflow-hidden">
           <div className="mb-10 p-6 rounded-[2rem] bg-stone-50 border border-stone-100">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
@@ -1021,6 +1033,13 @@ export default function UsersTab({ dict }: UsersTabProps) {
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <h2 className="text-xl font-black text-stone-900">Seznam uživatelů</h2>
+            <button
+              type="button"
+              onClick={() => { setEditingAdmin(null); reset(); setFormOpen(true); }}
+              className="inline-flex items-center gap-2 rounded-2xl border-2 border-black bg-white px-4 py-3 font-bold text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
+            >
+              <UserPlus size={16} /> {dict.admin.addUser || 'Přidat uživatele'}
+            </button>
             <div className="flex flex-wrap items-center gap-2">
               <select
                 value={`${sortConfig.col}|${sortConfig.asc}`}
