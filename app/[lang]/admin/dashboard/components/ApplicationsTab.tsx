@@ -1497,7 +1497,7 @@ export default function ApplicationsTab({ dict, readOnly }: { dict: any; readOnl
                             <textarea
                               value={dedupeNote}
                               onChange={(e) => setDedupeNote(e.target.value)}
-                              className="w-full min-h-[88px] bg-white border border-blue-200 rounded-2xl px-4 py-3 font-medium text-stone-700 outline-none focus:ring-2 focus:ring-blue-500 transition"
+                              className="w-full min-h-[88px] bg-white border border-stone-200 rounded-2xl px-4 py-3 font-medium text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition"
                               placeholder={isEn ? 'What was checked and which profile should stay primary?' : 'Co bylo zkontrolováno a který profil má zůstat primární?'}
                             />
                           </div>

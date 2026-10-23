@@ -83,80 +83,98 @@ const TiptapEditor = ({ value, onChange }: EditorProps) => {
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleBold().run()}
+          aria-label="Tučné"
+          title="Tučné"
           className={`p-2 rounded hover:bg-stone-100 ${editor.isActive('bold') ? 'text-green-600 bg-green-50' : 'text-stone-500'}`}
         >
-          <Bold size={18} />
+          <Bold size={18} aria-hidden="true" />
         </button>
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleItalic().run()}
+          aria-label="Kurzíva"
+          title="Kurzíva"
           className={`p-2 rounded hover:bg-stone-100 ${editor.isActive('italic') ? 'text-green-600 bg-green-50' : 'text-stone-500'}`}
         >
-          <Italic size={18} />
+          <Italic size={18} aria-hidden="true" />
         </button>
-        <div className="w-px h-6 bg-stone-200 mx-1 self-center" />
+        <div className="w-px h-6 bg-black dark:bg-white mx-1 self-center" />
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleBulletList().run()}
+          aria-label="Odrážkový seznam"
+          title="Odrážkový seznam"
           className={`p-2 rounded hover:bg-stone-100 ${editor.isActive('bulletList') ? 'text-green-600 bg-green-50' : 'text-stone-500'}`}
         >
-          <List size={18} />
+          <List size={18} aria-hidden="true" />
         </button>
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          aria-label="Číslovaný seznam"
+          title="Číslovaný seznam"
           className={`p-2 rounded hover:bg-stone-100 ${editor.isActive('orderedList') ? 'text-green-600 bg-green-50' : 'text-stone-500'}`}
         >
-          <ListOrdered size={18} />
+          <ListOrdered size={18} aria-hidden="true" />
         </button>
-        <div className="w-px h-6 bg-stone-200 mx-1 self-center" />
+        <div className="w-px h-6 bg-black dark:bg-white mx-1 self-center" />
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleBlockquote().run()}
+          aria-label="Citace"
+          title="Citace"
           className={`p-2 rounded hover:bg-stone-100 ${editor.isActive('blockquote') ? 'text-green-600 bg-green-50' : 'text-stone-500'}`}
         >
-          <Quote size={18} />
+          <Quote size={18} aria-hidden="true" />
         </button>
-        <div className="w-px h-6 bg-stone-200 mx-1 self-center" />
+        <div className="w-px h-6 bg-black dark:bg-white mx-1 self-center" />
         <button
           type="button"
           onClick={setLink}
-          className={`p-2 rounded hover:bg-stone-100 ${editor.isActive('link') ? 'text-blue-600 bg-blue-50' : 'text-stone-500'}`}
+          aria-label="Vložit odkaz"
           title="Vložit odkaz"
+          className={`p-2 rounded hover:bg-stone-100 ${editor.isActive('link') ? 'text-blue-600 bg-blue-50' : 'text-stone-500'}`}
         >
-          <LinkIcon size={18} />
+          <LinkIcon size={18} aria-hidden="true" />
         </button>
         <button
           type="button"
           onClick={() => editor.chain().focus().unsetLink().run()}
           disabled={!editor.isActive('link')}
-          className="p-2 rounded hover:bg-stone-100 text-stone-500 disabled:opacity-30"
+          aria-label="Zrušit odkaz"
           title="Zrušit odkaz"
+          className="p-2 rounded hover:bg-stone-100 text-stone-500 disabled:opacity-30"
         >
-          <Unlink size={18} />
+          <Unlink size={18} aria-hidden="true" />
         </button>
-        <div className="w-px h-6 bg-stone-200 mx-1 self-center" />
+        <div className="w-px h-6 bg-black dark:bg-white mx-1 self-center" />
         <button
           type="button"
           onClick={addYoutubeVideo}
+          aria-label="Vložit YouTube video"
+          title="Vložit YouTube video"
           className="p-2 rounded hover:bg-stone-100 text-stone-500"
         >
-          <YoutubeIcon size={18} />
+          <YoutubeIcon size={18} aria-hidden="true" />
         </button>
         <div className="flex-grow" />
         <button
           type="button"
           onClick={() => editor.chain().focus().undo().run()}
+          aria-label="Zpět"
+          title="Zpět"
           className="p-2 rounded hover:bg-stone-100 text-stone-500"
         >
-          <Undo size={18} />
+          <Undo size={18} aria-hidden="true" />
         </button>
         <button
           type="button"
           onClick={() => editor.chain().focus().redo().run()}
+          aria-label="Vpřed"
+          title="Vpřed"
           className="p-2 rounded hover:bg-stone-100 text-stone-500"
         >
-          <Redo size={18} />
+          <Redo size={18} aria-hidden="true" />
         </button>
       </div>
       <EditorContent editor={editor} />

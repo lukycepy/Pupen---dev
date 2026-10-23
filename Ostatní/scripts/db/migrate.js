@@ -95,11 +95,13 @@ async function main() {
   }
 
   await withClient(async (client) => {
-    await ensureMigrationsTable(client);
-
     const hasSupabaseTable = supabaseFiles.length ? await supabaseMigrationsTableExists(client) : false;
     const preferSupabase = hasSupabaseTable && (env === 'prod' || env === 'staging');
     const runLegacy = customFiles.length && (!preferSupabase || includeLegacy);
+
+    // Only create the legacy bookkeeping table when legacy SQL files are present;
+    // otherwise it would be created in production without RLS and expose an unused table.
+    if (runLegacy) await ensureMigrationsTable(client);
 
     if (supabaseFiles.length && hasSupabaseTable) {
       await ensureSupabaseMigrationsTable(client);

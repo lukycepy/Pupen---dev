@@ -5,7 +5,7 @@ import { DEFAULT_LINKA_DATA, LinkaPayloadSchema } from '@/lib/apps-linka/types';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-function buildSafePayload(raw: unknown): { json: string; status: number } {
+function buildSafePayload(): { json: string; status: number } {
   try {
     let payload = null as any;
     let status = 200;
@@ -40,7 +40,7 @@ const COMMON_HEADERS: Record<string, string> = {
 };
 
 export async function GET(): Promise<NextResponse> {
-  const { json, status } = buildSafePayload(null);
+  const { json, status } = buildSafePayload();
   return new NextResponse(json, {
     status,
     headers: COMMON_HEADERS,

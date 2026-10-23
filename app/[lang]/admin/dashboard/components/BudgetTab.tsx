@@ -65,8 +65,7 @@ export default function BudgetTab({ dict, uploadImage }: { dict: any, uploadImag
           }));
           showToast('Údaje z účtenky byly úspěšně vytěženy pomocí AI!', 'success');
         }
-      } catch (err) {
-        console.error('OCR failed:', err);
+      } catch {
         showToast('Nepodařilo se vytěžit data z účtenky, vyplňte je prosím ručně.', 'warning');
       } finally {
         setIsOCRRunning(false);
@@ -101,8 +100,7 @@ export default function BudgetTab({ dict, uploadImage }: { dict: any, uploadImag
             image_url: imageUrl,
             ocr_data: ocrData
           }]);
-        } catch (uploadErr) {
-          console.error('Receipt upload failed:', uploadErr);
+        } catch {
           showToast('Položka uložena, ale nahrání účtenky selhalo', 'warning');
         } finally {
           setIsUploading(false);
@@ -117,7 +115,6 @@ export default function BudgetTab({ dict, uploadImage }: { dict: any, uploadImag
       setFormData({ title: '', amount: 0, type: 'expense', category: '', date: new Date().toISOString().split('T')[0] });
     },
     onError: (err: any) => {
-      console.error('Budget save error:', err);
       showToast(err.message || 'Nepodařilo se uložit položku rozpočtu.', 'error');
     }
   });
@@ -159,7 +156,14 @@ export default function BudgetTab({ dict, uploadImage }: { dict: any, uploadImag
       -----------------------------------------
     `;
 
-    console.log(report);
+    const blob = new Blob([report], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `report-${currentYear}-${String(currentMonth + 1).padStart(2, '0')}.txt`;
+    link.click();
+    URL.revokeObjectURL(url);
+
     showToast(dict.admin.budget?.reportSent || 'Report vygenerován', 'success');
   };
 

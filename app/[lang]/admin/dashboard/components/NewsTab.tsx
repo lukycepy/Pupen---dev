@@ -109,8 +109,7 @@ export default function NewsTab({ dict, uploadImage, currentUser, userProfile, r
         }
         try {
           imageUrl = await uploadImage(imageFile, 'blog');
-        } catch (uploadErr) {
-          console.error('Image upload failed:', uploadErr);
+        } catch {
           throw new Error('Nepodařilo se nahrát obrázek. Zkuste jiný soubor nebo zkontrolujte připojení.');
         }
       }
@@ -139,8 +138,7 @@ export default function NewsTab({ dict, uploadImage, currentUser, userProfile, r
               created_by: currentUser?.id
             }]);
           }
-        } catch (vErr) {
-          console.error('Failed to save version:', vErr);
+        } catch {
         }
 
         const { error } = await supabase.from('posts').update(payload).eq('id', editingPost.id);
@@ -148,8 +146,7 @@ export default function NewsTab({ dict, uploadImage, currentUser, userProfile, r
         
         try {
           await logAdminAction(currentUser?.email, `Upravil novinku: ${data.title}`, editingPost.id, payload, userProfile ? `${userProfile.first_name} ${userProfile.last_name}` : undefined);
-        } catch (logErr) {
-          console.error('Failed to log admin action:', logErr);
+        } catch {
         }
       } else {
         const { data: newPost, error } = await supabase.from('posts').insert([payload]).select().single();
@@ -157,8 +154,7 @@ export default function NewsTab({ dict, uploadImage, currentUser, userProfile, r
         
         try {
           await logAdminAction(currentUser?.email, `Vytvořil novinku: ${data.title}`, newPost.id, payload, userProfile ? `${userProfile.first_name} ${userProfile.last_name}` : undefined);
-        } catch (logErr) {
-          console.error('Failed to log admin action:', logErr);
+        } catch {
         }
       }
     },

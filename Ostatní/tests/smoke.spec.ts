@@ -43,13 +43,13 @@ test.describe('Theme Smoke Tests', () => {
     await expect(page.locator('html')).not.toHaveClass(/dark/);
   });
 
-  test('Theme toggle cycles light -> dark -> system', async ({ page }) => {
+  test('Theme toggle switches light -> dark -> light', async ({ page }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem('pupen_theme', 'light');
     });
     await page.goto('/cs', { waitUntil: 'domcontentloaded' });
 
-    const toggle = page.getByTestId('accessibility-theme-toggle');
+    const toggle = page.locator('[data-testid="accessibility-theme-toggle"]:visible, [data-testid="accessibility-theme-toggle-mobile"]:visible').first();
     await expect(toggle).toBeVisible();
 
     await toggle.click();
@@ -59,13 +59,10 @@ test.describe('Theme Smoke Tests', () => {
       .toBe('dark');
 
     await toggle.click();
-    await expect(page.locator('html')).toHaveClass(/dark/);
+    await expect(page.locator('html')).not.toHaveClass(/dark/);
     await expect
       .poll(async () => page.evaluate(() => window.localStorage.getItem('pupen_theme')))
-      .toBe('system');
-
-    await page.emulateMedia({ colorScheme: 'light' });
-    await expect(page.locator('html')).not.toHaveClass(/dark/);
+      .toBe('light');
   });
 });
 
@@ -73,6 +70,12 @@ test.describe('Admin Smoke Tests (Mocked/Unauthenticated)', () => {
   test('Admin dashboard redirects to login if unauthenticated', async ({ page }) => {
     await page.goto('/cs/admin/dashboard', { waitUntil: 'commit' });
     await expect(page).toHaveURL(/\/cs\/(admin|login)(\/|$)/);
+    await expect(page.locator('body')).toBeVisible();
+  });
+
+  test('Member portal redirects to login if unauthenticated', async ({ page }) => {
+    await page.goto('/cs/clen', { waitUntil: 'commit' });
+    await expect(page).toHaveURL(/\/cs\/(clen|login)(\/|$)/);
     await expect(page.locator('body')).toBeVisible();
   });
 });

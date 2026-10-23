@@ -89,4 +89,16 @@ const nextConfig = {
   },
 };
 
-export default withSentryConfig(nextConfig, { silent: true });
+export default withSentryConfig(nextConfig, {
+  silent: true,
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  widenClientFileUpload: true,
+  // Odstraní Sentry debug logy z produkčního bundlu (nahrazuje deprecated disableLogger).
+  webpack: {
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
+});

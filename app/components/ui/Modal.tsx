@@ -8,11 +8,15 @@ export default function Modal({
   open,
   onClose,
   children,
+  ariaLabel,
+  labelledBy,
   maxWidthClassName = 'max-w-xl',
 }: {
   open: boolean;
   onClose: () => void;
   children: React.ReactNode;
+  ariaLabel?: string;
+  labelledBy?: string;
   maxWidthClassName?: string;
 }) {
   const panelRef = React.useRef<HTMLDivElement>(null);
@@ -26,10 +30,14 @@ export default function Modal({
         <div
           ref={panelRef}
           tabIndex={-1}
+          role="dialog"
+          aria-modal="true"
+          aria-label={ariaLabel}
+          aria-labelledby={labelledBy}
           className={['bg-white rounded-[2rem] p-6 w-full shadow-2xl relative', maxWidthClassName].join(' ')}
           onMouseDown={(e) => e.stopPropagation()}
         >
-          <button onClick={onClose} className="absolute top-5 right-5 text-stone-400 hover:text-stone-900">
+          <button onClick={onClose} aria-label="Zavřít" className="absolute top-5 right-5 text-stone-400 hover:text-stone-900">
             ✕
           </button>
           {children}

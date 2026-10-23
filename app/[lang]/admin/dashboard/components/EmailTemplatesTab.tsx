@@ -309,7 +309,7 @@ export default function EmailTemplatesTab() {
                     disabled={loadingDefault}
                     className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
                   >
-                    {loadingDefault ? <InlinePulse className="bg-stone-400/70" size={14} /> : <Download size={14} />}
+                    {loadingDefault ? <InlinePulse className="bg-stone-300" size={14} /> : <Download size={14} />}
                     Default
                   </button>
                   <button
@@ -318,7 +318,7 @@ export default function EmailTemplatesTab() {
                     disabled={overridesLoading}
                     className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
                   >
-                    {overridesLoading ? <InlinePulse className="bg-stone-400/70" size={14} /> : <RefreshCw size={14} />}
+                    {overridesLoading ? <InlinePulse className="bg-stone-300" size={14} /> : <RefreshCw size={14} />}
                     Reload
                   </button>
                 </div>
@@ -374,7 +374,7 @@ export default function EmailTemplatesTab() {
                   disabled={deleting || !currentOverride}
                   className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
                 >
-                  {deleting ? <InlinePulse className="bg-stone-400/70" size={14} /> : <Trash2 size={16} />}
+                  {deleting ? <InlinePulse className="bg-stone-300" size={14} /> : <Trash2 size={16} />}
                   Reset
                 </button>
               </div>
@@ -455,7 +455,7 @@ export default function EmailTemplatesTab() {
                         disabled={previewLoading || !parsed.ok}
                         className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
                       >
-                        {previewLoading ? <InlinePulse className="bg-stone-400/70" size={14} /> : <RefreshCw size={14} />}
+                        {previewLoading ? <InlinePulse className="bg-stone-300" size={14} /> : <RefreshCw size={14} />}
                         Aktualizovat
                       </button>
                     </div>

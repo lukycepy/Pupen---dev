@@ -30,8 +30,7 @@ export default function PaymentSettingsTab({ dict }: { dict: any }) {
         if (data && !error) {
           setSettings(data);
         }
-      } catch (err) {
-        console.error('Failed to fetch payment settings:', err);
+      } catch {
       } finally {
         setLoading(false);
       }

@@ -16,6 +16,7 @@ interface AuthUserListRow {
 
 interface UserUpsertInput extends JsonRecord {
   email?: unknown;
+  login_aliases?: unknown;
   first_name?: unknown;
   last_name?: unknown;
   password?: unknown;
@@ -85,6 +86,66 @@ function generatePassword(length = 14) {
     out[j] = tmp;
   }
   return out.join('');
+}
+
+function normalizeEmail(value: unknown) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function uniqueAliases(input: unknown, primaryEmail: string) {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const primary = normalizeEmail(primaryEmail);
+  for (const raw of Array.isArray(input) ? input : []) {
+    const email = normalizeEmail(raw);
+    if (!email || !email.includes('@') || email === primary || seen.has(email)) continue;
+    seen.add(email);
+    out.push(email);
+  }
+  return out.slice(0, 20);
+}
+
+async function syncLoginAliases(
+  supabase: ReturnType<typeof getServerSupabase>,
+  userId: string,
+  primaryEmail: string,
+  aliasesInput: unknown,
+  createdBy: string | null,
+) {
+  const aliases = uniqueAliases(aliasesInput, primaryEmail);
+  const existingRes = await supabase
+    .from('user_login_aliases')
+    .select('id,email,normalized_email')
+    .eq('user_id', userId);
+  if (existingRes.error) throw existingRes.error;
+
+  const existing = existingRes.data || [];
+  const existingByNormalized = new Map(existing.map((row: any) => [String(row.normalized_email || '').trim().toLowerCase(), row]));
+  const nextSet = new Set(aliases);
+
+  const toDelete = existing
+    .filter((row: any) => !nextSet.has(String(row.normalized_email || '').trim().toLowerCase()))
+    .map((row: any) => String(row.id || '').trim())
+    .filter(Boolean);
+
+  if (toDelete.length > 0) {
+    const del = await supabase.from('user_login_aliases').delete().in('id', toDelete);
+    if (del.error) throw del.error;
+  }
+
+  const toInsert = aliases
+    .filter((email) => !existingByNormalized.has(email))
+    .map((email) => ({
+      user_id: userId,
+      email,
+      normalized_email: email,
+      created_by: createdBy,
+    }));
+
+  if (toInsert.length > 0) {
+    const ins = await supabase.from('user_login_aliases').insert(toInsert);
+    if (ins.error) throw ins.error;
+  }
 }
 
 const ALLOWED_PROFILE_FIELDS = new Set([
@@ -159,7 +220,7 @@ export async function POST(req: Request) {
 
     async function upsertOne(input: unknown): Promise<UserUpsertResult> {
       const record = toRecord(input) as UserUpsertInput;
-      const email = String(record.email || '').trim().toLowerCase();
+      const email = normalizeEmail(record.email);
       const first_name = String(record.first_name || '').trim();
       const last_name = String(record.last_name || '').trim();
       const providedPassword = typeof record.password === 'string' ? record.password : '';
@@ -219,6 +280,8 @@ export async function POST(req: Request) {
       const { error: profErr } = await supabase.from('profiles').update(profilePatch).eq('id', userId);
       if (profErr) throw profErr;
 
+      await syncLoginAliases(supabase, userId, email, record.login_aliases, adminUser.id || null);
+
       try {
         await supabase.from('admin_logs').insert([
           {
@@ -226,7 +289,12 @@ export async function POST(req: Request) {
             admin_name: 'Uživatelé',
             action: created ? 'USER_CREATE' : 'USER_MERGE_UPDATE',
             target_id: userId,
-            details: { email, is_admin: !!profilePatch.is_admin, is_member: !!profilePatch.is_member },
+            details: {
+              email,
+              is_admin: !!profilePatch.is_admin,
+              is_member: !!profilePatch.is_member,
+              alias_count: uniqueAliases(record.login_aliases, email).length,
+            },
           },
         ]);
       } catch {}

@@ -183,7 +183,7 @@ export default function GaleriePage() {
 
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[1, 2, 3].map(i => <div key={i} className="aspect-[4/3] bg-stone-200 animate-pulse rounded-[2.5rem]" />)}
+            {[1, 2, 3].map(i => <div key={i} className="aspect-[4/3] border-2 border-black dark:border-white bg-transparent animate-pulse rounded-[2.5rem]" />)}
           </div>
         ) : (
           <div className="space-y-10">

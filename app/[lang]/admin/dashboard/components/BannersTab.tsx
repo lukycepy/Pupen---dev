@@ -73,7 +73,6 @@ export default function BannersTab({ dict }: { dict: any }) {
       showToast('Banner uložen', 'success');
     },
     onError: (err: any) => {
-      console.error('Banner save error:', err);
       showToast(err.message || 'Nepodařilo se uložit banner. Zkontrolujte připojení k databázi.', 'error');
     }
   });
@@ -271,7 +270,7 @@ export default function BannersTab({ dict }: { dict: any }) {
                 <div key={b.id} className="p-6 bg-stone-50/50 rounded-[2rem] border border-transparent hover:border-stone-100 hover:bg-white transition-all group">
                   <div className="flex flex-col sm:flex-row gap-6 sm:items-center">
                     <div className="flex items-center gap-4 shrink-0">
-                      <div className={`w-3 h-3 rounded-full ${b.is_active ? 'bg-green-500 animate-pulse shadow-lg shadow-green-500/50' : 'bg-stone-200'}`} />
+                      <div className={`w-3 h-3 rounded-full ${b.is_active ? 'bg-green-500 animate-pulse shadow-lg shadow-green-500/50' : 'bg-black dark:bg-white'}`} />
                       <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg ${b.bg_color}`}>
                         <Megaphone size={20} />
                       </div>

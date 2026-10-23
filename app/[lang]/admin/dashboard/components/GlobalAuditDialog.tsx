@@ -152,7 +152,7 @@ export default function GlobalAuditDialog({ open, onClose }: { open: boolean; on
       <div className="flex-1 overflow-y-auto p-6 bg-stone-50">
         {auditQuery.isLoading ? (
           <div className="py-12 flex justify-center">
-            <InlinePulse className="bg-stone-400/70" size={16} />
+            <InlinePulse className="bg-stone-300" size={16} />
           </div>
         ) : (
           <div className="space-y-3">

@@ -30,8 +30,15 @@ export default function AdminEntryClient({ lang }: { lang: string }) {
         const profRes = await fetch('/api/auth/me-profile', { headers: { Authorization: `Bearer ${token}` } });
         const profJson = await profRes.json().catch(() => ({}));
         const prof = profRes.ok ? profJson?.profile : null;
-        const isAdmin = !!(prof?.is_admin || prof?.can_manage_admins);
-        const isMember = !!(prof?.is_member || prof?.is_admin || prof?.can_manage_admins || prof?.can_view_member_portal || prof?.can_edit_member_portal);
+        const isAdmin = !!(prof?.has_admin_access || prof?.is_admin || prof?.can_manage_admins);
+        const isMember = !!(
+          prof?.has_member_access ||
+          prof?.is_member ||
+          prof?.is_admin ||
+          prof?.can_manage_admins ||
+          prof?.can_view_member_portal ||
+          prof?.can_edit_member_portal
+        );
 
         if (isAdmin) {
           router.replace(`/${lang}/admin/dashboard`);

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { writeServerLog } from '@/lib/logs/server-logger';
 
 export const runtime = 'nodejs'; // Use nodejs runtime for memoryUsage and uptime metrics
 
@@ -27,7 +28,12 @@ export async function GET() {
     const dbLatency = end - start;
     
     if (error) {
-      console.error('Healthcheck DB Error:', error);
+      await writeServerLog({
+        level: 'error',
+        category: 'health',
+        message: 'Database connection failed',
+        data: { message: error.message, code: error.code },
+      });
       return NextResponse.json(
         { status: 'error', message: 'Database connection failed', timestamp: new Date().toISOString() },
         { status: 503 }
@@ -46,7 +52,12 @@ export async function GET() {
       }
     });
   } catch (error) {
-    console.error('Healthcheck Error:', error);
+    await writeServerLog({
+      level: 'error',
+      category: 'health',
+      message: 'Healthcheck failed',
+      data: { error: error instanceof Error ? error.message : String(error) },
+    });
     return NextResponse.json(
       { status: 'error', message: 'Internal Server Error', timestamp: new Date().toISOString() },
       { status: 500 }

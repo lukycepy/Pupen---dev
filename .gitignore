@@ -52,11 +52,21 @@ next-env.d.ts
 /playwright/.cache/
 /playwright/.auth/
 /ops/backup-artifacts/
+/Ostatní/test-results/
+/Ostatní/playwright-report/
+/Ostatní/blob-report/
 /.trae/
 
 # Automigrace
 /Automigrace/logs/
+/Ostatní/Automigrace/logs/
 Migrace_databaze.log
 /Automigrace/.db_password.dpapi
 Automigrace/Migrace_databaze.latest.log
+Ostatní/Automigrace/Migrace_databaze.latest.log
 Automigrace/Migrace_databaze.ps1
+/Ostatní/.env copy
+/Ostatní/build-output.txt
+
+# Archív starých snapshotů (necommitovat)
+/Ostatní/deploy_29_9/

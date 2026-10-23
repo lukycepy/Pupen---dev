@@ -1,4 +1,5 @@
 import { getServerSupabase } from '@/lib/supabase-server';
+import { writeServerLog } from '@/lib/logs/server-logger';
 
 type WebhookEvent = 'new_application' | 'new_message' | 'new_error' | 'new_member' | 'test';
 
@@ -24,12 +25,22 @@ export async function triggerWebhooks(event: WebhookEvent, payload: any) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content })
       }).catch(err => {
-        console.error(`Webhook failed for ${wh.url}:`, err);
+        writeServerLog({
+          level: 'error',
+          category: 'webhook',
+          message: `Webhook delivery failed: ${wh.url}`,
+          data: { error: err instanceof Error ? err.message : String(err) },
+        });
       })
     );
 
     await Promise.allSettled(promises);
   } catch (error) {
-    console.error('triggerWebhooks error:', error);
+    writeServerLog({
+      level: 'error',
+      category: 'webhook',
+      message: 'triggerWebhooks failed',
+      data: { error: error instanceof Error ? error.message : String(error) },
+    });
   }
 }

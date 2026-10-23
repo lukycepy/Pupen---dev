@@ -174,23 +174,18 @@ export default function NotFound() {
   }, [lang, gameText.title, gameText.start, showGame]);
 
   if (!dict) return (
-    <div className="min-h-screen flex items-center justify-center bg-stone-50 text-stone-400 font-bold uppercase tracking-widest text-sm">
+    <div className="min-h-screen flex items-center justify-center bg-white text-black dark:bg-black dark:text-white font-bold uppercase tracking-widest text-sm">
       404 - Page Not Found
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-900 font-sans flex items-center justify-center p-6 relative overflow-hidden">
-      
-      {/* Background decoration elements */}
-      <div className="absolute top-[-10%] -left-20 w-[40rem] h-[40rem] bg-green-600/5 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] -right-20 w-[40rem] h-[40rem] bg-green-600/5 rounded-full blur-[120px] pointer-events-none" />
+    <div className="min-h-screen bg-white text-black dark:bg-black dark:text-white font-sans flex items-center justify-center p-6">
+      <div className="max-w-3xl w-full">
 
-      <div className="max-w-3xl w-full z-10">
-        
         {/* Karta ve stylu kontaktní stránky */}
-        <div className="bg-white p-8 md:p-20 rounded-[3rem] shadow-2xl shadow-stone-200/50 text-center border border-stone-100 relative group transition-all hover:shadow-stone-300/40">
-          
+        <div className="bg-white dark:bg-black p-8 md:p-20 rounded-[3rem] text-center border-2 border-black dark:border-white">
+
           {/* Logo Pupen (zmenšené) */}
           <div className="mb-10 flex justify-center">
             <Link
@@ -204,33 +199,32 @@ export default function NotFound() {
                   setClicks(0);
                 }
               }}
-              className="relative group transition-transform hover:scale-105 duration-300"
+              className="transition-transform hover:scale-105 duration-300"
             >
-              <div className="absolute -inset-3 bg-green-100 rounded-full blur-lg opacity-40 group-hover:opacity-100 transition duration-500" />
               <NextImage 
                 src="/logo.png" 
                 alt="Logo Spolek Pupen" 
                 width={56}
                 height={56}
-                className="rounded-full object-cover shadow-md border-2 border-white relative z-10"
+                className="rounded-full object-cover border-2 border-black dark:border-white"
               />
             </Link>
           </div>
 
-          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-stone-400 opacity-70">{gameText.hint}</div>
+          <div className="text-[10px] font-black uppercase tracking-[0.2em]">{gameText.hint}</div>
 
           {/* Obsah */}
           <div className="space-y-6">
             <div className="flex flex-col items-center">
-              <span className="text-green-600 font-black uppercase tracking-[0.3em] text-[10px] mb-4">
+              <span className="font-black uppercase tracking-[0.3em] text-[10px] mb-4 px-3 py-1 border-2 border-black dark:border-white rounded-full">
                 Error 404
               </span>
-              <h1 className="text-4xl md:text-6xl font-black text-stone-900 tracking-tighter leading-none mb-4">
+              <h1 className="text-4xl md:text-6xl font-black tracking-tighter leading-none mb-4">
                 {dict.title}
               </h1>
             </div>
             
-            <p className="text-stone-500 text-lg md:text-xl font-medium leading-relaxed max-w-md mx-auto">
+            <p className="text-lg md:text-xl font-medium leading-relaxed max-w-md mx-auto">
               {dict.description}
             </p>
 
@@ -238,7 +232,7 @@ export default function NotFound() {
             <div className="pt-8 flex justify-center">
               <Link 
                 href={`/${lang}`} 
-                className="bg-green-600 text-white px-8 py-4 rounded-xl font-bold hover:bg-green-500 transition-all shadow-xl shadow-green-600/30 flex items-center gap-3 hover:-translate-y-1 active:scale-95"
+                className="bg-black text-white dark:bg-white dark:text-black border-2 border-black dark:border-white px-8 py-4 rounded-xl font-bold transition-all hover:bg-green-600 hover:text-white hover:border-green-600 dark:hover:bg-green-500 dark:hover:text-black dark:hover:border-green-500 flex items-center gap-3 active:scale-95"
               >
                 <ArrowLeft size={20} />
                 {dict.backBtn}
@@ -248,28 +242,28 @@ export default function NotFound() {
         </div>
 
         {/* Spodní info */}
-        <p className="mt-12 text-center text-stone-400 text-[11px] font-black uppercase tracking-[0.2em] opacity-60">
+        <p className="mt-12 text-center text-[11px] font-black uppercase tracking-[0.2em]">
           Studentský spolek Pupen, z.s. &bull; {new Date().getFullYear()}
         </p>
       </div>
 
       {showGame ? (
-        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-6 z-50">
-          <div className="w-full max-w-xl bg-white rounded-[2.5rem] border border-stone-100 shadow-2xl p-8">
+        <div className="absolute inset-0 bg-black/70 flex items-center justify-center p-6 z-50">
+          <div className="w-full max-w-xl bg-white dark:bg-black rounded-[2.5rem] border-2 border-black dark:border-white p-8">
             <div className="flex items-center justify-between gap-4 mb-6">
-              <div className="font-black text-stone-900 text-xl">{gameText.title}</div>
+              <div className="font-black text-xl">{gameText.title}</div>
               <button
                 type="button"
                 onClick={() => setShowGame(false)}
-                className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
+                className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 border-black dark:border-white bg-white dark:bg-black text-black dark:text-white hover:bg-green-50 dark:hover:bg-green-950 transition"
               >
                 {gameText.close}
               </button>
             </div>
             <div className="flex justify-center">
-              <canvas ref={canvasRef} className="rounded-2xl border border-stone-100" />
+              <canvas ref={canvasRef} className="rounded-2xl border-2 border-black dark:border-white" />
             </div>
-            <div className="text-stone-500 font-medium text-sm mt-5">{gameText.start}</div>
+            <div className="font-medium text-sm mt-5">{gameText.start}</div>
           </div>
         </div>
       ) : null}

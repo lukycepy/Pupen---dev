@@ -9,7 +9,6 @@ import {
 import {
   LinkaContactSchema,
   LinkaPayloadSchema,
-  DEFAULT_LINKA_DATA,
   LinkaContact,
   validateContacts,
   CSV_HEADER,

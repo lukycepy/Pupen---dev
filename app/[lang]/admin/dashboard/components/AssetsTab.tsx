@@ -83,7 +83,6 @@ export default function AssetsTab({ dict }: { dict: any }) {
       handleCancel();
     },
     onError: (err: any) => {
-      console.error('Asset save error:', err);
       showToast(err.message || dict.admin?.assetSaveError || 'Nepodařilo se uložit položku.', 'error');
     }
   });

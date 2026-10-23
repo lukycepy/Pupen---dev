@@ -14,6 +14,10 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Error';
 }
 
+function normalizeEmail(value: unknown) {
+  return String(value || '').trim().toLowerCase();
+}
+
 const ALLOWED_PROFILE_FIELDS = new Set([
   'first_name',
   'last_name',
@@ -51,6 +55,94 @@ function pickProfilePatch(input: unknown) {
   return out;
 }
 
+function uniqueAliases(input: unknown, primaryEmail: string) {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const primary = normalizeEmail(primaryEmail);
+  for (const raw of Array.isArray(input) ? input : []) {
+    const email = normalizeEmail(raw);
+    if (!email || !email.includes('@') || email === primary || seen.has(email)) continue;
+    seen.add(email);
+    out.push(email);
+  }
+  return out.slice(0, 20);
+}
+
+async function syncLoginAliases(
+  supabase: ReturnType<typeof getServerSupabase>,
+  userId: string,
+  primaryEmail: string,
+  aliasesInput: unknown,
+  createdBy: string | null,
+) {
+  const aliases = uniqueAliases(aliasesInput, primaryEmail);
+  const existingRes = await supabase
+    .from('user_login_aliases')
+    .select('id,email,normalized_email')
+    .eq('user_id', userId);
+  if (existingRes.error) throw existingRes.error;
+
+  const existing = existingRes.data || [];
+  const existingByNormalized = new Map(existing.map((row: any) => [String(row.normalized_email || '').trim().toLowerCase(), row]));
+  const nextSet = new Set(aliases);
+
+  const toDelete = existing
+    .filter((row: any) => !nextSet.has(String(row.normalized_email || '').trim().toLowerCase()))
+    .map((row: any) => String(row.id || '').trim())
+    .filter(Boolean);
+  if (toDelete.length > 0) {
+    const del = await supabase.from('user_login_aliases').delete().in('id', toDelete);
+    if (del.error) throw del.error;
+  }
+
+  const toInsert = aliases
+    .filter((email) => !existingByNormalized.has(email))
+    .map((email) => ({
+      user_id: userId,
+      email,
+      normalized_email: email,
+      created_by: createdBy,
+    }));
+  if (toInsert.length > 0) {
+    const ins = await supabase.from('user_login_aliases').insert(toInsert);
+    if (ins.error) throw ins.error;
+  }
+}
+
+export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
+  try {
+    const { profile: adminProfile } = await requireAdmin(req);
+    if (!adminProfile?.can_manage_admins) throw new Error('Forbidden');
+    const { id } = await ctx.params;
+    const supabase = getServerSupabase();
+
+    const [profileRes, aliasesRes, rolesRes] = await Promise.all([
+      supabase.from('profiles').select('*').eq('id', id).maybeSingle(),
+      supabase.from('user_login_aliases').select('email').eq('user_id', id).order('email', { ascending: true }),
+      supabase
+        .from('app_user_roles')
+        .select('role_id, assigned_at, assigned_by_email, app_roles:role_id(id,name,color_hex,permissions)')
+        .eq('user_id', id)
+        .order('assigned_at', { ascending: false }),
+    ]);
+
+    if (profileRes.error) throw profileRes.error;
+    if (aliasesRes.error) throw aliasesRes.error;
+    if (rolesRes.error) throw rolesRes.error;
+
+    return NextResponse.json({
+      ok: true,
+      profile: profileRes.data || null,
+      loginAliases: (aliasesRes.data || []).map((row: any) => String(row.email || '').trim().toLowerCase()).filter(Boolean),
+      roleAssignments: rolesRes.data || [],
+    });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
+  }
+}
+
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
     const { user: adminUser, profile: adminProfile } = await requireAdmin(req);
@@ -61,6 +153,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     const body = toRecord(await req.json().catch(() => ({})));
     const profilePatch = pickProfilePatch(body);
     const password = typeof body.password === 'string' ? body.password : '';
+    const aliasesInput = body.login_aliases;
 
     if (password) {
       const email = profilePatch.email ? String(profilePatch.email) : body.email ? String(body.email) : '';
@@ -75,6 +168,13 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       if (error) throw error;
     }
 
+    if (aliasesInput !== undefined) {
+      const currentProfile = await supabase.from('profiles').select('email').eq('id', id).maybeSingle<{ email?: string | null }>();
+      if (currentProfile.error) throw currentProfile.error;
+      const primaryEmail = normalizeEmail(profilePatch.email) || normalizeEmail(body.email) || normalizeEmail(currentProfile.data?.email);
+      await syncLoginAliases(supabase, id, primaryEmail, aliasesInput, adminUser.id || null);
+    }
+
     try {
       await supabase.from('admin_logs').insert([
         {
@@ -82,7 +182,11 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
           admin_name: 'Uživatelé',
           action: 'USER_UPDATE',
           target_id: id,
-          details: { patch: Object.keys(profilePatch), password_changed: !!password },
+          details: {
+            patch: Object.keys(profilePatch),
+            password_changed: !!password,
+            alias_count: aliasesInput === undefined ? undefined : uniqueAliases(aliasesInput, String(profilePatch.email || body.email || '')).length,
+          },
         },
       ]);
     } catch {}

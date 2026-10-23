@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { buildDefaultPagesConfig } from '@/lib/site/pages-registry';
+import { writeServerLog } from '@/lib/logs/server-logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -83,12 +84,22 @@ export async function GET() {
           })
           .eq('id', configId);
         if (updateError) {
-          console.error('Auto-disable maintenance failed:', updateError);
+          await writeServerLog({
+            level: 'error',
+            category: 'site_config',
+            message: 'Auto-disable maintenance failed',
+            data: { message: updateError.message, code: updateError.code },
+          });
         } else {
           row.maintenance_enabled = false;
         }
       } catch (e) {
-        console.error('Auto-disable maintenance error:', e);
+        await writeServerLog({
+          level: 'error',
+          category: 'site_config',
+          message: 'Auto-disable maintenance error',
+          data: { error: e instanceof Error ? e.message : String(e) },
+        });
       }
     }
 

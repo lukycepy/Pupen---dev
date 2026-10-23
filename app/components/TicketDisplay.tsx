@@ -21,8 +21,7 @@ export default function TicketDisplay({ token, eventName, userName }: TicketDisp
           dark: '#16a34a', // Green-600
           light: '#ffffff',
         },
-      }, (error) => {
-        if (error) console.error('QR Code error:', error);
+      }, () => {
       });
     }
   }, [token]);

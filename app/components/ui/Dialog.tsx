@@ -9,6 +9,8 @@ export default function Dialog({
   onClose,
   children,
   closeOnBackdrop = true,
+  ariaLabel,
+  labelledBy,
   overlayClassName = 'fixed inset-0 z-[30000] flex items-end sm:items-center justify-center p-0 sm:p-4 sm:pb-4 bg-black/50 dark:bg-black/70',
   panelClassName = 'w-full sm:max-w-xl md:max-w-2xl bg-white dark:bg-black rounded-t-3xl sm:rounded-[2.5rem] border-2 border-black dark:border-white overflow-y-auto max-h-[92dvh] sm:max-h-[90vh]',
 }: {
@@ -16,6 +18,8 @@ export default function Dialog({
   onClose: () => void;
   children: React.ReactNode;
   closeOnBackdrop?: boolean;
+  ariaLabel?: string;
+  labelledBy?: string;
   overlayClassName?: string;
   panelClassName?: string;
 }) {
@@ -26,7 +30,16 @@ export default function Dialog({
   return (
     <Portal>
       <div className={overlayClassName} onMouseDown={closeOnBackdrop ? onClose : undefined}>
-        <div ref={panelRef} tabIndex={-1} className={panelClassName} onMouseDown={(e) => e.stopPropagation()}>
+        <div
+          ref={panelRef}
+          tabIndex={-1}
+          role="dialog"
+          aria-modal="true"
+          aria-label={ariaLabel}
+          aria-labelledby={labelledBy}
+          className={panelClassName}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
           {children}
         </div>
       </div>

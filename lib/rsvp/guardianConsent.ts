@@ -243,7 +243,7 @@ export async function ensureGuardianConsentPdf(input: {
   const existingBucket = cleanText(input.rsvp.guardian_consent_document_bucket, '');
   const existingPath = cleanText(input.rsvp.guardian_consent_document_path, '');
   let pdfBytes: Buffer | null = null;
-  let bucket = existingBucket || GUARDIAN_CONSENT_BUCKET;
+  const bucket = existingBucket || GUARDIAN_CONSENT_BUCKET;
   let path = existingPath;
 
   if (bucket && path) {

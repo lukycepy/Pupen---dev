@@ -4,7 +4,7 @@ setlocal EnableExtensions DisableDelayedExpansion
 chcp 65001 >nul 2>&1
 
 set "SCRIPT_DIR=%~dp0"
-set "REPO_ROOT=%~dp0.."
+set "REPO_ROOT=%~dp0..\.."
 set "PS1=%SCRIPT_DIR%Migrace_databaze.ps1"
 
 if not exist "%PS1%" (
@@ -36,4 +36,3 @@ if not "%EC%"=="0" (
 )
 
 endlocal & exit /b %EC%
-

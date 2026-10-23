@@ -87,6 +87,10 @@ export interface NavbarUserProfile {
   can_manage_admins?: boolean;
   can_view_member_portal?: boolean;
   can_edit_member_portal?: boolean;
+  has_admin_access?: boolean;
+  has_member_access?: boolean;
+  login_aliases?: string[];
+  assigned_roles?: Array<{ id: string; name: string }>;
 }
 
 export interface SitePageVisibilityConfig {

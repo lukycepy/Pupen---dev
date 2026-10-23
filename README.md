@@ -56,6 +56,42 @@ E‑maily lze nastavit dvěma způsoby:
 
 Pokud SMTP hlásí `unable to verify the first certificate`, vlož CA chain do admin nastavení (TLS CA PEM) nebo nastav `SMTP_TLS_CA_PEM`. Nevypínej ověřování certifikátu v produkci, pokud to není krátkodobý workaround.
 
+## Předprodukční checklist (env & release)
+
+Před každým nasazením do produkce projdi tento seznam. Slouží jako rychlá kontrola, že prostředí a databáze jsou v konzistentním stavu.
+
+### 1) Povinné env proměnné
+- [ ] `NEXT_PUBLIC_SITE_URL=https://pupen.org` (bez koncového `/`)
+- [ ] `NEXT_PUBLIC_SUPABASE_URL` a `NEXT_PUBLIC_SUPABASE_ANON_KEY` odpovídají produkčnímu projektu
+- [ ] `SUPABASE_SERVICE_ROLE_KEY` je nastaven (server-only, nikdy `NEXT_PUBLIC_*`)
+- [ ] `DATABASE_URL_PROD` obsahuje `?sslmode=require`
+- [ ] `DB_POOLER` / host odpovídá produkčnímu Supabase regionu (u novějších projektů `postgres.<project-ref>`)
+- [ ] `CRON_SECRET` je nastaven a shoduje se s hodnotou v systému cronu na VPS
+
+### 2) Doporučené / volitelné
+- [ ] `NEXT_PUBLIC_GA_MEASUREMENT_ID`, `NEXT_PUBLIC_ANALYTICS_*` dle potřeby
+- [ ] `NEXT_PUBLIC_TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY` (ochrana loginu)
+- [ ] `SENTRY_DSN` (+ `NEXT_PUBLIC_SENTRY_DSN`) – bez DSN je Sentry vypnutý
+- [ ] `SENTRY_ENVIRONMENT=production`, `SENTRY_RELEASE=<git sha>`
+- [ ] `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` (upload source map; volitelné)
+- [ ] `APP_DATA_DIR` / `APPS_DATA_DIR` ukazuje na existující zapisovatelný adresář
+
+### 3) Databáze a oprávnění
+- [ ] Všechny migrace aplikované: `npm run db:migrate:prod`
+- [ ] Schema cache bez chyb (případně `POST /api/admin/schema-cache/reload`)
+- [ ] `npm run db:drift-check` a `npm run db:rls-check` proběhly bez chyb (z prostředí s funkčním připojením k DB)
+
+### 4) Monitoring
+- [ ] Repozitářový secret `PROD_HEALTHCHECK_URL=https://pupen.org/api/health` nastaven (workflow `uptime.yml`)
+- [ ] `GET /api/health` vrací `{"status":"ok"}`
+- [ ] Cron endpointy běží a vrací OK: `/api/cron/email-queue`, `/api/cron/digest`, `/api/cron/membership-expiry` (vše s `?secret=$CRON_SECRET`)
+
+### 5) Smoke test po deployi
+- [ ] `/{lang}` se načte, `/cs/login` umí přihlášení i reset hesla
+- [ ] `/cs/admin/dashboard` a `/cs/clen` fungují pro příslušné role
+- [ ] `/sitemap.xml` a `/robots.txt` vrací očekávaný obsah
+- [ ] CI pipeline (`ci.yml`) je zelená: `tsc` + `lint` + `build` + smoke
+
 ## Nasazení na VPS (Ubuntu) pro pupen.org
 
 Níže je minimální, spolehlivý setup. Počítá s tím, že DB + Auth běží v Supabase a na VPS běží pouze Next.js app.

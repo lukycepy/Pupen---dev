@@ -49,7 +49,6 @@ export default function ArchiveTab({ dict }: { dict: any }) {
       showToast(editingItem ? 'Záznam upraven' : (dict.archive?.saveSuccess || 'Záznam uložen'), 'success');
     },
     onError: (err: any) => {
-      console.error('Archive save error:', err);
       showToast(err.message || 'Nepodařilo se uložit záznam.', 'error');
     }
   });

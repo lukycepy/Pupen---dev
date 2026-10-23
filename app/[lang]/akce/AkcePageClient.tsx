@@ -758,7 +758,7 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
           </div>
 
           <div className="mt-10 flex flex-col md:flex-row gap-3">
-            <div className="flex items-center gap-2 bg-white dark:bg-black border-2 border-black dark:border-white rounded-2xl px-4 py-3 w-full md:w-[420px]">
+            <div className="flex items-center gap-2 bg-white dark:bg-black border-2 border-black dark:border-white rounded-2xl px-4 py-3 w-full md:w-[420px] focus-within:border-green-600 dark:focus-within:border-green-500 transition">
               <Search size={16} className="text-stone-400 dark:text-stone-500" />
               <input
                 value={searchQuery}
@@ -1005,7 +1005,7 @@ export default function AkcePageClient({ lang }: AkcePageClientProps) {
                       disabled={rsvpCancelLoading || rsvpLoading === rsvpOpen}
                       className="w-full bg-white dark:bg-black border-2 border-black dark:border-white text-black dark:text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-green-50 dark:hover:bg-green-950 transition disabled:opacity-50"
                     >
-                      {rsvpCancelLoading ? <InlinePulse className="bg-stone-400/70" size={14} /> : null}
+                      {rsvpCancelLoading ? <InlinePulse className="bg-stone-300" size={14} /> : null}
                       {lang === 'en' ? 'Cancel registration' : 'Zrušit registraci'}
                     </button>
                     <button

@@ -127,7 +127,7 @@ export async function POST(req: Request) {
     const upload = await supabase.storage.from(GUARDIAN_CONSENT_BUCKET).upload(path, bytes, { contentType: 'application/pdf', upsert: false });
     if (upload.error) throw upload.error;
 
-    let update = await supabase
+    const update = await supabase
       .from('rsvp')
       .update({
         guardian_consent_status: 'uploaded',

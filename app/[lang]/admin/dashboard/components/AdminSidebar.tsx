@@ -278,7 +278,7 @@ const SidebarContent = ({
 
       {/* FOOTER */}
       <div className="p-3 border-t border-stone-100 dark:border-stone-800 space-y-1">
-        {userProfile?.is_member && (
+        {(userProfile?.has_member_access || userProfile?.is_member || userProfile?.can_view_member_portal || userProfile?.can_edit_member_portal || userProfile?.can_manage_admins) && (
           <Link
             href={`/${lang}/clen`}
             className={[

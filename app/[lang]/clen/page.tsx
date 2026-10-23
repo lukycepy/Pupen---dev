@@ -193,7 +193,14 @@ export default function ClenskaSekcePage() {
       const prof = profRes.ok ? profJson?.profile : null;
 
       const isSuperAdmin = !!prof?.can_manage_admins;
-      const hasMemberPortal = !!(prof?.is_member || prof?.is_admin || prof?.can_manage_admins || prof?.can_view_member_portal || prof?.can_edit_member_portal);
+      const hasMemberPortal = !!(
+        prof?.has_member_access ||
+        prof?.is_member ||
+        prof?.is_admin ||
+        prof?.can_manage_admins ||
+        prof?.can_view_member_portal ||
+        prof?.can_edit_member_portal
+      );
       if (!hasMemberPortal) {
         router.replace(`/${lang}/login`);
         return;
@@ -1692,7 +1699,7 @@ export default function ClenskaSekcePage() {
                       <h3 className="font-black text-stone-900 dark:text-stone-100 text-lg mb-1 truncate">{blog.title}</h3>
                       <div className="flex items-center gap-3">
                         <span className="text-[10px] text-stone-400 dark:text-stone-500 font-black uppercase tracking-widest">{new Date(blog.created_at).toLocaleDateString(dateLocale)}</span>
-                        <span className="w-1 h-1 bg-stone-300 dark:bg-stone-700 rounded-full"></span>
+                        <span className="w-1 h-1 bg-black dark:bg-white rounded-full"></span>
                         <span className="text-[10px] text-blue-600 font-black uppercase tracking-widest">{blog.category}</span>
                       </div>
                     </div>

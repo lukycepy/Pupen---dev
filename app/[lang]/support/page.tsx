@@ -132,7 +132,7 @@ export default function SupportPage() {
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-blue-500 outline-none transition"
+                  className="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 outline-none transition"
                 />
               </div>
               <div>
@@ -142,7 +142,7 @@ export default function SupportPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-blue-500 outline-none transition"
+                  className="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 outline-none transition"
                 />
               </div>
             </div>
@@ -155,7 +155,7 @@ export default function SupportPage() {
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 rows={6}
-                className="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 font-medium text-stone-700 focus:ring-2 focus:ring-blue-500 outline-none transition resize-none"
+                className="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 font-medium text-stone-700 focus:ring-2 focus:ring-green-500 outline-none transition resize-none"
               />
             </div>
             <button

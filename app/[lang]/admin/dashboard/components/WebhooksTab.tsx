@@ -206,7 +206,7 @@ export default function WebhooksTab() {
             <AdminPanel key={wh.id} className="p-6 group relative overflow-hidden">
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg ${wh.is_active ? 'bg-green-600 shadow-green-600/30' : 'bg-stone-400 shadow-stone-400/30'}`}>
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white dark:text-black shadow-lg ${wh.is_active ? 'bg-green-600 shadow-green-600/30' : 'bg-black dark:bg-white'}`}>
                     <Webhook size={20} />
                   </div>
                   <div>

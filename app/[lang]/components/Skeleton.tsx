@@ -8,7 +8,7 @@ interface SkeletonProps {
 
 export default function Skeleton({ className = '' }: SkeletonProps) {
   return (
-    <div className={`animate-pulse bg-stone-100 rounded-2xl ${className}`} />
+    <div className={`animate-pulse rounded-2xl border-2 border-black bg-transparent dark:border-white ${className}`} />
   );
 }
 

@@ -546,8 +546,7 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
         }
         try {
           imageUrl = await uploadImage(imageFile, 'events');
-        } catch (uploadErr) {
-          console.error('Image upload failed:', uploadErr);
+        } catch {
           throw new Error('Nepodařilo se nahrát obrázek. Zkuste jiný soubor nebo zkontrolujte připojení.');
         }
       }
@@ -597,8 +596,7 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
               created_by: currentUser?.id
             }]);
           }
-        } catch (vErr) {
-          console.error('Failed to save version:', vErr);
+        } catch {
         }
 
         let { error } = await supabase.from('events').update(payload).eq('id', editingEvent.id);
@@ -623,8 +621,7 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
         
         try {
           await logAdminAction(currentUser?.email, `Upravil akci: ${data.title}`, editingEvent.id, payload, userProfile ? `${userProfile.first_name} ${userProfile.last_name}` : undefined);
-        } catch (logErr) {
-          console.error('Failed to log admin action:', logErr);
+        } catch {
         }
       } else {
         let { data: newEvent, error } = await supabase.from('events').insert([payload]).select().single();
@@ -644,8 +641,7 @@ export default function EventsTab({ dict, events, uploadImage, currentUser, user
         
         try {
           await logAdminAction(currentUser?.email, `Vytvořil akci: ${data.title}`, newEvent.id, payload, userProfile ? `${userProfile.first_name} ${userProfile.last_name}` : undefined);
-        } catch (logErr) {
-          console.error('Failed to log admin action:', logErr);
+        } catch {
         }
       }
     },

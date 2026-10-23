@@ -231,7 +231,7 @@ export default function QueueTab({ dict }: { dict: Dictionary }) {
         description={desc}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex items-center rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
+            <div className="inline-flex items-center rounded-2xl border border-stone-200 bg-white px-4 py-3 focus-within:border-green-600 transition">
               <Search size={16} className="text-stone-400" />
               <input
                 value={q}

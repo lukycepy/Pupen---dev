@@ -334,7 +334,7 @@ export default function TrustBoxTab({ dict }: { dict: Dictionary }) {
 
       <AdminPanel className="p-6">
         <div className="flex flex-col md:flex-row md:items-center gap-4 justify-between">
-          <div className="flex items-center gap-3 bg-stone-50 border border-stone-200 px-4 py-3 rounded-2xl w-full md:max-w-md">
+          <div className="flex items-center gap-3 bg-stone-50 border border-stone-200 px-4 py-3 rounded-2xl w-full md:max-w-md focus-within:border-green-600 transition">
             <Search size={16} className="text-stone-400" />
             <input
               value={q}
@@ -364,7 +364,7 @@ export default function TrustBoxTab({ dict }: { dict: Dictionary }) {
 
             {settingsQuery.isLoading ? (
               <div className="py-6 flex justify-center">
-                <InlinePulse className="bg-stone-400/70" size={14} />
+                <InlinePulse className="bg-stone-300" size={14} />
               </div>
             ) : (
               <div className="space-y-4">
@@ -375,7 +375,7 @@ export default function TrustBoxTab({ dict }: { dict: Dictionary }) {
                       type="number"
                       value={retentionDays}
                       onChange={(e) => setRetentionDays(Number(e.target.value))}
-                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 outline-none"
+                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition"
                     />
                   </div>
                   <div className="flex items-end">
@@ -426,7 +426,7 @@ export default function TrustBoxTab({ dict }: { dict: Dictionary }) {
                   value={adminSearch}
                   onChange={(e) => setAdminSearch(e.target.value)}
                   placeholder="Najít uživatele…"
-                  className="flex-1 bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 outline-none"
+                  className="flex-1 bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition"
                 />
                 <label className="flex items-center gap-2 font-bold text-stone-700">
                   <input type="checkbox" checked={adminCanViewPii} onChange={(e) => setAdminCanViewPii(e.target.checked)} />
@@ -438,7 +438,7 @@ export default function TrustBoxTab({ dict }: { dict: Dictionary }) {
                 <div className="bg-stone-50 border border-stone-200 rounded-2xl p-3 space-y-2">
                   {userSearchQuery.isLoading ? (
                     <div className="py-4 flex justify-center">
-                      <InlinePulse className="bg-stone-400/70" size={12} />
+                      <InlinePulse className="bg-stone-300" size={12} />
                     </div>
                   ) : (
                     (userSearchQuery.data?.users || []).map((u: any) => (
@@ -557,7 +557,7 @@ export default function TrustBoxTab({ dict }: { dict: Dictionary }) {
         >
           {threadDetail.isLoading ? (
             <div className="p-8 flex justify-center">
-              <InlinePulse className="bg-stone-400/70" size={14} />
+              <InlinePulse className="bg-stone-300" size={14} />
             </div>
           ) : (
             <div className="p-8 space-y-6 overflow-y-auto custom-scrollbar">
@@ -625,7 +625,7 @@ export default function TrustBoxTab({ dict }: { dict: Dictionary }) {
                       <input
                         value={piiReason}
                         onChange={(e) => setPiiReason(e.target.value)}
-                        className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 outline-none"
+                        className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition"
                         placeholder="Min. 10 znaků…"
                       />
                     </div>
@@ -648,7 +648,7 @@ export default function TrustBoxTab({ dict }: { dict: Dictionary }) {
                     <select
                       value={String(threadDetail.data?.thread?.status || 'new')}
                       onChange={(e) => patchMutation.mutate({ status: e.target.value })}
-                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 outline-none"
+                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition"
                     >
                       <option value="new">{String(tb.status.new)}</option>
                       <option value="in_review">{String(tb.status.in_review)}</option>
@@ -662,7 +662,7 @@ export default function TrustBoxTab({ dict }: { dict: Dictionary }) {
                     <select
                       value={String(threadDetail.data?.thread?.priority || 'normal')}
                       onChange={(e) => patchMutation.mutate({ priority: e.target.value })}
-                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 outline-none"
+                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition"
                     >
                       <option value="normal">{String(tb.priority.normal)}</option>
                       <option value="urgent">{String(tb.priority.urgent)}</option>
@@ -676,7 +676,7 @@ export default function TrustBoxTab({ dict }: { dict: Dictionary }) {
                         const v = e.target.value.trim();
                         if (v) patchMutation.mutate({ category: v });
                       }}
-                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 outline-none"
+                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition"
                     />
                   </div>
                   <div>
@@ -684,7 +684,7 @@ export default function TrustBoxTab({ dict }: { dict: Dictionary }) {
                     <select
                       value={String(threadDetail.data?.thread?.owner_user_id || '')}
                       onChange={(e) => patchMutation.mutate({ owner_user_id: e.target.value || null })}
-                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 outline-none"
+                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition"
                     >
                       <option value="">{tb.ownerUnassigned}</option>
                       {(adminsQuery.data?.items || []).map((a: any) => (
@@ -720,7 +720,7 @@ export default function TrustBoxTab({ dict }: { dict: Dictionary }) {
                   <select
                     value={replyTemplateId}
                     onChange={(e) => setReplyTemplateId(e.target.value)}
-                    className="w-full md:w-auto bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 outline-none"
+                    className="w-full md:w-auto bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 outline-none focus:ring-2 focus:ring-green-500 transition"
                   >
                     <option value="">{tb.templatePlaceholder}</option>
                     {replyTemplates.map((t: any) => (
@@ -808,7 +808,7 @@ export default function TrustBoxTab({ dict }: { dict: Dictionary }) {
                             disabled={signedUrlMutation.isPending}
                             className="flex items-center gap-2 px-4 py-2 bg-stone-100 text-stone-700 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-stone-200 transition disabled:opacity-50"
                           >
-                            {signedUrlMutation.isPending ? <InlinePulse className="bg-stone-400/70" size={12} /> : <Paperclip size={16} />}
+                            {signedUrlMutation.isPending ? <InlinePulse className="bg-stone-300" size={12} /> : <Paperclip size={16} />}
                             Stáhnout
                           </button>
                         </div>
@@ -823,7 +823,7 @@ export default function TrustBoxTab({ dict }: { dict: Dictionary }) {
                 {auditQuery.isLoading ? (
                   <AdminPanel className="p-5">
                     <div className="flex justify-center">
-                      <InlinePulse className="bg-stone-400/70" size={12} />
+                      <InlinePulse className="bg-stone-300" size={12} />
                     </div>
                   </AdminPanel>
                 ) : (

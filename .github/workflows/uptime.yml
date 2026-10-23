@@ -1,0 +1,46 @@
+name: Uptime monitor
+
+# Pravidelně kontroluje produkční /api/health a při výpadku selže,
+# což spustí notifikaci správcům repozitáře (GitHub notifications).
+# Vyžaduje repozitářový secret PROD_HEALTHCHECK_URL.
+# Bez něj se workflow korektně přeskočí (no-op).
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check production /api/health
+        env:
+          HEALTHCHECK_URL: ${{ secrets.PROD_HEALTHCHECK_URL }}
+        run: |
+          if [ -z "$HEALTHCHECK_URL" ]; then
+            echo "PROD_HEALTHCHECK_URL is not configured - skipping health check."
+            exit 0
+          fi
+
+          code=$(curl -sS -o /tmp/health.json -w '%{http_code}' --max-time 20 "$HEALTHCHECK_URL")
+          echo "HTTP status: $code"
+          echo "Payload:"
+          cat /tmp/health.json || true
+          echo
+
+          if [ "$code" != "200" ]; then
+            echo "::error::Health endpoint returned HTTP $code"
+            exit 1
+          fi
+
+          if ! grep -q '"status":"ok"' /tmp/health.json; then
+            echo "::error::Health payload does not report status ok"
+            exit 1
+          fi
+
+          echo "Health check passed."

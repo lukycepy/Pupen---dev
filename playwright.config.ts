@@ -54,7 +54,7 @@ export default defineConfig({
   webServer: {
     command: `"${process.execPath}" node_modules/next/dist/bin/next start -p 3000`,
     url: 'http://localhost:3000',
-    reuseExistingServer: false,
+    reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
   },
 });

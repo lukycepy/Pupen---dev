@@ -62,7 +62,7 @@ export default function SocialShareInline({ title }: { title: string }) {
         >
           <XIcon size={14} /> X
         </a>
-        <div className="hidden sm:block w-px bg-stone-200 mx-1" />
+        <div className="hidden sm:block w-px bg-black dark:bg-white mx-1" />
         <CopyButton
           value={url}
           idleLabel="Kopírovat"

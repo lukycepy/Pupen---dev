@@ -505,7 +505,27 @@ function Find-WorkingDatabaseUrl {
   return @{ Url = $null; Tried = $tried.ToArray() }
 }
 
-$repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
+function Find-RepoRoot {
+  param([Parameter(Mandatory)] [string] $StartPath)
+
+  $current = Resolve-Path -LiteralPath $StartPath
+  while ($current) {
+    $currentPath = [string]$current
+    $hasPackageJson = Test-Path -LiteralPath (Join-Path $currentPath 'package.json')
+    $hasSupabaseMigrations = Test-Path -LiteralPath (Join-Path $currentPath 'supabase\migrations')
+    if ($hasPackageJson -and $hasSupabaseMigrations) {
+      return $current
+    }
+
+    $parent = Split-Path -Path $currentPath -Parent
+    if (-not $parent -or $parent -eq $currentPath) { break }
+    $current = Resolve-Path -LiteralPath $parent
+  }
+
+  throw "Nepodarilo se najit root projektu od: $StartPath"
+}
+
+$repoRoot = Find-RepoRoot -StartPath $PSScriptRoot
 $supabaseDir = Join-Path $repoRoot 'supabase'
 if (-not (Test-Path $supabaseDir)) {
   throw "Chybi slozka supabase: $supabaseDir"

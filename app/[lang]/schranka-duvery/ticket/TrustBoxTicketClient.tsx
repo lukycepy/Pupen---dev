@@ -242,7 +242,7 @@ export default function TrustBoxTicketClient() {
             </div>
           ) : loading ? (
             <div className="flex justify-center py-12">
-              <InlinePulse className="bg-stone-400/70" size={14} />
+              <InlinePulse className="bg-stone-300" size={14} />
             </div>
           ) : (
             <div className="space-y-6">
@@ -266,7 +266,7 @@ export default function TrustBoxTicketClient() {
                             className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-stone-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-stone-700 hover:bg-stone-100 transition disabled:opacity-50"
                             title={String(a.original_name || '')}
                           >
-                            {downloading === String(a.id) ? <InlinePulse className="bg-stone-400/70" size={12} /> : <Paperclip size={14} />}
+                            {downloading === String(a.id) ? <InlinePulse className="bg-stone-300" size={12} /> : <Paperclip size={14} />}
                             {String(a.original_name || 'Příloha')}
                           </button>
                         ))}

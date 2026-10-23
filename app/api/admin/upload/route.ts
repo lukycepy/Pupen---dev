@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { writeServerLog } from '@/lib/logs/server-logger';
 import sharp from 'sharp';
 
 export async function POST(req: Request) {
@@ -66,7 +67,12 @@ export async function POST(req: Request) {
           } catch {}
         }
       } catch (err) {
-        console.error('Sharp optimization failed, falling back to original:', err);
+        await writeServerLog({
+          level: 'warn',
+          category: 'upload',
+          message: 'Sharp optimization failed, falling back to original',
+          data: { error: err instanceof Error ? err.message : String(err) },
+        });
       }
     }
 

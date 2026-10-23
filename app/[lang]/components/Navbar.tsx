@@ -5,21 +5,15 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
   Menu, X, Search, Calendar, FileText, 
-  ChevronDown, BookOpen, ShieldCheck, Users, Tag, Clock, PenTool, BrainCircuit, Briefcase, HelpCircle, Lock as LockIcon, LogOut, KeyRound, Siren, Archive, LifeBuoy, Image as ImageIcon, HeartHandshake, Handshake
+  ChevronDown, BookOpen, ShieldCheck, Users, Tag, Clock, PenTool, BrainCircuit, Briefcase, HelpCircle, KeyRound, Siren, Archive, LifeBuoy, Image as ImageIcon, HeartHandshake, Handshake
 } from 'lucide-react';
 import Image from 'next/image';
-import { supabase } from '@/lib/supabase';
 import InlinePulse from '@/app/components/InlinePulse';
 import Drawer from '@/app/components/ui/Drawer';
 import Popover from '@/app/components/ui/Popover';
 import ThemeToggleButton from '@/app/components/ThemeToggleButton';
 import type { Dictionary } from '@/lib/dictionary-types';
-import type {
-  NavbarUserProfile,
-  SearchResponse,
-  SearchResults,
-  SitePageVisibilityConfig,
-} from '@/types/search';
+import type { SearchResponse, SearchResults, SitePageVisibilityConfig } from '@/types/search';
 
 interface NavbarProps {
   lang: string;
@@ -65,36 +59,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
   });
   const [isSearching, setIsSearching] = useState(false);
   const [isToolsOpen, setIsToolsOpen] = useState(false);
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [userProfile, setUserProfile] = useState<NavbarUserProfile | null>(null);
   const [sitePages, setSitePages] = useState<Record<string, SitePageVisibilityConfig> | null>(null);
-
-  useEffect(() => {
-    async function getProfile() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        try {
-          const token = session.access_token;
-          const res = await fetch('/api/auth/me-profile', { headers: { Authorization: `Bearer ${token}` } });
-          const json = await res.json().catch(() => ({}));
-          setUserProfile(res.ok ? (json?.profile || null) : null);
-        } catch {
-          setUserProfile(null);
-        }
-      }
-    }
-    getProfile();
-    
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        getProfile();
-      } else {
-        setUserProfile(null);
-      }
-    });
-    
-    return () => subscription.unsubscribe();
-  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -112,23 +77,11 @@ export default function Navbar({ lang, dict }: NavbarProps) {
   }, []);
 
   const pathname = usePathname();
-  const userMenuRef = useRef<HTMLDivElement>(null);
   const toolsRef = useRef<HTMLDivElement>(null);
-  const toolsCloseTimerRef = useRef<number | null>(null);
-
-  const cancelToolsClose = () => {
-    if (toolsCloseTimerRef.current) window.clearTimeout(toolsCloseTimerRef.current);
-    toolsCloseTimerRef.current = null;
-  };
-  const scheduleToolsClose = () => {
-    cancelToolsClose();
-    toolsCloseTimerRef.current = window.setTimeout(() => setIsToolsOpen(false), 120);
-  };
 
   useEffect(() => {
     setIsMenuOpen(false);
     setIsToolsOpen(false);
-    setIsUserMenuOpen(false);
   }, [pathname]);
 
   // Search logic
@@ -228,7 +181,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
           </Link>
 
           {/* DESKTOP MENU */}
-          <div className="hidden xl:flex items-center gap-6 font-medium text-[13px] tracking-normal text-black dark:text-white">
+          <div className="hidden xl:flex items-center gap-5 font-medium text-[13px] tracking-normal text-black dark:text-white">
             {[ 
               { slug: 'home', href: `/${lang}`, label: navHome, active: pathname === `/${lang}` },
               { slug: 'akce', href: `/${lang}/akce`, label: navEvents, active: pathname.includes('/akce') },
@@ -256,18 +209,10 @@ export default function Navbar({ lang, dict }: NavbarProps) {
             <div 
               ref={toolsRef}
               className="relative"
-              onMouseEnter={() => {
-                cancelToolsClose();
-                setIsToolsOpen(true);
-              }}
-              onMouseLeave={() => {
-                scheduleToolsClose();
-              }}
             >
               <button 
                 type="button"
                 onClick={() => {
-                  cancelToolsClose();
                   setIsToolsOpen((v) => !v);
                 }}
                 aria-haspopup="menu"
@@ -291,8 +236,6 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                   placement="bottom-center"
                   offset={10}
                   zIndex={10000}
-                  onPanelMouseEnter={cancelToolsClose}
-                  onPanelMouseLeave={scheduleToolsClose}
                   panelClassName="w-[520px] bg-white dark:bg-black border-2 border-black dark:border-white rounded-[2.5rem] p-8 animate-in fade-in slide-in-from-top-2 duration-300"
                 >
                   <div className="grid grid-cols-2 gap-3">
@@ -345,7 +288,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
           </div>
 
           {/* ACTION BUTTONS */}
-            <div className="hidden md:flex items-center gap-3">
+            <div className="hidden md:flex items-center gap-2">
 
             {/* PŘEPÍNAČ JAZYKA */}
             <div className={utilityGroupClass}>
@@ -363,90 +306,6 @@ export default function Navbar({ lang, dict }: NavbarProps) {
               </Link>
             </div>
 
-            <div
-              className="relative"
-              ref={userMenuRef}
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  setIsUserMenuOpen((v) => !v);
-                }}
-                aria-haspopup="menu"
-                aria-expanded={isUserMenuOpen}
-                className={`${utilityButtonClass} gap-1.5`}
-                title={userProfile ? (lang === 'cs' ? 'Účet' : 'Account') : (dict?.memberLogin || 'Login')}
-              >
-                {userProfile ? (
-                  <span className="w-5 h-5 flex items-center justify-center font-black text-xs uppercase">
-                    {(userProfile?.first_name?.[0] || userProfile?.email?.[0] || 'U') as string}
-                  </span>
-                ) : (
-                  <LockIcon size={20} />
-                )}
-                <ChevronDown size={14} className={`transition-transform duration-300 ${isUserMenuOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              {isUserMenuOpen && (
-                <Popover
-                  open={isUserMenuOpen}
-                  onClose={() => setIsUserMenuOpen(false)}
-                  anchorRef={userMenuRef}
-                  placement="bottom-end"
-                  offset={12}
-                  zIndex={10001}
-                  panelClassName="w-64 rounded-3xl border-2 border-black bg-white p-2 text-black dark:border-white dark:bg-black dark:text-white"
-                >
-                  {(userProfile?.is_member || userProfile?.is_admin || userProfile?.can_manage_admins || userProfile?.can_view_member_portal || userProfile?.can_edit_member_portal) && (
-                    <Link
-                      href={`/${lang}/clen`}
-                      className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-green-50 dark:hover:bg-green-950 transition text-black dark:text-white font-bold"
-                      onClick={() => setIsUserMenuOpen(false)}
-                    >
-                      <ShieldCheck size={18} className="text-blue-600" />
-                      <span>{lang === 'cs' ? 'Členský portál' : 'Member Portal'}</span>
-                    </Link>
-                  )}
-
-                  {(userProfile?.is_admin || userProfile?.can_manage_admins) && (
-                    <Link
-                      href={`/${lang}/admin/dashboard`}
-                      className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-green-50 dark:hover:bg-green-950 transition text-black dark:text-white font-bold"
-                      onClick={() => setIsUserMenuOpen(false)}
-                    >
-                      <LockIcon size={18} className="text-black dark:text-white" />
-                      <span>Admin</span>
-                    </Link>
-                  )}
-
-                  {!userProfile && (
-                    <Link
-                      href={`/${lang}/login`}
-                      className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-green-50 dark:hover:bg-green-950 transition text-black dark:text-white font-bold"
-                      onClick={() => setIsUserMenuOpen(false)}
-                    >
-                      <LockIcon size={18} className="text-black dark:text-white" />
-                      <span>{dict?.memberLogin || (lang === 'cs' ? 'Přihlášení' : 'Login')}</span>
-                    </Link>
-                  )}
-
-                  {userProfile && (
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        await supabase.auth.signOut();
-                        window.location.href = `/${lang}/login`;
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-red-50 dark:hover:bg-red-950 transition text-red-700 dark:text-red-400 font-bold"
-                    >
-                      <LogOut size={18} className="text-red-600 dark:text-red-500" />
-                      <span>{lang === 'cs' ? 'Odhlásit se' : 'Log out'}</span>
-                    </button>
-                  )}
-                </Popover>
-              )}
-            </div>
-
             <ThemeToggleButton className={utilityButtonClass} />
 
             {isPageEnabled('prihlaska') && (
@@ -461,7 +320,7 @@ export default function Navbar({ lang, dict }: NavbarProps) {
 
           {/* MOBILNÍ HAMBURGER */}
           <div className="md:hidden flex items-center gap-3">
-            <ThemeToggleButton className={utilityButtonClass} />
+            <ThemeToggleButton className={utilityButtonClass} testId="accessibility-theme-toggle-mobile" />
             <div className={utilityGroupClass}>
               <Link href={getTransliteratedPath('cs')} className={`px-2 py-1 rounded-lg text-[9px] font-black transition focus:ring-2 focus:ring-green-500 focus:outline-none ${lang === 'cs' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : 'text-black hover:text-green-600 dark:text-white dark:hover:text-green-500'}`}>CZ</Link>
               <Link href={getTransliteratedPath('en')} className={`px-2 py-1 rounded-lg text-[9px] font-black transition focus:ring-2 focus:ring-green-500 focus:outline-none ${lang === 'en' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : 'text-black hover:text-green-600 dark:text-white dark:hover:text-green-500'}`}>EN</Link>
@@ -493,12 +352,13 @@ export default function Navbar({ lang, dict }: NavbarProps) {
           <div className="flex flex-col p-5 sm:p-8 space-y-5 text-black dark:text-white pb-[max(2rem,env(safe-area-inset-bottom))]">
             {/* MOBILNÍ SEARCH */}
             <div className="relative mb-4">
-              <Search className="absolute left-4 top-3.5 text-stone-400 dark:text-stone-500" size={20} />
+              <Search className="absolute left-4 top-3.5 text-stone-400 dark:text-stone-500" size={20} aria-hidden="true" />
               <input 
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={searchPlaceholder}
+                aria-label={searchPlaceholder}
                 className="w-full rounded-2xl border-2 border-black bg-white pl-12 pr-4 py-4 text-sm font-bold text-black outline-none transition-all placeholder:text-black dark:border-white dark:bg-black dark:text-white dark:placeholder:text-white focus:ring-2 focus:ring-green-500"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
@@ -673,28 +533,6 @@ export default function Navbar({ lang, dict }: NavbarProps) {
               </Link>
             )}
 
-            {userProfile && (
-              <button 
-                onClick={async () => {
-                  await supabase.auth.signOut();
-                  window.location.href = `/${lang}/login`;
-                }}
-                className="flex items-center gap-4 text-base font-black uppercase tracking-[0.12em] text-red-600 dark:text-red-400"
-              >
-                <LogOut size={20} /> {lang === 'cs' ? 'Odhlásit se' : 'Log out'}
-              </button>
-            )}
-
-            {!userProfile && (
-              <Link 
-                href={`/${lang}/login`} 
-                onClick={() => setIsMenuOpen(false)}
-                className="flex items-center gap-4 text-base font-black uppercase tracking-[0.12em] text-stone-400 dark:text-stone-500 hover:text-black dark:hover:text-white"
-              >
-                <LockIcon size={20} /> {dict?.memberLogin}
-              </Link>
-            )}
-            
             {isPageEnabled('prihlaska') && (
               <Link 
                 href={`/${lang}/prihlaska`} 

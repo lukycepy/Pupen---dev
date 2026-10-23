@@ -9,7 +9,6 @@ import {
   Edit3,
   Search,
   Upload,
-  Download,
   ExternalLink,
   FileJson,
   FileSpreadsheet,
@@ -27,9 +26,6 @@ import {
   LinkaContact,
   nextContactId,
   contactMatches,
-  CSV_HEADER,
-  contactToCsvRow,
-  parseCsv,
 } from '@/lib/apps-linka/types';
 import { supabase } from '@/lib/supabase';
 
@@ -152,7 +148,7 @@ export default function LinkaTab() {
       case 'klapka':
         if (!v) return 'Povinné pole (přesně 4 číslice)';
         if (!/^\d{4}$/.test(v)) return 'Musí být přesně 4 číslice';
-        const dup = contacts.find((c, i) => c.klapka === v && c.id !== excludeId);
+        const dup = contacts.find((c) => c.klapka === v && c.id !== excludeId);
         if (dup) return `Linka ${v} už je obsazena (${dup.jmeno})`;
         return '';
       case 'email':

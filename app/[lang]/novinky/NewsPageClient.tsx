@@ -258,7 +258,7 @@ export default function NewsPageClient({ lang }: { lang: string }) {
                   <div className="p-8 flex flex-col flex-grow">
                     <div className="flex items-center gap-3 text-[9px] font-black uppercase tracking-widest text-stone-400 mb-4">
                       <span>{getPostDateLabel(post)}</span>
-                      <span className="w-1.5 h-1.5 bg-stone-200 rounded-full" />
+                      <span className="w-1.5 h-1.5 bg-black dark:bg-white rounded-full" />
                       <span>
                         {Math.ceil(stripHtmlToText(richTextToClientHtml(String(post.content || ''))).length / 1000)} {dict?.readingTime || 'min čtení'}
                       </span>
@@ -288,13 +288,13 @@ export default function NewsPageClient({ lang }: { lang: string }) {
             {/* --- PROGRESS BAR --- */}
             <div className="mt-8 flex flex-col items-center gap-6">
               <div className="flex items-center gap-4">
-                <div className="w-48 h-2 bg-stone-200 rounded-full relative border border-stone-100 px-1 flex items-center">
+                <div className="w-48 h-2 bg-white dark:bg-black rounded-full relative border-2 border-black dark:border-white px-1 flex items-center">
                   <div className="absolute inset-0 flex justify-between items-center px-2 pointer-events-none">
                     {[...Array(5)].map((_, i) => (
                       <div 
                         key={i} 
                         className={`w-1 h-1 rounded-full ${
-                          (scrollProgress * 100) >= (i * 25) ? 'bg-white/40' : 'bg-stone-400/30'
+                          (scrollProgress * 100) >= (i * 25) ? 'bg-black dark:bg-white' : 'bg-black/20 dark:bg-white/20'
                         }`}
                       />
                     ))}

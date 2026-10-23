@@ -37,14 +37,23 @@ export default function FAQWidget({ lang }: { lang: string }) {
   return (
     <div className="fixed bottom-6 right-6 z-[100] flex flex-col items-end">
       {isOpen && (
-        <div className="mb-4 bg-white rounded-3xl border shadow-2xl w-[350px] max-h-[500px] overflow-hidden flex flex-col animate-in slide-in-from-bottom-4 duration-300">
+        <div
+          id="faq-widget-panel"
+          role="dialog"
+          aria-label={lang === 'en' ? 'Frequently asked questions' : 'Časté dotazy'}
+          className="mb-4 bg-white rounded-3xl border shadow-2xl w-[350px] max-h-[500px] overflow-hidden flex flex-col animate-in slide-in-from-bottom-4 duration-300"
+        >
           <div className="p-6 bg-green-600 text-white flex items-center justify-between">
             <div>
               <h3 className="font-black uppercase tracking-widest text-xs">FAQ</h3>
               <p className="text-[10px] opacity-80">Časté dotazy studentů</p>
             </div>
-            <button onClick={() => setIsOpen(false)} className="hover:bg-white/20 p-2 rounded-xl transition">
-              <X size={20} />
+            <button
+              onClick={() => setIsOpen(false)}
+              aria-label={lang === 'en' ? 'Close FAQ' : 'Zavřít FAQ'}
+              className="hover:bg-white/20 p-2 rounded-xl transition"
+            >
+              <X size={20} aria-hidden="true" />
             </button>
           </div>
           
@@ -61,15 +70,17 @@ export default function FAQWidget({ lang }: { lang: string }) {
                 <div key={faq.id} className="bg-white rounded-2xl border border-stone-100 overflow-hidden shadow-sm">
                   <button 
                     onClick={() => setExpandedId(expandedId === faq.id ? null : faq.id)}
+                    aria-expanded={expandedId === faq.id}
+                    aria-controls={`faq-panel-${faq.id}`}
                     className="w-full p-4 text-left flex items-center justify-between gap-3 hover:bg-stone-50 transition"
                   >
                     <span className="text-sm font-bold text-stone-700">
                       {lang === 'en' && faq.question_en ? faq.question_en : faq.question}
                     </span>
-                    {expandedId === faq.id ? <ChevronUp size={16} className="text-green-600" /> : <ChevronDown size={16} className="text-stone-300" />}
+                    {expandedId === faq.id ? <ChevronUp size={16} className="text-green-600" aria-hidden="true" /> : <ChevronDown size={16} className="text-stone-300" aria-hidden="true" />}
                   </button>
                   {expandedId === faq.id && (
-                    <div className="px-4 pb-4 text-xs text-stone-500 leading-relaxed animate-in fade-in slide-in-from-top-1 duration-200">
+                    <div id={`faq-panel-${faq.id}`} className="px-4 pb-4 text-xs text-stone-500 leading-relaxed animate-in fade-in slide-in-from-top-1 duration-200">
                       {lang === 'en' && faq.answer_en ? faq.answer_en : faq.answer}
                     </div>
                   )}
@@ -91,9 +102,12 @@ export default function FAQWidget({ lang }: { lang: string }) {
 
       <button 
         onClick={() => setIsOpen(!isOpen)}
+        aria-label={lang === 'en' ? 'Frequently asked questions' : 'Časté dotazy'}
+        aria-expanded={isOpen}
+        aria-controls="faq-widget-panel"
         className={`w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all duration-500 ${isOpen ? 'bg-stone-900 text-white rotate-90 scale-90' : 'bg-green-600 text-white hover:scale-110 hover:rotate-12'}`}
       >
-        {isOpen ? <X size={28} /> : <HelpCircle size={28} />}
+        {isOpen ? <X size={28} aria-hidden="true" /> : <HelpCircle size={28} aria-hidden="true" />}
       </button>
     </div>
   );

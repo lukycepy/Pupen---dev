@@ -112,7 +112,7 @@ export default function AccessibilityControls() {
         Písmo {roundedScale}%
       </button>
       
-      <div className="w-px h-6 bg-stone-200 dark:bg-stone-700 mx-1"></div>
+      <div className="w-px h-6 bg-black dark:bg-white mx-1"></div>
       
       <button
         type="button"

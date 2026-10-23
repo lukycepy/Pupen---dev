@@ -30,6 +30,21 @@ function getLoginErrorMessage(loginError: { message?: string | null; status?: nu
   return String(loginError.message || fallback);
 }
 
+async function resolveLoginEmail(email: string) {
+  try {
+    const res = await fetch('/api/auth/resolve-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const json = await res.json().catch(() => ({}));
+    const resolved = String(json?.email || '').trim().toLowerCase();
+    return resolved || String(email || '').trim().toLowerCase();
+  } catch {
+    return String(email || '').trim().toLowerCase();
+  }
+}
+
 export default function LoginPageClient({ lang }: LoginPageClientProps) {
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
   const googleAuthEnabled = process.env.NEXT_PUBLIC_ENABLE_GOOGLE_AUTH === 'true';
@@ -238,7 +253,7 @@ export default function LoginPageClient({ lang }: LoginPageClientProps) {
 
   const ensureAdminAal2 = useCallback(async (profile: any, email?: string, method?: string) => {
     const isSuperAdmin = !!profile?.can_manage_admins;
-    const hasAdmin = !!(profile?.is_admin || profile?.can_manage_admins);
+    const hasAdmin = !!(profile?.has_admin_access || profile?.is_admin || profile?.can_manage_admins);
     if (!hasAdmin || isSuperAdmin) return true;
 
     const authAny: any = supabase.auth as any;
@@ -293,10 +308,16 @@ export default function LoginPageClient({ lang }: LoginPageClientProps) {
 
   const handleRedirect = useCallback(async (profile: any, email?: string, method?: string) => {
     const isSuperAdmin = !!profile?.can_manage_admins;
-    const hasAdmin = !!(profile?.is_admin || profile?.can_manage_admins);
-    const hasMember =
-      !!(profile?.is_member || profile?.is_admin || profile?.can_manage_admins || profile?.can_view_member_portal || profile?.can_edit_member_portal) ||
-      isSuperAdmin;
+    const hasAdmin = !!(profile?.has_admin_access || profile?.is_admin || profile?.can_manage_admins);
+    const hasMember = !!(
+      profile?.has_member_access ||
+      profile?.is_member ||
+      profile?.is_admin ||
+      profile?.can_manage_admins ||
+      profile?.can_view_member_portal ||
+      profile?.can_edit_member_portal ||
+      isSuperAdmin
+    );
 
     if (hasAdmin) {
       const ok = await ensureAdminAal2(profile, email, method);
@@ -362,8 +383,9 @@ export default function LoginPageClient({ lang }: LoginPageClientProps) {
       }
     } catch {}
 
+    const resolvedEmail = await resolveLoginEmail(email);
     const { data, error: loginError } = await supabase.auth.signInWithPassword({
-      email,
+      email: resolvedEmail,
       password,
     });
 
@@ -496,6 +518,7 @@ export default function LoginPageClient({ lang }: LoginPageClientProps) {
           
           <div className="grid gap-4">
             <button
+              data-testid="role-select-admin"
               onClick={async () => {
                 await logSecurity('LOGIN_SUCCESS', { method: 'session', outcome: 'admin' });
                 router.push(`/${lang}/admin/dashboard`);
@@ -515,6 +538,7 @@ export default function LoginPageClient({ lang }: LoginPageClientProps) {
             </button>
 
             <button
+              data-testid="role-select-member"
               onClick={async () => {
                 await logSecurity('LOGIN_SUCCESS', { method: 'session', outcome: 'member' });
                 router.push(`/${lang}/clen`);

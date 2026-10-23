@@ -18,6 +18,24 @@ interface UsersTabProps {
   dict: any;
 }
 
+type RoleAssignmentRow = {
+  role_id?: string | null;
+  assigned_at?: string | null;
+  assigned_by_email?: string | null;
+  app_roles?:
+    | {
+        id?: string | null;
+        name?: string | null;
+        color_hex?: string | null;
+      }
+    | Array<{
+        id?: string | null;
+        name?: string | null;
+        color_hex?: string | null;
+      }>
+    | null;
+};
+
 const PAGE_SIZE = 60;
 
 export default function UsersTab({ dict }: UsersTabProps) {
@@ -111,6 +129,47 @@ export default function UsersTab({ dict }: UsersTabProps) {
   const [sortConfig, setSortConfig] = useState<{ col: string; asc: boolean }>({ col: 'last_name', asc: true });
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [revokingSessions, setRevokingSessions] = useState(false);
+  const [loginAliases, setLoginAliases] = useState<string[]>([]);
+  const [aliasInput, setAliasInput] = useState('');
+  const [roleAssignments, setRoleAssignments] = useState<RoleAssignmentRow[]>([]);
+
+  const normalizeEmail = (value: string) => String(value || '').trim().toLowerCase();
+  const addAlias = () => {
+    const email = normalizeEmail(aliasInput);
+    const primary = normalizeEmail(String(watch('email') || editingAdmin?.email || ''));
+    if (!email || !email.includes('@')) {
+      showToast('Zadejte platný alias e-mail.', 'error');
+      return;
+    }
+    if (email === primary) {
+      showToast('Primární e-mail se mezi aliasy nepřidává.', 'error');
+      return;
+    }
+    if (loginAliases.includes(email)) {
+      showToast('Tento alias už je přidaný.', 'error');
+      return;
+    }
+    setLoginAliases((prev) => [...prev, email]);
+    setAliasInput('');
+  };
+  const removeAlias = (email: string) => {
+    setLoginAliases((prev) => prev.filter((item) => item !== email));
+  };
+  const getRoleAssignmentMeta = (assignment: RoleAssignmentRow) => {
+    const role = Array.isArray(assignment.app_roles) ? assignment.app_roles[0] : assignment.app_roles;
+    const roleName = String(role?.name || assignment.role_id || '').trim();
+    const assignedAt = assignment.assigned_at ? new Date(assignment.assigned_at) : null;
+    const assignedAtLabel =
+      assignedAt && !Number.isNaN(assignedAt.getTime())
+        ? assignedAt.toLocaleDateString(lang === 'en' ? 'en-GB' : 'cs-CZ')
+        : '';
+
+    return {
+      roleName,
+      assignedAtLabel,
+      assignedByEmail: String(assignment.assigned_by_email || '').trim(),
+    };
+  };
 
   const sendResetLink = async (email: string) => {
     setSendingReset(true);
@@ -306,7 +365,7 @@ export default function UsersTab({ dict }: UsersTabProps) {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ ...profilePayload, password: data.password || '' }),
+          body: JSON.stringify({ ...profilePayload, password: data.password || '', login_aliases: loginAliases }),
         });
         const json = await res.json();
         if (!res.ok) throw new Error(json?.error || 'Chyba');
@@ -345,7 +404,7 @@ export default function UsersTab({ dict }: UsersTabProps) {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ ...profilePayload, email: data.email, password: data.password || '', send_password: true }),
+          body: JSON.stringify({ ...profilePayload, email: data.email, password: data.password || '', send_password: true, login_aliases: loginAliases }),
         });
         const json = await res.json();
         if (!res.ok) throw new Error(json?.error || 'Chyba');
@@ -508,6 +567,8 @@ export default function UsersTab({ dict }: UsersTabProps) {
 
   const handleEdit = async (adm: any) => {
     let full = adm;
+    let nextAliases: string[] = [];
+    let nextRoleAssignments: any[] = [];
     try {
       if (adm?.id && adm?.can_view_events === undefined) {
         const res = await supabase.from('profiles').select('*').eq('id', adm.id).single();
@@ -519,8 +580,29 @@ export default function UsersTab({ dict }: UsersTabProps) {
       return;
     }
 
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (token && adm?.id) {
+        const extraRes = await fetch(`/api/admin/users/${adm.id}`, { headers: { Authorization: `Bearer ${token}` } });
+        const extraJson = await extraRes.json().catch(() => ({}));
+        if (!extraRes.ok) throw new Error(extraJson?.error || 'Chyba');
+        if (extraJson?.profile && typeof extraJson.profile === 'object') {
+          full = { ...full, ...extraJson.profile };
+        }
+        nextAliases = Array.isArray(extraJson?.loginAliases) ? extraJson.loginAliases.map((item: any) => String(item).trim().toLowerCase()).filter(Boolean) : [];
+        nextRoleAssignments = Array.isArray(extraJson?.roleAssignments) ? extraJson.roleAssignments : [];
+      }
+    } catch (e: any) {
+      showToast(e?.message || 'Chyba načtení aliasů', 'error');
+      return;
+    }
+
     setEditingAdmin(full);
     setFormOpen(true);
+    setLoginAliases(nextAliases);
+    setAliasInput('');
+    setRoleAssignments(nextRoleAssignments);
     let trustboxAdmin = false;
     try {
       const tb = await supabase.from('trust_box_admins').select('user_id').eq('user_id', full.id).maybeSingle();
@@ -584,6 +666,9 @@ export default function UsersTab({ dict }: UsersTabProps) {
   const handleCancel = () => {
     setEditingAdmin(null);
     setFormOpen(false);
+    setLoginAliases([]);
+    setAliasInput('');
+    setRoleAssignments([]);
     setScanDoc(null);
     setScanFile(null);
     reset();
@@ -706,6 +791,61 @@ export default function UsersTab({ dict }: UsersTabProps) {
             <div className="space-y-1.5">
               <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.admin.email}</label>
               <input {...register('email')} type="email" className={`w-full border-none p-4 rounded-2xl outline-none ring-1 ring-stone-100 focus:ring-2 focus:ring-green-500 bg-stone-50/50 font-bold text-stone-700 transition ${errors.email ? 'ring-red-500' : ''}`} />
+            </div>
+
+            <div className="rounded-[2rem] border border-stone-100 bg-stone-50/60 p-5 space-y-4">
+              <div className="space-y-1">
+                <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">Přihlašovací e-maily</div>
+                <p className="text-xs font-medium text-stone-500">
+                  Uživatel se může přihlásit přes primární e-mail i aliasy níže. Alias se při přihlášení přeloží na hlavní účet.
+                </p>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <input
+                  type="email"
+                  value={aliasInput}
+                  onChange={(e) => setAliasInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addAlias();
+                    }
+                  }}
+                  placeholder="alias@email.cz"
+                  className="flex-1 rounded-2xl border border-stone-200 bg-white px-4 py-3 font-bold text-stone-700 outline-none transition focus:ring-2 focus:ring-green-500"
+                />
+                <button
+                  type="button"
+                  onClick={addAlias}
+                  className="rounded-2xl border border-black bg-white px-5 py-3 text-[10px] font-black uppercase tracking-widest text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600"
+                >
+                  Přidat alias
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <span className="inline-flex items-center rounded-full border border-green-600 bg-green-50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-green-700">
+                  Primární: {String(watch('email') || editingAdmin?.email || '').trim() || 'nenastaveno'}
+                </span>
+                {loginAliases.map((alias) => (
+                  <span
+                    key={alias}
+                    className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-3 py-1 text-[10px] font-black uppercase tracking-widest text-stone-700"
+                  >
+                    {alias}
+                    <button
+                      type="button"
+                      onClick={() => removeAlias(alias)}
+                      className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-stone-200 text-stone-500 transition hover:border-red-300 hover:text-red-600"
+                      aria-label={`Odebrat alias ${alias}`}
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                ))}
+                {loginAliases.length === 0 ? (
+                  <span className="text-xs font-medium text-stone-400">Zatím bez aliasů.</span>
+                ) : null}
+              </div>
             </div>
 
             <div className="space-y-1.5">
@@ -861,6 +1001,43 @@ export default function UsersTab({ dict }: UsersTabProps) {
                 <h3 className="text-sm font-black uppercase tracking-widest">{dict.admin.permissions}</h3>
               </div>
 
+              <div className="rounded-[2rem] border border-stone-100 bg-white p-6 space-y-4">
+                <div className="flex flex-col gap-1">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">Identity a role</div>
+                  <p className="text-xs font-medium text-stone-500">
+                    Jeden účet může mít více identit současně. Základní přístup nastavíte zde, pojmenované RBAC role se přiřazují v záložce Role.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {roleAssignments.length > 0 ? (
+                    roleAssignments.map((assignment, index) => {
+                      const meta = getRoleAssignmentMeta(assignment);
+                      return (
+                        <div
+                          key={`${meta.roleName || 'role'}-${index}`}
+                          className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3"
+                        >
+                          <div className="text-[10px] font-black uppercase tracking-widest text-stone-700">
+                            {meta.roleName || 'Neznámá role'}
+                          </div>
+                          {(meta.assignedAtLabel || meta.assignedByEmail) ? (
+                            <div className="mt-1 text-[10px] font-medium text-stone-400">
+                              {meta.assignedAtLabel}
+                              {meta.assignedAtLabel && meta.assignedByEmail ? ' • ' : ''}
+                              {meta.assignedByEmail}
+                            </div>
+                          ) : null}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-xs font-medium text-stone-400">
+                      {editingAdmin ? 'Žádné další RBAC role zatím nejsou přiřazené.' : 'RBAC role půjde přiřadit po vytvoření účtu v záložce Role.'}
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="bg-white rounded-[2rem] border border-stone-100 p-6">
                 <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-4">Nástroje</div>
                 <label className="flex items-center justify-between gap-4">
@@ -928,7 +1105,7 @@ export default function UsersTab({ dict }: UsersTabProps) {
                     </div>
                   </label>
                   <label className="flex items-center gap-3 cursor-pointer group">
-                    <input type="checkbox" {...register('is_member')} className="w-5 h-5 rounded-lg border-stone-700 bg-stone-800 text-blue-500 focus:ring-blue-500" />
+                    <input type="checkbox" {...register('is_member')} className="w-5 h-5 rounded-lg border-stone-700 bg-stone-800 text-green-600 focus:ring-green-500" />
                     <div className="flex flex-col">
                       <span className="text-sm font-bold text-stone-200 group-hover:text-white transition">{dict.admin.roleMember || 'Člen spolku'}</span>
                       <span className="text-[10px] text-stone-500 font-medium">{dict.admin.roleMemberDesc}</span>
@@ -941,7 +1118,7 @@ export default function UsersTab({ dict }: UsersTabProps) {
                         <input
                           {...register('member_since')}
                           type="date"
-                          className="w-full bg-stone-800 border border-stone-700 rounded-2xl px-4 py-3 text-xs font-bold text-stone-100 outline-none focus:ring-2 focus:ring-blue-500 transition"
+                          className="w-full bg-stone-800 border border-stone-700 rounded-2xl px-4 py-3 text-xs font-bold text-stone-100 outline-none focus:ring-2 focus:ring-green-500 transition"
                         />
                       </div>
                       <div className="space-y-1">
@@ -949,13 +1126,13 @@ export default function UsersTab({ dict }: UsersTabProps) {
                         <input
                           {...register('member_expires_at')}
                           type="date"
-                          className="w-full bg-stone-800 border border-stone-700 rounded-2xl px-4 py-3 text-xs font-bold text-stone-100 outline-none focus:ring-2 focus:ring-blue-500 transition"
+                          className="w-full bg-stone-800 border border-stone-700 rounded-2xl px-4 py-3 text-xs font-bold text-stone-100 outline-none focus:ring-2 focus:ring-green-500 transition"
                         />
                       </div>
                     </div>
                   ) : null}
                   <label className="flex items-center gap-3 cursor-pointer group pt-2 border-t border-stone-800">
-                    <input type="checkbox" {...register('can_manage_admins')} className="w-5 h-5 rounded-lg border-stone-700 bg-stone-800 text-purple-500 focus:ring-purple-500" />
+                    <input type="checkbox" {...register('can_manage_admins')} className="w-5 h-5 rounded-lg border-stone-700 bg-stone-800 text-green-600 focus:ring-green-500" />
                     <span className="text-sm font-bold text-stone-200 group-hover:text-white transition">{dict.admin.superAdmin || 'SuperAdmin'}</span>
                   </label>
                 </div>
@@ -1035,7 +1212,14 @@ export default function UsersTab({ dict }: UsersTabProps) {
             <h2 className="text-xl font-black text-stone-900">Seznam uživatelů</h2>
             <button
               type="button"
-              onClick={() => { setEditingAdmin(null); reset(); setFormOpen(true); }}
+              onClick={() => {
+                setEditingAdmin(null);
+                setLoginAliases([]);
+                setAliasInput('');
+                setRoleAssignments([]);
+                reset();
+                setFormOpen(true);
+              }}
               className="inline-flex items-center gap-2 rounded-2xl border-2 border-black bg-white px-4 py-3 font-bold text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
             >
               <UserPlus size={16} /> {dict.admin.addUser || 'Přidat uživatele'}

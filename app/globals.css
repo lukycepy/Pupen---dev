@@ -23,6 +23,8 @@
   --text-subtle-rgb: 0, 0, 0;
   --border-rgb: 0, 0, 0;
   --border-soft-rgb: 0, 0, 0;
+  --hover-rgb: 240, 253, 244;
+  --hover-border-rgb: 22, 163, 74;
   --font-scale: 1;
 }
 
@@ -125,7 +127,113 @@ body {
 .dark .border-gray-200 { border-color: rgb(var(--border-rgb)) !important; }
 .dark .border-gray-300 { border-color: rgb(var(--border-soft-rgb)) !important; }
 
+/* Světlé neutrální plochy (gray/slate/zinc/neutral) – stejné mapování jako stone. */
+.dark .bg-gray-50, .dark .bg-slate-50, .dark .bg-zinc-50, .dark .bg-neutral-50 {
+  background-color: rgb(var(--surface-2-rgb)) !important;
+}
+.dark .bg-gray-100, .dark .bg-slate-100, .dark .bg-zinc-100, .dark .bg-neutral-100 {
+  background-color: rgb(var(--surface-3-rgb)) !important;
+}
+/* Výraznější neutrální plochy = jediná binární plocha (černá/bílá). */
+.dark .bg-stone-200, .dark .bg-stone-300,
+.dark .bg-gray-200, .dark .bg-gray-300,
+.dark .bg-slate-200, .dark .bg-slate-300,
+.dark .bg-zinc-200, .dark .bg-zinc-300,
+.dark .bg-neutral-200, .dark .bg-neutral-300 {
+  background-color: rgb(var(--surface-rgb)) !important;
+}
+
 .dark hr { border-color: rgb(var(--border-rgb)) !important; }
+
+/* ------------------------------------------------------------------
+   Light-mode sjednocení šedých utilit na binární černou/bílou.
+   Cíl: v light režimu se nemá zobrazovat šedá (stone/gray/slate/zinc/neutral).
+
+   Jak to funguje:
+   - Override cílí pouze ZÁKLADNÍ (nevariantní) utility uvnitř @layer utilities.
+   - Specificita je záměrně stejná jako u Tailwind utilit (0,1,0) => díky pořadí
+     v rámci vrstvy přebije základní deklaraci, ale NEPŘEBÍJÍ varianty
+     (hover:, focus:, group-hover:), takže inverzní hover stavy (např.
+     `bg-stone-50 hover:bg-stone-900 hover:text-white`) fungují dál.
+   - `:where(html:not(.dark))` => vše platí jen v light režimu, dark režim
+     zůstává beze změny (řeší ho blok výše).
+   ------------------------------------------------------------------ */
+@layer utilities {
+  :where(html:not(.dark)) :is(
+    .bg-stone-50, .bg-stone-100,
+    .bg-gray-50, .bg-gray-100,
+    .bg-slate-50, .bg-slate-100,
+    .bg-zinc-50, .bg-zinc-100,
+    .bg-neutral-50, .bg-neutral-100
+  ) {
+    background-color: rgb(var(--surface-rgb));
+  }
+
+  /* Výraznější neutrální plochy (skeletony, indikátory, checkboxy, chipy).
+     Stejné mapování jako -50/-100 => šedá zmizí i v light režimu. */
+  :where(html:not(.dark)) :is(
+    .bg-stone-200, .bg-stone-300,
+    .bg-gray-200, .bg-gray-300,
+    .bg-slate-200, .bg-slate-300,
+    .bg-zinc-200, .bg-zinc-300,
+    .bg-neutral-200, .bg-neutral-300
+  ) {
+    background-color: rgb(var(--surface-rgb));
+  }
+
+  /* Hover na neutrálních plochách => jednotný zelený hover (konvence projektu)
+     místo šedé. Specificita (0,2,0) je shodná s Tailwind variantou, ale díky
+     pořadí ve vrstvě vyhraje. Platí jen v light režimu, takže explicitní
+     `dark:hover:` stavy v dark režimu zůstávají nedotčené. */
+  :where(html:not(.dark)) :is(
+    .hover\:bg-stone-50:hover, .hover\:bg-stone-100:hover, .hover\:bg-stone-200:hover, .hover\:bg-stone-300:hover,
+    .hover\:bg-gray-50:hover, .hover\:bg-gray-100:hover, .hover\:bg-gray-200:hover, .hover\:bg-gray-300:hover,
+    .hover\:bg-slate-50:hover, .hover\:bg-slate-100:hover, .hover\:bg-slate-200:hover, .hover\:bg-slate-300:hover,
+    .hover\:bg-zinc-50:hover, .hover\:bg-zinc-100:hover, .hover\:bg-zinc-200:hover, .hover\:bg-zinc-300:hover,
+    .hover\:bg-neutral-50:hover, .hover\:bg-neutral-100:hover, .hover\:bg-neutral-200:hover, .hover\:bg-neutral-300:hover
+  ) {
+    background-color: rgb(var(--hover-rgb));
+  }
+
+  /* Oddělovače (divide-*) => binární barva ohraničení. */
+  :where(html:not(.dark)) :is(
+    .divide-stone-100, .divide-stone-200, .divide-stone-300,
+    .divide-gray-100, .divide-gray-200, .divide-gray-300,
+    .divide-slate-100, .divide-slate-200, .divide-slate-300,
+    .divide-zinc-100, .divide-zinc-200, .divide-zinc-300,
+    .divide-neutral-100, .divide-neutral-200, .divide-neutral-300
+  ) {
+    border-color: rgb(var(--border-rgb));
+  }
+
+  :where(html:not(.dark)) :is(
+    .text-stone-400, .text-stone-500, .text-stone-600, .text-stone-700, .text-stone-800, .text-stone-900,
+    .text-gray-400, .text-gray-500, .text-gray-600, .text-gray-700, .text-gray-800, .text-gray-900,
+    .text-slate-400, .text-slate-500, .text-slate-600, .text-slate-700, .text-slate-800, .text-slate-900,
+    .text-zinc-400, .text-zinc-500, .text-zinc-600, .text-zinc-700, .text-zinc-800, .text-zinc-900,
+    .text-neutral-400, .text-neutral-500, .text-neutral-600, .text-neutral-700, .text-neutral-800, .text-neutral-900
+  ) {
+    color: rgb(var(--text-rgb));
+  }
+
+  :where(html:not(.dark)) :is(
+    .border-stone-100, .border-stone-200, .border-stone-300,
+    .border-gray-100, .border-gray-200, .border-gray-300,
+    .border-slate-100, .border-slate-200, .border-slate-300,
+    .border-zinc-100, .border-zinc-200, .border-zinc-300,
+    .border-neutral-100, .border-neutral-200, .border-neutral-300
+  ) {
+    border-color: rgb(var(--border-rgb));
+  }
+
+  :where(html:not(.dark)) :is(
+    .ring-stone-100, .ring-stone-200,
+    .ring-gray-100, .ring-gray-200,
+    .ring-slate-100, .ring-zinc-100, .ring-neutral-100
+  ) {
+    --tw-ring-color: rgb(var(--border-rgb));
+  }
+}
 
 .dark input,
 .dark select,

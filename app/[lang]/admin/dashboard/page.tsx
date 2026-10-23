@@ -267,9 +267,9 @@ export default function AdminDashboard() {
 
       if (profile && isMounted) {
         // CHECK IF IS ADMIN
-        if (!profile.is_admin && !profile.can_manage_admins) {
+        if (!profile.has_admin_access && !profile.is_admin && !profile.can_manage_admins) {
           // If not admin but member, redirect to member portal
-          if (profile.is_member) {
+          if (profile.has_member_access || profile.is_member || profile.can_view_member_portal || profile.can_edit_member_portal) {
             router.replace(`/${lang}/clen`);
           } else {
             router.replace(`/${lang}/admin`);
@@ -277,7 +277,7 @@ export default function AdminDashboard() {
           return;
         }
 
-        if ((profile.is_admin || profile.can_manage_admins) && !profile.can_manage_admins) {
+        if ((profile.has_admin_access || profile.is_admin || profile.can_manage_admins) && !profile.can_manage_admins) {
           try {
             const authAny: any = supabase.auth as any;
             const aal = await authAny?.mfa?.getAuthenticatorAssuranceLevel?.();

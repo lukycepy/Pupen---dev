@@ -89,8 +89,7 @@ export default function GalleryTab(props: any) {
         try {
           const url = await uploadImage(file, 'gallery');
           uploadedUrls.push(url);
-        } catch (err) {
-          console.error('Chyba nahrávání:', err);
+        } catch {
         }
       }
 

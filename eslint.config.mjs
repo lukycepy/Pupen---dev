@@ -10,6 +10,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "Ostatní/deploy_29_9/**",
+    "Ostatní/playwright-report/**",
+    "Ostatní/test-results/**",
   ]),
   {
     rules: {

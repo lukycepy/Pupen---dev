@@ -47,10 +47,11 @@ export default function Banner({ lang, dict }: { lang: string, dict: any }) {
       </div>
       <button 
         onClick={() => setIsVisible(false)}
+        aria-label={lang === 'en' ? 'Close banner' : 'Zavřít oznámení'}
         className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 hover:bg-white/20 rounded-full transition-colors"
         title="Zavřít"
       >
-        <X size={14} />
+        <X size={14} aria-hidden="true" />
       </button>
     </div>
   );

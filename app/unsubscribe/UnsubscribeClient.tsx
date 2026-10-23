@@ -41,14 +41,14 @@ export default function UnsubscribeClient() {
   };
 
   return (
-    <div className="min-h-screen bg-stone-50 flex items-center justify-center p-6">
-      <div className="bg-white border border-stone-100 shadow-sm rounded-[3rem] p-10 w-full max-w-lg">
-        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-stone-400">Newsletter</div>
-        <h1 className="text-3xl font-black text-stone-900 tracking-tight mt-3">Odhlášení odběru</h1>
-        <p className="text-stone-500 font-medium mt-4">
+    <div className="min-h-screen bg-white dark:bg-black text-black dark:text-white flex items-center justify-center p-6">
+      <div className="bg-white dark:bg-black border-2 border-black dark:border-white rounded-[3rem] p-10 w-full max-w-lg">
+        <div className="text-[10px] font-black uppercase tracking-[0.2em]">Newsletter</div>
+        <h1 className="text-3xl font-black tracking-tight mt-3">Odhlášení odběru</h1>
+        <p className="font-medium mt-4">
           {email ? (
             <>
-              Chcete odhlásit e-mail <span className="font-bold text-stone-900">{email}</span>?
+              Chcete odhlásit e-mail <span className="font-bold">{email}</span>?
             </>
           ) : (
             'Chybí e-mail v odkazu.'
@@ -56,17 +56,17 @@ export default function UnsubscribeClient() {
         </p>
 
         {state === 'done' ? (
-          <div className="mt-8 bg-green-50 text-green-700 rounded-[2rem] p-6 font-bold">Hotovo. Odběr byl odhlášen.</div>
+          <div className="mt-8 bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 rounded-[2rem] p-6 font-bold">Hotovo. Odběr byl odhlášen.</div>
         ) : state === 'error' ? (
-          <div className="mt-8 bg-red-50 text-red-700 rounded-[2rem] p-6 font-bold">{error || 'Chyba'}</div>
+          <div className="mt-8 bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400 rounded-[2rem] p-6 font-bold">{error || 'Chyba'}</div>
         ) : (
           <>
-            <div className="mt-8 bg-stone-50 border border-stone-100 rounded-[2rem] p-6">
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-stone-400 mb-2">Důvod odhlášení</div>
+            <div className="mt-8 border-2 border-black dark:border-white rounded-[2rem] p-6">
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] mb-2">Důvod odhlášení</div>
               <select
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                className="w-full bg-white border border-stone-200 rounded-2xl px-5 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 outline-none transition"
+                className="w-full bg-white dark:bg-black border-2 border-black dark:border-white rounded-2xl px-5 py-4 font-bold focus:ring-2 focus:ring-green-500 outline-none transition"
               >
                 <option value="too_many">Chodí toho moc</option>
                 <option value="not_relevant">Obsah není pro mě</option>
@@ -80,7 +80,7 @@ export default function UnsubscribeClient() {
                   value={detail}
                   onChange={(e) => setDetail(e.target.value)}
                   placeholder="Napište prosím krátce důvod…"
-                  className="mt-3 w-full bg-white border border-stone-200 rounded-2xl px-5 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 outline-none transition min-h-[110px]"
+                  className="mt-3 w-full bg-white dark:bg-black border-2 border-black dark:border-white rounded-2xl px-5 py-4 font-bold focus:ring-2 focus:ring-green-500 outline-none transition min-h-[110px]"
                 />
               ) : null}
             </div>
@@ -89,14 +89,14 @@ export default function UnsubscribeClient() {
               type="button"
               disabled={!email || state === 'loading' || (reason === 'other' && !detail.trim())}
               onClick={run}
-              className="mt-4 w-full bg-stone-900 text-white px-6 py-4 rounded-2xl font-bold hover:bg-stone-800 transition disabled:opacity-50"
+              className="mt-4 w-full bg-black text-white dark:bg-white dark:text-black border-2 border-black dark:border-white px-6 py-4 rounded-2xl font-bold hover:bg-green-600 hover:border-green-600 dark:hover:bg-green-500 dark:hover:border-green-500 dark:hover:text-black transition disabled:opacity-50"
             >
               {state === 'loading' ? 'Odhlašuji…' : 'Odhlásit'}
             </button>
           </>
         )}
 
-        <Link href="/" className="mt-8 inline-block text-stone-400 font-bold hover:text-stone-900 transition text-sm">
+        <Link href="/" className="mt-8 inline-block font-bold hover:text-green-600 dark:hover:text-green-400 transition text-sm">
           Zpět na web
         </Link>
       </div>

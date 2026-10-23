@@ -257,7 +257,7 @@ const SidebarContent = ({
 
       {/* FOOTER */}
       <div className="p-4 border-t border-stone-100 space-y-2">
-        {userProfile?.is_admin && (
+        {(userProfile?.has_admin_access || userProfile?.is_admin || userProfile?.can_manage_admins) && (
           <Link 
             href={`/${lang}/admin/dashboard`}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-stone-600 hover:bg-stone-50 transition"
@@ -267,6 +267,7 @@ const SidebarContent = ({
           </Link>
         )}
         <button 
+          data-testid="logout-button"
           onClick={onLogout}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-red-500 hover:bg-red-50/10 transition"
         >

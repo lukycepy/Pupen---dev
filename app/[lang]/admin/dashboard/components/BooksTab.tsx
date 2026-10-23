@@ -39,7 +39,6 @@ export default function BooksTab({ dict }: { dict: any }) {
       showToast(dict.books.saveSuccess, 'success');
     },
     onError: (err: any) => {
-      console.error(err);
       showToast(err.message || 'Chyba při ukládání', 'error');
     }
   });

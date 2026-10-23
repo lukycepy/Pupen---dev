@@ -12,7 +12,7 @@ export default function InlinePulse({
   return (
     <span
       aria-hidden="true"
-      className={`inline-block rounded-full animate-pulse ${className}`}
+      className={`inline-block rounded-full animate-pulse border-2 border-black bg-transparent dark:border-white ${className}`}
       style={{ width: size, height: size }}
     />
   );

@@ -69,8 +69,8 @@ export default function MonthlyCalendar({ events, lang, value, onChange }: Calen
           </div>
         </div>
         <div className="flex gap-2">
-          <button onClick={prevMonth} className="p-3 hover:bg-white/10 dark:hover:bg-black/10 rounded-xl transition border-2 border-white/20 dark:border-black/20"><ChevronLeft size={20} /></button>
-          <button onClick={nextMonth} className="p-3 hover:bg-white/10 dark:hover:bg-black/10 rounded-xl transition border-2 border-white/20 dark:border-black/20"><ChevronRight size={20} /></button>
+          <button onClick={prevMonth} aria-label={lang === 'en' ? 'Previous month' : 'Předchozí měsíc'} className="p-3 hover:bg-white/10 dark:hover:bg-black/10 rounded-xl transition border-2 border-white/20 dark:border-black/20"><ChevronLeft size={20} aria-hidden="true" /></button>
+          <button onClick={nextMonth} aria-label={lang === 'en' ? 'Next month' : 'Následující měsíc'} className="p-3 hover:bg-white/10 dark:hover:bg-black/10 rounded-xl transition border-2 border-white/20 dark:border-black/20"><ChevronRight size={20} aria-hidden="true" /></button>
         </div>
       </header>
 
