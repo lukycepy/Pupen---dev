@@ -1,6 +1,7 @@
 import { getClientIp } from '@/lib/rate-limit';
 import { PROFILE_PERMISSION_KEYS_SET } from '@/lib/rbac/registry';
 import { isRequestBanned } from '@/lib/security/bans';
+import { withSchemaCacheRetry } from '@/lib/schema-cache-retry';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { getRlsSupabase } from '@/lib/supabase-rls';
 
@@ -80,10 +81,32 @@ function mergeRolePermissions(profile: EffectiveProfile, permissions: Record<str
 }
 
 async function getOwnProfile(supabase: ReturnType<typeof getRlsSupabase>) {
-  const { data, error } = await supabase.rpc('get_my_profile');
-  if (error) throw error;
-  if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
-  return data as GetMyProfileRpcRow as EffectiveProfile;
+  const userRes = await supabase.auth.getUser();
+  const userId = String(userRes.data?.user?.id || '').trim();
+  if (!userId) throw new Error('Unauthorized');
+
+  try {
+    const res = await withSchemaCacheRetry(supabase, () => supabase.rpc('get_my_profile'));
+    if (res.error) throw res.error;
+    const data = (res as { data?: unknown }).data;
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
+    return data as GetMyProfileRpcRow as EffectiveProfile;
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const canFallback =
+      /get_my_profile/i.test(message) &&
+      /(schema cache|could not find the function|does not exist|relation|table)/i.test(message);
+    if (!canFallback) throw error;
+
+    const serviceSupabase = getServerSupabase();
+    try {
+      await serviceSupabase.rpc('admin_reload_schema_cache');
+    } catch {}
+
+    const profileRes = await serviceSupabase.from('profiles').select('*').eq('id', userId).maybeSingle();
+    if (profileRes.error) throw profileRes.error;
+    return (profileRes.data || null) as EffectiveProfile | null;
+  }
 }
 
 export function getBearerToken(req: Request) {

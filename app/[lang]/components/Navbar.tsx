@@ -167,12 +167,12 @@ export default function Navbar({ lang, dict }: NavbarProps) {
           
           {/* LOGO */}
           <Link href={`/${lang}`} className="flex items-center gap-2 sm:gap-3 group shrink-0 mr-4">
-            <div className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-full transition duration-300 group-hover:scale-105 dark:border-2 dark:border-white dark:bg-white sm:h-9 sm:w-9">
+            <div className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-full transition duration-300 group-hover:scale-105 sm:h-9 sm:w-9">
               <Image 
                 src="/logo.png" 
                 alt="Logo Spolek Pupen" 
                 fill
-                className="object-contain dark:p-1"
+                className="object-contain dark:[filter:drop-shadow(0_0_1px_#fff)_drop-shadow(0_0_2px_#fff)]"
               />
             </div>
             <span className="hidden sm:inline max-w-[180px] truncate font-bold text-base tracking-tight text-black transition group-hover:text-green-600 sm:max-w-none sm:text-lg dark:text-white">
