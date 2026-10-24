@@ -12,6 +12,14 @@ Tento dokument je inventura tajných klíčů a citlivých konfigurací použit�
   - Uložení: pouze na serveru (`.env` na VPS / server runtime), nikdy do klienta ani do logů.
 - `DATABASE_URL_PROD` (přímé připojení na Postgres)
   - Uložení: `.env` na VPS; přístup spravuje Supabase.
+- `DATABASE_URL` (repozitářový secret pro CI – `db-checks.yml`)
+  - Uložení: GitHub → Settings → Secrets and variables → Actions.
+  - **Musí mířit na Supabase pooler** (`aws-1-eu-west-1.pooler.supabase.com:5432`,
+    uživatel `postgres.<project-ref>`) s `?uselibpqcompat=true&sslmode=require`.
+    Důvod: GitHub runners nemají IPv6 a `db.<project-ref>.supabase.co` publikuje
+    pouze AAAA záznam, takže přímé připojení v CI selže už na DNS.
+  - Workflow `db-checks.yml` obsahuje preflight, který na tento problém upozorní
+    srozumitelnou chybou.
 
 ## 2) Aplikace (ochrana endpointů, plánované úlohy)
 

@@ -15,6 +15,31 @@ jobs:
         node-version: lts/*
     - name: Install dependencies
       run: npm ci
+    - name: Preflight - DB connectivity assumptions
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        PGSSLMODE: require
+      run: |
+        # GitHub runners nemají IPv6 a projekt publikuje pro `db.<ref>.supabase.co`
+        # pouze AAAA záznam, takže přímé připojení v CI selže na DNS.
+        # CI secret DATABASE_URL proto musí mířit na Supabase pooler
+        # (`aws-1-eu-west-1.pooler.supabase.com:5432`, uživatel `postgres.<ref>`).
+        host=$(node -e "try{console.log(new URL(process.env.DATABASE_URL).hostname)}catch(e){console.log('')}")
+        if [ -z "$host" ]; then
+          echo "::error::DATABASE_URL secret is missing or not a valid connection string."
+          exit 1
+        fi
+        echo "DB host: $host"
+        if getent ahostsv4 "$host" >/dev/null 2>&1; then
+          echo "IPv4 resolution OK."
+        else
+          echo "::error::Host '$host' has no IPv4 record. Point DATABASE_URL at the Supabase pooler (*.pooler.supabase.com)."
+          exit 1
+        fi
+        case "$DATABASE_URL" in
+          *uselibpqcompat=true*) echo "uselibpqcompat=true present." ;;
+          *) echo "::warning::Pooler requires '?uselibpqcompat=true&sslmode=require' in DATABASE_URL." ;;
+        esac
     - name: DB Drift Check
       run: npm run db:drift-check
       env:

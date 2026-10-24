@@ -9,6 +9,7 @@ import CountdownWidget from '@/app/[lang]/components/CountdownWidget';
 import { decodeHtmlEntitiesDeep } from '@/lib/richtext-shared';
 
 type SiteConfig = {
+  public_mode?: 'default' | 'maintenance' | 'onepage';
   maintenance_enabled: boolean;
   maintenance_start_at?: string | null;
   maintenance_end_at?: string | null;
@@ -61,7 +62,10 @@ export default function MaintenancePage() {
   const startMs = startAt && !Number.isNaN(startAt.getTime()) ? startAt.getTime() : null;
   const endMs = endAt && !Number.isNaN(endAt.getTime()) ? endAt.getTime() : null;
   const isActive =
-    !!cfg?.maintenance_enabled && (!startMs || now >= startMs) && (!endMs || now < endMs);
+    cfg?.public_mode === 'maintenance' &&
+    !!cfg?.maintenance_active &&
+    (!startMs || now >= startMs) &&
+    (!endMs || now < endMs);
   const showCountdown = (!!endMs && now < endMs) || (!!startMs && now < startMs);
 
   useEffect(() => {

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { buildDefaultPagesConfig } from '@/lib/site/pages-registry';
 import { writeServerLog } from '@/lib/logs/server-logger';
+import { DEFAULT_ONEPAGE_CONFIG, mergeOnepageConfig, normalizePublicMode } from '@/lib/site/public-mode';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,6 +35,8 @@ const defaultHome: Record<string, any> = {
   },
   cta: {},
   testimonials: {},
+  public_mode: 'default',
+  onepage: DEFAULT_ONEPAGE_CONFIG,
 };
 
 const defaultMemberPortal: Record<string, any> = {
@@ -104,12 +107,16 @@ export async function GET() {
     }
 
     const homeRow = row.home && typeof row.home === 'object' ? row.home : {};
+    const publicMode = normalizePublicMode(homeRow.public_mode, !!row.maintenance_enabled);
+    const mergedOnepage = mergeOnepageConfig(homeRow.onepage);
     const mergedHome = {
       ...defaultHome,
       ...homeRow,
       widgets: { ...defaultHome.widgets, ...(homeRow.widgets && typeof homeRow.widgets === 'object' ? homeRow.widgets : {}) },
       hero: { ...defaultHome.hero, ...(homeRow.hero && typeof homeRow.hero === 'object' ? homeRow.hero : {}) },
       instagram: { ...defaultHome.instagram, ...(homeRow.instagram && typeof homeRow.instagram === 'object' ? homeRow.instagram : {}) },
+      public_mode: publicMode,
+      onepage: mergedOnepage,
     };
 
     const memberPortalRow = row.member_portal && typeof row.member_portal === 'object' ? row.member_portal : {};
@@ -132,11 +139,15 @@ export async function GET() {
         maintenance_enabled: !!row.maintenance_enabled && !ended,
         maintenance_start_at: startAt,
         maintenance_end_at: endAt,
-        maintenance_active: !!row.maintenance_enabled && !ended && windowAllows,
+        public_mode: publicMode,
+        mode_active: publicMode !== 'default' && !ended && windowAllows,
+        maintenance_active: publicMode === 'maintenance' && !ended && windowAllows,
+        onepage_active: publicMode === 'onepage' && !ended && windowAllows,
         maintenance_title_cs: row.maintenance_title_cs || null,
         maintenance_body_cs: row.maintenance_body_cs || null,
         maintenance_title_en: row.maintenance_title_en || null,
         maintenance_body_en: row.maintenance_body_en || null,
+        onepage: mergedOnepage,
         pages: { ...defaultPages, ...(row.pages || {}) },
         home: mergedHome,
         member_portal: mergedMemberPortal,
@@ -153,10 +164,14 @@ export async function GET() {
         maintenance_start_at: null,
         maintenance_end_at: null,
         maintenance_active: false,
+        onepage_active: false,
+        public_mode: 'default',
+        mode_active: false,
         maintenance_title_cs: null,
         maintenance_body_cs: null,
         maintenance_title_en: null,
         maintenance_body_en: null,
+        onepage: DEFAULT_ONEPAGE_CONFIG,
         pages: defaultPages,
         home: defaultHome,
         member_portal: defaultMemberPortal,

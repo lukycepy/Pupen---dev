@@ -379,8 +379,7 @@
     "mapaAreálu": "Mapa areálu",
     "burzaUčebnic": "Burza učebnic",
     "fotogalerie": "Fotogalerie",
-    "moreInfo": "Více info",
-    "eventsTitle": "Co se chystá?"
+    "moreInfo": "Více info"
   },
   "notFound": {
     "title": "Stránka nenalezena",
@@ -1718,9 +1717,7 @@
     "disclaimerText": "Web poskytujeme „tak jak je“. Spolek nenese odpovědnost za nedostupnost webu, škody vzniklé jeho používáním ani za obsah externích odkazů (partneři, ISIC slevy apod.).",
     "oauthTitle": "Přihlášení a zabezpečení účtu",
     "oauthText": "Web může umožnit přihlášení přes externího poskytovatele (např. Google) nebo použití passkey (WebAuthn) jako bezpečnostního ověření. Tyto možnosti jsou volitelné; zpracováváme pouze nezbytné údaje pro vytvoření a správu účtu a zabezpečení přístupu.",
-    "lastUpdated": "Naposledy aktualizováno: Březen 2026",
-    "liabilityTitle": "4. Odpovědnost a závěrečná ustanovení",
-    "liabilityText": "Spolek nenese odpovědnost za výpadky webu způsobené technickými problémy či vyšší mocí. Spolek nenese odpovědnost za obsah vložený uživateli (např. komentáře, recenze, inzeráty), ale vyhrazuje si právo takový obsah moderovat či smazat. Vztahy neupravené těmito VOP se řídí právním řádem České republiky."
+    "lastUpdated": "Naposledy aktualizováno: Březen 2026"
   },
   "member": {
     "tabDashboard": "Nástěnka",

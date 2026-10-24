@@ -13,13 +13,24 @@ function fmtDateCzNow() {
   return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function insertBeforeSectionEnd(lines, sectionHeader, row) {
-  const start = lines.findIndex((l) => l.trim() === sectionHeader.trim());
-  if (start === -1) return [...lines, row];
-  const after = lines.slice(start + 1);
-  const nextHeaderRel = after.findIndex((l) => l.startsWith('## '));
-  const insertAt = nextHeaderRel === -1 ? lines.length : start + 1 + nextHeaderRel;
-  return [...lines.slice(0, insertAt), row, ...lines.slice(insertAt)];
+// Dokumentace podpůrných nástrojů žije v `Ostatní/docs/ops/`.
+// Zkusíme ji najít tam i v kořeni, aby skript fungoval bez ohledu na to,
+// odkud ho spustíme.
+function resolveMdPath(repoRoot, fileName) {
+  const candidates = [
+    path.join(repoRoot, 'Ostatní', 'docs', 'ops', fileName),
+    path.join(repoRoot, 'docs', 'ops', fileName),
+  ];
+  return candidates.find((p) => fs.existsSync(p)) || candidates[0];
+}
+
+// Záznam patří do tabulky v sekci 2. Vkládáme ho před připravený prázdný
+// řádek, stejně jako to dělá `record-backup-to-md.mjs`. Původní logika
+// hledala konec sekce „Poznámky“ a řádek tak skončil až na konci souboru.
+function insertBeforeRow(lines, matcher, row) {
+  const idx = lines.findIndex(matcher);
+  if (idx === -1) return [...lines, row];
+  return [...lines.slice(0, idx), row, ...lines.slice(idx)];
 }
 
 function main() {
@@ -29,7 +40,7 @@ function main() {
   const notes = getArg('--notes') || '';
 
   const repoRoot = process.cwd();
-  const mdPath = path.join(repoRoot, 'docs', 'ops', 'zaznam-testu-obnovy.md');
+  const mdPath = resolveMdPath(repoRoot, 'zaznam-testu-obnovy.md');
   if (!fs.existsSync(mdPath)) {
     console.error(`Missing file: ${mdPath}`);
     process.exit(1);
@@ -39,7 +50,7 @@ function main() {
   const lines = md.split(/\r?\n/);
 
   const row = `| ${fmtDateCzNow()} | ${target} | ${dump} | restore:db | ${outcome} | ${notes} |`;
-  const out = insertBeforeSectionEnd(lines, '## 3) Poznámky', row);
+  const out = insertBeforeRow(lines, (l) => l.trim() === '|  | staging / lokál |  |  |  |  |', row);
   fs.writeFileSync(mdPath, out.join('\n'), 'utf8');
   console.log(JSON.stringify({ ok: true, updated: mdPath }));
 }

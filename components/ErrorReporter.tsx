@@ -43,8 +43,10 @@ export function ErrorReporter() {
           user_agent: navigator.userAgent
         })
       }).catch(err => {
-        // Silently fail if we can't report the error
-        console.error('Failed to report error:', err);
+        // V produkci tiše ignorujeme – chybu už zpracoval Sentry (instrumentation-client).
+        if (process.env.NODE_ENV !== 'production') {
+          console.error('Failed to report error:', err);
+        }
       });
     };
 
@@ -62,7 +64,9 @@ export function ErrorReporter() {
           user_agent: navigator.userAgent
         })
       }).catch(err => {
-        console.error('Failed to report rejection:', err);
+        if (process.env.NODE_ENV !== 'production') {
+          console.error('Failed to report rejection:', err);
+        }
       });
     };
 

@@ -1488,23 +1488,7 @@
       }
     },
     "tabNewsletter": "Newsletter",
-    "tabSettings": "Settings",
-    "tabSitePages": "Site Pages",
-    "bulkApprove": "Bulk Approve",
-    "bulkReject": "Bulk Reject",
-    "confirmBulkApprove": "Are you sure you want to approve selected applications?",
-    "confirmBulkReject": "Are you sure you want to reject selected applications?",
-    "newsletter": {
-      "newCampaign": "New Campaign",
-      "subscribers": "Subscribers",
-      "history": "Drafts & Templates",
-      "sendToAll": "Send to all",
-      "saveDraft": "Save Draft",
-      "exportCsv": "Export CSV",
-      "noSubscribers": "No subscribers found.",
-      "searchEmail": "Search email...",
-      "categories": "Categories"
-    }
+    "tabSitePages": "Site Pages"
   },
   "privacyPage": {
     "backToHome": "Back to home page",

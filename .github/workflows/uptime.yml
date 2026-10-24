@@ -2,8 +2,18 @@ name: Uptime monitor
 
 # Pravidelně kontroluje produkční /api/health a při výpadku selže,
 # což spustí notifikaci správcům repozitáře (GitHub notifications).
-# Vyžaduje repozitářový secret PROD_HEALTHCHECK_URL.
-# Bez něj se workflow korektně přeskočí (no-op).
+#
+# Kontrakt endpointu /api/health:
+#   - HTTP 200 + {"status":"ok"}           → zdravý stav
+#   - HTTP 200 + {"status":"degraded"}     → běží, ale bez DB/Supabase konfigurace
+#   - HTTP 503 + {"status":"error"}        → nedostupná databáze (Sev 2)
+#
+# Secrets:
+#   PROD_HEALTHCHECK_URL  (povinný pro zapnutí) – např. https://pupen.org/api/health
+#   ALERT_WEBHOOK_URL     (volitelný) – Slack/Discord kompatibilní webhook;
+#                         při výpadku se na něj pošle JSON {"text": "..."}.
+#
+# Bez PROD_HEALTHCHECK_URL se workflow korektně přeskočí (no-op).
 
 on:
   schedule:
@@ -19,28 +29,69 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Check production /api/health
+        id: check
         env:
           HEALTHCHECK_URL: ${{ secrets.PROD_HEALTHCHECK_URL }}
         run: |
           if [ -z "$HEALTHCHECK_URL" ]; then
             echo "PROD_HEALTHCHECK_URL is not configured - skipping health check."
+            echo "status=skipped" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          code=$(curl -sS -o /tmp/health.json -w '%{http_code}' --max-time 20 "$HEALTHCHECK_URL")
-          echo "HTTP status: $code"
-          echo "Payload:"
-          cat /tmp/health.json || true
-          echo
+          # 3 pokusy s odstupem, aby jedna přechodná chyba nevyvolala falešný alert.
+          attempt=1
+          max_attempts=3
+          sleep_seconds=10
+          code=""
+          body=""
 
-          if [ "$code" != "200" ]; then
-            echo "::error::Health endpoint returned HTTP $code"
-            exit 1
+          while [ "$attempt" -le "$max_attempts" ]; do
+            code=$(curl -sS -o /tmp/health.json -w '%{http_code}' --max-time 20 "$HEALTHCHECK_URL" || echo "000")
+            body=$(cat /tmp/health.json 2>/dev/null || true)
+            echo "Attempt $attempt/$max_attempts - HTTP status: $code"
+            echo "Payload: $body"
+
+            if [ "$code" = "200" ] && printf '%s' "$body" | grep -q '"status":"ok"'; then
+              echo "Health check passed."
+              echo "status=ok" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            attempt=$((attempt + 1))
+            if [ "$attempt" -le "$max_attempts" ]; then
+              sleep "$sleep_seconds"
+            fi
+          done
+
+          echo "status=fail" >> "$GITHUB_OUTPUT"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          if [ "$code" = "200" ]; then
+            echo "::error::Health payload does not report status ok after $max_attempts attempts: $body"
+          else
+            echo "::error::Health endpoint returned HTTP $code after $max_attempts attempts: $body"
+          fi
+          exit 1
+
+      - name: Send alert webhook
+        if: ${{ failure() }}
+        env:
+          ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+          HEALTHCHECK_URL: ${{ secrets.PROD_HEALTHCHECK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$ALERT_WEBHOOK_URL" ]; then
+            echo "ALERT_WEBHOOK_URL is not configured - skipping webhook alert."
+            exit 0
           fi
 
-          if ! grep -q '"status":"ok"' /tmp/health.json; then
-            echo "::error::Health payload does not report status ok"
-            exit 1
-          fi
+          payload=$(printf '{"text":":rotating_light: Pupen.org /api/health check FAILED\\nURL: %s\\nRun: %s"}' "$HEALTHCHECK_URL" "$RUN_URL")
 
-          echo "Health check passed."
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 \
+            -H 'Content-Type: application/json' \
+            -X POST --data "$payload" "$ALERT_WEBHOOK_URL" || echo "000")
+
+          echo "Alert webhook responded with HTTP $code"
+          if [ "$code" != "200" ] && [ "$code" != "204" ]; then
+            echo "::warning::Alert webhook delivery may have failed (HTTP $code)"
+          fi

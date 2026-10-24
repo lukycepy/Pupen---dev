@@ -12,6 +12,7 @@ import SitePageBlocksEditor from '@/app/[lang]/admin/dashboard/components/SitePa
 import { pageBlocksToHtml, parsePageBlocks, type PageBlocks } from '@/lib/site/page-blocks';
 import Popover from '@/app/components/ui/Popover';
 import type { Dictionary } from '@/lib/dictionary-types';
+import { DEFAULT_ONEPAGE_CONFIG, type OnepageConfig, type PublicSiteMode } from '@/lib/site/public-mode';
 
 type PageCfg = { enabled?: boolean; navbar?: boolean; tools?: boolean };
 type SiteCfg = {
@@ -22,7 +23,11 @@ type SiteCfg = {
   maintenance_body_cs: string | null;
   maintenance_title_en: string | null;
   maintenance_body_en: string | null;
-  home?: any;
+  home?: {
+    public_mode?: PublicSiteMode;
+    onepage?: OnepageConfig;
+    [key: string]: any;
+  } | null;
   member_portal?: any;
   pages: Record<string, PageCfg>;
 };
@@ -75,6 +80,7 @@ function newId() {
 export default function SiteConfigTab({ dict, permissions }: Props) {
   const { showToast } = useToast();
   const t = dict.admin.siteConfig;
+  const isEn = typeof window !== 'undefined' ? window.location.pathname.startsWith('/en') : false;
   const mpDict = dict.memberPortalConfig;
   const notSignedInError = t.errors.notSignedIn;
   const requestFailedError = t.errors.requestFailed;
@@ -106,6 +112,8 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
       },
       hero: { backgrounds: [] as string[] },
       instagram: { url: 'https://instagram.com/pupenfappz/', handle: '@pupenfappz' },
+      public_mode: 'default' as PublicSiteMode,
+      onepage: DEFAULT_ONEPAGE_CONFIG,
     },
     member_portal: {
       show_onboarding: true,
@@ -227,7 +235,18 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
           maintenance_body_cs: row.maintenance_body_cs || null,
           maintenance_title_en: row.maintenance_title_en || null,
           maintenance_body_en: row.maintenance_body_en || null,
-          home: row.home && typeof row.home === 'object' ? row.home : null,
+          home:
+            row.home && typeof row.home === 'object'
+              ? {
+                  ...row.home,
+                  public_mode:
+                    row.home?.public_mode === 'maintenance' || row.home?.public_mode === 'onepage' ? row.home.public_mode : 'default',
+                  onepage: { ...DEFAULT_ONEPAGE_CONFIG, ...(row.home?.onepage && typeof row.home.onepage === 'object' ? row.home.onepage : {}) },
+                }
+              : {
+                  public_mode: 'default',
+                  onepage: DEFAULT_ONEPAGE_CONFIG,
+                },
           member_portal: row.member_portal && typeof row.member_portal === 'object' ? row.member_portal : null,
           pages: (row.pages && typeof row.pages === 'object' ? row.pages : {}) as any,
         };
@@ -253,6 +272,20 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
     }));
   };
 
+  const updateOnepage = (patch: Partial<OnepageConfig>) => {
+    setConfig((prev) => ({
+      ...prev,
+      home: {
+        ...(prev.home || {}),
+        onepage: {
+          ...DEFAULT_ONEPAGE_CONFIG,
+          ...((prev.home?.onepage || {}) as OnepageConfig),
+          ...patch,
+        },
+      },
+    }));
+  };
+
   const save = async () => {
     setSaving(true);
     try {
@@ -269,6 +302,9 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
               maintenance_body_cs: config.maintenance_body_cs || null,
               maintenance_title_en: config.maintenance_title_en || null,
               maintenance_body_en: config.maintenance_body_en || null,
+              public_mode:
+                config.home?.public_mode === 'maintenance' || config.home?.public_mode === 'onepage' ? config.home.public_mode : 'default',
+              onepage: { ...DEFAULT_ONEPAGE_CONFIG, ...((config.home?.onepage || {}) as OnepageConfig) },
             }
           : section === 'home'
             ? { home: config.home || {} }
@@ -295,6 +331,10 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
     for (const p of DEFAULT_PAGES) g[p.group].push(p as any);
     return g;
   }, []);
+
+  const publicMode: PublicSiteMode =
+    config.home?.public_mode === 'maintenance' || config.home?.public_mode === 'onepage' ? config.home.public_mode : 'default';
+  const onepage = { ...DEFAULT_ONEPAGE_CONFIG, ...((config.home?.onepage || {}) as Partial<OnepageConfig>) };
 
   const pageMeta = useMemo(() => {
     const m = new Map<string, { group: string; label: string }>();
@@ -672,19 +712,43 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
               <ShieldAlert className="text-orange-500" size={18} />
               {t.maintenance.title}
             </div>
-            <div className="text-sm text-stone-600 font-medium mt-1 dark:text-stone-300">{t.maintenance.subtitle}</div>
+            <div className="text-sm text-stone-600 font-medium mt-1 dark:text-stone-300">
+              {isEn
+                ? 'Choose whether the public website stays normal, redirects to maintenance, or shows a focused onepage with key association info. Admin and member sections remain available.'
+                : 'Zvolte, zda verejny web pobezi normalne, presmeruje se na odstávku, nebo zobrazi onepage s nejdulezitejsimi informacemi o spolku. Admin a clen zustavaji dostupni.'}
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setConfig((p) => ({ ...p, maintenance_enabled: !p.maintenance_enabled }))}
-            className={`px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition ${
-              config.maintenance_enabled
-                ? 'bg-orange-600 text-white border-orange-600'
-                : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-50 dark:bg-stone-950 dark:text-stone-200 dark:border-stone-800 dark:hover:bg-stone-900/60'
-            }`}
-          >
-            {config.maintenance_enabled ? t.common.enabled : t.common.disabled}
-          </button>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-3">
+          {([
+            ['default', isEn ? 'Normal web' : 'Normalni web'],
+            ['maintenance', isEn ? 'Maintenance' : 'Odstavka'],
+            ['onepage', isEn ? 'Onepage info' : 'Onepage info'],
+          ] as const).map(([mode, label]) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() =>
+                setConfig((p) => ({
+                  ...p,
+                  maintenance_enabled: mode !== 'default',
+                  home: {
+                    ...(p.home || {}),
+                    public_mode: mode,
+                    onepage: { ...DEFAULT_ONEPAGE_CONFIG, ...((p.home?.onepage || {}) as OnepageConfig) },
+                  },
+                }))
+              }
+              className={`rounded-2xl border px-4 py-4 text-[10px] font-black uppercase tracking-widest transition ${
+                publicMode === mode
+                  ? 'border-green-600 bg-green-600 text-white'
+                  : 'border-stone-200 bg-white text-stone-700 hover:bg-stone-50 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-200 dark:hover:bg-stone-900/60'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
         <div className="grid md:grid-cols-3 gap-4">
@@ -723,6 +787,25 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
           </div>
         </div>
 
+        <div className="rounded-2xl border border-stone-200 bg-stone-50 p-5 dark:border-stone-800 dark:bg-stone-900/60">
+          <div className="text-[10px] font-black uppercase tracking-widest text-stone-500 dark:text-stone-400">
+            {isEn ? 'Current public mode' : 'Aktualni verejny rezim'}
+          </div>
+          <div className="mt-2 text-sm font-bold text-black dark:text-white">
+            {publicMode === 'maintenance'
+              ? isEn
+                ? 'Maintenance page'
+                : 'Odstavka'
+              : publicMode === 'onepage'
+                ? isEn
+                  ? 'Onepage info'
+                  : 'Onepage info'
+                : isEn
+                  ? 'Normal website'
+                  : 'Normalni web'}
+          </div>
+        </div>
+
         <div className="grid md:grid-cols-2 gap-6">
           <div>
             <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 dark:text-stone-500">{t.maintenance.titleCs}</div>
@@ -752,6 +835,197 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
             <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 dark:text-stone-500">{t.maintenance.bodyEn}</div>
             <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden dark:bg-stone-950 dark:border-stone-800">
               <Editor value={config.maintenance_body_en || ''} onChange={(v: string) => setConfig((p) => ({ ...p, maintenance_body_en: v }))} />
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-stone-200 pt-6 space-y-6 dark:border-stone-800">
+          <div>
+            <div className="text-sm font-black text-stone-900 dark:text-stone-100">
+              {isEn ? 'Onepage content' : 'Obsah onepage'}
+            </div>
+            <div className="text-sm text-stone-600 font-medium mt-1 dark:text-stone-300">
+              {isEn
+                ? 'This page contains the key association info, membership details, contacts, status info and CTA links.'
+                : 'Tato stranka obsahuje zakladni info o spolku, clenstvi, kontakty, status info a hlavni CTA odkazy.'}
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 dark:text-stone-500">Badge (CZ)</div>
+              <input
+                value={onepage.badge_cs}
+                onChange={(e) => updateOnepage({ badge_cs: e.target.value })}
+                className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition dark:bg-stone-900/60 dark:text-stone-100"
+              />
+            </div>
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 dark:text-stone-500">Badge (EN)</div>
+              <input
+                value={onepage.badge_en}
+                onChange={(e) => updateOnepage({ badge_en: e.target.value })}
+                className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition dark:bg-stone-900/60 dark:text-stone-100"
+              />
+            </div>
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 dark:text-stone-500">{isEn ? 'Headline (CZ)' : 'Hlavni nadpis (CZ)'}</div>
+              <input
+                value={onepage.title_cs}
+                onChange={(e) => updateOnepage({ title_cs: e.target.value })}
+                className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition dark:bg-stone-900/60 dark:text-stone-100"
+              />
+            </div>
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 dark:text-stone-500">{isEn ? 'Headline (EN)' : 'Hlavni nadpis (EN)'}</div>
+              <input
+                value={onepage.title_en}
+                onChange={(e) => updateOnepage({ title_en: e.target.value })}
+                className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition dark:bg-stone-900/60 dark:text-stone-100"
+              />
+            </div>
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 dark:text-stone-500">{isEn ? 'Intro (CZ)' : 'Intro (CZ)'}</div>
+              <textarea
+                value={onepage.intro_cs}
+                onChange={(e) => updateOnepage({ intro_cs: e.target.value })}
+                className="w-full min-h-[110px] bg-stone-50 border-none rounded-xl px-4 py-3 font-medium text-stone-700 focus:ring-2 focus:ring-green-500 transition dark:bg-stone-900/60 dark:text-stone-100"
+              />
+            </div>
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 dark:text-stone-500">{isEn ? 'Intro (EN)' : 'Intro (EN)'}</div>
+              <textarea
+                value={onepage.intro_en}
+                onChange={(e) => updateOnepage({ intro_en: e.target.value })}
+                className="w-full min-h-[110px] bg-stone-50 border-none rounded-xl px-4 py-3 font-medium text-stone-700 focus:ring-2 focus:ring-green-500 transition dark:bg-stone-900/60 dark:text-stone-100"
+              />
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 dark:text-stone-500">{isEn ? 'About the association (CZ)' : 'O spolku (CZ)'}</div>
+              <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden dark:bg-stone-950 dark:border-stone-800">
+                <Editor value={onepage.about_cs} onChange={(v: string) => updateOnepage({ about_cs: v })} />
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 dark:text-stone-500">{isEn ? 'About the association (EN)' : 'O spolku (EN)'}</div>
+              <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden dark:bg-stone-950 dark:border-stone-800">
+                <Editor value={onepage.about_en} onChange={(v: string) => updateOnepage({ about_en: v })} />
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 dark:text-stone-500">{isEn ? 'Membership (CZ)' : 'Clenstvi (CZ)'}</div>
+              <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden dark:bg-stone-950 dark:border-stone-800">
+                <Editor value={onepage.membership_cs} onChange={(v: string) => updateOnepage({ membership_cs: v })} />
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 dark:text-stone-500">{isEn ? 'Membership (EN)' : 'Clenstvi (EN)'}</div>
+              <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden dark:bg-stone-950 dark:border-stone-800">
+                <Editor value={onepage.membership_en} onChange={(v: string) => updateOnepage({ membership_en: v })} />
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 dark:text-stone-500">{isEn ? 'Contacts (CZ)' : 'Kontakty (CZ)'}</div>
+              <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden dark:bg-stone-950 dark:border-stone-800">
+                <Editor value={onepage.contacts_cs} onChange={(v: string) => updateOnepage({ contacts_cs: v })} />
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 dark:text-stone-500">{isEn ? 'Contacts (EN)' : 'Kontakty (EN)'}</div>
+              <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden dark:bg-stone-950 dark:border-stone-800">
+                <Editor value={onepage.contacts_en} onChange={(v: string) => updateOnepage({ contacts_en: v })} />
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 dark:text-stone-500">{isEn ? 'Status info (CZ)' : 'Status info (CZ)'}</div>
+              <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden dark:bg-stone-950 dark:border-stone-800">
+                <Editor value={onepage.status_cs} onChange={(v: string) => updateOnepage({ status_cs: v })} />
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 dark:text-stone-500">{isEn ? 'Status info (EN)' : 'Status info (EN)'}</div>
+              <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden dark:bg-stone-950 dark:border-stone-800">
+                <Editor value={onepage.status_en} onChange={(v: string) => updateOnepage({ status_en: v })} />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 dark:text-stone-500">Contact email</div>
+              <input
+                value={onepage.contact_email}
+                onChange={(e) => updateOnepage({ contact_email: e.target.value })}
+                className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition dark:bg-stone-900/60 dark:text-stone-100"
+              />
+            </div>
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 dark:text-stone-500">Instagram URL</div>
+              <input
+                value={onepage.instagram_url}
+                onChange={(e) => updateOnepage({ instagram_url: e.target.value })}
+                className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition dark:bg-stone-900/60 dark:text-stone-100"
+              />
+            </div>
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 dark:text-stone-500">Facebook URL</div>
+              <input
+                value={onepage.facebook_url}
+                onChange={(e) => updateOnepage({ facebook_url: e.target.value })}
+                className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition dark:bg-stone-900/60 dark:text-stone-100"
+              />
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="space-y-4 rounded-2xl border border-stone-200 p-5 dark:border-stone-800">
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500">
+                {isEn ? 'Primary CTA' : 'Primarni CTA'}
+              </div>
+              <input
+                value={onepage.primary_href}
+                onChange={(e) => updateOnepage({ primary_href: e.target.value })}
+                className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition dark:bg-stone-900/60 dark:text-stone-100"
+                placeholder="/cs/prihlaska"
+              />
+              <input
+                value={onepage.primary_label_cs}
+                onChange={(e) => updateOnepage({ primary_label_cs: e.target.value })}
+                className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition dark:bg-stone-900/60 dark:text-stone-100"
+                placeholder="Clenska prihlaska"
+              />
+              <input
+                value={onepage.primary_label_en}
+                onChange={(e) => updateOnepage({ primary_label_en: e.target.value })}
+                className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition dark:bg-stone-900/60 dark:text-stone-100"
+                placeholder="Membership application"
+              />
+            </div>
+            <div className="space-y-4 rounded-2xl border border-stone-200 p-5 dark:border-stone-800">
+              <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500">
+                {isEn ? 'Secondary CTA' : 'Sekundarni CTA'}
+              </div>
+              <input
+                value={onepage.secondary_href}
+                onChange={(e) => updateOnepage({ secondary_href: e.target.value })}
+                className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition dark:bg-stone-900/60 dark:text-stone-100"
+                placeholder="/cs/kontakt"
+              />
+              <input
+                value={onepage.secondary_label_cs}
+                onChange={(e) => updateOnepage({ secondary_label_cs: e.target.value })}
+                className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition dark:bg-stone-900/60 dark:text-stone-100"
+                placeholder="Kontakt"
+              />
+              <input
+                value={onepage.secondary_label_en}
+                onChange={(e) => updateOnepage({ secondary_label_en: e.target.value })}
+                className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition dark:bg-stone-900/60 dark:text-stone-100"
+                placeholder="Contact"
+              />
             </div>
           </div>
         </div>

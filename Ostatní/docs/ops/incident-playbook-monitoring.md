@@ -10,6 +10,33 @@ Tento dokument definuje minimální monitoring a postup řešení incidentů pro
 - DB zdraví: základní metriky v Supabase dashboardu (CPU, connections, errors).
 - E‑mail fronta: stav `email_send_queue` (pokud se používá) a výsledek cron jobů.
 
+### 1a) Kontrakt `/api/health` (co je „zdravý stav“)
+
+| Odpověď | HTTP | Význam | Reakce |
+|---|---|---|---|
+| `{"status":"ok"}` | 200 | DB dostupná, aplikace v pořádku | – |
+| `{"status":"degraded"}` | 200 | Aplikace běží, ale chybí konfigurace Supabase | Sev 3 – doplnit env |
+| `{"status":"error","message":"Database connection failed"}` | 503 | Nedostupná databáze | Sev 2 – viz sekce 6) |
+| jiná odpověď / timeout | 000–5xx | Proces neběží nebo reverse proxy nedostupná | Sev 1 |
+
+Endpoint vrací i `metrics.dbLatencyMs` (lze využít pro trendové měření, není podmínkou alertu).
+
+### 1b) Automatický monitoring a alerting
+
+Monitoring je implementován jako GitHub Actions workflow [`.github/workflows/uptime.yml`](../../../.github/workflows/uptime.yml):
+
+- běží každých 15 minut (`cron: '*/15 * * * *'`) a lze ho spustit i ručně (`workflow_dispatch`),
+- volá `PROD_HEALTHCHECK_URL` (repozitářový secret), obvykle `https://pupen.org/api/health`,
+- **3 pokusy** s odstupem 10 s → jedna přechodná chyba nevyvolá falešný alert,
+- alert se vyhodnotí, pokud po všech pokusech není `HTTP 200` **a zároveň** `"status":"ok"`
+  (tj. zachytí i `degraded` a `503`),
+- při selhání:
+  1. job selže → GitHub pošle notifikaci správcům repozitáře,
+  2. volitelně se pošle JSON `{"text": "..."}` na `ALERT_WEBHOOK_URL`
+     (Slack/Discord kompatibilní webhook) s URL healthchecku a odkazem na běh.
+
+Bez `PROD_HEALTHCHECK_URL` se workflow přeskočí (no-op), takže nic nepadá zbytečně.
+
 ## 2) Jak se incident klasifikuje (prakticky)
 
 - Sev 1: web nebo admin je nedostupný / únik dat / incident s osobními údaji.
@@ -34,7 +61,7 @@ Tento dokument definuje minimální monitoring a postup řešení incidentů pro
 - U DB problémů: obnova ze zálohy nebo cílená oprava (vždy s evidencí zásahu).
 - Po obnově provést minimální smoke testy dle `jak-nasadit-obnovit-predat.md`.
 
-## 6) Evidence incidentu (záznam)
+## 6) Evidence incidentů
 
 Do interní evidence zapsat:
 
@@ -42,4 +69,23 @@ Do interní evidence zapsat:
 - kroky stabilizace a obnova
 - zda šlo o incident s osobními údaji a jaké byly komunikační kroky
 - preventivní opatření a datum ověření
+
+### 6a) Otevřený incident – `pupen.org/api/health` vrací 503
+
+| Položka | Hodnota |
+|---|---|
+| Detekce | 2026‑10‑24 (automatická i manuální sonda) |
+| Klasifikace | Sev 2 (nedostupná DB na běžícím produkčním nasazení) |
+| Projev | `GET https://pupen.org/api/health` → **HTTP 503**, tělo `{"status":"error","message":"Database connection failed"}` (reprodukovatelné opakovaně, 3/3 pokusy) |
+| Dopad | Veřejná část webu se načítá (200), ale DB‑vázané funkce (login, přihlášky, admin) jsou nedostupné |
+| Poznámka | Běžící nasazení je starší verze na jiném Supabase projektu než Pupen 4.0 (`.env.local`). Před nasazením Pupen 4.0 je nutné ověřit `DATABASE_URL` / `NEXT_PUBLIC_SUPABASE_*` v produkčním prostředí (viz `release-checklist.md`, sekce 2). |
+| Stav | Otevřeno – čeká na kontrolu produkčních env proměnných na VPS a Supabase projektu |
+
+**Diagnostický postup pro tento typ incidentu:**
+
+1. Ověřit, že proces běží: `pm2 status pupen-app` (nebo `systemctl status pupen`).
+2. Ověřit produkční env: `npm run env:check -- --env prod` (musí projít bez chybějících povinných proměnných).
+3. Ověřit konektivitu na Supabase (pooler uživatel `postgres.<project-ref>`, `?uselibpqcompat=true&sslmode=require`).
+4. Zkontrolovat Supabase dashboard → Logs (DB errors, connection limit, projekt pozastaven).
+5. Po opravě ověřit `{"status":"ok"}` a teprve pak uzavřít incident s datem a zapsaným zásahem.
 

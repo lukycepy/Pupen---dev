@@ -60,9 +60,27 @@ function loadDotEnv() {
 function getDbUrl() {
   loadDotEnv();
   const env = getEnvFromArgs();
-  if (env === 'staging') return process.env.DATABASE_URL_STAGING || process.env.DATABASE_URL || null;
+  // Explicitní `--env staging` nesmí tiše spadnout zpět na `DATABASE_URL`,
+  // protože ten ukazuje na produkci. Prázdná/chybějící proměnná = chyba.
+  if (env === 'staging') return process.env.DATABASE_URL_STAGING || null;
   if (env === 'prod') return process.env.DATABASE_URL_PROD || process.env.DATABASE_URL || null;
   return process.env.DATABASE_URL || null;
+}
+
+// `pg_dump`/`pg_restore`/`psql` (libpq) neznají parametr `uselibpqcompat` –
+// jde o specifikum node-postgres/Prisma, které v connection stringu vyžaduje
+// pooler. Před spuštěním nativních nástrojů ho proto z URL odstraníme a
+// `sslmode` vrátíme zvlášť (volající ho předá přes `PGSSLMODE`).
+function sanitizeForPgTools(rawUrl) {
+  try {
+    const u = new URL(rawUrl);
+    const sslmode = u.searchParams.get('sslmode');
+    u.searchParams.delete('uselibpqcompat');
+    return { url: u.toString(), sslmode };
+  } catch {
+    // Když URL není parsovatelná, předáme ji beze změny a spoléháme na libpq.
+    return { url: rawUrl, sslmode: null };
+  }
 }
 
 async function withClient(fn) {
@@ -79,4 +97,4 @@ async function withClient(fn) {
   }
 }
 
-module.exports = { getEnvFromArgs, getDbUrl, withClient };
+module.exports = { getEnvFromArgs, getDbUrl, withClient, loadDotEnv, sanitizeForPgTools };

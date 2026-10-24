@@ -4,6 +4,7 @@ import React, { useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
+import * as Sentry from '@sentry/nextjs';
 import { RefreshCw, ArrowLeft, Trash2 } from 'lucide-react';
 
 export default function Error({
@@ -17,7 +18,10 @@ export default function Error({
   const lang = (params?.lang as string) || 'cs';
 
   useEffect(() => {
-    void error;
+    Sentry.captureException(error);
+  }, [error]);
+
+  useEffect(() => {
     // Auto-reload on ChunkLoadError or similar missing module errors caused by new deployments
     if (
       error?.name === 'ChunkLoadError' ||
@@ -101,7 +105,7 @@ export default function Error({
             {error?.digest && (
               <div className="mt-2 text-center">
                 <div className="text-[10px] font-black uppercase tracking-[0.3em]">
-                  Kód chyby
+                  {lang === 'en' ? 'Error code' : 'Kód chyby'}
                 </div>
                 <div className="mt-2 inline-flex items-center justify-center rounded-xl border-2 border-black dark:border-white px-4 py-2 text-xs font-black">
                   {error.digest}

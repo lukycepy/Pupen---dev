@@ -45,6 +45,15 @@ async function resolveLoginEmail(email: string) {
   }
 }
 
+async function fetchEffectiveProfile(token: string) {
+  const res = await fetch('/api/auth/me-profile', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(String(json?.error || 'Chyba'));
+  return json?.profile || null;
+}
+
 export default function LoginPageClient({ lang }: LoginPageClientProps) {
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
   const googleAuthEnabled = process.env.NEXT_PUBLIC_ENABLE_GOOGLE_AUTH === 'true';
@@ -240,9 +249,10 @@ export default function LoginPageClient({ lang }: LoginPageClientProps) {
       setAdminMfaEnrollCode('');
 
       const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
       const user = sessionData.session?.user;
-      if (!user) throw new Error('Unauthorized');
-      const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
+      if (!user || !token) throw new Error('Unauthorized');
+      const profile = await fetchEffectiveProfile(token);
       await handleRedirect(profile, user.email || undefined, 'mfa_enroll');
     } catch (e: any) {
       setError(e?.message || (lang === 'cs' ? 'Chyba' : 'Error'));
@@ -440,9 +450,10 @@ export default function LoginPageClient({ lang }: LoginPageClientProps) {
       const res = await authAny?.mfa?.verify?.({ factorId: mfa.factorId, challengeId: mfa.challengeId, code: mfaCode });
       if (res?.error) throw res.error;
       const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
       const user = sessionData.session?.user;
-      if (!user) throw new Error('Unauthorized');
-      const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
+      if (!user || !token) throw new Error('Unauthorized');
+      const profile = await fetchEffectiveProfile(token);
       setMfa(null);
       setMfaCode('');
       await handleRedirect(profile, user.email || undefined, 'mfa');

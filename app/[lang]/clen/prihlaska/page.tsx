@@ -59,6 +59,38 @@ export default function MyApplicationPage() {
     }
   };
   const isEn = lang === 'en';
+  const downloadDocx = async () => {
+    try {
+      const applicationId = String(application?.id || '').trim();
+      if (!applicationId) throw new Error(isEn ? 'Application not found' : 'Přihláška nebyla nalezena');
+
+      const { data: session } = await supabase.auth.getSession();
+      const token = session.session?.access_token;
+      if (!token) throw new Error(isEn ? 'Unauthorized' : 'Nepřihlášen');
+
+      const res = await fetch(`/api/membership-applications/${applicationId}/docx/signed-url`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ expiresIn: 600 }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(String(json?.error || 'Chyba'));
+
+      const href = String(json?.signedUrl || '').trim();
+      if (!href) throw new Error(isEn ? 'DOCX file is not available' : 'DOCX soubor není dostupný');
+
+      const a = document.createElement('a');
+      a.href = href;
+      a.target = '_blank';
+      a.rel = 'noreferrer';
+      a.download = `prihlaska_${new Date().toISOString().slice(0, 10)}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch {
+      // Keep the detail page usable even when the DOCX file is temporarily unavailable.
+    }
+  };
 
   const statusLabel =
     application?.status === 'approved'
@@ -94,6 +126,16 @@ export default function MyApplicationPage() {
             {isEn ? 'Back' : 'Zpět'}
           </Link>
           <div className="flex items-center gap-2">
+            {application?.docx_available ? (
+              <button
+                type="button"
+                onClick={downloadDocx}
+                className="inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition"
+              >
+                <Download size={16} />
+                {isEn ? 'Download DOCX' : 'Stáhnout DOCX'}
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={print}

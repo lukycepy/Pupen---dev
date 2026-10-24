@@ -1,6 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import { createClient } from '@supabase/supabase-js';
+
+// Sdílíme načítání `.env` s `db:*` skripty, aby šla záloha spustit i z cronu,
+// kde nejsou proměnné exportované v shellu.
+const require = createRequire(import.meta.url);
+const { loadDotEnv } = require('../db/utils.js');
 
 function ensureDir(p) {
   fs.mkdirSync(p, { recursive: true });
@@ -88,6 +94,7 @@ async function downloadOne(supabase, bucket, objectPath, outRoot) {
 }
 
 async function main() {
+  loadDotEnv(null);
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ? String(process.env.NEXT_PUBLIC_SUPABASE_URL) : '';
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY ? String(process.env.SUPABASE_SERVICE_ROLE_KEY) : '';
   if (!url || !key) {

@@ -1757,7 +1757,7 @@ export default function ClenskaSekcePage() {
                       <label className="flex items-start gap-3 cursor-pointer group">
                         <div className="relative flex items-start">
                           <input type="checkbox" className="peer sr-only" checked={true} disabled />
-                          <div className="w-5 h-5 border-2 border-stone-300 dark:border-stone-700 rounded bg-stone-100 dark:bg-stone-900 peer-checked:bg-stone-300 peer-checked:border-stone-300 transition flex items-center justify-center">
+                          <div className="w-5 h-5 border-2 border-stone-300 dark:border-stone-700 rounded bg-stone-100 dark:bg-stone-900 peer-checked:bg-green-600 peer-checked:border-green-600 transition flex items-center justify-center">
                             <span className="text-white text-xs font-bold">✓</span>
                           </div>
                         </div>

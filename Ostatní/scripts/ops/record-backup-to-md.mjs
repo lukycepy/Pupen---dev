@@ -25,6 +25,17 @@ function fmtDateIsoToCz(iso) {
   return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+// Dokumentace podpůrných nástrojů žije v `Ostatní/docs/ops/`.
+// Zkusíme ji najít tam i v kořeni, aby skript fungoval bez ohledu na to,
+// odkud ho spustíme.
+function resolveMdPath(repoRoot, fileName) {
+  const candidates = [
+    path.join(repoRoot, 'Ostatní', 'docs', 'ops', fileName),
+    path.join(repoRoot, 'docs', 'ops', fileName),
+  ];
+  return candidates.find((p) => fs.existsSync(p)) || candidates[0];
+}
+
 function insertBeforeFirst(lines, matcher, insertLines) {
   const idx = lines.findIndex((l) => matcher(l));
   if (idx === -1) return [...lines, ...insertLines];
@@ -45,7 +56,7 @@ function main() {
     process.exit(2);
   }
 
-  const mdPath = path.join(repoRoot, 'docs', 'ops', 'zaznam-testu-obnovy.md');
+  const mdPath = resolveMdPath(repoRoot, 'zaznam-testu-obnovy.md');
   if (!fs.existsSync(mdPath)) {
     console.error(`Missing file: ${mdPath}`);
     process.exit(1);

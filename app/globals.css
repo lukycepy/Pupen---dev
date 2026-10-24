@@ -39,6 +39,9 @@
   --text-subtle-rgb: 255, 255, 255;
   --border-rgb: 255, 255, 255;
   --border-soft-rgb: 255, 255, 255;
+  /* Hover v tmavém režimu drží stejnou konvenci jako světlý režim: zelený akcent. */
+  --hover-rgb: 5, 46, 22;
+  --hover-border-rgb: 22, 163, 74;
 }
 
 html {
@@ -57,6 +60,161 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* HTML obsah z adminu a právních stránek.
+   Projekt používá utility `prose`, ale bez typography pluginu by zůstaly bez
+   efektu. Tady proto držíme vlastní binární sazbu pro rich text napříč webem. */
+.prose {
+  color: rgb(var(--text-rgb));
+}
+
+.prose > :first-child {
+  margin-top: 0;
+}
+
+.prose > :last-child {
+  margin-bottom: 0;
+}
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
+  color: rgb(var(--text-rgb));
+  font-family: var(--font-montserrat), sans-serif;
+  font-weight: 900;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  margin-top: 1.6em;
+  margin-bottom: 0.7em;
+}
+
+.prose h1 {
+  font-size: 2.25rem;
+}
+
+.prose h2 {
+  font-size: 1.6rem;
+}
+
+.prose h3 {
+  font-size: 1.3rem;
+}
+
+.prose h4,
+.prose h5,
+.prose h6 {
+  font-size: 1.1rem;
+}
+
+.prose p,
+.prose ul,
+.prose ol,
+.prose blockquote,
+.prose pre,
+.prose table,
+.prose figure {
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+.prose p,
+.prose li,
+.prose blockquote,
+.prose td,
+.prose th {
+  line-height: 1.8;
+}
+
+.prose ul,
+.prose ol {
+  padding-left: 1.5rem;
+}
+
+.prose ul {
+  list-style: disc;
+}
+
+.prose ol {
+  list-style: decimal;
+}
+
+.prose li + li {
+  margin-top: 0.45em;
+}
+
+.prose strong,
+.prose b {
+  color: rgb(var(--text-rgb));
+  font-weight: 800;
+}
+
+.prose a {
+  color: #16a34a;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.prose a:hover {
+  color: #15803d;
+}
+
+.dark .prose a:hover {
+  color: #22c55e;
+}
+
+.prose hr {
+  border: 0;
+  border-top: 2px solid rgb(var(--border-rgb));
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+}
+
+.prose blockquote {
+  border-left: 4px solid rgb(var(--border-rgb));
+  padding-left: 1rem;
+}
+
+.prose img,
+.prose video,
+.prose canvas,
+.prose svg,
+.prose iframe {
+  display: block;
+  max-width: 100%;
+}
+
+.prose code {
+  font-size: 0.925em;
+  font-weight: 700;
+}
+
+.prose pre {
+  overflow-x: auto;
+  border: 2px solid rgb(var(--border-rgb));
+  border-radius: 1rem;
+  padding: 1rem 1.25rem;
+}
+
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.prose th,
+.prose td {
+  border: 2px solid rgb(var(--border-rgb));
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.prose :where(a, button, [role="button"], input, textarea, select):focus-visible {
+  outline: 3px solid #16a34a;
+  outline-offset: 2px;
 }
 
 :where([class*="shadow"], [class*="drop-shadow"]) {
@@ -96,12 +254,68 @@ body {
   border-color: rgb(var(--border-soft-rgb)) !important;
 }
 
-/* Dodatečné dark utility (řeší případy kdy Tailwind dark: není explicitně použit v JSX) */
-.dark .bg-white\/80 { background-color: rgb(var(--surface-rgb) / 0.8) !important; }
-.dark .bg-white\/70 { background-color: rgb(var(--surface-rgb) / 0.7) !important; }
-.dark .bg-stone-50\/60 { background-color: rgb(var(--surface-2-rgb) / 0.6) !important; }
-.dark .bg-stone-50\/80 { background-color: rgb(var(--surface-2-rgb) / 0.8) !important; }
-.dark .bg-stone-50\/90 { background-color: rgb(var(--surface-2-rgb) / 0.9) !important; }
+/* Dodatečné dark utility (řeší případy kdy Tailwind dark: není explicitně použit v JSX)
+   Pozor: proměnné jsou v comma syntaxi (`0, 0, 0`), takže průhlednost se musí
+   zapisovat přes `rgba(var(--x), a)`. Zápis `rgb(var(--x) / a)` je neplatný
+   a prohlížeč ho zahodí (barva by zůstala průhledná). */
+.dark .bg-white\/80 { background-color: rgba(var(--surface-rgb), 0.8) !important; }
+.dark .bg-white\/70 { background-color: rgba(var(--surface-rgb), 0.7) !important; }
+.dark .bg-stone-50\/60 { background-color: rgba(var(--surface-2-rgb), 0.6) !important; }
+.dark .bg-stone-50\/80 { background-color: rgba(var(--surface-2-rgb), 0.8) !important; }
+.dark .bg-stone-50\/90 { background-color: rgba(var(--surface-2-rgb), 0.9) !important; }
+
+/* Průhledné varianty bílých ploch. `bg-white/90` bez explicitního `dark:`
+   variantu by na černém webu zůstalo téměř bílé (viditelná bílá lišta),
+   proto je mapujeme na binární plochu. */
+.dark .bg-white\/95 { background-color: rgba(var(--surface-rgb), 0.95) !important; }
+.dark .bg-white\/90 { background-color: rgba(var(--surface-rgb), 0.9) !important; }
+.dark .bg-white\/85 { background-color: rgba(var(--surface-rgb), 0.85) !important; }
+.dark .bg-white\/60 { background-color: rgba(var(--surface-rgb), 0.6) !important; }
+.dark .bg-white\/50 { background-color: rgba(var(--surface-rgb), 0.5) !important; }
+
+/* Průhledné varianty světlých neutrálních ploch (např. `bg-stone-50/50`).
+   V tmavém režimu se bez tohoto vykreslí jako středně šedá plocha
+   (stone-50 na 50 % přes černou), což binární design zakazuje. Mapujeme je
+   na plnou plochu; oddělení prvků řeší 2px ohraničení. */
+.dark .bg-stone-50\/30, .dark .bg-stone-50\/40, .dark .bg-stone-50\/50,
+.dark .bg-stone-100\/30, .dark .bg-stone-100\/40, .dark .bg-stone-100\/50,
+.dark .bg-gray-50\/30, .dark .bg-gray-50\/50, .dark .bg-gray-100\/50 {
+  background-color: rgb(var(--surface-rgb)) !important;
+}
+.dark .border-stone-100\/50, .dark .border-stone-200\/50,
+.dark .border-gray-100\/50, .dark .border-gray-200\/50 {
+  border-color: rgb(var(--border-rgb)) !important;
+}
+.dark .hover\:bg-stone-50\/50:hover, .dark .hover\:bg-stone-50\/80:hover,
+.dark .hover\:bg-stone-100\/50:hover, .dark .hover\:bg-gray-50\/50:hover {
+  background-color: rgb(var(--hover-rgb)) !important;
+}
+
+/* Gradientové zastávky neutrálních barev. Bez `dark:` varianty vykreslovaly
+   v opačném režimu světlou/šedou plochu (např. `from-stone-50 to-stone-100/40`
+   nebo `from-white via-stone-50 to-white`), což binární design zakazuje.
+   V tmavém režimu je sjednocujeme na binární černou (surface). */
+.dark .from-stone-50, .dark .from-white {
+  --tw-gradient-from: rgb(var(--surface-rgb)) !important;
+}
+.dark .via-stone-50, .dark .via-white {
+  --tw-gradient-via: rgb(var(--surface-rgb)) !important;
+}
+.dark .to-stone-50, .dark .to-stone-100\/40, .dark .to-white {
+  --tw-gradient-to: rgb(var(--surface-rgb)) !important;
+}
+
+/* Doplňky tmavého režimu: indikátor `bg-stone-400` a nejjemnější neutrální
+   odstíny (`border-stone-50`, `divide-stone-50`), které dříve zůstávaly šedé. */
+.dark .bg-stone-400 {
+  background-color: rgb(var(--text-rgb)) !important;
+}
+.dark .border-stone-50 {
+  border-color: rgb(var(--border-rgb)) !important;
+}
+.dark .divide-stone-50 {
+  border-color: rgb(var(--border-rgb)) !important;
+}
 
 .dark .text-black { color: rgb(var(--text-rgb)) !important; }
 .dark .text-neutral-900 { color: rgb(var(--text-rgb)) !important; }
@@ -216,6 +430,45 @@ body {
     color: rgb(var(--text-rgb));
   }
 
+  /* Velmi světlé šedé texty (50–300) – na bílých plochách v light režimu
+     mají kontrast < 2:1, tj. jsou prakticky nečitelné. Sjednocujeme je na
+     plnou barvu textu, konzistentně s text-400..900 výše. */
+  :where(html:not(.dark)) :is(
+    .text-stone-50, .text-stone-100, .text-stone-200, .text-stone-300,
+    .text-gray-50, .text-gray-100, .text-gray-200, .text-gray-300,
+    .text-slate-50, .text-slate-100, .text-slate-200, .text-slate-300,
+    .text-zinc-50, .text-zinc-100, .text-zinc-200, .text-zinc-300,
+    .text-neutral-50, .text-neutral-100, .text-neutral-200, .text-neutral-300
+  ) {
+    color: rgb(var(--text-rgb));
+  }
+
+  /* Schválená výjimka: světlé texty uvnitř tmavých ploch v light režimu
+     (patička, hero přes obrázek, tmavé admin panely) musí zůstat světlé,
+     jinak by byly na tmavém pozadí nečitelné. Specificita (0,2,0) zde
+     přebíjí pravidlo výše. Pokrývá i případ, kdy tmavou plochu i text nese
+     tentýž element (např. `bg-stone-900 text-stone-300` v patičce). */
+  :where(html:not(.dark)) :is(
+    .bg-black, .bg-stone-800, .bg-stone-900, .bg-stone-950
+  ) :is(
+    .text-stone-50, .text-stone-100, .text-stone-200, .text-stone-300,
+    .text-gray-50, .text-gray-100, .text-gray-200, .text-gray-300,
+    .text-slate-50, .text-slate-100, .text-slate-200, .text-slate-300,
+    .text-zinc-50, .text-zinc-100, .text-zinc-200, .text-zinc-300,
+    .text-neutral-50, .text-neutral-100, .text-neutral-200, .text-neutral-300
+  ),
+  :where(html:not(.dark)) :is(
+    .bg-black, .bg-stone-800, .bg-stone-900, .bg-stone-950
+  ):is(
+    .text-stone-50, .text-stone-100, .text-stone-200, .text-stone-300,
+    .text-gray-50, .text-gray-100, .text-gray-200, .text-gray-300,
+    .text-slate-50, .text-slate-100, .text-slate-200, .text-slate-300,
+    .text-zinc-50, .text-zinc-100, .text-zinc-200, .text-zinc-300,
+    .text-neutral-50, .text-neutral-100, .text-neutral-200, .text-neutral-300
+  ) {
+    color: #d6d3d1;
+  }
+
   :where(html:not(.dark)) :is(
     .border-stone-100, .border-stone-200, .border-stone-300,
     .border-gray-100, .border-gray-200, .border-gray-300,
@@ -232,6 +485,81 @@ body {
     .ring-slate-100, .ring-zinc-100, .ring-neutral-100
   ) {
     --tw-ring-color: rgb(var(--border-rgb));
+  }
+
+  /* Průhledné varianty neutrálních ploch (bg-stone-50/50, bg-stone-100/50, …).
+     Základní utility výše pokrývají jen neprůhledné tvary, takže tyto
+     varianty zůstávaly v light režimu jako jemná šedá. Sjednocujeme je na
+     binární plochu; oddělení řeší ohraničení. */
+  :where(html:not(.dark)) :is(
+    .bg-stone-50\/30, .bg-stone-50\/40, .bg-stone-50\/50, .bg-stone-50\/60,
+    .bg-stone-100\/30, .bg-stone-100\/40, .bg-stone-100\/50,
+    .bg-gray-50\/30, .bg-gray-50\/50, .bg-gray-100\/50
+  ) {
+    background-color: rgb(var(--surface-rgb));
+  }
+
+  /* Hover na průhledných neutrálních plochách => stejná zelená konvence
+     jako u neprůhledných hover stavů výše. */
+  :where(html:not(.dark)) :is(
+    .hover\:bg-stone-50\/50:hover, .hover\:bg-stone-50\/80:hover,
+    .hover\:bg-stone-100\/50:hover, .hover\:bg-gray-50\/50:hover
+  ) {
+    background-color: rgb(var(--hover-rgb));
+  }
+
+  :where(html:not(.dark)) :is(
+    .border-stone-100\/50, .border-stone-200\/50,
+    .border-gray-100\/50, .border-gray-200\/50
+  ) {
+    border-color: rgb(var(--border-rgb));
+  }
+
+  /* Gradientové zastávky neutrálních barev. Bez `dark:` varianty (např.
+     `bg-gradient-to-b from-stone-50 to-stone-100/40` na admin/member stránce)
+     vytvářely v light režimu šedý přechod. Sjednocujeme je na binární
+     plochu; oddělení řeší ohraničení. */
+  :where(html:not(.dark)) :is(.from-stone-50, .from-white) {
+    --tw-gradient-from: rgb(var(--surface-rgb));
+  }
+  :where(html:not(.dark)) :is(.via-stone-50, .via-white) {
+    --tw-gradient-via: rgb(var(--surface-rgb));
+  }
+  :where(html:not(.dark)) :is(.to-stone-50, .to-stone-100\/40, .to-white) {
+    --tw-gradient-to: rgb(var(--surface-rgb));
+  }
+
+  /* Doplňky, které dříve zůstávaly šedé: indikátor `bg-stone-400`
+     a nejjemnější neutrální odstíny `border-stone-50` / `divide-stone-50`. */
+  :where(html:not(.dark)) :is(.bg-stone-400) {
+    background-color: rgb(var(--text-rgb));
+  }
+  :where(html:not(.dark)) :is(.border-stone-50) {
+    border-color: rgb(var(--border-rgb));
+  }
+  :where(html:not(.dark)) :is(.divide-stone-50) {
+    border-color: rgb(var(--border-rgb));
+  }
+
+  /* Placeholder v tmavé ploše (patička): šedý `placeholder-stone-500` by na
+     tmavém podkladu v light režimu nebyl čitelný, sjednocujeme na světlý text
+     (stejná schválená výjimka jako u text-stone-50..300 uvnitř tmavých ploch). */
+  :where(html:not(.dark)) :is(.placeholder-stone-500)::placeholder {
+    color: #d6d3d1;
+  }
+
+  /* Placeholder varianty neutrálních textů (`placeholder:text-stone-400`).
+     Override výše cílí jen na nevariantní utility, takže `::placeholder`
+     zůstával v light režimu šedý. Sjednocujeme na plnou barvu textu.
+     (Dark režim u inputů/textarea řeší unlayered pravidlo `.dark input::placeholder`.) */
+  :where(html:not(.dark)) :is(
+    .placeholder\:text-stone-300, .placeholder\:text-stone-400, .placeholder\:text-stone-500,
+    .placeholder\:text-gray-300, .placeholder\:text-gray-400, .placeholder\:text-gray-500,
+    .placeholder\:text-slate-300, .placeholder\:text-slate-400, .placeholder\:text-slate-500,
+    .placeholder\:text-zinc-300, .placeholder\:text-zinc-400, .placeholder\:text-zinc-500,
+    .placeholder\:text-neutral-300, .placeholder\:text-neutral-400, .placeholder\:text-neutral-500
+  )::placeholder {
+    color: rgb(var(--text-rgb));
   }
 }
 
@@ -507,7 +835,6 @@ select:-webkit-autofill:focus {
   border-radius: var(--admin-radius) !important;
   color: var(--admin-text) !important;
   font-weight: 700 !important;
-  outline: none;
 }
 
 .admin-scope :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select):disabled {

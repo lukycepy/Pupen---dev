@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, CheckCircle, Clock, FileText, FileCheck, Mail, Pencil, RefreshCw, Save, Search, ShieldCheck, Upload, Users, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Clock, Download, FileText, FileCheck, Mail, Pencil, RefreshCw, Save, Search, ShieldCheck, Upload, Users, XCircle } from 'lucide-react';
 import { useToast } from '../../../../context/ToastContext';
 import Image from 'next/image';
 import { SkeletonTabContent } from '../../../components/Skeleton';
@@ -112,6 +112,12 @@ function safeJsonParse(s: string) {
   }
 }
 
+function getMembershipFileKind(file: { meta?: unknown } | null | undefined) {
+  if (!file || typeof file !== 'object') return '';
+  const meta = 'meta' in file && file.meta && typeof file.meta === 'object' ? (file.meta as Record<string, unknown>) : {};
+  return String(meta.kind || '').trim();
+}
+
 export default function ApplicationsTab({ dict, readOnly }: { dict: any; readOnly?: boolean }) {
   const qc = useQueryClient();
   const { showToast } = useToast();
@@ -191,6 +197,9 @@ export default function ApplicationsTab({ dict, readOnly }: { dict: any; readOnl
   );
   const selectedProvisioning = detailQuery.data?.provisioning || null;
   const selectedDedupe = detailQuery.data?.dedupe || null;
+  const selectedFiles = useMemo(() => (Array.isArray(detailQuery.data?.files) ? detailQuery.data.files : []), [detailQuery.data?.files]);
+  const hasApplicationPdf = useMemo(() => selectedFiles.some((file) => getMembershipFileKind(file) === 'application_pdf'), [selectedFiles]);
+  const hasApplicationDocx = useMemo(() => selectedFiles.some((file) => getMembershipFileKind(file) === 'application_docx'), [selectedFiles]);
   const sourceMergeProfileId = String(selectedProvisioning?.userId || '');
   const targetMergeProfileId = String(selectedPrimaryProfileId || '');
 
@@ -485,6 +494,34 @@ export default function ApplicationsTab({ dict, readOnly }: { dict: any; readOnl
           : `Přístupový e-mail znovu odeslán${data?.userId ? ` pro ${String(data.userId).slice(0, 8)}` : ''}.`,
         'success',
       );
+    },
+    onError: (e: any) => showToast(e?.message || (isEn ? 'Error' : 'Chyba'), 'error'),
+  });
+
+  const storedFileDownloadMutation = useMutation({
+    mutationFn: async (kind: 'pdf' | 'docx') => {
+      if (!selectedId) throw new Error('Missing id');
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
+
+      const segment = kind === 'docx' ? 'docx/signed-url' : 'pdf/signed-url';
+      const res = await fetch(`/api/admin/membership-applications/${selectedId}/${segment}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ expiresIn: 600 }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Request failed');
+
+      const signedUrl = String(json?.signedUrl || '').trim();
+      if (!signedUrl) throw new Error(isEn ? 'Missing file URL.' : 'Chybí URL souboru.');
+      return { kind, signedUrl };
+    },
+    onSuccess: ({ signedUrl }) => {
+      if (typeof window !== 'undefined') {
+        window.open(signedUrl, '_blank', 'noopener,noreferrer');
+      }
     },
     onError: (e: any) => showToast(e?.message || (isEn ? 'Error' : 'Chyba'), 'error'),
   });
@@ -1598,6 +1635,42 @@ export default function ApplicationsTab({ dict, readOnly }: { dict: any; readOnl
                       </div>
                     </div>
                   )}
+                </div>
+
+                <div className="rounded-[2.5rem] border border-stone-100 bg-white shadow-sm p-8 space-y-4">
+                  <div className="flex items-center gap-3 text-stone-900">
+                    <Download size={20} className="text-green-600" />
+                    <h3 className="text-sm font-black uppercase tracking-widest">{isEn ? 'Documents' : 'Dokumenty'}</h3>
+                  </div>
+                  <div className="space-y-3">
+                    {hasApplicationDocx ? (
+                      <button
+                        type="button"
+                        disabled={storedFileDownloadMutation.isPending}
+                        onClick={() => storedFileDownloadMutation.mutate('docx')}
+                        className="w-full bg-white text-stone-700 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-stone-200 hover:bg-stone-50 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {storedFileDownloadMutation.isPending ? <InlinePulse className="bg-stone-200" size={14} /> : <Download size={16} />}
+                        {isEn ? 'Download DOCX' : 'Stáhnout DOCX'}
+                      </button>
+                    ) : null}
+                    {hasApplicationPdf ? (
+                      <button
+                        type="button"
+                        disabled={storedFileDownloadMutation.isPending}
+                        onClick={() => storedFileDownloadMutation.mutate('pdf')}
+                        className="w-full bg-white text-stone-700 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-stone-200 hover:bg-stone-50 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {storedFileDownloadMutation.isPending ? <InlinePulse className="bg-stone-200" size={14} /> : <Download size={16} />}
+                        {isEn ? 'Download PDF' : 'Stáhnout PDF'}
+                      </button>
+                    ) : null}
+                    {!hasApplicationDocx && !hasApplicationPdf ? (
+                      <div className="rounded-2xl border border-stone-100 bg-stone-50 px-4 py-4 text-xs font-bold text-stone-500">
+                        {isEn ? 'No generated files are available yet.' : 'Zatím tu nejsou dostupné vygenerované soubory.'}
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
 
                 <div className="rounded-[2.5rem] border border-stone-100 bg-white shadow-sm p-8 space-y-4">

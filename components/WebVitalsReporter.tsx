@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect } from 'react';
+import type { Metric } from 'web-vitals';
 
 export function WebVitalsReporter() {
   useEffect(() => {
     // Dynamically import web-vitals so it doesn't block the main thread
     import('web-vitals').then(({ onCLS, onINP, onLCP, onFCP, onTTFB }) => {
-      const reportMetric = (metric: any) => {
+      const reportMetric = (metric: Metric) => {
         // Only report if we exceed a certain budget (e.g., LCP > 2500ms)
         const budget: Record<string, number> = {
           LCP: 2500,
@@ -40,7 +41,9 @@ export function WebVitalsReporter() {
       onFCP(reportMetric);
       onTTFB(reportMetric);
     }).catch(err => {
-      console.warn('Failed to load web-vitals:', err);
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn('Failed to load web-vitals:', err);
+      }
     });
   }, []);
 

@@ -130,6 +130,27 @@ test.describe('Auth flows (mocked)', () => {
     await expect(page).toHaveURL(/\/cs\/clen/);
   });
 
+  test('login redirects an admin-only profile to /cs/admin/dashboard', async ({ page }) => {
+    // aal2: 2FA je už splněné, takže ensureAdminAal2 přesměrování nezablokuje.
+    await mockToken(page, sessionJson('aal2'));
+    await jsonRoute(page, '**/api/auth/login-guard', {});
+    await jsonRoute(page, '**/api/auth/resolve-login', { email: TEST_EMAIL });
+    await jsonRoute(page, '**/api/auth/me-profile', {
+      profile: {
+        has_admin_access: true,
+        has_member_access: false,
+        can_manage_admins: false,
+        is_admin: false,
+      },
+    });
+    await jsonRoute(page, '**/api/auth/security-log', {});
+
+    await submitLogin(page);
+
+    // Bez členského přístupu se nezobrazuje výběr role a jde se rovnou do adminu.
+    await expect(page).toHaveURL(/\/cs\/admin\/dashboard/);
+  });
+
   test('alias login authenticates with the canonical e-mail', async ({ page }) => {
     let capturedEmail: string | undefined;
     await mockToken(page, sessionJson(), (body) => {

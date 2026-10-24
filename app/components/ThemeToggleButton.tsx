@@ -12,12 +12,12 @@ export default function ThemeToggleButton({
   className?: string;
   testId?: string;
 }) {
-  const [, setPreference] = React.useState<AppTheme>('system');
+  const [, setPreference] = React.useState<AppTheme>('light');
   const [resolved, setResolved] = React.useState<ResolvedTheme>('light');
 
   React.useEffect(() => {
     const update = () => {
-      const pref = (readStoredTheme() || 'system') satisfies AppTheme;
+      const pref = (readStoredTheme() || 'light') satisfies AppTheme;
       setPreference(pref);
       setResolved(resolveTheme(pref));
     };

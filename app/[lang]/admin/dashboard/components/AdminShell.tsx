@@ -8,6 +8,7 @@ import AppShell from '@/app/[lang]/components/appshell/AppShell';
 import AppLanguageSwitch from '@/app/[lang]/components/appshell/AppLanguageSwitch';
 import AppThemeToggle from '@/app/[lang]/components/appshell/AppThemeToggle';
 import AppUserMenu from '@/app/[lang]/components/appshell/AppUserMenu';
+import type { AppTheme } from '@/app/[lang]/components/appshell/theme';
 import { useAppTheme } from '@/app/[lang]/components/appshell/useAppTheme';
 import { supabase } from '@/lib/supabase';
 
@@ -51,11 +52,11 @@ export default function AdminShell({
   const initialTheme = (userProfile?.ui_prefs && typeof userProfile.ui_prefs === 'object' ? userProfile.ui_prefs.theme : null) as any;
   const { theme, resolvedTheme, setTheme } = useAppTheme(initialTheme);
 
-  const persistTheme = async (next: 'light' | 'dark' | 'system') => {
+  const persistTheme = async (next: AppTheme) => {
     const id = String(userProfile?.id || '').trim();
     if (!id) return;
     const ui = userProfile?.ui_prefs && typeof userProfile.ui_prefs === 'object' ? userProfile.ui_prefs : {};
-    const nextUi = { ...ui, theme: next };
+    const nextUi = { ...ui, theme: next === 'dark' ? 'dark' : 'light' };
     await supabase.from('profiles').update({ ui_prefs: nextUi }).eq('id', id);
   };
 
@@ -131,7 +132,6 @@ export default function AdminShell({
                 title: dict.common.theme,
                 light: dict.common.themeLight,
                 dark: dict.common.themeDark,
-                system: dict.common.themeSystem,
               }}
               onChange={async (next) => {
                 setTheme(next);

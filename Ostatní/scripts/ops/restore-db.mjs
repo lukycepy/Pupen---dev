@@ -1,6 +1,12 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
+
+// Sdílíme načítání `.env` s `db:*` skripty, aby šla obnova spustit i z cronu,
+// kde nejsou proměnné exportované v shellu.
+const require = createRequire(import.meta.url);
+const { loadDotEnv, sanitizeForPgTools } = require('../db/utils.js');
 
 function getArg(name) {
   const i = process.argv.findIndex((x) => x === name);
@@ -23,9 +29,11 @@ function getEnvFromArgs() {
 }
 
 function getDbUrl(env) {
-  if (env === 'staging') return process.env.DATABASE_URL_STAGING || process.env.DATABASE_URL || null;
+  // Explicitní `--env staging` / `--env local` nesmí tiše spadnout zpět na
+  // `DATABASE_URL` (ten ukazuje na produkci). Prázdná proměnná = chyba.
+  if (env === 'staging') return process.env.DATABASE_URL_STAGING || null;
   if (env === 'prod') return process.env.DATABASE_URL_PROD || process.env.DATABASE_URL || null;
-  if (env === 'local') return process.env.DATABASE_URL_LOCAL || process.env.DATABASE_URL || null;
+  if (env === 'local') return process.env.DATABASE_URL_LOCAL || null;
   return process.env.DATABASE_URL || null;
 }
 
@@ -38,6 +46,7 @@ function run(cmd, args, opts = {}) {
 }
 
 async function main() {
+  loadDotEnv(getEnvFromArgs());
   const from = getArg('--from');
   if (!from) {
     console.error('Missing --from <path-to-dump>');
@@ -70,22 +79,26 @@ async function main() {
   const ext = path.extname(absFrom).toLowerCase();
   const isCustomDump = ext === '.dump' || ext === '.backup' || ext === '.bak';
 
+  // libpq (`pg_restore`/`psql`) nezná `uselibpqcompat` – očistíme URL a
+  // `sslmode` předáme přes `PGSSLMODE`, aby spojení zůstalo šifrované.
+  const { url: targetUrl, sslmode } = sanitizeForPgTools(dbUrl);
+  const spawnEnv = { ...process.env };
+  if (sslmode) spawnEnv.PGSSLMODE = sslmode;
+
   if (isCustomDump) {
-    const code = await run('pg_restore', [
-      '--clean',
-      '--if-exists',
-      '--no-owner',
-      '--no-privileges',
-      '--dbname',
-      dbUrl,
-      absFrom,
-    ]);
+    const code = await run(
+      'pg_restore',
+      ['--clean', '--if-exists', '--no-owner', '--no-privileges', '--dbname', targetUrl, absFrom],
+      { env: spawnEnv }
+    );
     if (code !== 0) process.exit(code);
     console.log(JSON.stringify({ ok: true, restored: absFrom, env }));
     return;
   }
 
-  const code = await run('psql', ['--set', 'ON_ERROR_STOP=1', dbUrl, '--file', absFrom]);
+  const code = await run('psql', ['--set', 'ON_ERROR_STOP=1', targetUrl, '--file', absFrom], {
+    env: spawnEnv,
+  });
   if (code !== 0) process.exit(code);
   console.log(JSON.stringify({ ok: true, restored: absFrom, env }));
 }

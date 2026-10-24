@@ -7,6 +7,7 @@ import AppLanguageSwitch from '@/app/[lang]/components/appshell/AppLanguageSwitc
 import AppThemeToggle from '@/app/[lang]/components/appshell/AppThemeToggle';
 import AppUserMenu from '@/app/[lang]/components/appshell/AppUserMenu';
 import { useAppTheme } from '@/app/[lang]/components/appshell/useAppTheme';
+import type { AppTheme } from '@/app/[lang]/components/appshell/theme';
 import { useDictionary } from '@/app/context/DictionaryContext';
 import { supabase } from '@/lib/supabase';
 import MemberSidebar from './MemberSidebar';
@@ -41,11 +42,11 @@ export default function MemberShell({
   const initialTheme = (profile?.ui_prefs && typeof profile.ui_prefs === 'object' ? profile.ui_prefs.theme : null) as any;
   const { theme, resolvedTheme, setTheme } = useAppTheme(initialTheme);
 
-  const persistTheme = async (next: 'light' | 'dark' | 'system') => {
+  const persistTheme = async (next: AppTheme) => {
     const id = String(profile?.id || '').trim();
     if (!id) return;
     const ui = profile?.ui_prefs && typeof profile.ui_prefs === 'object' ? profile.ui_prefs : {};
-    const nextUi = { ...ui, theme: next };
+    const nextUi = { ...ui, theme: next === 'dark' ? 'dark' : 'light' };
     await supabase.from('profiles').update({ ui_prefs: nextUi }).eq('id', id);
   };
 
@@ -88,7 +89,6 @@ export default function MemberShell({
                 title: dict.common.theme,
                 light: dict.common.themeLight,
                 dark: dict.common.themeDark,
-                system: dict.common.themeSystem,
               }}
               onChange={async (next) => {
                 setTheme(next);

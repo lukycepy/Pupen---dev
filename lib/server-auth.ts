@@ -51,6 +51,8 @@ type EffectiveProfile = Record<string, unknown> & {
   has_member_access?: boolean;
 };
 
+type GetMyProfileRpcRow = Record<string, unknown>;
+
 function getErrorMessage(error: unknown) {
   if (error instanceof Error) return error.message;
   if (error && typeof error === 'object' && 'message' in error) {
@@ -75,6 +77,13 @@ function mergeRolePermissions(profile: EffectiveProfile, permissions: Record<str
       profile[key] = true;
     }
   }
+}
+
+async function getOwnProfile(supabase: ReturnType<typeof getRlsSupabase>) {
+  const { data, error } = await supabase.rpc('get_my_profile');
+  if (error) throw error;
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
+  return data as GetMyProfileRpcRow as EffectiveProfile;
 }
 
 export function getBearerToken(req: Request) {
@@ -107,8 +116,7 @@ export async function getEffectiveProfileByToken(token: string) {
   const user = res.data?.user;
   if (!user) throw new Error('Unauthorized');
 
-  const { data: profile, error } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle<EffectiveProfile>();
-  if (error) throw error;
+  const profile = await getOwnProfile(supabase);
 
   const effectiveProfile: EffectiveProfile = {
     ...(profile || {}),
@@ -196,9 +204,8 @@ export async function requireTrustBoxAdmin(req: Request) {
   if (!token) throw new Error('Unauthorized');
   const supabase = getRlsSupabase(token);
   const user = await requireUser(req);
-  const profRes = await supabase.from('profiles').select('can_manage_admins').eq('id', user.id).maybeSingle<AdminProfileRow>();
-  if (profRes.error) throw profRes.error;
-  const isSuperadmin = !!profRes.data?.can_manage_admins;
+  const profile = await getOwnProfile(supabase);
+  const isSuperadmin = !!(profile as AdminProfileRow | null)?.can_manage_admins;
   if (isSuperadmin) return { user, isSuperadmin: true, canViewPii: true };
 
   const row = await supabase.from('trust_box_admins').select('can_view_pii').eq('user_id', user.id).maybeSingle<TrustBoxAdminRow>();

@@ -5,19 +5,20 @@ import type { AppTheme, ResolvedTheme } from './theme';
 import {
   applyThemeToDom,
   onStorageThemeChange,
-  onSystemThemeChange,
   readStoredTheme,
   resolveTheme,
   writeStoredTheme,
 } from './theme';
 
 function normalizeTheme(v: unknown): AppTheme | null {
-  return v === 'light' || v === 'dark' || v === 'system' ? v : null;
+  if (v === 'light' || v === 'dark') return v;
+  if (v === 'system') return 'light';
+  return null;
 }
 
 function readInitialTheme(initial: AppTheme | null | undefined): AppTheme {
   const stored = readStoredTheme();
-  return normalizeTheme(stored) ?? normalizeTheme(initial) ?? 'system';
+  return normalizeTheme(stored) ?? normalizeTheme(initial) ?? 'light';
 }
 
 export function useAppTheme(initial?: AppTheme | null) {
@@ -37,7 +38,7 @@ export function useAppTheme(initial?: AppTheme | null) {
   // Při mountu synchronizovat DOM s preference (bez přechodu, zabránit FOUT po hydrataci)
   React.useEffect(() => {
     const currentStored = readStoredTheme();
-    const effective = normalizeTheme(currentStored) ?? normalizeTheme(initial) ?? 'system';
+    const effective = normalizeTheme(currentStored) ?? normalizeTheme(initial) ?? 'light';
 
     const resolved = resolveTheme(effective);
 
@@ -63,30 +64,12 @@ export function useAppTheme(initial?: AppTheme | null) {
       applyThemeToDom(next, { transition: true });
     });
 
-    let offSystem: undefined | (() => void);
-    if (effective === 'system') {
-      offSystem = onSystemThemeChange(() => {
-        const r = resolveTheme('system');
-        setResolvedTheme(r);
-        applyThemeToDom('system', { transition: true });
-      });
-    }
-
     return () => {
       offStorage?.();
-      offSystem?.();
     };
     // Použijeme initial jen při mountu – dále je důvěryhodnější localStorage / DOM
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Když uživatel změní systémovou preferenci (pouze když aktuální je system)
-  React.useEffect(() => {
-    if (theme !== 'system') return;
-    return onSystemThemeChange(() => {
-      setResolvedTheme(resolveTheme('system'));
-    });
-  }, [theme]);
 
   const set = React.useCallback(
     (next: AppTheme) => applyTheme(next, { persist: true, transition: true }),

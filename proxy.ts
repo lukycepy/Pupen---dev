@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 type CacheEntry = { banned: boolean; atMs: number };
 type Locale = 'cs' | 'en';
+type PublicModeCacheEntry = { mode: 'default' | 'maintenance' | 'onepage'; active: boolean; atMs: number };
 
 const cache: Map<string, CacheEntry> = (globalThis as any).__PUPEN_EDGE_BAN_CACHE__ || new Map();
 (globalThis as any).__PUPEN_EDGE_BAN_CACHE__ = cache;
@@ -79,21 +80,60 @@ function isLocale(value: string | null | undefined): value is Locale {
 function getPreferredLocale(req: NextRequest): Locale {
   const cookieLocale = req.cookies.get(LOCALE_COOKIE)?.value;
   if (isLocale(cookieLocale)) return cookieLocale;
+  return 'cs';
+}
 
-  const acceptLanguage = String(req.headers.get('accept-language') || '').toLowerCase();
-  const parts = acceptLanguage
-    .split(',')
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .map((part) => {
-      const [tag, ...params] = part.split(';').map((item) => item.trim());
-      const q = params.find((param) => param.startsWith('q='))?.slice(2);
-      return { tag, q: q ? Number(q) : 1 };
-    })
-    .sort((a, b) => b.q - a.q);
+function setPublicModeCache(entry: PublicModeCacheEntry) {
+  (globalThis as any).__PUPEN_PUBLIC_MODE_CACHE__ = entry;
+}
 
-  const englishPreferred = parts.some(({ tag }) => tag === 'en' || tag.startsWith('en-'));
-  return englishPreferred ? 'en' : 'cs';
+async function getPublicMode(req: NextRequest) {
+  const now = Date.now();
+  const cached = (globalThis as any).__PUPEN_PUBLIC_MODE_CACHE__ as PublicModeCacheEntry | null;
+  if (cached && now - cached.atMs < 15_000) return cached;
+
+  const res = await fetch(`${req.nextUrl.origin}/api/site-config`, {
+    headers: { 'x-proxy-site-mode': '1' },
+    cache: 'no-store',
+  }).catch(() => null);
+  if (!res?.ok) {
+    const fallback = { mode: 'default' as const, active: false, atMs: now };
+    setPublicModeCache(fallback);
+    return fallback;
+  }
+
+  const json = (await res.json().catch(() => ({}))) as {
+    config?: { public_mode?: unknown; mode_active?: unknown };
+  };
+  const mode: PublicModeCacheEntry['mode'] =
+    json?.config?.public_mode === 'maintenance' || json?.config?.public_mode === 'onepage'
+      ? json.config.public_mode
+      : 'default';
+  const active = json?.config?.mode_active === true && mode !== 'default';
+  const entry = { mode, active, atMs: now };
+  setPublicModeCache(entry);
+  return entry;
+}
+
+function isPublicModeExemptPath(pathname: string, locale: Locale) {
+  const prefix = `/${locale}`;
+  const suffix = pathname.slice(prefix.length) || '/';
+  return (
+    suffix === '/odstavka' ||
+    suffix.startsWith('/odstavka/') ||
+    suffix === '/info' ||
+    suffix.startsWith('/info/') ||
+    suffix === '/login' ||
+    suffix.startsWith('/login/') ||
+    suffix === '/forgot' ||
+    suffix.startsWith('/forgot/') ||
+    suffix === '/reset-password' ||
+    suffix.startsWith('/reset-password/') ||
+    suffix === '/admin' ||
+    suffix.startsWith('/admin/') ||
+    suffix === '/clen' ||
+    suffix.startsWith('/clen/')
+  );
 }
 
 export async function proxy(req: NextRequest) {
@@ -120,6 +160,7 @@ export async function proxy(req: NextRequest) {
   const isPublicFile = /\.[^/]+$/.test(pathname);
   if (
     pathname.startsWith('/api') ||
+    pathname.startsWith('/apps') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/offline') ||
     pathname.startsWith('/unsubscribe') ||
@@ -146,6 +187,15 @@ export async function proxy(req: NextRequest) {
   }
 
   const locale = pathname.startsWith('/en') ? 'en' : 'cs';
+  const publicMode = await getPublicMode(req);
+  if (publicMode.active && !isPublicModeExemptPath(pathname, locale)) {
+    const target = publicMode.mode === 'maintenance' ? `/${locale}/odstavka` : `/${locale}/info`;
+    if (pathname !== target) {
+      const url = req.nextUrl.clone();
+      url.pathname = target;
+      return NextResponse.redirect(url);
+    }
+  }
   const response = NextResponse.next();
   if (req.cookies.get(LOCALE_COOKIE)?.value !== locale) {
     response.cookies.set(LOCALE_COOKIE, locale, {

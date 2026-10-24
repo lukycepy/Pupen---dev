@@ -7,6 +7,11 @@ import Panel from '@/app/components/ui/Panel';
 import PageBlocksRenderer from '@/app/[lang]/components/PageBlocksRenderer';
 import { parsePageBlocks } from '@/lib/site/page-blocks';
 
+// Obsah se načítá z tabulky `site_page_contents` a je editovatelný v adminu.
+// Bez tohoto by Next stránku předrenderoval při buildu a změny z adminu by se
+// na webu projevily až po dalším nasazení.
+export const dynamic = 'force-dynamic';
+
 export default async function DonatePage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang: rawLang } = await params;
   const lang = rawLang === 'en' ? 'en' : 'cs';

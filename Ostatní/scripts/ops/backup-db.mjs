@@ -2,6 +2,12 @@ import { spawn } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
+
+// Sdílíme načítání `.env` s `db:*` skripty, aby šly zálohy spustit i z cronu,
+// kde nejsou proměnné exportované v shellu.
+const require = createRequire(import.meta.url);
+const { loadDotEnv, sanitizeForPgTools } = require('../db/utils.js');
 
 function getArg(name) {
   const i = process.argv.findIndex((x) => x === name);
@@ -20,11 +26,17 @@ function getEnvFromArgs() {
 
 function getDbUrl() {
   const env = getEnvFromArgs();
-  if (env === 'staging') return process.env.DATABASE_URL_STAGING || process.env.DATABASE_URL || null;
+  // Explicitní `--env staging` nesmí tiše spadnout zpět na `DATABASE_URL`
+  // (ten ukazuje na produkci). Prázdná/chybějící proměnná = chyba.
+  if (env === 'staging') return process.env.DATABASE_URL_STAGING || null;
   if (env === 'prod') return process.env.DATABASE_URL_PROD || process.env.DATABASE_URL || null;
   return process.env.DATABASE_URL || null;
 }
 
+// `pg_dump` (libpq) nezná parametr `uselibpqcompat` – jde o specifikum
+// node-postgres/Prisma, které v connection stringu vyžaduje pooler.
+// Sanitizaci řeší sdílená utilita (`sanitizeForPgTools`), `sslmode` se
+// předává zvlášť přes `PGSSLMODE`, aby spojení zůstalo šifrované.
 function stamp() {
   const d = new Date();
   const pad = (n) => String(n).padStart(2, '0');
@@ -64,6 +76,7 @@ function run(cmd, args, opts = {}) {
 }
 
 async function main() {
+  loadDotEnv(getEnvFromArgs());
   const dbUrl = getDbUrl();
   if (!dbUrl) {
     console.error('Missing DATABASE_URL (or DATABASE_URL_STAGING / DATABASE_URL_PROD with --env)');
@@ -77,7 +90,15 @@ async function main() {
   const fileBase = `db_${envTag}_${stamp()}.dump`;
   const filePath = path.join(outDir, fileBase);
 
-  const res = await run('pg_dump', ['--format=custom', '--no-owner', '--no-privileges', dbUrl, '--file', filePath]);
+  const { url: pgDumpUrl, sslmode } = sanitizeForPgTools(dbUrl);
+  const spawnEnv = { ...process.env };
+  if (sslmode) spawnEnv.PGSSLMODE = sslmode;
+
+  const res = await run(
+    'pg_dump',
+    ['--format=custom', '--no-owner', '--no-privileges', pgDumpUrl, '--file', filePath],
+    { env: spawnEnv }
+  );
   if (res.code !== 0) {
     console.error(res.err || `pg_dump failed with code ${res.code}`);
     process.exit(1);

@@ -5,6 +5,11 @@ import PageHeader from '@/app/components/ui/PageHeader';
 import { getSitePageContent } from '@/lib/site/page-content';
 import DbContentPage from '@/app/[lang]/components/DbContentPage';
 
+// Obsah se načítá z tabulky `site_page_contents` a je editovatelný v adminu.
+// Bez tohoto by Next stránku předrenderoval při buildu a změny z adminu by se
+// na webu projevily až po dalším nasazení.
+export const dynamic = 'force-dynamic';
+
 export default async function SafetyRulesPage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang: rawLang } = await params;
   const lang = rawLang === 'en' ? 'en' : 'cs';

@@ -12,7 +12,11 @@ export function readStoredTheme(): AppTheme | null {
   if (!canAccessWindow()) return null;
   try {
     const raw = window.localStorage.getItem(THEME_STORAGE_KEY);
-    return raw === 'dark' || raw === 'light' || raw === 'system' ? raw : null;
+    if (raw === 'dark' || raw === 'light') return raw;
+    // Legacy hodnota `system` mapujeme na světlý režim, aby web defaultně
+    // startoval bíle, dokud si uživatel výslovně nezvolí tmavý režim.
+    if (raw === 'system') return 'light';
+    return null;
   } catch {
     return null;
   }
@@ -40,7 +44,7 @@ export function getSystemTheme(): ResolvedTheme {
 }
 
 export function resolveTheme(theme: AppTheme): ResolvedTheme {
-  return theme === 'system' ? getSystemTheme() : theme;
+  return theme === 'dark' ? 'dark' : 'light';
 }
 
 export function applyThemeToDom(theme: AppTheme, opts?: { transition?: boolean }) {
@@ -98,7 +102,8 @@ export function onStorageThemeChange(onChange: (next: AppTheme) => void) {
   const storageHandler = (e: StorageEvent) => {
     if (e.key !== THEME_STORAGE_KEY || e.newValue === e.oldValue) return;
     const v = e.newValue;
-    if (v === 'dark' || v === 'light' || v === 'system') onChange(v);
+    if (v === 'dark' || v === 'light') onChange(v);
+    else if (v === 'system') onChange('light');
   };
   const customHandler = (e: Event) => {
     const ce = e as CustomEvent<{ theme: AppTheme }>;

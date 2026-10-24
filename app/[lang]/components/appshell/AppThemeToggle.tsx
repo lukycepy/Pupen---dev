@@ -1,15 +1,13 @@
 'use client';
 
 import React from 'react';
-import { Monitor, Moon, Sun } from 'lucide-react';
+import { Moon, Sun } from 'lucide-react';
 import type { AppTheme, ResolvedTheme } from './theme';
 
 export interface ThemeLabels {
   light?: string;
   dark?: string;
-  system?: string;
   title?: string;
-  cycleTo?: string;
 }
 
 export default function AppThemeToggle({
@@ -25,31 +23,16 @@ export default function AppThemeToggle({
 }) {
   const [pulse, setPulse] = React.useState(false);
 
-  const cycle: AppTheme =
-    theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light';
+  const cycle: AppTheme = theme === 'dark' ? 'light' : 'dark';
 
   const isDark = resolvedTheme === 'dark';
-  const isSystem = theme === 'system';
 
   const titleLight = labels?.light || 'Světlý režim';
   const titleDark = labels?.dark || 'Tmavý režim';
-  const titleSystem = labels?.system || 'Režim systému';
   const title = labels?.title || 'Přepnout režim zobrazení';
 
-  const currentLabel = isSystem
-    ? isDark
-      ? `${titleSystem} · aktivní: ${titleDark}`
-      : `${titleSystem} · aktivní: ${titleLight}`
-    : isDark
-      ? titleDark
-      : titleLight;
-
-  const nextLabel =
-    cycle === 'system'
-      ? titleSystem
-      : cycle === 'dark'
-        ? titleDark
-        : titleLight;
+  const currentLabel = isDark ? titleDark : titleLight;
+  const nextLabel = cycle === 'dark' ? titleDark : titleLight;
 
   const handleClick = React.useCallback(() => {
     setPulse(true);
@@ -95,16 +78,6 @@ export default function AppThemeToggle({
         >
           <Moon size={18} strokeWidth={2.25} />
         </span>
-      </span>
-      <span
-        className={[
-          'pointer-events-none absolute -bottom-1 left-1/2 -translate-x-1/2 text-[9px] leading-none font-black uppercase tracking-[0.18em] text-stone-400 dark:text-stone-500',
-          'transition-opacity duration-200',
-          isSystem ? 'opacity-100' : 'opacity-0',
-        ].join(' ')}
-        aria-hidden="true"
-      >
-        <Monitor size={10} strokeWidth={2.5} />
       </span>
     </button>
   );

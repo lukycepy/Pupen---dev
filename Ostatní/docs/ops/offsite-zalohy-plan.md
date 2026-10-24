@@ -66,6 +66,15 @@ Předpoklady na VPS:
 
 - `pg_dump`, `pg_restore`, `psql` (postgres klientské nástroje)
 - `node` a `npm`
+- `.env` / `.env.local` v rootu repa s `DATABASE_URL`, případně
+  `DATABASE_URL_STAGING` / `DATABASE_URL_PROD`, `NEXT_PUBLIC_SUPABASE_URL`
+  a `SUPABASE_SERVICE_ROLE_KEY` — skripty si je načítají samy i v cronu.
+  `--env staging` vyžaduje vyplněnou `DATABASE_URL_STAGING`; prázdná hodnota
+  se záměrně nefallbackuje na produkční `DATABASE_URL`.
+- Connection string může obsahovat parametr `uselibpqcompat=true`, který
+  vyžaduje pooler pro node-postgres/Prisma, ale nativní `pg_dump`/`pg_restore`/
+  `psql` ho odmítají. Skripty (`backup-db.mjs`, `restore-db.mjs`) ho proto před
+  spuštěním automaticky odstraní a `sslmode` předají přes `PGSSLMODE`.
 
 Příklad cron jobu (1× denně ve 03:20, s logem a ochranou proti paralelnímu běhu):
 

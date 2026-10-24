@@ -19,6 +19,7 @@ export default function PrihlaskaPage() {
   const [dict, setDict] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [generatedDocxUrl, setGeneratedDocxUrl] = useState<string>('');
   const [pageHtml, setPageHtml] = useState<string>('');
   const [pageTitle, setPageTitle] = useState<string>('');
   const [pageBlocks, setPageBlocks] = useState<any[] | null>(null);
@@ -116,6 +117,7 @@ export default function PrihlaskaPage() {
       const applicationId = String(submitJson?.applicationId || '').trim();
       if (!applicationId) throw new Error('Odeslání přihlášky selhalo.');
       
+      setGeneratedDocxUrl(String(submitJson?.docxDownloadUrl || ''));
       setSuccess(true);
       showToast(dict.successTitle, 'success');
     } catch (err: any) {
@@ -160,7 +162,17 @@ export default function PrihlaskaPage() {
                 <div>{dict.nextStep3}</div>
               </div>
             </div>
-            <div className="mt-5 grid grid-cols-2 gap-3">
+            <div className={`mt-5 grid gap-3 ${generatedDocxUrl ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2'}`}>
+              {generatedDocxUrl ? (
+                <a
+                  href={generatedDocxUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center justify-center bg-green-600 text-white px-4 py-3 rounded-2xl font-bold hover:bg-green-700 transition text-xs"
+                >
+                  {lang === 'en' ? 'Download DOCX' : 'Stáhnout DOCX'}
+                </a>
+              ) : null}
               <Link
                 href={`/${lang}/login`}
                 className="inline-flex items-center justify-center bg-white text-stone-700 px-4 py-3 rounded-2xl font-bold hover:bg-stone-100 transition border border-stone-200 text-xs"

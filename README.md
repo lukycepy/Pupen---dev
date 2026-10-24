@@ -83,7 +83,8 @@ Před každým nasazením do produkce projdi tento seznam. Slouží jako rychlá
 
 ### 4) Monitoring
 - [ ] Repozitářový secret `PROD_HEALTHCHECK_URL=https://pupen.org/api/health` nastaven (workflow `uptime.yml`)
-- [ ] `GET /api/health` vrací `{"status":"ok"}`
+- [ ] Volitelný secret `ALERT_WEBHOOK_URL` (Slack/Discord webhook) pro alert při výpadku `/api/health`
+- [ ] `GET /api/health` vrací `{"status":"ok"}` (503 = nedostupná DB, 200 s `degraded` = chybí env)
 - [ ] Cron endpointy běží a vrací OK: `/api/cron/email-queue`, `/api/cron/digest`, `/api/cron/membership-expiry` (vše s `?secret=$CRON_SECRET`)
 
 ### 5) Smoke test po deployi

@@ -2,9 +2,9 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { Monitor, Moon, Sun } from 'lucide-react';
+import { Moon, Sun } from 'lucide-react';
 import type { AppTheme, ResolvedTheme } from './theme';
-import { applyThemeToDom, onSystemThemeChange, readStoredTheme, resolveTheme, writeStoredTheme } from './theme';
+import { applyThemeToDom, readStoredTheme, resolveTheme, writeStoredTheme } from './theme';
 
 const SCALE_KEY = 'pupen_font_scale';
 const MOTION_KEY = 'pupen_reduce_motion';
@@ -16,7 +16,7 @@ function clamp(n: number, min: number, max: number) {
 export default function AccessibilityControls() {
   const pathname = usePathname();
   const [scale, setScale] = useState(1);
-  const [theme, setTheme] = useState<AppTheme>('system');
+  const [theme, setTheme] = useState<AppTheme>('light');
   const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>('light');
   const [reduceMotion, setReduceMotion] = useState(false);
 
@@ -31,7 +31,7 @@ export default function AccessibilityControls() {
     if (!Number.isNaN(storedScale)) setScale(clamp(storedScale, 0.9, 1.2));
 
     const storedTheme = readStoredTheme();
-    const nextTheme = storedTheme || 'system';
+    const nextTheme = storedTheme || 'light';
     setTheme(nextTheme);
     applyThemeToDom(nextTheme);
     setResolvedTheme(resolveTheme(nextTheme));
@@ -51,21 +51,12 @@ export default function AccessibilityControls() {
 
   useEffect(() => {
     if (hide) return;
-    if (theme !== 'system') return;
-    return onSystemThemeChange(() => {
-      applyThemeToDom('system');
-      setResolvedTheme(resolveTheme('system'));
-    });
-  }, [hide, theme]);
-
-  useEffect(() => {
-    if (hide) return;
     document.documentElement.style.setProperty('--font-scale', String(scale));
     window.localStorage.setItem(SCALE_KEY, String(scale));
   }, [hide, scale]);
 
   const cycleTheme = () => {
-    const next: AppTheme = theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light';
+    const next: AppTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(next);
     writeStoredTheme(next);
     applyThemeToDom(next);
@@ -119,12 +110,10 @@ export default function AccessibilityControls() {
         onClick={cycleTheme}
         className="h-9 w-9 flex items-center justify-center rounded-xl bg-stone-50 dark:bg-stone-800 text-stone-700 dark:text-yellow-400 hover:bg-stone-100 dark:hover:bg-stone-700 transition"
         aria-label="Přepnout motiv"
-        title={theme === 'system' ? 'Systém' : theme === 'dark' ? 'Tmavý' : 'Světlý'}
+        title={theme === 'dark' ? 'Tmavý' : 'Světlý'}
         data-testid="accessibility-theme-toggle"
       >
-        {theme === 'system' ? (
-          <Monitor size={16} />
-        ) : resolvedTheme === 'dark' ? (
+        {resolvedTheme === 'dark' ? (
           <Sun size={16} />
         ) : (
           <Moon size={16} />

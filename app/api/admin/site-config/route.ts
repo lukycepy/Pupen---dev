@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { requireAdmin, requireUser } from '@/lib/server-auth';
+import { normalizePublicMode } from '@/lib/site/public-mode';
 
 const SITE_CONFIG_ID = Number(process.env.SITE_CONFIG_ID || 1);
 
@@ -52,6 +53,35 @@ function asIsoDateOrNull(value: unknown) {
     return { value: null, error: 'invalid' as const };
   }
   return { value: parsed.toISOString(), error: null as string | null };
+}
+
+function sanitizeOnepageConfig(value: unknown) {
+  const record = toRecord(value);
+  return {
+    badge_cs: asOptionalTrimmedString(record.badge_cs, 120),
+    badge_en: asOptionalTrimmedString(record.badge_en, 120),
+    title_cs: asOptionalTrimmedString(record.title_cs, 240),
+    title_en: asOptionalTrimmedString(record.title_en, 240),
+    intro_cs: asOptionalTrimmedString(record.intro_cs, 2000),
+    intro_en: asOptionalTrimmedString(record.intro_en, 2000),
+    about_cs: asOptionalTrimmedString(record.about_cs, 12000),
+    about_en: asOptionalTrimmedString(record.about_en, 12000),
+    membership_cs: asOptionalTrimmedString(record.membership_cs, 12000),
+    membership_en: asOptionalTrimmedString(record.membership_en, 12000),
+    contacts_cs: asOptionalTrimmedString(record.contacts_cs, 12000),
+    contacts_en: asOptionalTrimmedString(record.contacts_en, 12000),
+    status_cs: asOptionalTrimmedString(record.status_cs, 12000),
+    status_en: asOptionalTrimmedString(record.status_en, 12000),
+    contact_email: asOptionalTrimmedString(record.contact_email, 200),
+    instagram_url: asOptionalTrimmedString(record.instagram_url, 500),
+    facebook_url: asOptionalTrimmedString(record.facebook_url, 500),
+    primary_href: asOptionalTrimmedString(record.primary_href, 300),
+    primary_label_cs: asOptionalTrimmedString(record.primary_label_cs, 120),
+    primary_label_en: asOptionalTrimmedString(record.primary_label_en, 120),
+    secondary_href: asOptionalTrimmedString(record.secondary_href, 300),
+    secondary_label_cs: asOptionalTrimmedString(record.secondary_label_cs, 120),
+    secondary_label_en: asOptionalTrimmedString(record.secondary_label_en, 120),
+  };
 }
 
 export async function GET(req: Request) {
@@ -136,7 +166,8 @@ export async function POST(req: Request) {
     };
 
     if (section === 'maintenance') {
-      const maintenanceEnabled = !!patch.maintenance_enabled;
+      const publicMode = normalizePublicMode(patch.public_mode, !!patch.maintenance_enabled);
+      const maintenanceEnabled = publicMode !== 'default';
       const startAt = asIsoDateOrNull(patch.maintenance_start_at);
       const endAt = asIsoDateOrNull(patch.maintenance_end_at);
       if (startAt.error) return NextResponse.json({ error: 'Invalid maintenance_start_at' }, { status: 400 });
@@ -151,6 +182,14 @@ export async function POST(req: Request) {
       out.maintenance_body_cs = asOptionalTrimmedString(patch.maintenance_body_cs, 4000);
       out.maintenance_title_en = asOptionalTrimmedString(patch.maintenance_title_en, 200);
       out.maintenance_body_en = asOptionalTrimmedString(patch.maintenance_body_en, 4000);
+      out.home = {
+        ...toRecord(out.home),
+        public_mode: publicMode,
+        onepage: {
+          ...toRecord(toRecord(out.home).onepage),
+          ...sanitizeOnepageConfig(patch.onepage),
+        },
+      };
     } else if (section === 'home') {
       out.home = toRecord(patch.home);
     } else if (section === 'member') {
