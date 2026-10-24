@@ -3,6 +3,7 @@ import { getServerSupabase } from '@/lib/supabase-server';
 import { buildDefaultPagesConfig } from '@/lib/site/pages-registry';
 import { writeServerLog } from '@/lib/logs/server-logger';
 import { DEFAULT_ONEPAGE_CONFIG, mergeOnepageConfig, normalizePublicMode } from '@/lib/site/public-mode';
+import { DEFAULT_HOME_INSTAGRAM_CONFIG, mergeHomeInstagramConfig } from '@/lib/site/instagram-feed';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,8 +31,7 @@ const defaultHome: Record<string, any> = {
     ab: { enabled: false, split: 50 },
   },
   instagram: {
-    url: 'https://instagram.com/pupenfappz/',
-    handle: '@pupenfappz',
+    ...DEFAULT_HOME_INSTAGRAM_CONFIG,
   },
   cta: {},
   testimonials: {},
@@ -114,7 +114,7 @@ export async function GET() {
       ...homeRow,
       widgets: { ...defaultHome.widgets, ...(homeRow.widgets && typeof homeRow.widgets === 'object' ? homeRow.widgets : {}) },
       hero: { ...defaultHome.hero, ...(homeRow.hero && typeof homeRow.hero === 'object' ? homeRow.hero : {}) },
-      instagram: { ...defaultHome.instagram, ...(homeRow.instagram && typeof homeRow.instagram === 'object' ? homeRow.instagram : {}) },
+      instagram: mergeHomeInstagramConfig(homeRow.instagram),
       public_mode: publicMode,
       onepage: mergedOnepage,
     };
@@ -154,7 +154,7 @@ export async function GET() {
         updated_at: row.updated_at || null,
       },
     });
-    out.headers.set('Cache-Control', 'no-store');
+    out.headers.set('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=300');
     return out;
   } catch {
     const out = NextResponse.json({
@@ -178,7 +178,7 @@ export async function GET() {
         updated_at: null,
       },
     });
-    out.headers.set('Cache-Control', 'no-store');
+    out.headers.set('Cache-Control', 'public, s-maxage=15, stale-while-revalidate=120');
     return out;
   }
 }

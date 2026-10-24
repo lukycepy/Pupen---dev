@@ -1,10 +1,12 @@
 import React from 'react';
 import { Instagram } from 'lucide-react';
+import Image from 'next/image';
+import type { InstagramFeedPost } from '@/lib/site/instagram-feed';
 
-export default function InstagramFeedGrid({ url, handle }: { url?: string; handle?: string }) {
+export default function InstagramFeedGrid({ url, handle, posts = [] }: { url?: string; handle?: string; posts?: InstagramFeedPost[] }) {
   const href = url || 'https://instagram.com/pupenfappz/';
   const label = handle || '@pupenfappz';
-  const tiles = Array.from({ length: 6 }, (_, i) => i);
+  const tiles = posts.filter((post) => post?.href && post?.image_url).slice(0, 6);
   return (
     <section className="py-20 px-6 max-w-6xl mx-auto bg-white dark:bg-black">
       <div className="flex items-end justify-between gap-6 mb-10">
@@ -24,7 +26,30 @@ export default function InstagramFeedGrid({ url, handle }: { url?: string; handl
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        {tiles.map((i) => (
+        {tiles.length > 0 ? tiles.map((post, i) => (
+          <a
+            key={`${post.href}-${i}`}
+            href={post.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group relative aspect-square rounded-[2rem] bg-white dark:bg-black border-2 border-black dark:border-white overflow-hidden transition"
+          >
+            <Image
+              src={`/api/image-proxy?url=${encodeURIComponent(post.image_url)}`}
+              alt={post.alt || 'Instagram'}
+              fill
+              sizes="(max-width: 768px) 50vw, 33vw"
+              className="object-cover transition duration-300 group-hover:scale-105"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-70 transition group-hover:opacity-90" />
+            <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-3 p-4 text-white">
+              <div className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
+                <Instagram size={16} />
+                Otevřít
+              </div>
+            </div>
+          </a>
+        )) : Array.from({ length: 6 }, (_, i) => (
           <a
             key={i}
             href={href}

@@ -9,6 +9,7 @@ import InlinePulse from '@/app/components/InlinePulse';
 import { richTextToClientHtml } from '@/lib/richtext-client';
 import type { OnepageConfig, PublicSiteMode } from '@/lib/site/public-mode';
 import { DEFAULT_ONEPAGE_CONFIG } from '@/lib/site/public-mode';
+import { getCachedPublicSiteConfig } from '@/lib/site/public-config-client';
 
 type SiteConfig = {
   public_mode?: PublicSiteMode;
@@ -25,6 +26,13 @@ function safeHref(value: string, fallback: string) {
   return fallback;
 }
 
+function localizeInternalHref(href: string, lang: string) {
+  if (!href.startsWith('/')) return href;
+  if (href === '/cs/prihlaska' || href === '/en/prihlaska') return `/${lang}/prihlaska`;
+  if (href === '/cs/kontakt' || href === '/en/kontakt') return `/${lang}/kontakt`;
+  return href;
+}
+
 export default function InfoPage() {
   const params = useParams();
   const router = useRouter();
@@ -35,8 +43,7 @@ export default function InfoPage() {
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const res = await fetch('/api/site-config', { cache: 'no-store' });
-      const json = await res.json().catch(() => ({}));
+      const json = await getCachedPublicSiteConfig();
       if (mounted) setCfg((json?.config || null) as SiteConfig | null);
     })();
     return () => {
@@ -53,8 +60,8 @@ export default function InfoPage() {
 
   const onepage = useMemo(() => ({ ...DEFAULT_ONEPAGE_CONFIG, ...(cfg?.onepage || {}) }), [cfg]);
   const otherLang = isEn ? 'cs' : 'en';
-  const primaryHref = safeHref(onepage.primary_href, `/${lang}/prihlaska`);
-  const secondaryHref = safeHref(onepage.secondary_href, `/${lang}/kontakt`);
+  const primaryHref = localizeInternalHref(safeHref(onepage.primary_href, `/${lang}/prihlaska`), lang);
+  const secondaryHref = localizeInternalHref(safeHref(onepage.secondary_href, `/${lang}/kontakt`), lang);
   const instagramHref = safeHref(onepage.instagram_url, '');
   const facebookHref = safeHref(onepage.facebook_url, '');
   const contactEmail = String(onepage.contact_email || DEFAULT_ONEPAGE_CONFIG.contact_email).trim();
@@ -70,10 +77,10 @@ export default function InfoPage() {
     primaryLabel: isEn ? onepage.primary_label_en : onepage.primary_label_cs,
     secondaryLabel: isEn ? onepage.secondary_label_en : onepage.secondary_label_cs,
     aboutTitle: isEn ? 'About the association' : 'O spolku',
-    membershipTitle: isEn ? 'Membership' : 'Clenstvi',
+    membershipTitle: isEn ? 'Membership' : 'Členství',
     contactsTitle: isEn ? 'Contacts' : 'Kontakty',
     statusTitle: isEn ? 'Status info' : 'Status info',
-    socialsTitle: isEn ? 'Social channels' : 'Socialni site',
+    socialsTitle: isEn ? 'Social channels' : 'Sociální sítě',
   };
 
   return (
@@ -101,7 +108,7 @@ export default function InfoPage() {
           <div className="mx-auto flex min-h-[70vh] max-w-6xl items-center justify-center">
             <span className="inline-flex items-center gap-3 rounded-2xl border-2 border-black bg-white px-5 py-4 text-sm font-bold text-black dark:border-white dark:bg-black dark:text-white">
               <InlinePulse className="bg-black dark:bg-white" size={14} />
-              {isEn ? 'Loading onepage...' : 'Nacitam onepage...'}
+              {isEn ? 'Loading onepage...' : 'Načítám onepage...'}
             </span>
           </div>
         ) : (

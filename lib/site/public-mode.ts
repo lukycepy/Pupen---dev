@@ -36,7 +36,7 @@ export function normalizePublicMode(value: unknown, fallbackMaintenanceEnabled =
   return fallbackMaintenanceEnabled ? 'maintenance' : 'default';
 }
 
-export const DEFAULT_ONEPAGE_CONFIG: OnepageConfig = {
+const LEGACY_ONEPAGE_CONFIG: OnepageConfig = {
   badge_cs: 'Studentsky spolek',
   badge_en: 'Student association',
   title_cs: 'Vse dulezite o spolku Pupen na jedne strance',
@@ -72,31 +72,73 @@ export const DEFAULT_ONEPAGE_CONFIG: OnepageConfig = {
   secondary_label_en: 'Contact',
 };
 
+export const DEFAULT_ONEPAGE_CONFIG: OnepageConfig = {
+  badge_cs: 'Studentský spolek',
+  badge_en: 'Student association',
+  title_cs: 'Vše důležité o spolku Pupen na jedné stránce',
+  title_en: 'Everything important about Pupen on one page',
+  intro_cs:
+    'Hlavní web je dočasně v omezeném režimu. Tady najdete základní informace o spolku, členství, kontakty a nejdůležitější odkazy.',
+  intro_en:
+    'The main website is temporarily in a limited mode. Here you can find the essential information about the association, membership, contacts and important links.',
+  about_cs:
+    '<p>Studentský spolek Pupen, z.s. propojuje studenty, akce a komunitní život kolem FAPPZ a ČZU. Věnujeme se studentským aktivitám, podpoře komunity a smysluplným projektům pro studenty.</p>',
+  about_en:
+    '<p>Studentsky spolek Pupen, z.s. connects students, events and community life around FAPPZ and CZU. We support student activities, community building and practical projects for students.</p>',
+  membership_cs:
+    '<p>Členství je určené především pro studenty a absolventy spojené se spolkem. Součástí je možnost zapojit se do aktivit spolku a mít přehled o novinkách a akcích.</p><p>Členský příspěvek je 200 Kč za semestr.</p>',
+  membership_en:
+    '<p>Membership is intended mainly for students and alumni connected with the association. It allows you to join our activities and stay informed about news and events.</p><p>The membership fee is CZK 200 per semester.</p>',
+  contacts_cs:
+    '<p>Pro běžné dotazy pište na <a href=\"mailto:info@pupen.org\">info@pupen.org</a>. Aktuální informace najdete také na našich sociálních sítích.</p>',
+  contacts_en:
+    '<p>For general questions, contact us at <a href=\"mailto:info@pupen.org\">info@pupen.org</a>. You can also follow current updates on our social channels.</p>',
+  status_cs:
+    '<p>V tomto režimu zobrazujeme jen to nejdůležitější. Ostatní části webu mohou být dočasně omezené nebo nedostupné.</p>',
+  status_en:
+    '<p>In this mode we only show the most important information. Other parts of the website may be temporarily limited or unavailable.</p>',
+  contact_email: 'info@pupen.org',
+  instagram_url: 'https://instagram.com/pupenfappz/',
+  facebook_url: '',
+  primary_href: '/cs/prihlaska',
+  primary_label_cs: 'Členská přihláška',
+  primary_label_en: 'Membership application',
+  secondary_href: '/cs/kontakt',
+  secondary_label_cs: 'Kontakt',
+  secondary_label_en: 'Contact',
+};
+
+function pickOnepageString(value: unknown, fallback: string, legacy: string) {
+  const text = typeof value === 'string' ? value.trim() : '';
+  if (!text || text === legacy) return fallback;
+  return text;
+}
+
 export function mergeOnepageConfig(value: unknown): OnepageConfig {
   const record = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
   return {
-    badge_cs: pickString(record.badge_cs, DEFAULT_ONEPAGE_CONFIG.badge_cs),
-    badge_en: pickString(record.badge_en, DEFAULT_ONEPAGE_CONFIG.badge_en),
-    title_cs: pickString(record.title_cs, DEFAULT_ONEPAGE_CONFIG.title_cs),
-    title_en: pickString(record.title_en, DEFAULT_ONEPAGE_CONFIG.title_en),
-    intro_cs: pickString(record.intro_cs, DEFAULT_ONEPAGE_CONFIG.intro_cs),
-    intro_en: pickString(record.intro_en, DEFAULT_ONEPAGE_CONFIG.intro_en),
-    about_cs: pickString(record.about_cs, DEFAULT_ONEPAGE_CONFIG.about_cs),
-    about_en: pickString(record.about_en, DEFAULT_ONEPAGE_CONFIG.about_en),
-    membership_cs: pickString(record.membership_cs, DEFAULT_ONEPAGE_CONFIG.membership_cs),
-    membership_en: pickString(record.membership_en, DEFAULT_ONEPAGE_CONFIG.membership_en),
-    contacts_cs: pickString(record.contacts_cs, DEFAULT_ONEPAGE_CONFIG.contacts_cs),
-    contacts_en: pickString(record.contacts_en, DEFAULT_ONEPAGE_CONFIG.contacts_en),
-    status_cs: pickString(record.status_cs, DEFAULT_ONEPAGE_CONFIG.status_cs),
-    status_en: pickString(record.status_en, DEFAULT_ONEPAGE_CONFIG.status_en),
-    contact_email: pickString(record.contact_email, DEFAULT_ONEPAGE_CONFIG.contact_email),
-    instagram_url: pickString(record.instagram_url, DEFAULT_ONEPAGE_CONFIG.instagram_url),
-    facebook_url: pickString(record.facebook_url, DEFAULT_ONEPAGE_CONFIG.facebook_url),
-    primary_href: pickString(record.primary_href, DEFAULT_ONEPAGE_CONFIG.primary_href),
-    primary_label_cs: pickString(record.primary_label_cs, DEFAULT_ONEPAGE_CONFIG.primary_label_cs),
-    primary_label_en: pickString(record.primary_label_en, DEFAULT_ONEPAGE_CONFIG.primary_label_en),
-    secondary_href: pickString(record.secondary_href, DEFAULT_ONEPAGE_CONFIG.secondary_href),
-    secondary_label_cs: pickString(record.secondary_label_cs, DEFAULT_ONEPAGE_CONFIG.secondary_label_cs),
-    secondary_label_en: pickString(record.secondary_label_en, DEFAULT_ONEPAGE_CONFIG.secondary_label_en),
+    badge_cs: pickOnepageString(record.badge_cs, DEFAULT_ONEPAGE_CONFIG.badge_cs, LEGACY_ONEPAGE_CONFIG.badge_cs),
+    badge_en: pickOnepageString(record.badge_en, DEFAULT_ONEPAGE_CONFIG.badge_en, LEGACY_ONEPAGE_CONFIG.badge_en),
+    title_cs: pickOnepageString(record.title_cs, DEFAULT_ONEPAGE_CONFIG.title_cs, LEGACY_ONEPAGE_CONFIG.title_cs),
+    title_en: pickOnepageString(record.title_en, DEFAULT_ONEPAGE_CONFIG.title_en, LEGACY_ONEPAGE_CONFIG.title_en),
+    intro_cs: pickOnepageString(record.intro_cs, DEFAULT_ONEPAGE_CONFIG.intro_cs, LEGACY_ONEPAGE_CONFIG.intro_cs),
+    intro_en: pickOnepageString(record.intro_en, DEFAULT_ONEPAGE_CONFIG.intro_en, LEGACY_ONEPAGE_CONFIG.intro_en),
+    about_cs: pickOnepageString(record.about_cs, DEFAULT_ONEPAGE_CONFIG.about_cs, LEGACY_ONEPAGE_CONFIG.about_cs),
+    about_en: pickOnepageString(record.about_en, DEFAULT_ONEPAGE_CONFIG.about_en, LEGACY_ONEPAGE_CONFIG.about_en),
+    membership_cs: pickOnepageString(record.membership_cs, DEFAULT_ONEPAGE_CONFIG.membership_cs, LEGACY_ONEPAGE_CONFIG.membership_cs),
+    membership_en: pickOnepageString(record.membership_en, DEFAULT_ONEPAGE_CONFIG.membership_en, LEGACY_ONEPAGE_CONFIG.membership_en),
+    contacts_cs: pickOnepageString(record.contacts_cs, DEFAULT_ONEPAGE_CONFIG.contacts_cs, LEGACY_ONEPAGE_CONFIG.contacts_cs),
+    contacts_en: pickOnepageString(record.contacts_en, DEFAULT_ONEPAGE_CONFIG.contacts_en, LEGACY_ONEPAGE_CONFIG.contacts_en),
+    status_cs: pickOnepageString(record.status_cs, DEFAULT_ONEPAGE_CONFIG.status_cs, LEGACY_ONEPAGE_CONFIG.status_cs),
+    status_en: pickOnepageString(record.status_en, DEFAULT_ONEPAGE_CONFIG.status_en, LEGACY_ONEPAGE_CONFIG.status_en),
+    contact_email: pickOnepageString(record.contact_email, DEFAULT_ONEPAGE_CONFIG.contact_email, LEGACY_ONEPAGE_CONFIG.contact_email),
+    instagram_url: pickOnepageString(record.instagram_url, DEFAULT_ONEPAGE_CONFIG.instagram_url, LEGACY_ONEPAGE_CONFIG.instagram_url),
+    facebook_url: pickOnepageString(record.facebook_url, DEFAULT_ONEPAGE_CONFIG.facebook_url, LEGACY_ONEPAGE_CONFIG.facebook_url),
+    primary_href: pickOnepageString(record.primary_href, DEFAULT_ONEPAGE_CONFIG.primary_href, LEGACY_ONEPAGE_CONFIG.primary_href),
+    primary_label_cs: pickOnepageString(record.primary_label_cs, DEFAULT_ONEPAGE_CONFIG.primary_label_cs, LEGACY_ONEPAGE_CONFIG.primary_label_cs),
+    primary_label_en: pickOnepageString(record.primary_label_en, DEFAULT_ONEPAGE_CONFIG.primary_label_en, LEGACY_ONEPAGE_CONFIG.primary_label_en),
+    secondary_href: pickOnepageString(record.secondary_href, DEFAULT_ONEPAGE_CONFIG.secondary_href, LEGACY_ONEPAGE_CONFIG.secondary_href),
+    secondary_label_cs: pickOnepageString(record.secondary_label_cs, DEFAULT_ONEPAGE_CONFIG.secondary_label_cs, LEGACY_ONEPAGE_CONFIG.secondary_label_cs),
+    secondary_label_en: pickOnepageString(record.secondary_label_en, DEFAULT_ONEPAGE_CONFIG.secondary_label_en, LEGACY_ONEPAGE_CONFIG.secondary_label_en),
   };
 }

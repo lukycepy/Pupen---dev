@@ -417,6 +417,15 @@ export default function AdminDashboard() {
 
   return (
     <>
+      <style jsx global>{`
+        [data-pupen-banner],
+        [data-pupen-navbar],
+        [data-pupen-footer],
+        [data-pupen-cookie],
+        [data-pupen-faq] {
+          display: none !important;
+        }
+      `}</style>
       <AdminCommandPalette
         open={isPaletteOpen}
         onClose={() => setIsPaletteOpen(false)}

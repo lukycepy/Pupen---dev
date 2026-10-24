@@ -72,8 +72,18 @@ export default function AdminEntryClient({ lang }: { lang: string }) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-stone-50 to-stone-100/40 p-6 admin-scope">
-      <div className="bg-white p-8 sm:p-10 rounded-[2rem] shadow-xl w-full max-w-md text-center border border-stone-100">
+    <>
+      <style jsx global>{`
+        [data-pupen-banner],
+        [data-pupen-navbar],
+        [data-pupen-footer],
+        [data-pupen-cookie],
+        [data-pupen-faq] {
+          display: none !important;
+        }
+      `}</style>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-stone-50 to-stone-100/40 p-6 admin-scope">
+        <div className="bg-white p-8 sm:p-10 rounded-[2rem] shadow-xl w-full max-w-md text-center border border-stone-100">
         <div className="flex justify-center mb-7">
           <div className="w-14 h-14 rounded-[1.25rem] border border-green-100 bg-green-50 flex items-center justify-center">
             <ShieldCheck className="w-7 h-7 text-green-700" />
@@ -118,7 +128,8 @@ export default function AdminEntryClient({ lang }: { lang: string }) {
             </Link>
           </div>
         )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -13,6 +13,8 @@ import { pageBlocksToHtml, parsePageBlocks, type PageBlocks } from '@/lib/site/p
 import Popover from '@/app/components/ui/Popover';
 import type { Dictionary } from '@/lib/dictionary-types';
 import { DEFAULT_ONEPAGE_CONFIG, type OnepageConfig, type PublicSiteMode } from '@/lib/site/public-mode';
+import { DEFAULT_HOME_INSTAGRAM_CONFIG, type InstagramFeedPost } from '@/lib/site/instagram-feed';
+import { invalidateCachedPublicSiteConfig } from '@/lib/site/public-config-client';
 
 type PageCfg = { enabled?: boolean; navbar?: boolean; tools?: boolean };
 type SiteCfg = {
@@ -88,7 +90,7 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
   const isSuperadmin = !!permissions?.can_manage_admins;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [section, setSection] = useState<'pages' | 'content' | 'home' | 'member' | 'maintenance' | 'permissions'>('pages');
+  const [section, setSection] = useState<'pages' | 'content' | 'home' | 'member' | 'maintenance' | 'onepage' | 'permissions'>('pages');
   const [config, setConfig] = useState<SiteCfg>({
     maintenance_enabled: false,
     maintenance_start_at: null,
@@ -111,7 +113,7 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
         cta: true,
       },
       hero: { backgrounds: [] as string[] },
-      instagram: { url: 'https://instagram.com/pupenfappz/', handle: '@pupenfappz' },
+      instagram: { ...DEFAULT_HOME_INSTAGRAM_CONFIG },
       public_mode: 'default' as PublicSiteMode,
       onepage: DEFAULT_ONEPAGE_CONFIG,
     },
@@ -138,6 +140,24 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
   const [pageContentMode, setPageContentMode] = useState<'html' | 'blocks'>('blocks');
   const [pageEditorLang, setPageEditorLang] = useState<'cs' | 'en'>('cs');
   const [pagePickerQuery, setPagePickerQuery] = useState('');
+
+  const updateHomeInstagramPost = useCallback((index: number, patch: Partial<InstagramFeedPost>) => {
+    setConfig((p) => {
+      const current = Array.isArray(p.home?.instagram?.posts) ? [...p.home.instagram.posts] : [];
+      while (current.length < 6) current.push({ href: '', image_url: '', alt: '' });
+      current[index] = { ...(current[index] || { href: '', image_url: '', alt: '' }), ...patch };
+      return {
+        ...p,
+        home: {
+          ...(p.home || {}),
+          instagram: {
+            ...(p.home?.instagram || {}),
+            posts: current,
+          },
+        },
+      };
+    });
+  }, []);
 
   const [pageAccess, setPageAccess] = useState<{
     loaded: boolean;
@@ -295,17 +315,21 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
       const patch =
         section === 'maintenance'
           ? {
-              maintenance_enabled: config.maintenance_enabled,
               maintenance_start_at: config.maintenance_start_at || null,
               maintenance_end_at: config.maintenance_end_at || null,
               maintenance_title_cs: config.maintenance_title_cs || null,
               maintenance_body_cs: config.maintenance_body_cs || null,
               maintenance_title_en: config.maintenance_title_en || null,
               maintenance_body_en: config.maintenance_body_en || null,
-              public_mode:
-                config.home?.public_mode === 'maintenance' || config.home?.public_mode === 'onepage' ? config.home.public_mode : 'default',
-              onepage: { ...DEFAULT_ONEPAGE_CONFIG, ...((config.home?.onepage || {}) as OnepageConfig) },
+              public_mode: config.home?.public_mode === 'maintenance' ? 'maintenance' : config.home?.public_mode === 'onepage' ? 'onepage' : 'default',
             }
+          : section === 'onepage'
+            ? {
+                maintenance_start_at: config.maintenance_start_at || null,
+                maintenance_end_at: config.maintenance_end_at || null,
+                public_mode: config.home?.public_mode === 'maintenance' ? 'maintenance' : config.home?.public_mode === 'onepage' ? 'onepage' : 'default',
+                onepage: { ...DEFAULT_ONEPAGE_CONFIG, ...((config.home?.onepage || {}) as OnepageConfig) },
+              }
           : section === 'home'
             ? { home: config.home || {} }
             : section === 'member'
@@ -318,6 +342,7 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error || t.errors.saveFailed);
+      invalidateCachedPublicSiteConfig();
       showToast(t.toasts.saved, 'success');
     } catch (e: any) {
       showToast(e?.message || t.errors.generic, 'error');
@@ -610,7 +635,7 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
           ? canEditSiteHome
           : section === 'member'
             ? canEditSiteMember
-            : section === 'maintenance'
+          : section === 'maintenance' || section === 'onepage'
               ? canEditSiteMaintenance
               : section === 'permissions'
                 ? isSuperadmin
@@ -683,6 +708,7 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
               ['home', t.sections.home, canEditSiteHome],
               ['member', t.sections.memberPortal, canEditSiteMember],
               ['maintenance', t.sections.maintenance, canEditSiteMaintenance],
+              ['onepage', ((t.sections as unknown as Record<string, string>)?.onepage || (isEn ? 'Onepage' : 'Onepage')), canEditSiteMaintenance],
               ['permissions', t.sections.permissions, isSuperadmin],
             ] as const
           )
@@ -714,41 +740,59 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
             </div>
             <div className="text-sm text-stone-600 font-medium mt-1 dark:text-stone-300">
               {isEn
-                ? 'Choose whether the public website stays normal, redirects to maintenance, or shows a focused onepage with key association info. Admin and member sections remain available.'
-                : 'Zvolte, zda verejny web pobezi normalne, presmeruje se na odstávku, nebo zobrazi onepage s nejdulezitejsimi informacemi o spolku. Admin a clen zustavaji dostupni.'}
+                ? 'Configure only the maintenance mode here: activation window and maintenance texts. Onepage has its own separate section.'
+                : 'Tady nastavujete jen odstavku: casove okno a texty odstavky. Onepage ma vlastni samostatnou sekci.'}
             </div>
           </div>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-3">
-          {([
-            ['default', isEn ? 'Normal web' : 'Normalni web'],
-            ['maintenance', isEn ? 'Maintenance' : 'Odstavka'],
-            ['onepage', isEn ? 'Onepage info' : 'Onepage info'],
-          ] as const).map(([mode, label]) => (
-            <button
-              key={mode}
-              type="button"
-              onClick={() =>
-                setConfig((p) => ({
+        <div className="grid md:grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() =>
+              setConfig((p) => {
+                const currentMode = p.home?.public_mode === 'maintenance' || p.home?.public_mode === 'onepage' ? p.home.public_mode : 'default';
+                const nextMode = currentMode === 'maintenance' ? 'default' : currentMode;
+                return {
                   ...p,
-                  maintenance_enabled: mode !== 'default',
+                  maintenance_enabled: nextMode !== 'default',
                   home: {
                     ...(p.home || {}),
-                    public_mode: mode,
+                    public_mode: nextMode,
                     onepage: { ...DEFAULT_ONEPAGE_CONFIG, ...((p.home?.onepage || {}) as OnepageConfig) },
                   },
-                }))
-              }
-              className={`rounded-2xl border px-4 py-4 text-[10px] font-black uppercase tracking-widest transition ${
-                publicMode === mode
-                  ? 'border-green-600 bg-green-600 text-white'
-                  : 'border-stone-200 bg-white text-stone-700 hover:bg-stone-50 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-200 dark:hover:bg-stone-900/60'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+                };
+              })
+            }
+            className={`rounded-2xl border px-4 py-4 text-[10px] font-black uppercase tracking-widest transition ${
+              publicMode !== 'maintenance'
+                ? 'border-stone-900 bg-stone-900 text-white dark:border-stone-100 dark:bg-stone-100 dark:text-stone-900'
+                : 'border-stone-200 bg-white text-stone-700 hover:bg-stone-50 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-200 dark:hover:bg-stone-900/60'
+            }`}
+          >
+            {isEn ? 'Maintenance off' : 'Odstavka vypnuta'}
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              setConfig((p) => ({
+                ...p,
+                maintenance_enabled: true,
+                home: {
+                  ...(p.home || {}),
+                  public_mode: 'maintenance',
+                  onepage: { ...DEFAULT_ONEPAGE_CONFIG, ...((p.home?.onepage || {}) as OnepageConfig) },
+                },
+              }))
+            }
+            className={`rounded-2xl border px-4 py-4 text-[10px] font-black uppercase tracking-widest transition ${
+              publicMode === 'maintenance'
+                ? 'border-green-600 bg-green-600 text-white'
+                : 'border-stone-200 bg-white text-stone-700 hover:bg-stone-50 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-200 dark:hover:bg-stone-900/60'
+            }`}
+          >
+            {isEn ? 'Enable maintenance' : 'Zapnout odstavku'}
+          </button>
         </div>
 
         <div className="grid md:grid-cols-3 gap-4">
@@ -836,6 +880,128 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
             <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden dark:bg-stone-950 dark:border-stone-800">
               <Editor value={config.maintenance_body_en || ''} onChange={(v: string) => setConfig((p) => ({ ...p, maintenance_body_en: v }))} />
             </div>
+          </div>
+        </div>
+      </div>
+      )}
+
+      {section === 'onepage' && (
+      <div className="bg-white p-8 rounded-[2.5rem] border shadow-sm space-y-6 dark:bg-stone-950 dark:border-stone-800">
+        <div className="flex items-start justify-between gap-6">
+          <div>
+            <div className="text-sm font-black text-stone-900 flex items-center gap-2 dark:text-stone-100">
+              <Globe className="text-green-600" size={18} />
+              {isEn ? 'Onepage info' : 'Onepage info'}
+            </div>
+            <div className="text-sm text-stone-600 font-medium mt-1 dark:text-stone-300">
+              {isEn
+                ? 'This section controls only the focused onepage mode and its content. Maintenance has its own separate section.'
+                : 'Tato sekce nastavuje jen onepage rezim a jeho obsah. Odstavka ma vlastni samostatnou sekci.'}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() =>
+              setConfig((p) => {
+                const currentMode = p.home?.public_mode === 'maintenance' || p.home?.public_mode === 'onepage' ? p.home.public_mode : 'default';
+                const nextMode = currentMode === 'onepage' ? 'default' : currentMode;
+                return {
+                  ...p,
+                  maintenance_enabled: nextMode !== 'default',
+                  home: {
+                    ...(p.home || {}),
+                    public_mode: nextMode,
+                    onepage: { ...DEFAULT_ONEPAGE_CONFIG, ...((p.home?.onepage || {}) as OnepageConfig) },
+                  },
+                };
+              })
+            }
+            className={`rounded-2xl border px-4 py-4 text-[10px] font-black uppercase tracking-widest transition ${
+              publicMode !== 'onepage'
+                ? 'border-stone-900 bg-stone-900 text-white dark:border-stone-100 dark:bg-stone-100 dark:text-stone-900'
+                : 'border-stone-200 bg-white text-stone-700 hover:bg-stone-50 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-200 dark:hover:bg-stone-900/60'
+            }`}
+          >
+            {isEn ? 'Onepage off' : 'Onepage vypnuta'}
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              setConfig((p) => ({
+                ...p,
+                maintenance_enabled: true,
+                home: {
+                  ...(p.home || {}),
+                  public_mode: 'onepage',
+                  onepage: { ...DEFAULT_ONEPAGE_CONFIG, ...((p.home?.onepage || {}) as OnepageConfig) },
+                },
+              }))
+            }
+            className={`rounded-2xl border px-4 py-4 text-[10px] font-black uppercase tracking-widest transition ${
+              publicMode === 'onepage'
+                ? 'border-green-600 bg-green-600 text-white'
+                : 'border-stone-200 bg-white text-stone-700 hover:bg-stone-50 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-200 dark:hover:bg-stone-900/60'
+            }`}
+          >
+            {isEn ? 'Enable onepage' : 'Zapnout onepage'}
+          </button>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-4">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 dark:text-stone-500">{t.maintenance.start}</div>
+            <input
+              type="datetime-local"
+              value={toLocalInput(config.maintenance_start_at)}
+              onChange={(e) => {
+                const v = e.target.value;
+                setConfig((p) => ({ ...p, maintenance_start_at: v ? new Date(v).toISOString() : null }));
+              }}
+              className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition dark:bg-stone-900/60 dark:text-stone-100"
+            />
+          </div>
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 dark:text-stone-500">{t.maintenance.end}</div>
+            <input
+              type="datetime-local"
+              value={toLocalInput(config.maintenance_end_at)}
+              onChange={(e) => {
+                const v = e.target.value;
+                setConfig((p) => ({ ...p, maintenance_end_at: v ? new Date(v).toISOString() : null }));
+              }}
+              className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition dark:bg-stone-900/60 dark:text-stone-100"
+            />
+          </div>
+          <div className="flex items-end">
+            <button
+              type="button"
+              onClick={() => setConfig((p) => ({ ...p, maintenance_start_at: null, maintenance_end_at: null }))}
+              className="w-full px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition bg-white text-stone-700 border-stone-200 hover:bg-stone-50 dark:bg-stone-950 dark:text-stone-200 dark:border-stone-800 dark:hover:bg-stone-900/60"
+            >
+              {t.maintenance.clearTime}
+            </button>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-stone-200 bg-stone-50 p-5 dark:border-stone-800 dark:bg-stone-900/60">
+          <div className="text-[10px] font-black uppercase tracking-widest text-stone-500 dark:text-stone-400">
+            {isEn ? 'Current public mode' : 'Aktualni verejny rezim'}
+          </div>
+          <div className="mt-2 text-sm font-bold text-black dark:text-white">
+            {publicMode === 'maintenance'
+              ? isEn
+                ? 'Maintenance page'
+                : 'Odstavka'
+              : publicMode === 'onepage'
+                ? isEn
+                  ? 'Onepage info'
+                  : 'Onepage info'
+                : isEn
+                  ? 'Normal website'
+                  : 'Normalni web'}
           </div>
         </div>
 
@@ -1369,6 +1535,62 @@ export default function SiteConfigTab({ dict, permissions }: Props) {
                   className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition dark:bg-stone-900/60 dark:text-stone-100"
                   placeholder="@pupenfappz"
                 />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 dark:text-stone-500">
+                  {isEn ? 'Instagram posts' : 'Instagram posty'}
+                </div>
+                <div className="mt-1 px-1 text-xs font-medium text-stone-500 dark:text-stone-400">
+                  {isEn
+                    ? 'Fill up to 6 tiles with image URL and post URL.'
+                    : 'Vyplňte až 6 dlaždic pomocí URL obrázku a URL příspěvku.'}
+                </div>
+              </div>
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                {Array.from({ length: 6 }, (_, index) => {
+                  const post = (Array.isArray(config.home?.instagram?.posts) ? config.home?.instagram?.posts[index] : undefined) || {
+                    href: '',
+                    image_url: '',
+                    alt: '',
+                  };
+                  return (
+                    <div key={index} className="rounded-2xl border border-black dark:border-white p-4 space-y-3">
+                      <div className="text-[10px] font-black uppercase tracking-widest text-stone-500 dark:text-stone-400">
+                        {isEn ? `Post ${index + 1}` : `Post ${index + 1}`}
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 dark:text-stone-500">Image URL</div>
+                        <input
+                          value={String(post.image_url || '')}
+                          onChange={(e) => updateHomeInstagramPost(index, { image_url: e.target.value })}
+                          className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition dark:bg-stone-900/60 dark:text-stone-100"
+                          placeholder="https://..."
+                        />
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 dark:text-stone-500">Post URL</div>
+                        <input
+                          value={String(post.href || '')}
+                          onChange={(e) => updateHomeInstagramPost(index, { href: e.target.value })}
+                          className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition dark:bg-stone-900/60 dark:text-stone-100"
+                          placeholder="https://www.instagram.com/p/..."
+                        />
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1 dark:text-stone-500">Alt</div>
+                        <input
+                          value={String(post.alt || '')}
+                          onChange={(e) => updateHomeInstagramPost(index, { alt: e.target.value })}
+                          className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition dark:bg-stone-900/60 dark:text-stone-100"
+                          placeholder={isEn ? 'Instagram post preview' : 'Náhled instagramového příspěvku'}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>

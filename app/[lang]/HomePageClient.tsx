@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { 
   Leaf, Calendar, Users, ArrowRight,
   HelpCircle, ChevronDown, ChevronUp, ExternalLink, 
-  Archive, Map as MapIcon, UserPlus as UserPlusIcon, Image as ImageIcon
+  UserPlus as UserPlusIcon, Image as ImageIcon
 } from 'lucide-react';
 import { getDictionary } from '@/lib/get-dictionary';
 import { supabase } from '@/lib/supabase';
@@ -391,48 +391,6 @@ export default function HomePageClient({ lang }: HomePageClientProps) {
         </div>
       </section>
 
-      {/* --- PŘIDÁNO: ZTRÁTY A NÁLEZY --- */}
-      {widgets.lostFound !== false && (
-        <section className="py-20 sm:py-24 bg-white dark:bg-black">
-          <div className="max-w-6xl mx-auto px-6">
-            <div className="text-center mb-12 sm:mb-16">
-              <span className="text-blue-600 dark:text-blue-400 font-bold uppercase tracking-widest text-sm mb-3 block">{lang === 'en' ? 'Lost & Found' : 'Ztráty a nálezy'}</span>
-              <h2 className="text-3xl sm:text-5xl font-black text-black dark:text-white tracking-tight">
-                {lang === 'en' ? 'Did you lose something?' : 'Ztratili jste něco?'}
-              </h2>
-              <p className="text-stone-500 dark:text-stone-400 mt-4 max-w-2xl mx-auto">
-                {lang === 'en' ? 'Check our public list of lost and found items from our events.' : 'Podívejte se na náš veřejný seznam ztrát a nálezů z našich akcí.'}
-              </p>
-            </div>
-            <div className="flex justify-center">
-              <Link href={`/${lang}/ztraty-a-nalezy`} className="inline-flex items-center gap-3 bg-white dark:bg-black text-black dark:text-white px-8 py-4 rounded-2xl font-bold hover:bg-green-50 dark:hover:bg-green-950 transition border-2 border-black dark:border-white">
-                {lang === 'en' ? 'View Lost & Found' : 'Otevřít Ztráty a nálezy'} <ArrowRight size={20} />
-              </Link>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* --- 4.5 RYCHLÉ ODKAZY --- */}
-      <section className="py-20 bg-white dark:bg-black">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-            <Link href={`/${lang}/archiv`} className="bg-white dark:bg-black p-8 rounded-[2rem] flex flex-col items-center text-center group hover:bg-green-600 dark:hover:bg-green-600 transition-colors duration-500 border-2 border-black dark:border-white">
-               <div className="p-4 bg-white dark:bg-black text-green-600 dark:text-green-400 rounded-2xl mb-4 group-hover:bg-white/20 group-hover:text-white transition-colors border-2 border-black dark:border-white group-hover:border-white group-hover:dark:border-white"><Archive size={32} /></div>
-               <span className="font-black text-black dark:text-white group-hover:text-white transition-colors uppercase tracking-widest text-xs">{dict.archiveAktivit}</span>
-            </Link>
-            <Link href={`/${lang}/mapa`} className="bg-white dark:bg-black p-8 rounded-[2rem] flex flex-col items-center text-center group hover:bg-green-600 dark:hover:bg-green-600 transition-colors duration-500 border-2 border-black dark:border-white">
-               <div className="p-4 bg-white dark:bg-black text-green-600 dark:text-green-400 rounded-2xl mb-4 group-hover:bg-white/20 group-hover:text-white transition-colors border-2 border-black dark:border-white group-hover:border-white group-hover:dark:border-white"><MapIcon size={32} /></div>
-               <span className="font-black text-black dark:text-white group-hover:text-white transition-colors uppercase tracking-widest text-xs">{dict.mapaAreálu}</span>
-            </Link>
-            <Link href={`/${lang}/galerie`} className="bg-white dark:bg-black p-8 rounded-[2rem] flex flex-col items-center text-center group hover:bg-green-600 dark:hover:bg-green-600 transition-colors duration-500 border-2 border-black dark:border-white">
-               <div className="p-4 bg-white dark:bg-black text-green-600 dark:text-green-400 rounded-2xl mb-4 group-hover:bg-white/20 group-hover:text-white transition-colors border-2 border-black dark:border-white group-hover:border-white group-hover:dark:border-white"><ImageIcon size={32} /></div>
-               <span className="font-black text-black dark:text-white group-hover:text-white transition-colors uppercase tracking-widest text-xs">{dict.fotogalerie}</span>
-            </Link>
-          </div>
-        </div>
-      </section>
-
       {/* --- 5. FAQ --- */}
       {faqs.length > 0 && (
         <section className="py-20 sm:py-32 px-6 max-w-3xl mx-auto bg-white dark:bg-black">
@@ -474,7 +432,7 @@ export default function HomePageClient({ lang }: HomePageClientProps) {
           <TestimonialsSlider lang={lang} />
         ))}
       {widgets.instagram !== false && (
-        <InstagramFeedGrid url={homeCfg?.instagram?.url} handle={homeCfg?.instagram?.handle} />
+        <InstagramFeedGrid url={homeCfg?.instagram?.url} handle={homeCfg?.instagram?.handle} posts={homeCfg?.instagram?.posts} />
       )}
 
       {/* --- 5.5 PARTNEŘI --- */}

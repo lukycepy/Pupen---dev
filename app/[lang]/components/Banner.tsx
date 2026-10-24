@@ -1,11 +1,37 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
 import { X, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { richTextToClientHtml } from '@/lib/richtext-client';
+
+const BANNER_CACHE_KEY = 'pupen_active_banner_v1';
+const BANNER_TTL_MS = 60_000;
+
+function readBannerCache() {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.sessionStorage.getItem(BANNER_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { expiresAt?: unknown; banner?: unknown };
+    const expiresAt = Number(parsed?.expiresAt || 0);
+    if (!expiresAt || Date.now() >= expiresAt) return null;
+    return parsed?.banner || null;
+  } catch {
+    return null;
+  }
+}
+
+function writeBannerCache(banner: unknown) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.setItem(
+      BANNER_CACHE_KEY,
+      JSON.stringify({ banner, expiresAt: Date.now() + BANNER_TTL_MS }),
+    );
+  } catch {}
+}
 
 export default function Banner({ lang, dict }: { lang: string, dict: any }) {
   const [banner, setBanner] = useState<any>(null);
@@ -14,8 +40,20 @@ export default function Banner({ lang, dict }: { lang: string, dict: any }) {
 
   useEffect(() => {
     async function loadBanner() {
-      const { data } = await supabase.from('banners').select('*').eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle();
-      if (data) setBanner(data);
+      const cached = readBannerCache();
+      if (cached) {
+        setBanner(cached);
+        return;
+      }
+
+      const res = await fetch('/api/banner/active');
+      const json = await res.json().catch(() => ({}));
+      if (json?.banner) {
+        setBanner(json.banner);
+        writeBannerCache(json.banner);
+      } else {
+        writeBannerCache(null);
+      }
     }
     loadBanner();
   }, []);

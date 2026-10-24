@@ -14,6 +14,7 @@ import Popover from '@/app/components/ui/Popover';
 import ThemeToggleButton from '@/app/components/ThemeToggleButton';
 import type { Dictionary } from '@/lib/dictionary-types';
 import type { SearchResponse, SearchResults, SitePageVisibilityConfig } from '@/types/search';
+import { getCachedPublicSiteConfig } from '@/lib/site/public-config-client';
 
 interface NavbarProps {
   lang: string;
@@ -65,10 +66,11 @@ export default function Navbar({ lang, dict }: NavbarProps) {
     let mounted = true;
     (async () => {
       try {
-        const res = await fetch('/api/site-config', { cache: 'no-store' });
-        const json = await res.json().catch(() => ({}));
+        const json = await getCachedPublicSiteConfig();
         const pages = json?.config?.pages;
-        if (mounted && pages && typeof pages === 'object') setSitePages(pages);
+        if (mounted && pages && typeof pages === 'object') {
+          setSitePages(pages as Record<string, SitePageVisibilityConfig>);
+        }
       } catch {}
     })();
     return () => {

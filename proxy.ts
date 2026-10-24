@@ -115,14 +115,42 @@ async function getPublicMode(req: NextRequest) {
   return entry;
 }
 
-function isPublicModeExemptPath(pathname: string, locale: Locale) {
+function isPublicModeExemptPath(pathname: string, locale: Locale, mode: PublicModeCacheEntry['mode']) {
   const prefix = `/${locale}`;
   const suffix = pathname.slice(prefix.length) || '/';
+  const onepageExempt =
+    mode === 'onepage' &&
+    (suffix === '/prihlaska' ||
+      suffix.startsWith('/prihlaska/') ||
+      suffix === '/kontakt' ||
+      suffix.startsWith('/kontakt/'));
   return (
+    onepageExempt ||
     suffix === '/odstavka' ||
     suffix.startsWith('/odstavka/') ||
     suffix === '/info' ||
     suffix.startsWith('/info/') ||
+    suffix === '/login' ||
+    suffix.startsWith('/login/') ||
+    suffix === '/forgot' ||
+    suffix.startsWith('/forgot/') ||
+    suffix === '/reset-password' ||
+    suffix.startsWith('/reset-password/') ||
+    suffix === '/admin' ||
+    suffix.startsWith('/admin/') ||
+    suffix === '/clen' ||
+    suffix.startsWith('/clen/')
+  );
+}
+
+function isAlwaysPublicModeExemptPath(pathname: string, locale: Locale) {
+  const prefix = `/${locale}`;
+  const suffix = pathname.slice(prefix.length) || '/';
+  return (
+    suffix === '/info' ||
+    suffix.startsWith('/info/') ||
+    suffix === '/odstavka' ||
+    suffix.startsWith('/odstavka/') ||
     suffix === '/login' ||
     suffix.startsWith('/login/') ||
     suffix === '/forgot' ||
@@ -187,8 +215,19 @@ export async function proxy(req: NextRequest) {
   }
 
   const locale = pathname.startsWith('/en') ? 'en' : 'cs';
+  if (isAlwaysPublicModeExemptPath(pathname, locale)) {
+    const response = NextResponse.next();
+    if (req.cookies.get(LOCALE_COOKIE)?.value !== locale) {
+      response.cookies.set(LOCALE_COOKIE, locale, {
+        path: '/',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 365,
+      });
+    }
+    return response;
+  }
   const publicMode = await getPublicMode(req);
-  if (publicMode.active && !isPublicModeExemptPath(pathname, locale)) {
+  if (publicMode.active && !isPublicModeExemptPath(pathname, locale, publicMode.mode)) {
     const target = publicMode.mode === 'maintenance' ? `/${locale}/odstavka` : `/${locale}/info`;
     if (pathname !== target) {
       const url = req.nextUrl.clone();

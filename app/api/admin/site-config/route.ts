@@ -135,6 +135,7 @@ export async function POST(req: Request) {
     if (!section) return NextResponse.json({ error: 'Missing section' }, { status: 400 });
     if (
       (section === 'maintenance' && !allowMaintenance) ||
+      (section === 'onepage' && !allowMaintenance) ||
       (section === 'home' && !allowHome) ||
       (section === 'member' && !allowMember) ||
       (section === 'pages' && !allowPages)
@@ -166,8 +167,8 @@ export async function POST(req: Request) {
     };
 
     if (section === 'maintenance') {
-      const publicMode = normalizePublicMode(patch.public_mode, !!patch.maintenance_enabled);
-      const maintenanceEnabled = publicMode !== 'default';
+      const currentMode = normalizePublicMode(toRecord(out.home).public_mode, !!out.maintenance_enabled);
+      const nextMode = patch.public_mode === 'maintenance' ? 'maintenance' : currentMode === 'maintenance' ? 'default' : currentMode;
       const startAt = asIsoDateOrNull(patch.maintenance_start_at);
       const endAt = asIsoDateOrNull(patch.maintenance_end_at);
       if (startAt.error) return NextResponse.json({ error: 'Invalid maintenance_start_at' }, { status: 400 });
@@ -175,7 +176,7 @@ export async function POST(req: Request) {
       if (startAt.value && endAt.value && new Date(startAt.value).getTime() > new Date(endAt.value).getTime()) {
         return NextResponse.json({ error: 'maintenance_start_at must be <= maintenance_end_at' }, { status: 400 });
       }
-      out.maintenance_enabled = maintenanceEnabled;
+      out.maintenance_enabled = nextMode !== 'default';
       out.maintenance_start_at = startAt.value;
       out.maintenance_end_at = endAt.value;
       out.maintenance_title_cs = asOptionalTrimmedString(patch.maintenance_title_cs, 200);
@@ -184,7 +185,24 @@ export async function POST(req: Request) {
       out.maintenance_body_en = asOptionalTrimmedString(patch.maintenance_body_en, 4000);
       out.home = {
         ...toRecord(out.home),
-        public_mode: publicMode,
+        public_mode: nextMode,
+      };
+    } else if (section === 'onepage') {
+      const currentMode = normalizePublicMode(toRecord(out.home).public_mode, !!out.maintenance_enabled);
+      const nextMode = patch.public_mode === 'onepage' ? 'onepage' : currentMode === 'onepage' ? 'default' : currentMode;
+      const startAt = asIsoDateOrNull(patch.maintenance_start_at);
+      const endAt = asIsoDateOrNull(patch.maintenance_end_at);
+      if (startAt.error) return NextResponse.json({ error: 'Invalid maintenance_start_at' }, { status: 400 });
+      if (endAt.error) return NextResponse.json({ error: 'Invalid maintenance_end_at' }, { status: 400 });
+      if (startAt.value && endAt.value && new Date(startAt.value).getTime() > new Date(endAt.value).getTime()) {
+        return NextResponse.json({ error: 'maintenance_start_at must be <= maintenance_end_at' }, { status: 400 });
+      }
+      out.maintenance_enabled = nextMode !== 'default';
+      out.maintenance_start_at = startAt.value;
+      out.maintenance_end_at = endAt.value;
+      out.home = {
+        ...toRecord(out.home),
+        public_mode: nextMode,
         onepage: {
           ...toRecord(toRecord(out.home).onepage),
           ...sanitizeOnepageConfig(patch.onepage),
