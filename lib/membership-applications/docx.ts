@@ -1,17 +1,7 @@
-import {
-  AlignmentType,
-  BorderStyle,
-  Document,
-  HeadingLevel,
-  ImageRun,
-  Packer,
-  Paragraph,
-  Table,
-  TableCell,
-  TableRow,
-  TextRun,
-  WidthType,
-} from 'docx';
+import { readFile } from 'fs/promises';
+import path from 'path';
+import { load, type Cheerio, type CheerioAPI } from 'cheerio';
+import type { AnyNode } from 'domhandler';
 import { formatDatePrague } from '@/lib/time/prague';
 
 export const MEMBERSHIP_APPLICATION_DOCX_MIME =
@@ -39,48 +29,6 @@ interface MembershipApplicationDocxInput {
 interface ImageInput {
   bytes: Buffer;
   extension: 'png' | 'jpg';
-}
-
-interface DocxCopy {
-  title: string;
-  subtitle: string;
-  association: string;
-  associationMeta: string;
-  membershipTitle: string;
-  membershipRegular: string;
-  membershipRegularDesc: string;
-  membershipExternal: string;
-  membershipExternalDesc: string;
-  labelFirstName: string;
-  labelLastName: string;
-  labelUniversityEmail: string;
-  labelFieldYear: string;
-  labelEmail: string;
-  labelPhone: string;
-  statementTitle: string;
-  statementBody: string;
-  statementContact: string;
-  statementFee: string;
-  placePrefix: string;
-  placeValue: string;
-  dateLabel: string;
-  applicantSignatureLabel: string;
-  decisionTitle: string;
-  decisionPending: string;
-  gdprTitle: string;
-  gdprSubtitle: string;
-  gdprIntro: string;
-  gdprItems: string[];
-  gdprPurpose: string;
-  gdprRetention: string;
-  gdprProcessors: string[];
-  gdprMarketing: string;
-  gdprRightsTitle: string;
-  gdprRights: string[];
-  gdprComplaint: string;
-  gdprRevoke: string;
-  gdprDateLabel: string;
-  gdprSignatureLabel: string;
 }
 
 function cleanText(input: unknown, fallback = '') {
@@ -114,269 +62,173 @@ function decodeImageDataUrl(dataUrl: string | null | undefined): ImageInput | nu
   return { bytes, extension };
 }
 
-function makeFieldTable(
-  copy: DocxCopy,
-  input: MembershipApplicationDocxInput,
-  signedOn: string,
-) {
-  const fieldYear = [cleanText(input.fieldOfStudy), cleanText(input.studyYear)]
-    .filter(Boolean)
-    .join(', ');
+const WORD_XML_OPTIONS = { xmlMode: true, decodeEntities: false as const };
+const W_P = 'w\\:p';
+const W_T = 'w\\:t';
+const W_TC = 'w\\:tc';
+const W_TR = 'w\\:tr';
+const W_TBL = 'w\\:tbl';
+const W_PPR = 'w\\:pPr';
 
-  const rows = [
-    [copy.labelFirstName, cleanText(input.firstName, '-')],
-    [copy.labelLastName, cleanText(input.lastName, '-')],
-    [
-      copy.labelUniversityEmail,
-      input.membershipType === 'regular' ? cleanText(input.universityEmail, '-') : '-',
-    ],
-    [copy.labelFieldYear, input.membershipType === 'regular' ? cleanText(fieldYear, '-') : '-'],
-    [copy.labelEmail, cleanText(input.email, '-')],
-    [copy.labelPhone, cleanText(input.phone, '-')],
-    [copy.dateLabel, cleanText(signedOn, '-')],
-  ];
-
-  return new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE },
-    rows: rows.map(([label, value]) =>
-      new TableRow({
-        children: [
-          new TableCell({
-            width: { size: 28, type: WidthType.PERCENTAGE },
-            borders: {
-              bottom: { style: BorderStyle.SINGLE, color: '000000', size: 1 },
-            },
-            children: [
-              new Paragraph({
-                children: [new TextRun({ text: label, bold: true })],
-              }),
-            ],
-          }),
-          new TableCell({
-            width: { size: 72, type: WidthType.PERCENTAGE },
-            borders: {
-              bottom: { style: BorderStyle.SINGLE, color: '000000', size: 1 },
-            },
-            children: [
-              new Paragraph({
-                children: [new TextRun(String(value || '-'))],
-              }),
-            ],
-          }),
-        ],
-      }),
-    ),
-  });
+function resolveMembershipTemplatePath() {
+  return path.resolve(process.cwd(), MEMBERSHIP_APPLICATION_DOCX_TEMPLATE_PATH);
 }
 
-function getCopy(lang: ApplicationLang): DocxCopy {
-  if (lang === 'en') {
+function normalizeNodeText(text: string) {
+  return String(text || '')
+    .replace(/\u00a0/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getNodeText($: CheerioAPI, node: AnyNode) {
+  return normalizeNodeText($(node).text());
+}
+
+function escapeXmlText(value: string) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function textRunXml(text: string, size: 20 | 22, opts?: { bold?: boolean }) {
+  const bold = opts?.bold ? '<w:b /><w:bCs />' : '';
+  return `<w:r><w:rPr><w:rFonts w:ascii="Roboto" w:hAnsi="Roboto" />${bold}<w:sz w:val="${size}" /><w:szCs w:val="${size}" /></w:rPr><w:t xml:space="preserve">${escapeXmlText(text)}</w:t></w:r>`;
+}
+
+function tabRunXml(size: 20 | 22) {
+  return `<w:r><w:rPr><w:rFonts w:ascii="Roboto" w:hAnsi="Roboto" /><w:sz w:val="${size}" /><w:szCs w:val="${size}" /></w:rPr><w:tab /></w:r>`;
+}
+
+function setParagraphInnerXml(paragraph: Cheerio<AnyNode>, innerXml: string) {
+  paragraph.children().not(W_PPR).remove();
+  paragraph.append(innerXml);
+}
+
+function setParagraphText(paragraph: Cheerio<AnyNode>, text: string, size: 20 | 22, opts?: { bold?: boolean }) {
+  setParagraphInnerXml(paragraph, text ? textRunXml(text, size, opts) : '');
+}
+
+function findParagraphByText($: CheerioAPI, needle: string) {
+  return $(W_P)
+    .toArray()
+    .find((node) => getNodeText($, node).includes(needle));
+}
+
+function findParagraphsByExactText($: CheerioAPI, value: string) {
+  return $(W_P)
+    .toArray()
+    .filter((node) => getNodeText($, node) === value);
+}
+
+function fillTableValue($: CheerioAPI, label: string, value: string) {
+  const table = $(W_TBL)
+    .toArray()
+    .find((node) => {
+      const firstCell = $(node).find(W_TC).first();
+      const firstCellNode = firstCell.get(0);
+      return firstCellNode ? getNodeText($, firstCellNode).startsWith(label) : false;
+    });
+  if (!table) return;
+  const valueCell = $(table).find(W_TR).first().find(W_TC).eq(1);
+  const paragraph = valueCell.find(W_P).first();
+  if (!paragraph.length) return;
+  setParagraphText(paragraph, value, 22);
+}
+
+function replaceParagraphText($: CheerioAPI, needle: string, replacer: (text: string) => string, size: 20 | 22) {
+  const paragraphNode = findParagraphByText($, needle);
+  if (!paragraphNode) return;
+  const paragraph = $(paragraphNode);
+  const currentText = normalizeNodeText(paragraph.text());
+  const nextText = replacer(currentText);
+  setParagraphText(paragraph, nextText, size);
+}
+
+function buildInlineImageXml(relId: string, imageName: string, docPrId: number, widthPx: number, heightPx: number) {
+  const cx = Math.round(widthPx * 9525);
+  const cy = Math.round(heightPx * 9525);
+  return [
+    '<w:r>',
+    '<w:drawing>',
+    '<wp:inline distT="0" distB="0" distL="0" distR="0">',
+    `<wp:extent cx="${cx}" cy="${cy}" />`,
+    '<wp:effectExtent l="0" t="0" r="0" b="0" />',
+    `<wp:docPr id="${docPrId}" name="${escapeXmlText(imageName)}" />`,
+    '<wp:cNvGraphicFramePr>',
+    '<a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1" />',
+    '</wp:cNvGraphicFramePr>',
+    '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">',
+    '<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">',
+    '<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">',
+    '<pic:nvPicPr>',
+    `<pic:cNvPr id="${docPrId}" name="${escapeXmlText(imageName)}" />`,
+    '<pic:cNvPicPr />',
+    '</pic:nvPicPr>',
+    '<pic:blipFill>',
+    `<a:blip r:embed="${escapeXmlText(relId)}" />`,
+    '<a:stretch><a:fillRect /></a:stretch>',
+    '</pic:blipFill>',
+    '<pic:spPr>',
+    '<a:xfrm>',
+    '<a:off x="0" y="0" />',
+    `<a:ext cx="${cx}" cy="${cy}" />`,
+    '</a:xfrm>',
+    '<a:prstGeom prst="rect"><a:avLst /></a:prstGeom>',
+    '</pic:spPr>',
+    '</pic:pic>',
+    '</a:graphicData>',
+    '</a:graphic>',
+    '</wp:inline>',
+    '</w:drawing>',
+    '</w:r>',
+  ].join('');
+}
+
+function ensureImageRelationship(
+  relsXml: string,
+  target: string,
+) {
+  const $rels = load(relsXml, WORD_XML_OPTIONS);
+  const existing = $rels('Relationship')
+    .toArray()
+    .find((node) => $rels(node).attr('Target') === target);
+  if (existing) {
     return {
-      title: 'MEMBERSHIP APPLICATION',
-      subtitle: 'The application includes consent to the processing of personal data for the member register.',
-      association: 'Studentský spolek Pupen, z.s.',
-      associationMeta:
-        'Company ID: 22694498, registered with the Municipal Court in Prague, file No. L 18291, registered office Kamýcká 129, Suchdol, 165 00 Prague.',
-      membershipTitle: 'Membership type',
-      membershipRegular: 'REGULAR',
-      membershipRegularDesc:
-        'for students enrolled at FAPPZ, Czech University of Life Sciences Prague, in bachelor, master or doctoral studies',
-      membershipExternal: 'EXTERNAL',
-      membershipExternalDesc:
-        'for students of other CZU faculties and institutes (corresponding member) and FAPPZ graduates (alumni member)',
-      labelFirstName: 'First name',
-      labelLastName: 'Last name',
-      labelUniversityEmail: 'University email',
-      labelFieldYear: 'Field of study, year',
-      labelEmail: 'Email',
-      labelPhone: 'Phone',
-      statementTitle: 'Applicant statement',
-      statementBody:
-        'By submitting this application, I confirm that I wish to become a member of Studentský spolek Pupen, z.s., that I have read the statutes and agree with them. I understand that the application may be submitted in written or electronic form and that, if my membership is established, I will comply with the rights and obligations arising from membership.',
-      statementContact:
-        'Electronic applications are delivered to info@pupen.org.',
-      statementFee: 'I undertake to pay the membership fee of CZK 200 per semester.',
-      placePrefix: 'In',
-      placeValue: 'Prague',
-      dateLabel: 'Date',
-      applicantSignatureLabel: 'Applicant signature',
-      decisionTitle: 'Association decision',
-      decisionPending: 'To be completed by the association after review.',
-      gdprTitle: 'Consent to the processing of personal data',
-      gdprSubtitle: 'Attachment to the membership application',
-      gdprIntro:
-        'I hereby grant consent to Studentský spolek Pupen, z.s. to process the personal data I have provided for the purposes of keeping the member register, communicating association activities and fulfilling the legitimate activities of the association.',
-      gdprItems: [
-        'first name and last name',
-        'delivery email address',
-        'phone contact',
-        'year of membership and any role carried out in the association',
-        'photographs from association events',
-        'field and year of study',
-        'other data necessary for the association operation',
-      ],
-      gdprPurpose:
-        'The data are processed for membership administration, communication about association activities, scholarships, events, promotion of the association and related operational agenda.',
-      gdprRetention:
-        'The data are retained for the duration of membership and no longer than 3 years after membership ends, unless a legal obligation requires a longer retention period.',
-      gdprProcessors: [
-        'Czech University of Life Sciences Prague for scholarship administration',
-        'public authorities where required for grants or statutory obligations',
-      ],
-      gdprMarketing:
-        'I also acknowledge that the association may process my name, photographs, videos and audio recordings for marketing and presentation purposes if I have provided or allowed them.',
-      gdprRightsTitle: 'Under the GDPR, I acknowledge my rights to:',
-      gdprRights: [
-        'access my personal data',
-        'rectify inaccurate or incomplete data',
-        'erase data where legal conditions are met',
-        'restrict processing',
-        'data portability',
-        'object to processing',
-        'not be subject solely to automated decision-making where prohibited',
-        'be notified of a personal data breach where required by law',
-      ],
-      gdprComplaint:
-        'For GDPR matters, contact gdpr@pupen.org. You may also lodge a complaint with the Czech Data Protection Authority (www.uoou.cz).',
-      gdprRevoke:
-        'This consent can be withdrawn at any time in writing or electronically by sending a request to gdpr@pupen.org.',
-      gdprDateLabel: 'Date',
-      gdprSignatureLabel: 'Signature',
+      relId: String($rels(existing).attr('Id') || '').trim(),
+      xml: $rels.xml(),
     };
   }
 
-  return {
-    title: 'PŘIHLÁŠKA DO SPOLKU',
-    subtitle:
-      'Součástí přihlášky je Souhlas se zpracováním osobních údajů v rámci seznamu členů spolku.',
-    association: 'Studentský spolek Pupen, z.s.',
-    associationMeta:
-      'IČO: 22694498, zapsaný u Městského soudu v Praze, spisová značka L 18291, sídlem Kamýcká 129, Suchdol, 165 00 Praha.',
-    membershipTitle: 'Typ členství',
-    membershipRegular: 'ŘÁDNÉ',
-    membershipRegularDesc:
-      'pro studenty studující na FAPPZ ČZU v Praze bakalářské, magisterské nebo doktorské studium',
-    membershipExternal: 'EXTERNÍ',
-    membershipExternalDesc:
-      'pro studenty jiných fakult a institutů ČZU v Praze a absolventy FAPPZ ČZU',
-    labelFirstName: 'Jméno',
-    labelLastName: 'Příjmení',
-    labelUniversityEmail: 'Univerzitní email',
-    labelFieldYear: 'Obor, ročník',
-    labelEmail: 'Email',
-    labelPhone: 'Telefon',
-    statementTitle: 'Prohlášení žadatele',
-    statementBody:
-      'Svým podpisem stvrzuji, že se chci stát členem spolku Studentský spolek Pupen, z.s., že jsem se seznámil/a se stanovami a souhlasím s nimi. Beru na vědomí, že přihláška se podává v písemné nebo elektronické formě a že v případě vzniku mého členství budu plnit veškerá práva a povinnosti člena spolku.',
-    statementContact:
-      'Elektronicky se přihláška podává na e-mailovou adresu info@pupen.org.',
-    statementFee: 'Zavazuji se uhradit členský příspěvek 200 Kč za semestr.',
-    placePrefix: 'V',
-    placeValue: 'Praze',
-    dateLabel: 'Datum',
-    applicantSignatureLabel: 'Podpis žadatele',
-    decisionTitle: 'Rozhodnutí spolku o členství',
-    decisionPending: 'Vyplní spolek po posouzení přihlášky.',
-    gdprTitle: 'Souhlas se zpracováním osobních údajů',
-    gdprSubtitle: 'Příloha přihlášky do spolku',
-    gdprIntro:
-      'Já níže podepsaný/á tímto uděluji souhlas pro Studentský spolek Pupen, z.s., aby zpracovával moje osobní údaje, které jsem poskytl/a, za účelem vedení evidence členské základny, komunikace o činnosti spolku a zajištění provozu spolku.',
-    gdprItems: [
-      'jméno a příjmení',
-      'elektronická doručovací adresa',
-      'telefonní kontakt',
-      'rok vzniku členství a typ vykonávané funkce ve spolku',
-      'fotografie z akcí spolku',
-      'ročník a obor studia',
-      'další údaje nezbytné pro chod spolku',
-    ],
-    gdprPurpose:
-      'Osobní údaje jsou zpracovávány za účelem vedení evidence členské základny, informací o činnosti spolku, plnění účelu, pro který byl spolek založen, a souvisejících činností.',
-    gdprRetention:
-      'Osobní údaje jsou uchovávány po dobu členství a nejdéle po dobu 3 let ode dne, kdy přestanu být členem spolku, pokud právní předpis nevyžaduje delší dobu.',
-    gdprProcessors: [
-      'Česká zemědělská univerzita v Praze za účelem výplaty stipendií',
-      'příslušné orgány státní správy a samosprávy za účelem žádostí o dotace nebo splnění zákonných povinností',
-    ],
-    gdprMarketing:
-      'Beru na vědomí, že spolek může na základě souhlasu zpracovávat moje jméno, fotografie, videa a zvukové záznamy pro marketing a prezentaci činnosti spolku.',
-    gdprRightsTitle: 'Podle GDPR beru na vědomí své právo na:',
-    gdprRights: [
-      'přístup k osobním údajům',
-      'opravu nepřesných nebo neúplných údajů',
-      'výmaz údajů za podmínek GDPR',
-      'omezení zpracování',
-      'přenositelnost údajů',
-      'vznesení námitky proti zpracování',
-      'nepodrobení se výhradně automatizovanému rozhodování, pokud je zakázáno',
-      'oznámení případu porušení zabezpečení osobních údajů, pokud to zákon vyžaduje',
-    ],
-    gdprComplaint:
-      'V případě pochybností o zpracování osobních údajů můžete kontaktovat gdpr@pupen.org a podat stížnost k Úřadu pro ochranu osobních údajů (www.uoou.cz).',
-    gdprRevoke:
-      'Souhlas lze kdykoliv odvolat písemně nebo elektronicky zasláním žádosti na gdpr@pupen.org.',
-    gdprDateLabel: 'Datum',
-    gdprSignatureLabel: 'Podpis',
-  };
-}
-
-function sectionHeading(text: string, level: (typeof HeadingLevel)[keyof typeof HeadingLevel] = HeadingLevel.HEADING_1) {
-  return new Paragraph({
-    heading: level,
-    spacing: { after: 160 },
-    children: [
-      new TextRun({
-        text,
-        bold: true,
-      }),
-    ],
-  });
-}
-
-function bodyParagraph(text: string, opts?: { bold?: boolean; italics?: boolean; pageBreakBefore?: boolean }) {
-  return new Paragraph({
-    pageBreakBefore: opts?.pageBreakBefore === true,
-    spacing: { after: 140 },
-    alignment: AlignmentType.BOTH,
-    children: [
-      new TextRun({
-        text,
-        bold: opts?.bold === true,
-        italics: opts?.italics === true,
-      }),
-    ],
-  });
-}
-
-function bulletList(items: string[]) {
-  return items.map((item) =>
-    new Paragraph({
-      bullet: { level: 0 },
-      spacing: { after: 60 },
-      children: [new TextRun(item)],
-    }),
-  );
-}
-
-function signatureParagraph(label: string, image: ImageInput | null) {
-  if (!image) {
-    return new Paragraph({
-      spacing: { before: 160, after: 100 },
-      children: [new TextRun(`${label}: ______________________________`)],
+  const ids = $rels('Relationship')
+    .toArray()
+    .map((node) => {
+      const raw = String($rels(node).attr('Id') || '');
+      const match = raw.match(/^rId(\d+)$/);
+      return match?.[1] ? Number(match[1]) : 0;
     });
-  }
+  const relId = `rId${Math.max(0, ...ids) + 1}`;
+  $rels('Relationships').append(
+    `<Relationship Id="${relId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="${escapeXmlText(target)}" />`,
+  );
+  return { relId, xml: $rels.xml() };
+}
 
-  return new Paragraph({
-    spacing: { before: 160, after: 100 },
-    children: [
-      new TextRun({ text: `${label}: ` }),
-      new ImageRun({
-        data: image.bytes,
-        transformation: { width: 220, height: 70 },
-        type: image.extension,
-      }),
-    ],
-  });
+function ensureContentTypeDefault(contentTypesXml: string, extension: 'png' | 'jpg') {
+  const $types = load(contentTypesXml, WORD_XML_OPTIONS);
+  const normalizedExtension = extension === 'jpg' ? 'jpeg' : 'png';
+  const existing = $types('Default')
+    .toArray()
+    .some((node) => String($types(node).attr('Extension') || '').toLowerCase() === normalizedExtension);
+  if (!existing) {
+    $types('Types').prepend(
+      `<Default Extension="${normalizedExtension}" ContentType="${extension === 'png' ? 'image/png' : 'image/jpeg'}" />`,
+    );
+  }
+  return $types.xml();
 }
 
 export function buildMembershipApplicationDocxStoragePath(applicationId: string, lang: ApplicationLang) {
@@ -400,124 +252,128 @@ export function formatMembershipApplicationDocxFileName(input: {
 }
 
 export async function buildMembershipApplicationDocxBytes(input: MembershipApplicationDocxInput) {
-  const lang = input.lang === 'en' ? 'en' : 'cs';
-  const copy = getCopy(lang);
-  const signedOn = formatSignedOn(input.signedOn, lang);
-  const applicantSignature = decodeImageDataUrl(input.applicantSignature);
-  const regularChecked = input.membershipType === 'regular' ? '☒' : '☐';
-  const externalChecked = input.membershipType === 'external' ? '☒' : '☐';
+  const signedOn = formatSignedOn(input.signedOn, 'cs');
+  const firstName = cleanText(input.firstName, '');
+  const lastName = cleanText(input.lastName, '');
+  const fieldYear = [cleanText(input.fieldOfStudy, ''), cleanText(input.studyYear, '')]
+    .filter(Boolean)
+    .join(', ');
+  const templateBytes = await readFile(resolveMembershipTemplatePath());
+  const JSZip = (await import('jszip')).default;
+  const zip = await JSZip.loadAsync(templateBytes);
 
-  const doc = new Document({
-    creator: 'Pupen',
-    title: copy.title,
-    description: `${copy.title} · ${MEMBERSHIP_APPLICATION_DOCX_TEMPLATE_PATH}`,
-    sections: [
-      {
-        children: [
-          sectionHeading(copy.title),
-          bodyParagraph(copy.subtitle, { italics: true }),
-          bodyParagraph(copy.association, { bold: true }),
-          bodyParagraph(copy.associationMeta),
-          sectionHeading(copy.membershipTitle, HeadingLevel.HEADING_2),
-          new Table({
-            width: { size: 100, type: WidthType.PERCENTAGE },
-            rows: [
-              new TableRow({
-                children: [
-                  new TableCell({
-                    width: { size: 20, type: WidthType.PERCENTAGE },
-                    children: [new Paragraph(`${regularChecked} ${copy.membershipRegular}`)],
-                  }),
-                  new TableCell({
-                    width: { size: 80, type: WidthType.PERCENTAGE },
-                    children: [new Paragraph(copy.membershipRegularDesc)],
-                  }),
-                ],
-              }),
-              new TableRow({
-                children: [
-                  new TableCell({
-                    width: { size: 20, type: WidthType.PERCENTAGE },
-                    children: [new Paragraph(`${externalChecked} ${copy.membershipExternal}`)],
-                  }),
-                  new TableCell({
-                    width: { size: 80, type: WidthType.PERCENTAGE },
-                    children: [new Paragraph(copy.membershipExternalDesc)],
-                  }),
-                ],
-              }),
-            ],
-          }),
-          new Paragraph({ spacing: { after: 160 } }),
-          makeFieldTable(copy, input, signedOn),
-          new Paragraph({ spacing: { after: 180 } }),
-          sectionHeading(copy.statementTitle, HeadingLevel.HEADING_2),
-          bodyParagraph(copy.statementBody),
-          bodyParagraph(copy.statementContact),
-          bodyParagraph(copy.statementFee, { bold: true }),
-          new Table({
-            width: { size: 100, type: WidthType.PERCENTAGE },
-            rows: [
-              new TableRow({
-                children: [
-                  new TableCell({
-                    width: { size: 35, type: WidthType.PERCENTAGE },
-                    borders: { bottom: { style: BorderStyle.SINGLE, color: '000000', size: 1 } },
-                    children: [new Paragraph(`${copy.placePrefix} ${copy.placeValue}`)],
-                  }),
-                  new TableCell({
-                    width: { size: 65, type: WidthType.PERCENTAGE },
-                    borders: { bottom: { style: BorderStyle.SINGLE, color: '000000', size: 1 } },
-                    children: [new Paragraph(`${copy.dateLabel}: ${signedOn}`)],
-                  }),
-                ],
-              }),
-            ],
-          }),
-          signatureParagraph(copy.applicantSignatureLabel, applicantSignature),
-          sectionHeading(copy.decisionTitle, HeadingLevel.HEADING_2),
-          bodyParagraph(copy.decisionPending),
-        ],
-      },
-      {
-        children: [
-          sectionHeading(copy.gdprTitle),
-          bodyParagraph(copy.gdprSubtitle, { italics: true }),
-          bodyParagraph(copy.gdprIntro),
-          ...bulletList(copy.gdprItems),
-          bodyParagraph(copy.gdprPurpose),
-          bodyParagraph(copy.gdprRetention),
-          sectionHeading(lang === 'en' ? 'Processors' : 'Zpracovatelé', HeadingLevel.HEADING_2),
-          ...bulletList(copy.gdprProcessors),
-          bodyParagraph(copy.gdprMarketing),
-          sectionHeading(copy.gdprRightsTitle, HeadingLevel.HEADING_2),
-          ...bulletList(copy.gdprRights),
-          bodyParagraph(copy.gdprComplaint),
-          bodyParagraph(copy.gdprRevoke),
-          new Table({
-            width: { size: 100, type: WidthType.PERCENTAGE },
-            rows: [
-              new TableRow({
-                children: [
-                  new TableCell({
-                    width: { size: 35, type: WidthType.PERCENTAGE },
-                    borders: { bottom: { style: BorderStyle.SINGLE, color: '000000', size: 1 } },
-                    children: [new Paragraph(`${copy.placePrefix} ${copy.placeValue}`)],
-                  }),
-                  new TableCell({
-                    width: { size: 65, type: WidthType.PERCENTAGE },
-                    borders: { bottom: { style: BorderStyle.SINGLE, color: '000000', size: 1 } },
-                    children: [new Paragraph(`${copy.gdprDateLabel}: ${signedOn}`)],
-                  }),
-                ],
-              }),
-            ],
-          }),
-          signatureParagraph(copy.gdprSignatureLabel, applicantSignature),
-        ],
-      },
-    ],
+  const documentEntry = zip.file('word/document.xml');
+  const relsEntry = zip.file('word/_rels/document.xml.rels');
+  const contentTypesEntry = zip.file('[Content_Types].xml');
+  if (!documentEntry || !relsEntry || !contentTypesEntry) {
+    throw new Error('Membership DOCX template is incomplete.');
+  }
+
+  const [documentXml, relsXml, contentTypesXml] = await Promise.all([
+    documentEntry.async('string'),
+    relsEntry.async('string'),
+    contentTypesEntry.async('string'),
+  ]);
+
+  const $doc = load(documentXml, WORD_XML_OPTIONS);
+  const membershipTable = $doc(W_TBL).first();
+  const membershipChecks = membershipTable
+    .find(W_T)
+    .toArray()
+    .filter((node) => $doc(node).text() === '▢');
+  if (membershipChecks[0]) $doc(membershipChecks[0]).text(input.membershipType === 'regular' ? '☒' : '☐');
+  if (membershipChecks[1]) $doc(membershipChecks[1]).text(input.membershipType === 'external' ? '☒' : '☐');
+
+  fillTableValue($doc, 'Jméno', firstName);
+  fillTableValue($doc, 'Příjmení', lastName);
+  fillTableValue(
+    $doc,
+    'Univerzitní email',
+    input.membershipType === 'regular' ? cleanText(input.universityEmail, '') : '',
+  );
+  fillTableValue(
+    $doc,
+    'Obor, ročník',
+    input.membershipType === 'regular' ? fieldYear : '',
+  );
+  fillTableValue($doc, 'Email', cleanText(input.email, ''));
+  fillTableValue($doc, 'Telefon', cleanText(input.phone, ''));
+
+  const dateParagraphs = findParagraphsByExactText($doc, 'V dne').concat(findParagraphsByExactText($doc, 'V dne:'));
+  if (dateParagraphs[0]) {
+    setParagraphInnerXml(
+      $doc(dateParagraphs[0]),
+      `${textRunXml('V Praze', 22)}${tabRunXml(22)}${textRunXml(`dne ${signedOn}`, 22)}`,
+    );
+  }
+  if (dateParagraphs[1]) {
+    setParagraphInnerXml(
+      $doc(dateParagraphs[1]),
+      `${textRunXml('V Praze', 20)}${tabRunXml(20)}${textRunXml(`dne: ${signedOn}`, 20)}`,
+    );
+  }
+
+  const consentName = `${firstName} ${lastName}`.trim();
+  if (consentName) {
+    replaceParagraphText(
+      $doc,
+      'Já níže podepsaný',
+      (text) => text.replace(/Já níže podepsaný\/á\s+_+\s+_+/, `Já níže podepsaný/á ${consentName}`),
+      20,
+    );
+  }
+
+  const applicantEmailLink = $doc('w\\:hyperlink[r\\:id="rId10"]').first();
+  if (applicantEmailLink.length) {
+    applicantEmailLink.find(W_T).first().text('info@pupen.org');
+  }
+
+  replaceParagraphText(
+    $doc,
+    'Elektronicky lze souhlas odvolat zasláním zprávy na e-mailovou adresu',
+    (text) => text.replace(/pupen@af\.czu\.cz/gi, 'gdpr@pupen.org'),
+    20,
+  );
+
+  const signature = decodeImageDataUrl(input.applicantSignature);
+  let nextRelsXml = relsXml;
+  let nextContentTypesXml = contentTypesXml;
+  if (signature) {
+    const mediaFileName = `applicant-signature.${signature.extension === 'png' ? 'png' : 'jpeg'}`;
+    const mediaTarget = `media/${mediaFileName}`;
+    zip.file(`word/${mediaTarget}`, signature.bytes);
+
+    const relInfo = ensureImageRelationship(nextRelsXml, mediaTarget);
+    nextRelsXml = relInfo.xml;
+    nextContentTypesXml = ensureContentTypeDefault(nextContentTypesXml, signature.extension);
+
+    const dottedParagraphs = findParagraphsByExactText($doc, '……………………………………….');
+    const applicantSignatureXml = `${tabRunXml(22)}${tabRunXml(22)}${buildInlineImageXml(relInfo.relId, mediaFileName, 1001, 220, 70)}`;
+    const gdprSignatureXml = `${tabRunXml(20)}${tabRunXml(20)}${buildInlineImageXml(relInfo.relId, mediaFileName, 1002, 220, 70)}`;
+    if (dottedParagraphs[0]) {
+      setParagraphInnerXml($doc(dottedParagraphs[0]), applicantSignatureXml);
+    }
+    if (dottedParagraphs[1]) {
+      setParagraphInnerXml($doc(dottedParagraphs[1]), gdprSignatureXml);
+    }
+  }
+
+  const $rels = load(nextRelsXml, WORD_XML_OPTIONS);
+  const infoMailRel = $rels('Relationship')
+    .toArray()
+    .find((node) => String($rels(node).attr('Id') || '').trim() === 'rId10');
+  if (infoMailRel) {
+    $rels(infoMailRel).attr('Target', 'mailto:info@pupen.org');
+  }
+
+  zip.file('word/document.xml', $doc.xml());
+  zip.file('word/_rels/document.xml.rels', $rels.xml());
+  zip.file('[Content_Types].xml', nextContentTypesXml);
+
+  return await zip.generateAsync({
+    type: 'nodebuffer',
+    mimeType: MEMBERSHIP_APPLICATION_DOCX_MIME,
+    compression: 'DEFLATE',
+    compressionOptions: { level: 9 },
   });
-
-  return await Packer.toBuffer(doc);
 }

@@ -30,7 +30,7 @@ export default function AppShell({
                   <button
                     type="button"
                     onClick={onOpenMobileNav}
-                    className="flex items-center justify-center w-10 h-10 rounded-2xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 hover:bg-stone-50 dark:hover:bg-stone-800 text-stone-700 dark:text-stone-200"
+                    className="flex lg:hidden items-center justify-center w-10 h-10 rounded-2xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 hover:bg-stone-50 dark:hover:bg-stone-800 text-stone-700 dark:text-stone-200"
                     aria-label="Otevřít navigaci"
                   >
                     <Menu size={18} />

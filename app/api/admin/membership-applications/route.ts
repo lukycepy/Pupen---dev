@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getBearerToken, requireAdmin } from '@/lib/server-auth';
-import { getRlsSupabase } from '@/lib/supabase-rls';
+import { requireAdmin } from '@/lib/server-auth';
+import { getServerSupabase } from '@/lib/supabase-server';
 import { membershipApplicationAdminListQuerySchema } from '@/lib/validations/membership-applications-admin';
 
 type JsonRecord = Record<string, unknown>;
@@ -52,9 +52,7 @@ function getErrorMessage(error: unknown) {
 export async function GET(req: Request) {
   try {
     await requireAdmin(req);
-    const token = getBearerToken(req);
-    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    const rls = getRlsSupabase(token);
+    const supabase = getServerSupabase();
 
     const url = new URL(req.url);
     const parsed = membershipApplicationAdminListQuerySchema.safeParse({
@@ -70,7 +68,7 @@ export async function GET(req: Request) {
     const includePendingCount = isTruthy(parsed.data.pendingCount);
 
     if (includePendingCount) {
-      const countRes = await rls
+      const countRes = await supabase
         .from('membership_applications_v2')
         .select('id', { count: 'exact', head: true })
         .eq('status', 'pending');
@@ -78,7 +76,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ ok: true, count: Number(countRes.count || 0) });
     }
 
-    let query = rls
+    let query = supabase
       .from('membership_applications_v2')
       .select('id,created_at,updated_at,status,name,email,phone,address,motivation,decision_reason,meta', { count: 'exact' });
 

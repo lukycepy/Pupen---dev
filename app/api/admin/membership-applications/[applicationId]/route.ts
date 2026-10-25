@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getBearerToken, requireAdmin } from '@/lib/server-auth';
-import { getRlsSupabase } from '@/lib/supabase-rls';
+import { requireAdmin } from '@/lib/server-auth';
 import { membershipApplicationAdminUpdateSchema } from '@/lib/validations/membership-applications-admin';
 import { writeAuditLog } from '@/lib/audit/audit-log';
 import { getServerSupabase } from '@/lib/supabase-server';
@@ -76,20 +75,17 @@ function normalizeEmail(value: unknown) {
 export async function GET(req: Request, ctx: { params: Promise<{ applicationId: string }> }) {
   try {
     await requireAdmin(req);
-    const token = getBearerToken(req);
-    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    const rls = getRlsSupabase(token);
     const srv = getServerSupabase();
 
     const { applicationId } = await ctx.params;
     const id = String(applicationId || '').trim();
     if (!id) return NextResponse.json({ error: 'Missing applicationId' }, { status: 400 });
 
-    const appRes = await rls.from('membership_applications_v2').select('*').eq('id', id).maybeSingle<MembershipApplicationRow>();
+    const appRes = await srv.from('membership_applications_v2').select('*').eq('id', id).maybeSingle<MembershipApplicationRow>();
     if (appRes.error) throw appRes.error;
     if (!appRes.data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    const filesRes = await rls
+    const filesRes = await srv
       .from('membership_application_files')
       .select('id,created_at,file_name,mime_type,size_bytes,meta')
       .eq('application_id', id)
@@ -150,7 +146,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ applicationId: 
 
     if (email) {
       const [duplicateAppsRes, duplicateProfilesRes] = await Promise.all([
-        rls
+        srv
           .from('membership_applications_v2')
           .select('id,status,created_at,name,email')
           .eq('email', email)
@@ -200,9 +196,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ applicationId: 
 export async function PATCH(req: Request, ctx: { params: Promise<{ applicationId: string }> }) {
   try {
     const { user } = await requireAdmin(req);
-    const token = getBearerToken(req);
-    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    const rls = getRlsSupabase(token);
+    const srv = getServerSupabase();
 
     const { applicationId } = await ctx.params;
     const id = String(applicationId || '').trim();
@@ -212,7 +206,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ applicationId
     const parsed = membershipApplicationAdminUpdateSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
 
-    const current = await rls.from('membership_applications_v2').select('*').eq('id', id).maybeSingle<MembershipApplicationRow>();
+    const current = await srv.from('membership_applications_v2').select('*').eq('id', id).maybeSingle<MembershipApplicationRow>();
     if (current.error) throw current.error;
     if (!current.data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     if (String(current.data.status || '') !== 'pending') {
@@ -230,7 +224,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ applicationId
     const fieldOfStudy = String(nextMeta.field_of_study || '').trim();
     const nextFaculty = membershipType === 'regular' ? fieldOfStudy || null : null;
 
-    const up = await rls
+    const up = await srv
       .from('membership_applications_v2')
       .update({
         email: parsed.data.application.email,
@@ -245,7 +239,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ applicationId
       .eq('id', id);
     if (up.error) throw up.error;
 
-    const afterRes = await rls.from('membership_applications_v2').select('*').eq('id', id).maybeSingle<MembershipApplicationRow>();
+    const afterRes = await srv.from('membership_applications_v2').select('*').eq('id', id).maybeSingle<MembershipApplicationRow>();
     if (afterRes.error) throw afterRes.error;
 
     await writeAuditLog({
