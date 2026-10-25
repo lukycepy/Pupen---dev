@@ -1,12 +1,17 @@
 import { NextResponse } from 'next/server';
-import { getBearerToken, requireUser } from '@/lib/server-auth';
-import { getRlsSupabase } from '@/lib/supabase-rls';
+import { requireUser } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { MEMBERSHIP_APPLICATION_PDF_BUCKET } from '@/lib/membership-applications/pdf';
 
 interface StoredFileRow {
   storage_bucket?: string | null;
   storage_path?: string | null;
+}
+
+interface MembershipApplicationAccessRow {
+  id?: string | null;
+  user_id?: string | null;
+  email?: string | null;
 }
 
 interface MembershipApplicationSignedUrlBody {
@@ -23,10 +28,7 @@ function getErrorMessage(error: unknown) {
 
 export async function POST(req: Request, ctx: { params: Promise<{ applicationId: string }> }) {
   try {
-    await requireUser(req);
-    const token = getBearerToken(req);
-    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    const rls = getRlsSupabase(token);
+    const user = await requireUser(req);
 
     const { applicationId } = await ctx.params;
     const id = String(applicationId || '').trim();
@@ -35,8 +37,24 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
     const body = toRecord(await req.json().catch(() => ({})));
     const payload = body as MembershipApplicationSignedUrlBody;
     const expiresIn = Math.max(60, Math.min(60 * 60, Number(payload.expiresIn || 600) || 600));
+    const srv = getServerSupabase();
 
-    const fileRes = await rls
+    const applicationRes = await srv
+      .from('membership_applications_v2')
+      .select('id,user_id,email')
+      .eq('id', id)
+      .maybeSingle<MembershipApplicationAccessRow>();
+    if (applicationRes.error) throw applicationRes.error;
+    const application = applicationRes.data;
+    const userId = String(user.id || '').trim();
+    const userEmail = String(user.email || '').trim().toLowerCase();
+    const ownedByUserId = !!userId && String(application?.user_id || '').trim() === userId;
+    const ownedByEmail = !!userEmail && String(application?.email || '').trim().toLowerCase() === userEmail;
+    if (!application || (!ownedByUserId && !ownedByEmail)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const fileRes = await srv
       .from('membership_application_files')
       .select('storage_bucket, storage_path')
       .eq('application_id', id)
@@ -51,7 +69,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
     const path = String(fileRes.data.storage_path || '').trim();
     if (!bucket || !path) return NextResponse.json({ error: 'Missing file' }, { status: 409 });
 
-    const srv = getServerSupabase();
     const signed = await srv.storage.from(bucket).createSignedUrl(path, expiresIn);
     if (signed.error) throw signed.error;
 

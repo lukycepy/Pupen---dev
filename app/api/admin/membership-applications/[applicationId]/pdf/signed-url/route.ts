@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getBearerToken, requireAdmin } from '@/lib/server-auth';
-import { getRlsSupabase } from '@/lib/supabase-rls';
+import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { MEMBERSHIP_APPLICATION_PDF_BUCKET } from '@/lib/membership-applications/pdf';
 
@@ -16,9 +15,7 @@ function getErrorMessage(error: unknown) {
 export async function POST(req: Request, ctx: { params: Promise<{ applicationId: string }> }) {
   try {
     await requireAdmin(req);
-    const token = getBearerToken(req);
-    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    const rls = getRlsSupabase(token);
+    const srv = getServerSupabase();
 
     const { applicationId } = await ctx.params;
     const id = String(applicationId || '').trim();
@@ -27,7 +24,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
     const body = await req.json().catch(() => ({}));
     const expiresIn = Math.max(60, Math.min(60 * 60, Number(body?.expiresIn || 600) || 600));
 
-    const fileRes = await rls
+    const fileRes = await srv
       .from('membership_application_files')
       .select('storage_bucket, storage_path')
       .eq('application_id', id)
@@ -42,7 +39,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
     const path = String(fileRes.data?.storage_path || '').trim();
     if (!bucket || !path) return NextResponse.json({ error: 'Missing file' }, { status: 409 });
 
-    const srv = getServerSupabase();
     const signed = await srv.storage.from(bucket).createSignedUrl(path, expiresIn);
     if (signed.error) throw signed.error;
 
