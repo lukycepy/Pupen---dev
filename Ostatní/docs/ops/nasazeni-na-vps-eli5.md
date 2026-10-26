@@ -151,7 +151,7 @@ npm run db:migrate:prod
 4. `pm2 start` + Nginx s HTTPS.
 5. Příště jen `git pull`, `build`, `restart`.
 
-## Souvisící dokumenty
+## Související dokumenty
 
 - [README.md](../../README.md) – kompletní technický postup nasazení.
 - [jak-nasadit-obnovit-predat.md](./jak-nasadit-obnovit-predat.md) – provozní one-pager.

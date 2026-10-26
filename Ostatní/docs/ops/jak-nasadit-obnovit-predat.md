@@ -12,6 +12,8 @@ Tento dokument slouží jako stručný provozní „one‑pager“ pro bezpečn�
 
 ## 2) Nasazení (standardní postup)
 
+> Zjednodušené vysvětlení kroků (ELI5) pro méně zkušené: [nasazeni-na-vps-eli5.md](./nasazeni-na-vps-eli5.md).
+
 ### 2.1 Předpoklady
 
 - Přístup k VPS (SSH) a k repozitáři.

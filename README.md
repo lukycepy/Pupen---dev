@@ -97,6 +97,8 @@ Před každým nasazením do produkce projdi tento seznam. Slouží jako rychlá
 
 Níže je minimální, spolehlivý setup. Počítá s tím, že DB + Auth běží v Supabase a na VPS běží pouze Next.js app.
 
+> Jednodušší, „lidská" verze tohoto postupu (pro člověka, který nasazení nedělá každý den): [nasazeni-na-vps-eli5.md](./Ostatní/docs/ops/nasazeni-na-vps-eli5.md).
+
 ### 1) DNS
 - `A pupen.org -> <IP VPS>`
 - `A www.pupen.org -> <IP VPS>` (volitelně, bude redirect na pupen.org)
