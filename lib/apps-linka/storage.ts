@@ -39,6 +39,7 @@ export function sanitizeJsonOutput(payload: LinkaPayload): LinkaPayload {
           budova: String(c.budova || '').trim(),
           mistnost: String(c.mistnost || '').trim(),
           klapka: String(c.klapka || '').trim(),
+          telefon: String(c.telefon || '').trim(),
           email: String(c.email || '').trim().toLowerCase(),
         }))
       : [],

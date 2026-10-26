@@ -8,6 +8,9 @@ export const LinkaContactSchema = z.object({
   budova: z.string().min(1).max(200).trim(),
   mistnost: z.string().min(1).max(100).trim(),
   klapka: z.string().regex(/^\d{4}$/, 'Linka musí být přesně 4 číslice'),
+  // Nepovinné přímé telefonní číslo. Aplikace Linka ho upřednostní před linkou,
+  // takže u kontaktů, které mají i mobil, se uživateli nabídne volba obojího.
+  telefon: z.string().max(40).trim().default(''),
   email: z.string().email().max(200).trim().toLowerCase(),
 });
 
@@ -32,6 +35,7 @@ export const DEFAULT_LINKA_DATA: LinkaPayload = {
       budova: 'Studentské centrum',
       mistnost: 'Pupen klubovna',
       klapka: '1777',
+      telefon: '',
       email: 'tech@pupen.org',
     },
     {
@@ -42,6 +46,7 @@ export const DEFAULT_LINKA_DATA: LinkaPayload = {
       budova: 'Studentské centrum',
       mistnost: 'Pupen klubovna',
       klapka: '1700',
+      telefon: '',
       email: 'info@pupen.org',
     },
   ],
@@ -88,6 +93,76 @@ export function removeDiacritics(s: string): string {
     .toLowerCase();
 }
 
+export function normalizeImportKey(value: string) {
+  return removeDiacritics(String(value || '')).replace(/[^a-z0-9]+/g, '');
+}
+
+function buildImportMap(record: Record<string, unknown>) {
+  const out = new Map<string, unknown>();
+  for (const [key, value] of Object.entries(record)) {
+    const normalized = normalizeImportKey(key);
+    if (normalized && !out.has(normalized)) out.set(normalized, value);
+  }
+  return out;
+}
+
+export function firstImportValueFromAliases(record: Record<string, unknown>, aliases: string[]) {
+  const map = buildImportMap(record);
+  for (const alias of aliases) {
+    const value = map.get(normalizeImportKey(alias));
+    const text = String(value ?? '').trim();
+    if (text) return text;
+  }
+  return '';
+}
+
+export function normalizeImportedObjectContact(item: unknown): LinkaContact | null {
+  const c = item && typeof item === 'object' ? (item as Record<string, unknown>) : {};
+  const rawId = Number(firstImportValueFromAliases(c, ['id']));
+  const jmeno =
+    firstImportValueFromAliases(c, ['jmeno', 'jmeno s tituly', 'jmeno (s tituly)', 'full name', 'fullname', 'name']) ||
+    [
+      firstImportValueFromAliases(c, ['tituly pred']),
+      firstImportValueFromAliases(c, ['jmeno']),
+      firstImportValueFromAliases(c, ['prijmeni']),
+      firstImportValueFromAliases(c, ['tituly za']),
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  const oddeleni = firstImportValueFromAliases(c, ['oddeleni', 'katedra / pracoviste', 'katedra/pracoviste', 'pracoviste', 'katedra', 'department']);
+  const fakulta = firstImportValueFromAliases(c, ['fakulta / utvar', 'fakulta/utvar', 'fakulta', 'utvar', 'faculty']);
+  const budova = firstImportValueFromAliases(c, ['budova', 'lokace', 'building']) || fakulta || oddeleni || 'CZU';
+  const mistnost = firstImportValueFromAliases(c, ['mistnost', 'cislo dveri / kancelare', 'cislo dveri/kancelare', 'kancelar', 'room']) || budova;
+  const klapka = firstImportValueFromAliases(c, ['klapka', 'linka', 'extension']);
+  const telefon = firstImportValueFromAliases(c, ['telefon', 'mobil', 'pevna linka', 'phone', 'mobile', 'tel']);
+  const email = firstImportValueFromAliases(c, ['email', 'hlavni email', 'mail']).toLowerCase();
+
+  if (!jmeno && !oddeleni && !fakulta && !budova && !mistnost && !klapka && !telefon && !email) return null;
+  if (!jmeno || !email || !/^\d{4}$/.test(klapka)) return null;
+
+  const normalized: LinkaContact = {
+    id: Number.isFinite(rawId) && rawId > 0 ? Math.floor(rawId) : 0,
+    jmeno,
+    oddeleni: oddeleni || fakulta || budova,
+    fakulta: fakulta || oddeleni || budova,
+    budova,
+    mistnost,
+    klapka,
+    telefon,
+    email,
+  };
+
+  return LinkaContactSchema.safeParse(normalized).success ? normalized : null;
+}
+
+export function normalizeImportedContacts(items: unknown[]) {
+  return items
+    .map((item) => normalizeImportedObjectContact(item))
+    .filter((item): item is LinkaContact => item !== null);
+}
+
 export function contactMatches(contact: LinkaContact, query: string): boolean {
   const q = removeDiacritics(query).trim();
   if (!q) return true;
@@ -100,6 +175,7 @@ export function contactMatches(contact: LinkaContact, query: string): boolean {
       contact.budova,
       contact.mistnost,
       contact.klapka,
+      contact.telefon,
       contact.email,
     ].join(' '),
   );
@@ -112,12 +188,87 @@ export function contactToCsvRow(c: LinkaContact): string {
     if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
     return s;
   };
-  return [c.id, c.jmeno, c.oddeleni, c.fakulta, c.budova, c.mistnost, c.klapka, c.email]
+  return [c.id, c.jmeno, c.oddeleni, c.fakulta, c.budova, c.mistnost, c.klapka, c.telefon, c.email]
     .map(esc)
     .join(',');
 }
 
-export const CSV_HEADER = 'id,jmeno,oddeleni,fakulta,budova,mistnost,klapka,email';
+export const CSV_HEADER = 'id,jmeno,oddeleni,fakulta,budova,mistnost,klapka,telefon,email';
+
+function detectCsvDelimiter(text: string) {
+  const candidates = [',', ';', '\t'];
+  const counts = new Map<string, number>(candidates.map((candidate) => [candidate, 0]));
+  let inQ = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '"') {
+      if (inQ && text[i + 1] === '"') {
+        i++;
+      } else {
+        inQ = !inQ;
+      }
+      continue;
+    }
+    if (!inQ && (ch === '\n' || ch === '\r')) break;
+    if (!inQ && counts.has(ch)) counts.set(ch, Number(counts.get(ch) || 0) + 1);
+  }
+
+  let best = ',';
+  let bestCount = -1;
+  for (const candidate of candidates) {
+    const count = Number(counts.get(candidate) || 0);
+    if (count > bestCount) {
+      best = candidate;
+      bestCount = count;
+    }
+  }
+  return best;
+}
+
+function normalizeHeaderKey(value: string) {
+  return removeDiacritics(String(value || ''))
+    .replace(/[_\s-]+/g, '')
+    .trim();
+}
+
+function canonicalHeaderName(value: string) {
+  switch (normalizeHeaderKey(value)) {
+    case 'id':
+      return 'id';
+    case 'jmeno':
+    case 'name':
+      return 'jmeno';
+    case 'oddeleni':
+    case 'department':
+      return 'oddeleni';
+    case 'fakulta':
+    case 'faculty':
+      return 'fakulta';
+    case 'budova':
+    case 'building':
+      return 'budova';
+    case 'mistnost':
+    case 'room':
+      return 'mistnost';
+    case 'klapka':
+    case 'linka':
+    case 'extension':
+      return 'klapka';
+    case 'telefon':
+    case 'telefonnicislo':
+    case 'phone':
+    case 'mobile':
+    case 'tel':
+      return 'telefon';
+    case 'email':
+    case 'mail':
+    case 'eemail':
+      return 'email';
+    default:
+      return normalizeHeaderKey(value);
+  }
+}
 
 export function parseCsv(text: string): LinkaContact[] {
   const rows: string[][] = [];
@@ -125,6 +276,7 @@ export function parseCsv(text: string): LinkaContact[] {
   let field = '';
   let inQ = false;
   const src = String(text || '').replace(/^\uFEFF/, '');
+  const delimiter = detectCsvDelimiter(src);
   for (let i = 0; i < src.length; i++) {
     const ch = src[i];
     if (inQ) {
@@ -140,7 +292,7 @@ export function parseCsv(text: string): LinkaContact[] {
       }
     } else {
       if (ch === '"') inQ = true;
-      else if (ch === ',') {
+      else if (ch === delimiter) {
         cur.push(field);
         field = '';
       } else if (ch === '\r') {
@@ -160,8 +312,19 @@ export function parseCsv(text: string): LinkaContact[] {
     rows.push(cur);
   }
   if (rows.length === 0) return [];
-  const header = rows[0].map((h) => String(h || '').trim().toLowerCase());
-  const idx = (name: string) => header.indexOf(name);
+  const headerIndex = new Map<string, number>();
+  rows[0].forEach((value, index) => {
+    const canonical = canonicalHeaderName(String(value || ''));
+    if (canonical && !headerIndex.has(canonical)) headerIndex.set(canonical, index);
+  });
+
+  const requiredHeaders = ['jmeno', 'oddeleni', 'fakulta', 'budova', 'mistnost', 'klapka', 'email'];
+  const missingHeaders = requiredHeaders.filter((name) => !headerIndex.has(name));
+  if (missingHeaders.length > 0) {
+    throw new Error(`CSV neobsahuje povinne sloupce: ${missingHeaders.join(', ')}`);
+  }
+
+  const idx = (name: string) => headerIndex.get(name) ?? -1;
   const out: LinkaContact[] = [];
   for (let r = 1; r < rows.length; r++) {
     const row = rows[r];
@@ -177,8 +340,12 @@ export function parseCsv(text: string): LinkaContact[] {
       budova: pick('budova'),
       mistnost: pick('mistnost'),
       klapka: pick('klapka'),
+      telefon: pick('telefon'),
       email: pick('email'),
     });
+  }
+  if (out.length === 0) {
+    throw new Error('CSV neobsahuje zadne datove radky');
   }
   return out;
 }

@@ -19,12 +19,12 @@ export default function AppShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-stone-50 to-white dark:from-stone-950 dark:to-stone-950">
+    <div className="min-h-screen bg-white dark:bg-black">
       {sidebar}
       <div className="lg:pl-[var(--app-sidebar-w)]">
-        <header className="sticky top-0 z-40 border-b border-stone-200 dark:border-stone-800 bg-white/80 dark:bg-stone-950/70 backdrop-blur">
-          <div className="mx-auto max-w-7xl px-4 py-3 lg:px-8">
-            <div className="flex items-center justify-between gap-3">
+        <header className="sticky top-0 z-40 border-b-2 border-black bg-white/95 backdrop-blur dark:border-white dark:bg-black/95">
+          <div className="mx-auto flex h-[72px] max-w-7xl items-center px-4 lg:px-8">
+            <div className="flex w-full items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
                 {onOpenMobileNav ? (
                   <button

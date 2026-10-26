@@ -112,9 +112,9 @@ const SidebarContent = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-white/80 dark:bg-stone-950/70 backdrop-blur text-stone-800 dark:text-stone-100">
+    <div className="flex h-full flex-col bg-white text-stone-800 dark:bg-black dark:text-white">
       {/* BRAND */}
-      <div className="p-4 border-b border-stone-100 dark:border-stone-800 flex items-center justify-between gap-3">
+      <div className="flex h-[72px] items-center justify-between gap-3 border-b-2 border-black px-4 dark:border-white">
         <Link href={`/${lang}`} className="flex items-center gap-3 min-w-0">
           <div className="w-10 h-10 bg-green-600 rounded-2xl flex items-center justify-center shadow-sm shrink-0">
             <ShieldCheck size={22} className="text-white" />
@@ -134,7 +134,7 @@ const SidebarContent = ({
           <button
             type="button"
             onClick={onToggleDesktopCollapsed}
-            className="hidden lg:inline-flex p-2 rounded-xl hover:bg-stone-50 dark:hover:bg-stone-900/60 text-stone-500 dark:text-stone-400"
+            className="hidden rounded-xl p-2 text-black transition hover:bg-green-50 hover:text-green-600 dark:text-white dark:hover:bg-green-950 dark:hover:text-green-400 lg:inline-flex"
             aria-label={desktopCollapsed ? t.expandNav : t.collapseNav}
             title={desktopCollapsed ? t.expandNav : t.collapseNav}
           >
@@ -142,7 +142,7 @@ const SidebarContent = ({
           </button>
           <button
             onClick={() => setIsMobileOpen(false)}
-            className="lg:hidden inline-flex p-2 rounded-xl hover:bg-stone-50 dark:hover:bg-stone-900/60 text-stone-500 dark:text-stone-400"
+            className="inline-flex rounded-xl p-2 text-black transition hover:bg-green-50 hover:text-green-600 dark:text-white dark:hover:bg-green-950 dark:hover:text-green-400 lg:hidden"
             aria-label={t.closeNav}
           >
             <X size={18} />
@@ -151,7 +151,7 @@ const SidebarContent = ({
       </div>
 
       {/* USER PROFILE */}
-      <div className="p-4 border-b border-stone-100 dark:border-stone-800">
+      <div className="border-b-2 border-black p-4 dark:border-white">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-green-50 dark:bg-green-950/40 rounded-2xl flex items-center justify-center font-black text-green-700 dark:text-green-400 border border-green-100 dark:border-green-900 shrink-0">
             {userProfile?.first_name?.charAt(0) || userProfile?.email?.charAt(0).toUpperCase()}
@@ -277,7 +277,7 @@ const SidebarContent = ({
       </nav>
 
       {/* FOOTER */}
-      <div className="p-3 border-t border-stone-100 dark:border-stone-800 space-y-1">
+      <div className="space-y-1 border-t-2 border-black p-3 dark:border-white">
         {(userProfile?.has_member_access || userProfile?.is_member || userProfile?.can_view_member_portal || userProfile?.can_edit_member_portal || userProfile?.can_manage_admins) && (
           <Link
             href={`/${lang}/clen`}
@@ -346,8 +346,8 @@ export default function AdminSidebar({
       {/* SIDEBAR DESKTOP */}
       <aside
         className={[
-          'hidden lg:block fixed left-0 top-0 bottom-0 shrink-0 z-[10000] border-r border-stone-100 bg-white',
-          'dark:border-stone-800 dark:bg-stone-950',
+          'hidden lg:block fixed left-0 top-0 bottom-0 shrink-0 overflow-hidden z-[10000] border-r-2 border-black bg-white',
+          'dark:border-white dark:bg-black',
           desktopCollapsed ? 'w-[72px]' : 'w-[260px]',
         ].join(' ')}
       >

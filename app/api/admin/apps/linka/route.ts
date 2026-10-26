@@ -14,6 +14,7 @@ import {
   CSV_HEADER,
   contactToCsvRow,
   parseCsv,
+  normalizeImportedContacts,
 } from '@/lib/apps-linka/types';
 import { z } from 'zod';
 
@@ -93,22 +94,26 @@ export async function POST(req: Request) {
     if (!rawText.trim()) {
       return NextResponse.json({ ok: false, error: 'Importovaný soubor je prázdný' }, { status: 400 });
     }
-    let imported: LinkaContact[] = [];
+    let imported: unknown[] = [];
     try {
       if (rawFormat === 'csv') {
-      imported = parseCsv(rawText);
-    } else {
-      const parsed = JSON.parse(rawText);
-      if (Array.isArray(parsed)) imported = parsed;
-      else if (parsed && Array.isArray(parsed.contacts)) imported = parsed.contacts;
-      else return NextResponse.json({ ok: false, error: 'Neplatný JSON import (očekávám pole nebo objekt s contacts[])' }, { status: 400 });
-    }
+        imported = parseCsv(rawText);
+      } else {
+        const parsed = JSON.parse(rawText);
+        if (Array.isArray(parsed)) imported = parsed;
+        else if (parsed && Array.isArray(parsed.contacts)) imported = parsed.contacts;
+        else return NextResponse.json({ ok: false, error: 'Neplatný JSON import (očekávám pole nebo objekt s contacts[])' }, { status: 400 });
+      }
     } catch (e: any) {
       return NextResponse.json({ ok: false, error: 'Chyba parsování importu: ' + (e?.message || e) }, { status: 400 });
     }
+    const preview: LinkaContact[] = normalizeImportedContacts(imported);
+    if (preview.length === 0) {
+      return NextResponse.json({ ok: false, error: 'Import neobsahuje žádné rozpoznané kontakty' }, { status: 400 });
+    }
     return NextResponse.json({
       ok: true,
-      preview: imported,
+      preview,
     });
   }
 
@@ -142,6 +147,7 @@ export async function POST(req: Request) {
       budova: String(c?.budova || ''),
       mistnost: String(c?.mistnost || ''),
       klapka: String(c?.klapka || ''),
+      telefon: String(c?.telefon || ''),
       email: String(c?.email || ''),
     });
   }

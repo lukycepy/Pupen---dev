@@ -21,11 +21,11 @@ import AdminModuleHeader from './ui/AdminModuleHeader';
 import AdminPanel from './ui/AdminPanel';
 import InlinePulse from '@/app/components/InlinePulse';
 import { useToast } from '@/app/context/ToastContext';
-import Dialog from '@/app/components/ui/Dialog';
 import {
   LinkaContact,
   nextContactId,
   contactMatches,
+  normalizeImportedContacts,
 } from '@/lib/apps-linka/types';
 import { supabase } from '@/lib/supabase';
 
@@ -39,6 +39,7 @@ const FIELD_LABELS: Record<keyof LinkaContact, string> = {
   budova: 'Budova / lokace',
   mistnost: 'Místnost',
   klapka: 'Linka (4 číslice)',
+  telefon: 'Telefon (nepovinné)',
   email: 'E-mail',
 };
 
@@ -50,6 +51,7 @@ const FIELD_PLACEHOLDERS: Record<keyof LinkaContact, string> = {
   budova: 'Kampus - Budova A',
   mistnost: 'A-301',
   klapka: '2001',
+  telefon: '+420 224 38X XXX',
   email: 'jan.novák@fapp.czu.cz',
 };
 
@@ -60,6 +62,7 @@ const EMPTY_FORM: FormState = {
   budova: '',
   mistnost: '',
   klapka: '',
+  telefon: '',
   email: '',
 };
 
@@ -77,6 +80,7 @@ export default function LinkaTab() {
   const [importing, setImporting] = useState(false);
 
   const [search, setSearch] = useState('');
+  const [editOpen, setEditOpen] = useState(false);
 
   const [editing, setEditing] = useState<{ dirty: boolean; idx: number | null; form: FormState; errors: Record<string, string> }>({
     dirty: false,
@@ -89,10 +93,6 @@ export default function LinkaTab() {
   const [warnedEmpty, setWarnedEmpty] = useState(false);
 
   const importFileRef = useRef<HTMLInputElement | null>(null);
-  const isEditOpen =
-    editing.idx != null ||
-    editing.dirty ||
-    Object.values(editing.form).some((value) => String(value || '').trim().length > 0);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -151,6 +151,12 @@ export default function LinkaTab() {
         const dup = contacts.find((c) => c.klapka === v && c.id !== excludeId);
         if (dup) return `Linka ${v} už je obsazena (${dup.jmeno})`;
         return '';
+      case 'telefon':
+        // Nepovinné pole – prázdné je v pořádku.
+        if (!v) return '';
+        if (v.length > 40) return 'Max 40 znaků';
+        if (!/^\+?[\d\s()/.-]{4,}$/.test(v)) return 'Neplatný telefon';
+        return '';
       case 'email':
         if (!v) return 'Povinné pole';
         if (v.length > 200) return 'Max 200 znaků';
@@ -162,6 +168,7 @@ export default function LinkaTab() {
   };
 
   const startEdit = (contact: LinkaContact | null) => {
+    setEditOpen(true);
     setEditing({
       dirty: false,
       idx: contact ? contacts.findIndex((c) => c.id === contact.id) : null,
@@ -174,6 +181,7 @@ export default function LinkaTab() {
             budova: contact.budova,
             mistnost: contact.mistnost,
             klapka: contact.klapka,
+            telefon: contact.telefon || '',
             email: contact.email,
           }
         : { ...EMPTY_FORM },
@@ -182,6 +190,7 @@ export default function LinkaTab() {
   };
 
   const cancelEdit = () => {
+    setEditOpen(false);
     setEditing({ dirty: false, idx: null, form: { ...EMPTY_FORM }, errors: {} });
   };
 
@@ -225,6 +234,7 @@ export default function LinkaTab() {
       budova: String(form.budova || '').trim(),
       mistnost: String(form.mistnost || '').trim(),
       klapka: String(form.klapka || '').trim(),
+      telefon: String(form.telefon || '').trim(),
       email: String(form.email || '').trim().toLowerCase(),
     };
 
@@ -233,6 +243,7 @@ export default function LinkaTab() {
       if (idx >= 0) {
         nextContacts[idx] = { ...cleaned, id: Number(editing.form.id) };
         setContacts(nextContacts);
+        setEditOpen(false);
         setEditing({ dirty: false, idx: null, form: { ...EMPTY_FORM }, errors: {} });
         showToast('Změna uložena v paměti, nezapomeň vše dohromady ULOŽIT', 'info');
         return;
@@ -242,6 +253,7 @@ export default function LinkaTab() {
     const newId = nextContactId(nextContacts);
     nextContacts.push({ ...cleaned, id: newId });
     setContacts(nextContacts);
+    setEditOpen(false);
     setEditing({ dirty: false, idx: null, form: { ...EMPTY_FORM }, errors: {} });
     showToast('Kontakt přidán do paměti, nezapomeň vše dohromady ULOŽIT', 'info');
   };
@@ -333,17 +345,35 @@ export default function LinkaTab() {
     setImporting(true);
     try {
       const text = await file.text();
-      const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token;
-      if (!token) throw new Error('Nepřihlášen');
-      const res = await fetch('/api/admin/apps/linka', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ mode: 'import', format, content: text }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok || !json?.ok) throw new Error(json?.error || 'Chyba importu');
-      const imported = Array.isArray(json?.preview) ? json.preview : [];
+      let imported: LinkaContact[] = [];
+
+      if (format === 'json') {
+        const parsed = JSON.parse(text);
+        const rawItems = Array.isArray(parsed) ? parsed : parsed && Array.isArray(parsed.contacts) ? parsed.contacts : null;
+        if (!rawItems) throw new Error('Neplatný JSON import (očekávám pole nebo objekt s contacts[])');
+        imported = normalizeImportedContacts(rawItems);
+      } else {
+        const { data } = await supabase.auth.getSession();
+        const token = data.session?.access_token;
+        if (!token) throw new Error('Nepřihlášen');
+        const res = await fetch('/api/admin/apps/linka', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ mode: 'import', format, content: text }),
+        });
+        const rawResponseText = await res.text();
+        let json: Record<string, unknown> = {};
+        try {
+          json = rawResponseText ? JSON.parse(rawResponseText) : {};
+        } catch {
+          json = {};
+        }
+        if (!res.ok || !json?.ok) {
+          throw new Error(String(json?.error || rawResponseText || 'Chyba importu'));
+        }
+        imported = Array.isArray(json?.preview) ? json.preview : [];
+      }
+
       if (!imported.length) {
         showToast('Import neobsahuje žádné platné záznamy', 'error');
         return;
@@ -363,6 +393,7 @@ export default function LinkaTab() {
           budova: String(c.budova || '').trim(),
           mistnost: String(c.mistnost || '').trim(),
           klapka: String(c.klapka || '').trim(),
+          telefon: String(c.telefon || '').trim(),
           email: String(c.email || '').trim().toLowerCase(),
         };
         if (Number.isFinite(id) && id > 0) {
@@ -542,6 +573,84 @@ export default function LinkaTab() {
           <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500">
             Seznam kontaktů · {countFiltered} z {contacts.length}
           </div>
+          {editOpen && (
+            <AdminPanel className="rounded-[2.5rem] border-2 border-black bg-white p-6 sm:p-8 dark:border-white dark:bg-black">
+              <div className="space-y-6">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="flex items-center gap-3 text-black dark:text-white">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-green-600 bg-green-50 text-green-700 dark:border-green-500 dark:bg-green-950 dark:text-green-400">
+                      <Phone size={22} />
+                    </div>
+                    <div>
+                      <div className="text-xl font-black">
+                        {editing.idx != null || editing.form.id ? 'Upravit kontakt' : 'Přidat kontakt'}
+                      </div>
+                      <div className="text-sm font-bold text-stone-500 dark:text-stone-400">
+                        Změna se připraví do seznamu a uloží se společně hlavním tlačítkem nahoře.
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={cancelEdit}
+                    className="inline-flex items-center gap-2 rounded-2xl border-2 border-black bg-white px-4 py-3 font-bold text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
+                  >
+                    <X size={16} /> Zavřít
+                  </button>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  {(['jmeno', 'oddeleni', 'fakulta', 'budova', 'mistnost', 'klapka', 'telefon', 'email'] as const).map((key) => {
+                    const value: string = String((editing.form as any)[key] || '');
+                    const err = editing.errors[key];
+                    return (
+                      <div key={key} className={key === 'email' ? 'md:col-span-2' : ''}>
+                        <label className="mb-2 flex items-center justify-between px-1">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500">
+                            {FIELD_LABELS[key]}
+                            {key !== 'telefon' && <span className="ml-1 text-red-500">*</span>}
+                          </span>
+                          {err ? <span className="text-xs font-bold text-red-600 dark:text-red-400">{err}</span> : null}
+                        </label>
+                        <input
+                          type={key === 'email' ? 'email' : key === 'telefon' ? 'tel' : 'text'}
+                          inputMode={key === 'klapka' ? 'numeric' : key === 'telefon' ? 'tel' : undefined}
+                          maxLength={key === 'mistnost' ? 100 : key === 'telefon' ? 40 : 200}
+                          value={value}
+                          onChange={(e) => updateField(key, e.target.value, false)}
+                          onBlur={(e) => updateField(key, e.target.value, true)}
+                          placeholder={FIELD_PLACEHOLDERS[key]}
+                          className={`w-full rounded-2xl border-2 px-5 py-4 font-bold outline-none transition ${
+                            err
+                              ? 'border-red-600 bg-red-50/30 text-black focus:ring-2 focus:ring-red-500 dark:border-red-500 dark:bg-red-950/30 dark:text-white dark:focus:ring-red-400'
+                              : 'border-black bg-white text-black placeholder:text-stone-400 focus:ring-2 focus:ring-green-500 dark:border-white dark:bg-black dark:text-white dark:placeholder:text-stone-500'
+                          }`}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="flex flex-wrap justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={cancelEdit}
+                    className="rounded-2xl border-2 border-black bg-white px-6 py-3 font-black text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
+                  >
+                    Zrušit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={commitEdit}
+                    className="flex items-center gap-2 rounded-2xl border-2 border-green-700 bg-green-600 px-8 py-3 font-black text-white transition hover:bg-green-700 dark:border-green-500 dark:bg-green-500 dark:text-black dark:hover:bg-green-400"
+                  >
+                    <Check size={18} />
+                    {editing.idx != null || editing.form.id ? 'Uložit změny' : 'Přidat do seznamu'}
+                  </button>
+                </div>
+              </div>
+            </AdminPanel>
+          )}
           {loading ? (
             <div className="p-10 rounded-[2rem] bg-green-50/30 dark:bg-green-950/30 border-2 border-black dark:border-white flex items-center gap-3 text-stone-600 dark:text-stone-400 font-bold">
               <InlinePulse className="bg-green-500 dark:bg-green-400" size={20} /> Načítám data…
@@ -561,6 +670,7 @@ export default function LinkaTab() {
                     <th className="py-3 px-3 md:px-4">Budova</th>
                     <th className="py-3 px-3 md:px-4">Místnost</th>
                     <th className="py-3 px-3 md:px-4">Linka</th>
+                    <th className="py-3 px-3 md:px-4">Telefon</th>
                     <th className="py-3 px-3 md:px-4">E-mail</th>
                     <th className="py-3 px-3 md:px-4 text-right">Akce</th>
                   </tr>
@@ -580,6 +690,9 @@ export default function LinkaTab() {
                         <span className="inline-flex items-center gap-1 rounded-xl bg-green-50 dark:bg-green-950 border-2 border-green-600 dark:border-green-500 px-3 py-1 font-black text-green-800 dark:text-green-400">
                           <Phone size={14} />{c.klapka}
                         </span>
+                      </td>
+                      <td className="py-3 px-3 md:px-4 border-t border-black/10 dark:border-white/10 align-top font-bold text-stone-700 dark:text-stone-400 break-all">
+                        {c.telefon || <span className="text-stone-400 dark:text-stone-600">—</span>}
                       </td>
                       <td className="py-3 px-3 md:px-4 border-t border-black/10 dark:border-white/10 align-top font-bold text-stone-700 dark:text-stone-400 break-all max-w-xs">{c.email}</td>
                       <td className="py-3 px-3 md:px-4 border-t border-black/10 dark:border-white/10 align-top text-right">
@@ -612,88 +725,6 @@ export default function LinkaTab() {
           )}
         </div>
       </AdminPanel>
-
-      <Dialog
-        open={isEditOpen}
-        onClose={cancelEdit}
-        overlayClassName="fixed inset-0 z-[30000] flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-6"
-        panelClassName="w-full max-w-4xl rounded-t-[2rem] border-2 border-black bg-white p-6 sm:rounded-[2.5rem] sm:p-8 dark:border-white dark:bg-black max-h-[92dvh] overflow-y-auto"
-      >
-        <div className="space-y-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="flex items-center gap-3 text-black dark:text-white">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-green-600 bg-green-50 text-green-700 dark:border-green-500 dark:bg-green-950 dark:text-green-400">
-                <Phone size={22} />
-              </div>
-              <div>
-                <div className="text-xl font-black">
-                  {editing.idx != null || editing.form.id ? 'Upravit kontakt' : 'Přidat kontakt'}
-                </div>
-                <div className="text-sm font-bold text-stone-500 dark:text-stone-400">
-                  Změna se připraví do seznamu a uloží se společně hlavním tlačítkem nahoře.
-                </div>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={cancelEdit}
-              className="inline-flex items-center gap-2 rounded-2xl border-2 border-black bg-white px-4 py-3 font-bold text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
-            >
-              <X size={16} /> Zavřít
-            </button>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            {(['jmeno', 'oddeleni', 'fakulta', 'budova', 'mistnost', 'klapka', 'email'] as const).map((key) => {
-              const value: string = String((editing.form as any)[key] || '');
-              const err = editing.errors[key];
-              return (
-                <div key={key} className={key === 'email' ? 'md:col-span-2' : ''}>
-                  <label className="mb-2 flex items-center justify-between px-1">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500">
-                      {FIELD_LABELS[key]}
-                      <span className="ml-1 text-red-500">*</span>
-                    </span>
-                    {err ? <span className="text-xs font-bold text-red-600 dark:text-red-400">{err}</span> : null}
-                  </label>
-                  <input
-                    type={key === 'email' ? 'email' : 'text'}
-                    inputMode={key === 'klapka' ? 'numeric' : undefined}
-                    maxLength={key === 'mistnost' ? 100 : 200}
-                    value={value}
-                    onChange={(e) => updateField(key, e.target.value, false)}
-                    onBlur={(e) => updateField(key, e.target.value, true)}
-                    placeholder={FIELD_PLACEHOLDERS[key]}
-                    className={`w-full rounded-2xl border-2 px-5 py-4 font-bold outline-none transition ${
-                      err
-                        ? 'border-red-600 bg-red-50/30 text-black focus:ring-2 focus:ring-red-500 dark:border-red-500 dark:bg-red-950/30 dark:text-white dark:focus:ring-red-400'
-                        : 'border-black bg-white text-black placeholder:text-stone-400 focus:ring-2 focus:ring-green-500 dark:border-white dark:bg-black dark:text-white dark:placeholder:text-stone-500'
-                    }`}
-                  />
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="flex flex-wrap justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={cancelEdit}
-              className="rounded-2xl border-2 border-black bg-white px-6 py-3 font-black text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
-            >
-              Zrušit
-            </button>
-            <button
-              type="button"
-              onClick={commitEdit}
-              className="flex items-center gap-2 rounded-2xl border-2 border-green-700 bg-green-600 px-8 py-3 font-black text-white transition hover:bg-green-700 dark:border-green-500 dark:bg-green-500 dark:text-black dark:hover:bg-green-400"
-            >
-              <Check size={18} />
-              {editing.idx != null || editing.form.id ? 'Uložit změny' : 'Přidat do seznamu'}
-            </button>
-          </div>
-        </div>
-      </Dialog>
 
       <footer className="pt-2">
         <div className="text-center text-xs font-bold text-stone-500">
