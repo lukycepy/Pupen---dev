@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { withSchemaCacheRetry } from '@/lib/schema-cache-retry';
 
 interface MembershipApplicationSummaryRow {
   id?: string | null;
@@ -54,24 +55,30 @@ export async function GET(req: Request) {
     const supabase = getServerSupabase();
 
     const [appsRes, profilesRes, accessLogsRes, dedupeLogsRes] = await Promise.all([
-      supabase
-        .from('membership_applications_v2')
-        .select('id,status,email,user_id,created_at')
-        .order('created_at', { ascending: false })
-        .limit(5000),
-      supabase.from('profiles').select('id,email').limit(10000),
-      supabase
-        .from('admin_logs')
-        .select('target_id,created_at,details')
-        .eq('action', 'MEMBERSHIP_APPLICATION_APPROVED_ACCESS_SENT')
-        .order('created_at', { ascending: false })
-        .limit(5000),
-      supabase
-        .from('admin_logs')
-        .select('action,target_id,created_at,details')
-        .eq('action', 'MEMBERSHIP_APPLICATION_DEDUPE_REVIEWED')
-        .order('created_at', { ascending: false })
-        .limit(5000),
+      withSchemaCacheRetry(supabase, () =>
+        supabase
+          .from('membership_applications_v2')
+          .select('id,status,email,user_id,created_at')
+          .order('created_at', { ascending: false })
+          .limit(5000),
+      ),
+      withSchemaCacheRetry(supabase, () => supabase.from('profiles').select('id,email').limit(10000)),
+      withSchemaCacheRetry(supabase, () =>
+        supabase
+          .from('admin_logs')
+          .select('target_id,created_at,details')
+          .eq('action', 'MEMBERSHIP_APPLICATION_APPROVED_ACCESS_SENT')
+          .order('created_at', { ascending: false })
+          .limit(5000),
+      ),
+      withSchemaCacheRetry(supabase, () =>
+        supabase
+          .from('admin_logs')
+          .select('action,target_id,created_at,details')
+          .eq('action', 'MEMBERSHIP_APPLICATION_DEDUPE_REVIEWED')
+          .order('created_at', { ascending: false })
+          .limit(5000),
+      ),
     ]);
 
     if (appsRes.error) throw appsRes.error;

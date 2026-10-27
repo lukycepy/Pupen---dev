@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, CheckCircle, Clock, Download, FileText, FileCheck, Mail, Pencil, RefreshCw, Save, Search, ShieldCheck, Upload, Users, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Clock, Download, FileText, FileCheck, Mail, Pencil, RefreshCw, Save, Search, ShieldCheck, Trash2, Upload, Users, XCircle } from 'lucide-react';
 import { useToast } from '../../../../context/ToastContext';
 import Image from 'next/image';
 import { SkeletonTabContent } from '../../../components/Skeleton';
@@ -600,10 +600,45 @@ export default function ApplicationsTab({ dict, readOnly }: { dict: any; readOnl
     onError: (e: any) => showToast(e?.message || (isEn ? 'Error' : 'Chyba'), 'error'),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedId) throw new Error('Missing id');
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Unauthorized');
+
+      const res = await fetch(`/api/admin/membership-applications/${selectedId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Request failed');
+      return json as { ok?: boolean };
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['membership_applications_v2'] }),
+        qc.invalidateQueries({ queryKey: ['membership_applications_v2_summary'] }),
+      ]);
+      setSelectedId(null);
+      showToast(isEn ? 'Application deleted.' : 'Přihláška smazána.', 'success');
+    },
+    onError: (e: any) => showToast(e?.message || (isEn ? 'Error' : 'Chyba'), 'error'),
+  });
+
   const submitEdit = handleSubmit((values) => {
     if (!isEditable) return;
     updateMutation.mutate(values);
   });
+
+  const deleteSelectedApplication = () => {
+    if (!selectedId) return;
+    const message = isEn
+      ? 'Do you really want to permanently delete this application? This action cannot be undone.'
+      : 'Opravdu chcete tuto přihlášku trvale smazat? Tato akce je nevratná.';
+    if (!confirm(message)) return;
+    deleteMutation.mutate();
+  };
 
   const rows = listQuery.data?.rows || [];
   const count = listQuery.data?.count;
@@ -940,14 +975,28 @@ export default function ApplicationsTab({ dict, readOnly }: { dict: any; readOnl
               </span>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setSelectedId(null)}
-            className="rounded-full border-2 border-black p-2 text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
-            title={dict?.common?.close || (isEn ? 'Close' : 'Zavřít')}
-          >
-            <XCircle size={22} />
-          </button>
+          <div className="flex items-center gap-2">
+            {selectedApplication ? (
+              <button
+                type="button"
+                onClick={deleteSelectedApplication}
+                disabled={deleteMutation.isPending}
+                className="inline-flex items-center gap-2 rounded-2xl border-2 border-red-600 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-red-600 transition hover:bg-red-50 disabled:opacity-50 dark:border-red-500 dark:text-red-500 dark:hover:bg-red-950"
+                title={isEn ? 'Delete application' : 'Smazat přihlášku'}
+              >
+                {deleteMutation.isPending ? <InlinePulse className="bg-red-500/80" size={12} /> : <Trash2 size={16} />}
+                {isEn ? 'Delete' : 'Smazat'}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => setSelectedId(null)}
+              className="rounded-full border-2 border-black p-2 text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
+              title={dict?.common?.close || (isEn ? 'Close' : 'Zavřít')}
+            >
+              <XCircle size={22} />
+            </button>
+          </div>
         </div>
 
         {detailQuery.isLoading ? (

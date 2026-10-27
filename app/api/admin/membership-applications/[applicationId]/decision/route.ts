@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { getBearerToken, requireAdmin } from '@/lib/server-auth';
-import { getRlsSupabase } from '@/lib/supabase-rls';
+import { requireAdmin } from '@/lib/server-auth';
 import { membershipApplicationAdminDecisionSchema } from '@/lib/validations/membership-applications-admin';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { withSchemaCacheRetry } from '@/lib/schema-cache-retry';
 import { enqueueEmailTrigger } from '@/lib/email/triggers';
 import { getMailerWithSettingsOrQueueTransporter, getSenderFromSettings } from '@/lib/email/mailer';
 import { renderEmailTemplateWithDbOverride } from '@/lib/email/render';
@@ -16,6 +16,7 @@ import {
 import { subscribeToNewsletter } from '@/lib/newsletter/subscribe';
 import { stripHtmlToText } from '@/lib/richtext-shared';
 import { ensureMembershipApplicationAccessProvisioned } from '@/lib/membership-applications/access';
+import { ensureMembershipApplicationPdf } from '@/lib/membership-applications/pdf';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -58,9 +59,7 @@ function isMissingColumnError(message: string, feature: string) {
 export async function POST(req: Request, ctx: { params: Promise<{ applicationId: string }> }) {
   try {
     const { user } = await requireAdmin(req);
-    const token = getBearerToken(req);
-    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    const rls = getRlsSupabase(token);
+    const srv = getServerSupabase();
 
     const { applicationId } = await ctx.params;
     const id = String(applicationId || '').trim();
@@ -71,23 +70,27 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
     const parsed = membershipApplicationAdminDecisionSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
 
-    const appRes = await rls
-      .from('membership_applications_v2')
-      .select('status,meta,user_id,email')
-      .eq('id', id)
-      .maybeSingle<MembershipApplicationDecisionRow>();
+    const appRes = await withSchemaCacheRetry(srv, () =>
+      srv
+        .from('membership_applications_v2')
+        .select('status,meta,user_id,email')
+        .eq('id', id)
+        .maybeSingle<MembershipApplicationDecisionRow>(),
+    );
     if (appRes.error) throw appRes.error;
     if (!appRes.data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     if (String(appRes.data.status || '') !== 'pending') return NextResponse.json({ error: 'Immutable' }, { status: 409 });
 
     const expectedKind = `chair_${parsed.data.decision.chairAuthKind}`;
-    const fileRes = await rls
-      .from('membership_application_files')
-      .select('id')
-      .eq('id', parsed.data.decision.chairAuthFileId)
-      .eq('application_id', id)
-      .contains('meta', { kind: expectedKind })
-      .maybeSingle<MembershipApplicationFileIdRow>();
+    const fileRes = await withSchemaCacheRetry(srv, () =>
+      srv
+        .from('membership_application_files')
+        .select('id')
+        .eq('id', parsed.data.decision.chairAuthFileId)
+        .eq('application_id', id)
+        .contains('meta', { kind: expectedKind })
+        .maybeSingle<MembershipApplicationFileIdRow>(),
+    );
     if (fileRes.error) throw fileRes.error;
     if (!fileRes.data) return NextResponse.json({ error: 'Invalid chair auth file' }, { status: 400 });
 
@@ -103,23 +106,26 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
       status: parsed.data.decision.status,
     });
 
-    const up = await rls
-      .from('membership_applications_v2')
-      .update({
-        status: parsed.data.decision.status,
-        decision_reason: parsed.data.decision.reason || null,
-        meta: nextMeta,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', id);
+    const up = await withSchemaCacheRetry(srv, () =>
+      srv
+        .from('membership_applications_v2')
+        .update({
+          status: parsed.data.decision.status,
+          decision_reason: parsed.data.decision.reason || null,
+          meta: nextMeta,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id),
+    );
     if (up.error) throw up.error;
 
-    const srv = getServerSupabase();
-    const fullRes = await srv
-      .from('membership_applications_v2')
-      .select('id, email, status, decision_reason, meta')
-      .eq('id', id)
-      .maybeSingle<MembershipApplicationDecisionRow>();
+    const fullRes = await withSchemaCacheRetry(srv, () =>
+      srv
+        .from('membership_applications_v2')
+        .select('id, email, status, decision_reason, meta')
+        .eq('id', id)
+        .maybeSingle<MembershipApplicationDecisionRow>(),
+    );
     if (fullRes.error) throw fullRes.error;
     const app = fullRes.data;
     const applicantEmail = String(app?.email || '').trim().toLowerCase();
@@ -128,6 +134,15 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
     const lastName = String(meta.last_name || '').trim();
     const status = String(parsed.data.decision.status || '');
     const reason = String(parsed.data.decision.reason || '').trim();
+    let pdfUrl = '';
+    try {
+      const ensuredPdf = await ensureMembershipApplicationPdf({
+        applicationId: id,
+        generatedByEmail: user.email || null,
+        expiresIn: 60 * 60 * 24 * 7,
+      });
+      pdfUrl = String(ensuredPdf.signedUrl || '').trim();
+    } catch {}
     const marketingConsent = meta.newsletter_opt_in === true;
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://pupen.org';
     let provisionedUserId: string | null = null;
@@ -206,7 +221,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
           firstName,
           lastName,
           actionUrl: actionUrlPublic,
-          pdfUrl: '',
+          pdfUrl,
           lang,
         });
         await sendMailWithQueueFallback({
@@ -258,6 +273,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
           firstName,
           status,
           reason: status === 'rejected' ? reason : '',
+          pdfUrl,
         },
         headers: { 'X-Pupen-Category': 'membership', 'X-Pupen-Trigger': 'membership_application_status' },
         meta: { application_id: id },

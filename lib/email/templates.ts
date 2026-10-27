@@ -120,7 +120,7 @@ export function listEmailTemplates() {
     {
       key: 'application_status' as const,
       label: 'Přihláška – změna stavu',
-      variables: ['toEmail', 'firstName', 'status', 'reason', 'lang'],
+      variables: ['toEmail', 'firstName', 'status', 'reason', 'pdfUrl', 'lang'],
     },
     {
       key: 'application_status_admin' as const,
@@ -685,6 +685,7 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
     const toEmail = String(vars?.toEmail || vars?.email || '');
     const status = String(vars?.status || 'pending').trim();
     const reason = String(vars?.reason || '').trim();
+    const pdfUrl = String(vars?.pdfUrl || '').trim();
 
     const statusLabel =
       status === 'approved'
@@ -736,6 +737,12 @@ export function renderEmailTemplate(key: EmailTemplateKey, vars: any): { subject
       badge: lang === 'en' ? 'Application' : 'Přihláška',
       preheader: `${lang === 'en' ? 'Status' : 'Stav'}: ${statusLabel}`,
       introHtml: `<p style="margin:0;">${intro}</p>`,
+      secondaryCta: pdfUrl
+        ? {
+            href: pdfUrl,
+            label: lang === 'en' ? 'Download application PDF' : 'Stáhnout PDF přihlášky',
+          }
+        : undefined,
       contentHtml: `
         <div style="background:#f5f5f4; border:1px solid #e7e5e4; border-radius:18px; padding:16px;">
           <div style="font-weight:950; font-size:16px;">${escapeHtml(lang === 'en' ? 'Status' : 'Stav')}: ${escapeHtml(statusLabel)}</div>

@@ -11,6 +11,9 @@ import InlinePulse from '@/app/components/InlinePulse';
 import PageBlocksRenderer from '@/app/[lang]/components/PageBlocksRenderer';
 import { parsePageBlocks } from '@/lib/site/page-blocks';
 
+const formFieldClassName =
+  'w-full bg-white dark:bg-black border-2 border-black dark:border-white rounded-2xl px-5 py-4 text-black dark:text-white focus:ring-2 focus:ring-green-500 transition font-bold';
+
 export default function PrihlaskaPage() {
   const params = useParams();
   const lang = (params?.lang as string) || 'cs';
@@ -19,7 +22,6 @@ export default function PrihlaskaPage() {
   const [dict, setDict] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [generatedDocxUrl, setGeneratedDocxUrl] = useState<string>('');
   const [pageHtml, setPageHtml] = useState<string>('');
   const [pageTitle, setPageTitle] = useState<string>('');
   const [pageBlocks, setPageBlocks] = useState<any[] | null>(null);
@@ -101,7 +103,6 @@ export default function PrihlaskaPage() {
           university_email: formData.membership_type === 'regular' ? formData.university_email : null,
           field_of_study: formData.membership_type === 'regular' ? formData.field_of_study : null,
           study_year: formData.membership_type === 'regular' ? formData.study_year : null,
-          signed_on: formData.signed_on || null,
           gdpr_consent: true,
           newsletter_opt_in: formData.newsletter_opt_in,
           applicant_signature: formData.applicant_signature,
@@ -117,7 +118,6 @@ export default function PrihlaskaPage() {
       const applicationId = String(submitJson?.applicationId || '').trim();
       if (!applicationId) throw new Error('Odeslání přihlášky selhalo.');
       
-      setGeneratedDocxUrl(String(submitJson?.docxDownloadUrl || ''));
       setSuccess(true);
       showToast(dict.successTitle, 'success');
     } catch (err: any) {
@@ -162,17 +162,7 @@ export default function PrihlaskaPage() {
                 <div>{dict.nextStep3}</div>
               </div>
             </div>
-            <div className={`mt-5 grid gap-3 ${generatedDocxUrl ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2'}`}>
-              {generatedDocxUrl ? (
-                <a
-                  href={generatedDocxUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center justify-center bg-green-600 text-white px-4 py-3 rounded-2xl font-bold hover:bg-green-700 transition text-xs"
-                >
-                  {lang === 'en' ? 'Download DOCX' : 'Stáhnout DOCX'}
-                </a>
-              ) : null}
+            <div className="mt-5 grid gap-3 grid-cols-2">
               <Link
                 href={`/${lang}/login`}
                 className="inline-flex items-center justify-center bg-white text-stone-700 px-4 py-3 rounded-2xl font-bold hover:bg-stone-100 transition border border-stone-200 text-xs"
@@ -249,7 +239,7 @@ export default function PrihlaskaPage() {
                 type="text"
                 value={formData.first_name}
                 onChange={e => setFormData({...formData, first_name: e.target.value})}
-                className="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 focus:ring-2 focus:ring-green-500 transition font-bold"
+                className={formFieldClassName}
               />
             </div>
             <div className="space-y-2">
@@ -259,7 +249,7 @@ export default function PrihlaskaPage() {
                 type="text"
                 value={formData.last_name}
                 onChange={e => setFormData({...formData, last_name: e.target.value})}
-                className="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 focus:ring-2 focus:ring-green-500 transition font-bold"
+                className={formFieldClassName}
               />
             </div>
           </div>
@@ -273,7 +263,7 @@ export default function PrihlaskaPage() {
                   type="email"
                   value={formData.university_email}
                   onChange={e => setFormData({...formData, university_email: e.target.value})}
-                  className="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 focus:ring-2 focus:ring-green-500 transition font-bold"
+                  className={formFieldClassName}
                 />
               </div>
             )}
@@ -284,7 +274,7 @@ export default function PrihlaskaPage() {
                 type="email" 
                 value={formData.email}
                 onChange={e => setFormData({...formData, email: e.target.value})}
-                className="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 focus:ring-2 focus:ring-green-500 transition font-bold"
+                className={formFieldClassName}
               />
             </div>
             <div className="space-y-2">
@@ -294,7 +284,7 @@ export default function PrihlaskaPage() {
                 type="tel" 
                 value={formData.phone}
                 onChange={e => setFormData({...formData, phone: e.target.value})}
-                className="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 focus:ring-2 focus:ring-green-500 transition font-bold"
+                className={formFieldClassName}
               />
             </div>
           </div>
@@ -308,7 +298,7 @@ export default function PrihlaskaPage() {
                   type="text"
                   value={formData.field_of_study}
                   onChange={e => setFormData({...formData, field_of_study: e.target.value})}
-                  className="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 focus:ring-2 focus:ring-green-500 transition font-bold"
+                  className={formFieldClassName}
                 />
               </div>
               <div className="space-y-2">
@@ -318,7 +308,7 @@ export default function PrihlaskaPage() {
                   type="text"
                   value={formData.study_year}
                   onChange={e => setFormData({...formData, study_year: e.target.value})}
-                  className="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 focus:ring-2 focus:ring-green-500 transition font-bold"
+                  className={formFieldClassName}
                 />
               </div>
             </div>
@@ -330,16 +320,6 @@ export default function PrihlaskaPage() {
               {legalSection}
             </div>
           ) : null}
-
-          <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">{dict.labelSignedOn}</label>
-            <input
-              type="date"
-              value={formData.signed_on}
-              onChange={e => setFormData({ ...formData, signed_on: e.target.value })}
-              className="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 focus:ring-2 focus:ring-green-500 transition font-bold"
-            />
-          </div>
 
           <div className="bg-stone-50 border border-stone-100 rounded-[2rem] p-6">
             <label className="flex items-start gap-4 cursor-pointer">

@@ -49,6 +49,9 @@ const ALLOWED_EXT = [
   'webp',
 ];
 
+const formFieldClassName =
+  'w-full bg-white dark:bg-black border-2 border-black dark:border-white rounded-2xl px-6 py-4 font-bold text-black dark:text-white focus:ring-2 focus:ring-green-500 transition';
+
 function fileExt(name: string) {
   const n = String(name || '');
   const i = n.lastIndexOf('.');
@@ -316,22 +319,22 @@ export default function TrustBoxPageClient() {
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Jméno</label>
-                    <input value={firstName} onChange={(e) => setFirstName(e.target.value)} className="w-full bg-stone-50 border-none rounded-2xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition" />
+                    <input value={firstName} onChange={(e) => setFirstName(e.target.value)} className={formFieldClassName} />
                   </div>
                   <div>
                     <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Příjmení</label>
-                    <input value={lastName} onChange={(e) => setLastName(e.target.value)} className="w-full bg-stone-50 border-none rounded-2xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition" />
+                    <input value={lastName} onChange={(e) => setLastName(e.target.value)} className={formFieldClassName} />
                   </div>
                 </div>
 
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Fakultní e‑mail</label>
-                  <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" className="w-full bg-stone-50 border-none rounded-2xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition" />
+                  <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" className={formFieldClassName} />
                 </div>
 
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Typ podnětu</label>
-                  <select value={topic} onChange={(e) => setTopic(e.target.value)} className="w-full bg-stone-50 border-none rounded-2xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition">
+                  <select value={topic} onChange={(e) => setTopic(e.target.value)} className={formFieldClassName}>
                     {TOPICS.map((t) => (
                       <option key={t.id} value={t.id}>
                         {lang === 'en' ? t.en : t.cs}
@@ -342,12 +345,12 @@ export default function TrustBoxPageClient() {
 
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Předmět</label>
-                  <input value={subject} onChange={(e) => setSubject(e.target.value)} className="w-full bg-stone-50 border-none rounded-2xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition" />
+                  <input value={subject} onChange={(e) => setSubject(e.target.value)} className={formFieldClassName} />
                 </div>
 
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 px-1">Popis</label>
-                  <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={6} className="w-full bg-stone-50 border-none rounded-2xl px-6 py-4 font-bold text-stone-700 focus:ring-2 focus:ring-green-500 transition resize-none" />
+                  <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={6} className={`${formFieldClassName} resize-none`} />
                 </div>
 
                 <div>

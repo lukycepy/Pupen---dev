@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getBearerToken, requireAdmin } from '@/lib/server-auth';
 import { getRlsSupabase } from '@/lib/supabase-rls';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { withSchemaCacheRetry } from '@/lib/schema-cache-retry';
 
 interface StoredFileRow {
   storage_bucket?: string | null;
@@ -35,14 +36,16 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
     const payload = body as SignatureSignedUrlBody;
     const expiresIn = Math.max(60, Math.min(60 * 60, Number(payload.expiresIn || 600) || 600));
 
-    const fileRes = await rls
-      .from('membership_application_files')
-      .select('storage_bucket, storage_path')
-      .eq('application_id', id)
-      .contains('meta', { kind: 'applicant_signature' })
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle<StoredFileRow>();
+    const fileRes = await withSchemaCacheRetry(rls, () =>
+      rls
+        .from('membership_application_files')
+        .select('storage_bucket, storage_path')
+        .eq('application_id', id)
+        .contains('meta', { kind: 'applicant_signature' })
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle<StoredFileRow>(),
+    );
     if (fileRes.error) throw fileRes.error;
     if (!fileRes.data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 

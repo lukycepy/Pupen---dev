@@ -3,6 +3,7 @@ import { requireAdmin } from '@/lib/server-auth';
 import { membershipApplicationAdminUpdateSchema } from '@/lib/validations/membership-applications-admin';
 import { writeAuditLog } from '@/lib/audit/audit-log';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { withSchemaCacheRetry } from '@/lib/schema-cache-retry';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -21,6 +22,8 @@ interface MembershipApplicationRow {
 interface MembershipApplicationFileRow {
   id?: string | number | null;
   created_at?: string | null;
+  storage_bucket?: string | null;
+  storage_path?: string | null;
   file_name?: string | null;
   mime_type?: string | null;
   size_bytes?: number | null;
@@ -81,26 +84,32 @@ export async function GET(req: Request, ctx: { params: Promise<{ applicationId: 
     const id = String(applicationId || '').trim();
     if (!id) return NextResponse.json({ error: 'Missing applicationId' }, { status: 400 });
 
-    const appRes = await srv.from('membership_applications_v2').select('*').eq('id', id).maybeSingle<MembershipApplicationRow>();
+    const appRes = await withSchemaCacheRetry(srv, () =>
+      srv.from('membership_applications_v2').select('*').eq('id', id).maybeSingle<MembershipApplicationRow>(),
+    );
     if (appRes.error) throw appRes.error;
     if (!appRes.data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    const filesRes = await srv
-      .from('membership_application_files')
-      .select('id,created_at,file_name,mime_type,size_bytes,meta')
-      .eq('application_id', id)
-      .order('created_at', { ascending: false });
+    const filesRes = await withSchemaCacheRetry(srv, () =>
+      srv
+        .from('membership_application_files')
+        .select('id,created_at,file_name,mime_type,size_bytes,meta')
+        .eq('application_id', id)
+        .order('created_at', { ascending: false }),
+    );
     if (filesRes.error) throw filesRes.error;
 
     const files: MembershipApplicationFileRow[] = Array.isArray(filesRes.data) ? filesRes.data : [];
 
-    const logsRes = await srv
-      .from('admin_logs')
-      .select('action,admin_email,admin_name,created_at,details')
-      .eq('target_id', id)
-      .in('action', ['membership_application.decision', 'MEMBERSHIP_APPLICATION_APPROVED_ACCESS_SENT', 'MEMBERSHIP_APPLICATION_DEDUPE_REVIEWED'])
-      .order('created_at', { ascending: false })
-      .limit(20);
+    const logsRes = await withSchemaCacheRetry(srv, () =>
+      srv
+        .from('admin_logs')
+        .select('action,admin_email,admin_name,created_at,details')
+        .eq('target_id', id)
+        .in('action', ['membership_application.decision', 'MEMBERSHIP_APPLICATION_APPROVED_ACCESS_SENT', 'MEMBERSHIP_APPLICATION_DEDUPE_REVIEWED'])
+        .order('created_at', { ascending: false })
+        .limit(20),
+    );
     const logs: AdminLogRow[] = logsRes.error || !Array.isArray(logsRes.data) ? [] : logsRes.data;
     const latestDecisionLog = logs.find((row) => String(row.action || '') === 'membership_application.decision') || null;
     const latestAccessLog = logs.find((row) => String(row.action || '') === 'MEMBERSHIP_APPLICATION_APPROVED_ACCESS_SENT') || null;
@@ -146,19 +155,23 @@ export async function GET(req: Request, ctx: { params: Promise<{ applicationId: 
 
     if (email) {
       const [duplicateAppsRes, duplicateProfilesRes] = await Promise.all([
-        srv
-          .from('membership_applications_v2')
-          .select('id,status,created_at,name,email')
-          .eq('email', email)
-          .neq('id', id)
-          .order('created_at', { ascending: false })
-          .limit(10),
-        srv
-          .from('profiles')
-          .select('id,email,first_name,last_name,is_member,is_admin,created_at')
-          .eq('email', email)
-          .order('created_at', { ascending: false })
-          .limit(10),
+        withSchemaCacheRetry(srv, () =>
+          srv
+            .from('membership_applications_v2')
+            .select('id,status,created_at,name,email')
+            .eq('email', email)
+            .neq('id', id)
+            .order('created_at', { ascending: false })
+            .limit(10),
+        ),
+        withSchemaCacheRetry(srv, () =>
+          srv
+            .from('profiles')
+            .select('id,email,first_name,last_name,is_member,is_admin,created_at')
+            .eq('email', email)
+            .order('created_at', { ascending: false })
+            .limit(10),
+        ),
       ]);
       if (!duplicateAppsRes.error) {
         const rows = Array.isArray(duplicateAppsRes.data) ? duplicateAppsRes.data as Array<{ id?: string | null; status?: string | null; created_at?: string | null; name?: string | null }> : [];
@@ -253,6 +266,80 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ applicationId
     });
 
     return NextResponse.json({ ok: true });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
+  }
+}
+
+export async function DELETE(req: Request, ctx: { params: Promise<{ applicationId: string }> }) {
+  try {
+    const { user, profile } = await requireAdmin(req);
+    if (!profile?.is_admin && !profile?.can_manage_admins && !profile?.can_edit_apps) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const srv = getServerSupabase();
+    const { applicationId } = await ctx.params;
+    const id = String(applicationId || '').trim();
+    if (!id) return NextResponse.json({ error: 'Missing applicationId' }, { status: 400 });
+
+    const appRes = await withSchemaCacheRetry(srv, () =>
+      srv.from('membership_applications_v2').select('*').eq('id', id).maybeSingle<MembershipApplicationRow>(),
+    );
+    if (appRes.error) throw appRes.error;
+    if (!appRes.data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+    const filesRes = await withSchemaCacheRetry(srv, () =>
+      srv
+        .from('membership_application_files')
+        .select('id,storage_bucket,storage_path,file_name,mime_type,size_bytes,meta')
+        .eq('application_id', id),
+    );
+    if (filesRes.error) throw filesRes.error;
+    const files = Array.isArray(filesRes.data) ? (filesRes.data as MembershipApplicationFileRow[]) : [];
+
+    const delFilesRes = await withSchemaCacheRetry(srv, () => srv.from('membership_application_files').delete().eq('application_id', id));
+    if (delFilesRes.error) throw delFilesRes.error;
+
+    const delAppRes = await withSchemaCacheRetry(srv, () => srv.from('membership_applications_v2').delete().eq('id', id));
+    if (delAppRes.error) throw delAppRes.error;
+
+    const filesByBucket = new Map<string, string[]>();
+    for (const file of files) {
+      const bucket = String(file.storage_bucket || '').trim();
+      const path = String(file.storage_path || '').trim();
+      if (!bucket || !path) continue;
+      const current = filesByBucket.get(bucket) || [];
+      current.push(path);
+      filesByBucket.set(bucket, current);
+    }
+    for (const [bucket, paths] of filesByBucket.entries()) {
+      try {
+        await srv.storage.from(bucket).remove(paths);
+      } catch {}
+    }
+
+    await writeAuditLog({
+      req,
+      actorUserId: user.id,
+      actorEmail: user.email || null,
+      action: 'membership_application.delete',
+      entity: { type: 'membership_application', id },
+      before: appRes.data,
+      after: null,
+      details: {
+        deleted_files_count: files.length,
+        deleted_file_paths: files.map((file) => ({
+          bucket: file.storage_bucket || null,
+          path: file.storage_path || null,
+          kind: toRecord(file.meta).kind || null,
+        })),
+      },
+    });
+
+    return NextResponse.json({ ok: true, deleted: true });
   } catch (error: unknown) {
     const message = getErrorMessage(error);
     const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;

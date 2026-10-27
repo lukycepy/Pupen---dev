@@ -116,11 +116,67 @@ export function firstImportValueFromAliases(record: Record<string, unknown>, ali
   return '';
 }
 
+function splitImportCandidates(value: string) {
+  return String(value || '')
+    .split('|')
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+function firstImportEmail(record: Record<string, unknown>, aliases: string[]) {
+  const raw = firstImportValueFromAliases(record, aliases);
+  const candidates = splitImportCandidates(raw).flatMap((part) => part.split(/[,\s;]+/g).map((chunk) => chunk.trim()).filter(Boolean));
+  for (const candidate of candidates) {
+    const normalized = candidate.replace(/[<>]/g, '').trim().toLowerCase();
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) return normalized;
+  }
+  return '';
+}
+
+function firstImportExtension(record: Record<string, unknown>, aliases: string[]) {
+  const raw = firstImportValueFromAliases(record, aliases);
+  const match = raw.match(/(?:^|\D)(\d{4})(?!\d)/);
+  return match?.[1] || '';
+}
+
+function firstImportPhone(record: Record<string, unknown>, aliases: string[]) {
+  const raw = firstImportValueFromAliases(record, aliases);
+  const candidates = splitImportCandidates(raw);
+  for (const candidate of candidates) {
+    const normalized = candidate.replace(/\s+/g, ' ').trim();
+    if (normalized) return normalized;
+  }
+  return '';
+}
+
+function pickMostSpecificImportLabel(value: string) {
+  const parts = splitImportCandidates(value);
+  const selected = parts.length > 0 ? parts[parts.length - 1] : String(value || '').trim();
+  const hierarchy = selected
+    .split('>')
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return (hierarchy.length > 0 ? hierarchy[hierarchy.length - 1] : selected).trim();
+}
+
+function scoreImportedContact(contact: LinkaContact) {
+  return [
+    contact.jmeno,
+    contact.oddeleni,
+    contact.fakulta,
+    contact.budova,
+    contact.mistnost,
+    contact.klapka,
+    contact.telefon,
+    contact.email,
+  ].reduce((sum, value) => sum + String(value || '').trim().length, 0);
+}
+
 export function normalizeImportedObjectContact(item: unknown): LinkaContact | null {
   const c = item && typeof item === 'object' ? (item as Record<string, unknown>) : {};
   const rawId = Number(firstImportValueFromAliases(c, ['id']));
   const jmeno =
-    firstImportValueFromAliases(c, ['jmeno', 'jmeno s tituly', 'jmeno (s tituly)', 'full name', 'fullname', 'name']) ||
+    firstImportValueFromAliases(c, ['jmeno (s tituly)', 'jmeno s tituly', 'full name', 'fullname', 'name', 'jmeno']) ||
     [
       firstImportValueFromAliases(c, ['tituly pred']),
       firstImportValueFromAliases(c, ['jmeno']),
@@ -131,19 +187,25 @@ export function normalizeImportedObjectContact(item: unknown): LinkaContact | nu
       .join(' ')
       .replace(/\s+/g, ' ')
       .trim();
-  const oddeleni = firstImportValueFromAliases(c, ['oddeleni', 'katedra / pracoviste', 'katedra/pracoviste', 'pracoviste', 'katedra', 'department']);
-  const fakulta = firstImportValueFromAliases(c, ['fakulta / utvar', 'fakulta/utvar', 'fakulta', 'utvar', 'faculty']);
-  const budova = firstImportValueFromAliases(c, ['budova', 'lokace', 'building']) || fakulta || oddeleni || 'CZU';
-  const mistnost = firstImportValueFromAliases(c, ['mistnost', 'cislo dveri / kancelare', 'cislo dveri/kancelare', 'kancelar', 'room']) || budova;
-  const klapka = firstImportValueFromAliases(c, ['klapka', 'linka', 'extension']);
-  const telefon = firstImportValueFromAliases(c, ['telefon', 'mobil', 'pevna linka', 'phone', 'mobile', 'tel']);
-  const email = firstImportValueFromAliases(c, ['email', 'hlavni email', 'mail']).toLowerCase();
+  const oddeleniRaw = firstImportValueFromAliases(c, ['oddeleni', 'katedra / pracoviste', 'katedra/pracoviste', 'pracoviste', 'katedra', 'department']);
+  const fakultaRaw = firstImportValueFromAliases(c, ['fakulta / utvar', 'fakulta/utvar', 'fakulta', 'utvar', 'faculty']);
+  const budovaRaw = firstImportValueFromAliases(c, ['budova', 'lokace', 'building']);
+  const mistnostRaw = firstImportValueFromAliases(c, ['mistnost', 'cislo dveri / kancelare', 'cislo dveri/kancelare', 'kancelar', 'room']);
+  const oddeleni = pickMostSpecificImportLabel(oddeleniRaw) || pickMostSpecificImportLabel(fakultaRaw);
+  const fakulta = pickMostSpecificImportLabel(fakultaRaw) || pickMostSpecificImportLabel(oddeleniRaw);
+  const budova = pickMostSpecificImportLabel(budovaRaw) || fakulta || oddeleni || 'CZU';
+  const mistnost = pickMostSpecificImportLabel(mistnostRaw) || budova;
+  const klapka = firstImportExtension(c, ['klapka', 'linka', 'extension']);
+  const telefon =
+    firstImportPhone(c, ['telefon', 'mobil', 'phone', 'mobile', 'tel']) ||
+    firstImportPhone(c, ['pevna linka', 'pevna', 'fixed line']);
+  const email = firstImportEmail(c, ['email', 'hlavni email', 'vedlejsi emaily', 'mail']);
 
   if (!jmeno && !oddeleni && !fakulta && !budova && !mistnost && !klapka && !telefon && !email) return null;
   if (!jmeno || !email || !/^\d{4}$/.test(klapka)) return null;
 
   const normalized: LinkaContact = {
-    id: Number.isFinite(rawId) && rawId > 0 ? Math.floor(rawId) : 0,
+    id: Number.isFinite(rawId) && rawId > 0 ? Math.floor(rawId) : 1,
     jmeno,
     oddeleni: oddeleni || fakulta || budova,
     fakulta: fakulta || oddeleni || budova,
@@ -158,9 +220,27 @@ export function normalizeImportedObjectContact(item: unknown): LinkaContact | nu
 }
 
 export function normalizeImportedContacts(items: unknown[]) {
-  return items
-    .map((item) => normalizeImportedObjectContact(item))
-    .filter((item): item is LinkaContact => item !== null);
+  const dedupedByExtension = new Map<string, LinkaContact>();
+
+  for (const item of items) {
+    const normalized = normalizeImportedObjectContact(item);
+    if (!normalized) continue;
+
+    const existing = dedupedByExtension.get(normalized.klapka);
+    if (!existing) {
+      dedupedByExtension.set(normalized.klapka, normalized);
+      continue;
+    }
+
+    if (scoreImportedContact(normalized) > scoreImportedContact(existing)) {
+      dedupedByExtension.set(normalized.klapka, normalized);
+    }
+  }
+
+  return Array.from(dedupedByExtension.values()).map((contact, index) => ({
+    ...contact,
+    id: index + 1,
+  }));
 }
 
 export function contactMatches(contact: LinkaContact, query: string): boolean {

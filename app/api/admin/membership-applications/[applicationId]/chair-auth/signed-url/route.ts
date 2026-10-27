@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getBearerToken, requireAdmin } from '@/lib/server-auth';
 import { getRlsSupabase } from '@/lib/supabase-rls';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { withSchemaCacheRetry } from '@/lib/schema-cache-retry';
 import { membershipApplicationChairAuthKindSchema } from '@/lib/validations/membership-applications-admin';
 import { z } from 'zod';
 
@@ -39,14 +40,16 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
     if (!parsed.success) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
 
     const expectedKind = `chair_${parsed.data.kind}`;
-    const fileRes = await rls
-      .from('membership_application_files')
-      .select('storage_bucket, storage_path')
-      .eq('application_id', id)
-      .contains('meta', { kind: expectedKind })
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle<StoredFileRow>();
+    const fileRes = await withSchemaCacheRetry(rls, () =>
+      rls
+        .from('membership_application_files')
+        .select('storage_bucket, storage_path')
+        .eq('application_id', id)
+        .contains('meta', { kind: expectedKind })
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle<StoredFileRow>(),
+    );
     if (fileRes.error) throw fileRes.error;
     if (!fileRes.data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 

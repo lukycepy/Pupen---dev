@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { withSchemaCacheRetry } from '@/lib/schema-cache-retry';
 import { membershipApplicationAdminListQuerySchema } from '@/lib/validations/membership-applications-admin';
 
 type JsonRecord = Record<string, unknown>;
@@ -68,10 +69,12 @@ export async function GET(req: Request) {
     const includePendingCount = isTruthy(parsed.data.pendingCount);
 
     if (includePendingCount) {
-      const countRes = await supabase
-        .from('membership_applications_v2')
-        .select('id', { count: 'exact', head: true })
-        .eq('status', 'pending');
+      const countRes = await withSchemaCacheRetry(supabase, () =>
+        supabase
+          .from('membership_applications_v2')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'pending'),
+      );
       if (countRes.error) throw countRes.error;
       return NextResponse.json({ ok: true, count: Number(countRes.count || 0) });
     }
@@ -86,9 +89,11 @@ export async function GET(req: Request) {
       query = query.or(`name.ilike.%${qq}%,email.ilike.%${qq}%,phone.ilike.%${qq}%`);
     }
 
-    const res = await query
-      .order('created_at', { ascending: false })
-      .range(parsed.data.offset, parsed.data.offset + parsed.data.limit - 1);
+    const res = await withSchemaCacheRetry(supabase, () =>
+      query
+        .order('created_at', { ascending: false })
+        .range(parsed.data.offset, parsed.data.offset + parsed.data.limit - 1),
+    );
     if (res.error) throw res.error;
 
     const rows = (Array.isArray(res.data) ? res.data : []).map((row) => {

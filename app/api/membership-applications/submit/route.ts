@@ -8,13 +8,7 @@ import { enqueueEmailTrigger } from '@/lib/email/triggers';
 import { getApplicationNewNotificationEmailsFromSettings, getApplicationNotificationEmailsFromSettings } from '@/lib/email/mailer';
 import { writeAuditLog } from '@/lib/audit/audit-log';
 import { subscribeToNewsletter } from '@/lib/newsletter/subscribe';
-import {
-  buildMembershipApplicationDocxBytes,
-  buildMembershipApplicationDocxStoragePath,
-  formatMembershipApplicationDocxFileName,
-  MEMBERSHIP_APPLICATION_DOCX_MIME,
-  MEMBERSHIP_APPLICATION_DOCX_TEMPLATE_PATH,
-} from '@/lib/membership-applications/docx';
+import { formatDatePrague } from '@/lib/time/prague';
 
 export const runtime = 'nodejs';
 
@@ -77,6 +71,8 @@ export async function POST(req: Request) {
         ? String(data.field_of_study || '').trim() || null
         : null;
 
+    const signedOn = formatDatePrague(new Date(), 'cs');
+
     const meta: any = {
       lang,
       membership_type: data.membership_type,
@@ -85,7 +81,7 @@ export async function POST(req: Request) {
       university_email: data.membership_type === 'regular' ? (data.university_email || null) : null,
       field_of_study: data.membership_type === 'regular' ? (data.field_of_study || null) : null,
       study_year: data.membership_type === 'regular' ? (data.study_year || null) : null,
-      signed_on: data.signed_on || null,
+      signed_on: signedOn,
       gdpr_consent: true,
       newsletter_opt_in: data.newsletter_opt_in === true,
       address_meta: data.address_meta || {},
@@ -130,61 +126,6 @@ export async function POST(req: Request) {
       ]);
     });
     if (insFile.error) throw insFile.error;
-
-    let docxDownloadUrl: string | null = null;
-    try {
-      const docxBytes = await buildMembershipApplicationDocxBytes({
-        lang,
-        membershipType: data.membership_type,
-        firstName: data.first_name,
-        lastName: data.last_name,
-        email: data.email,
-        phone: data.phone,
-        universityEmail: data.membership_type === 'regular' ? (data.university_email || null) : null,
-        fieldOfStudy: data.membership_type === 'regular' ? (data.field_of_study || null) : null,
-        studyYear: data.membership_type === 'regular' ? (data.study_year || null) : null,
-        signedOn: data.signed_on || null,
-        applicantSignature: data.applicant_signature,
-      });
-
-      const docxPath = buildMembershipApplicationDocxStoragePath(applicationId, lang);
-      const docxUpload = await supabase.storage.from(storageBucket).upload(docxPath, docxBytes, {
-        contentType: MEMBERSHIP_APPLICATION_DOCX_MIME,
-        upsert: true,
-      });
-      if (!docxUpload.error) {
-        const docxInsert = await withSchemaCacheRetry(supabase, async () => {
-          return await supabase.from('membership_application_files').insert([
-            {
-              application_id: applicationId,
-              storage_bucket: storageBucket,
-              storage_path: docxPath,
-              file_name: formatMembershipApplicationDocxFileName({
-                firstName: data.first_name,
-                lastName: data.last_name,
-                createdAt: new Date().toISOString(),
-                lang,
-              }),
-              mime_type: MEMBERSHIP_APPLICATION_DOCX_MIME,
-              size_bytes: docxBytes.length,
-              meta: {
-                kind: 'application_docx',
-                lang,
-                generated_at: new Date().toISOString(),
-                source_template: MEMBERSHIP_APPLICATION_DOCX_TEMPLATE_PATH,
-              },
-            },
-          ]);
-        });
-
-        if (!docxInsert.error) {
-          const signed = await supabase.storage.from(storageBucket).createSignedUrl(docxPath, 60 * 60);
-          if (!signed.error) {
-            docxDownloadUrl = signed.data?.signedUrl || null;
-          }
-        }
-      }
-    } catch {}
 
     const applicantEmail = String(data.email || '').trim().toLowerCase();
     await writeAuditLog({
@@ -268,7 +209,7 @@ export async function POST(req: Request) {
       });
     }
 
-    return NextResponse.json({ ok: true, applicationId, docxDownloadUrl });
+    return NextResponse.json({ ok: true, applicationId });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: String(e?.message || 'Error') }, { status: 500 });
   }

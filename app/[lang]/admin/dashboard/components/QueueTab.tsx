@@ -208,6 +208,22 @@ export default function QueueTab({ dict }: { dict: Dictionary }) {
 
   const title = view === 'queue' ? String(t.titleQueue) : String(t.titleDead);
   const desc = view === 'queue' ? String(t.descQueue) : String(t.descDead);
+  const queueLabels = {
+    kind: String((t as any).kind || (lang === 'en' ? 'Type' : 'Typ')),
+    from: String((t as any).from || 'From'),
+    replyTo: String((t as any).replyTo || 'Reply-To'),
+    maxAttempts: String((t as any).maxAttempts || (lang === 'en' ? 'Max attempts' : 'Max. pokusů')),
+    nextAttemptIso: String((t as any).nextAttemptIso || (lang === 'en' ? 'Next attempt (ISO)' : 'Další pokus (ISO)')),
+    actions: String((t as any).actions || (lang === 'en' ? 'Actions' : 'Akce')),
+    lastError: String((t as any).lastError || (lang === 'en' ? 'Last error' : 'Poslední chyba')),
+    diagnostics: String((t as any).diagnostics || (lang === 'en' ? 'Diagnostics' : 'Diagnostika')),
+    htmlPreview: String((t as any).htmlPreview || (lang === 'en' ? 'HTML (preview)' : 'HTML (náhled)')),
+    loading: String((t as any).loading || (lang === 'en' ? 'Loading…' : 'Načítám…')),
+    retry: String((t as any).retry || 'Retry'),
+    save: String((t as any).save || (lang === 'en' ? 'Save' : 'Uložit')),
+    unlock: String((t as any).unlock || (lang === 'en' ? 'Unlock' : 'Odemknout')),
+    delete: String((t as any).delete || (lang === 'en' ? 'Delete' : 'Smazat')),
+  };
 
   const statusLabel = (s: string) => {
     const raw = String(s || '').trim();
@@ -226,115 +242,121 @@ export default function QueueTab({ dict }: { dict: Dictionary }) {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <AdminModuleHeader
-        title={title}
-        description={desc}
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex items-center rounded-2xl border border-stone-200 bg-white px-4 py-3 focus-within:border-green-600 transition">
-              <Search size={16} className="text-stone-400" />
-              <input
-                value={q}
-                onChange={(e) => {
-                  setQ(e.target.value);
-                  setPage(0);
-                }}
-                placeholder={t.searchPlaceholder}
-                className="ml-2 w-64 bg-transparent text-sm font-bold text-stone-700 outline-none"
-              />
-            </div>
-            <select
-              value={view}
-              onChange={(e) => {
-                setSelected(null);
-                setView(e.target.value === 'dead' ? 'dead' : 'queue');
-                setPage(0);
-              }}
-              className="px-4 py-3 rounded-2xl border border-stone-200 bg-white text-sm font-bold text-stone-700 shadow-sm"
-            >
-              <option value="queue">{String(t.tabQueue)}</option>
-              <option value="dead">{String(t.tabDead)}</option>
-            </select>
-            {view === 'queue' && (
-              <select
-                value={status}
-                onChange={(e) => {
-                  setStatus(e.target.value);
-                  setPage(0);
-                }}
-                className="px-4 py-3 rounded-2xl border border-stone-200 bg-white text-sm font-bold text-stone-700 shadow-sm"
-              >
-                <option value="">{t.allStatuses}</option>
-                <option value="queued">{statusLabel('queued')}</option>
-                <option value="retry">{statusLabel('retry')}</option>
-                <option value="processing">{statusLabel('processing')}</option>
-              </select>
-            )}
+      <AdminModuleHeader title={title} description={desc} />
+
+      <div className="rounded-[2.25rem] border-2 border-black bg-white p-4 dark:border-white dark:bg-black md:p-5">
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.6fr)_180px_180px_220px_auto_auto]">
+          <label className="inline-flex items-center rounded-2xl border-2 border-black bg-white px-4 py-3 text-black transition focus-within:border-green-600 dark:border-white dark:bg-black dark:text-white dark:focus-within:border-green-500">
+            <Search size={16} />
             <input
-              value={kind}
+              value={q}
               onChange={(e) => {
-                setKind(e.target.value);
+                setQ(e.target.value);
                 setPage(0);
               }}
-              placeholder={t.kindPlaceholder}
-              className="px-4 py-3 rounded-2xl border border-stone-200 bg-white text-sm font-bold text-stone-700 shadow-sm w-56"
+              placeholder={t.searchPlaceholder}
+              className="ml-3 min-w-0 flex-1 bg-transparent text-sm font-bold outline-none placeholder:text-black/50 dark:placeholder:text-white/60"
             />
-            {view === 'queue' && (
-              <button
-                type="button"
-                onClick={() => {
-                  setDueOnly((v) => !v);
-                  setPage(0);
-                }}
-                className={`inline-flex items-center gap-2 px-4 py-3 rounded-2xl border text-[10px] font-black uppercase tracking-widest shadow-sm transition ${
-                  dueOnly ? 'bg-green-600 text-white border-green-600' : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-50'
-                }`}
-              >
-                <Clock size={14} /> {dueOnly ? t.dueOn : t.dueOff}
-              </button>
-            )}
-            {view === 'queue' ? (
-              <button
-                type="button"
-                onClick={() => processMutation.mutate()}
-                disabled={processMutation.isPending}
-                className="inline-flex items-center gap-2 px-4 py-3 rounded-2xl border border-green-200 bg-green-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-green-700 transition disabled:opacity-50 shadow-sm"
-              >
-                <Zap size={14} /> {t.processQueue}
-              </button>
-            ) : null}
-          </div>
-        }
-      />
+          </label>
+          <select
+            value={view}
+            onChange={(e) => {
+              setSelected(null);
+              setView(e.target.value === 'dead' ? 'dead' : 'queue');
+              setPage(0);
+            }}
+            className="rounded-2xl border-2 border-black bg-white px-4 py-3 text-sm font-bold text-black outline-none transition focus:border-green-600 dark:border-white dark:bg-black dark:text-white dark:focus:border-green-500"
+          >
+            <option value="queue">{String(t.tabQueue)}</option>
+            <option value="dead">{String(t.tabDead)}</option>
+          </select>
+          {view === 'queue' ? (
+            <select
+              value={status}
+              onChange={(e) => {
+                setStatus(e.target.value);
+                setPage(0);
+              }}
+              className="rounded-2xl border-2 border-black bg-white px-4 py-3 text-sm font-bold text-black outline-none transition focus:border-green-600 dark:border-white dark:bg-black dark:text-white dark:focus:border-green-500"
+            >
+              <option value="">{t.allStatuses}</option>
+              <option value="queued">{statusLabel('queued')}</option>
+              <option value="retry">{statusLabel('retry')}</option>
+              <option value="processing">{statusLabel('processing')}</option>
+            </select>
+          ) : (
+            <div className="hidden xl:block" />
+          )}
+          <input
+            value={kind}
+            onChange={(e) => {
+              setKind(e.target.value);
+              setPage(0);
+            }}
+            placeholder={t.kindPlaceholder}
+            className="rounded-2xl border-2 border-black bg-white px-4 py-3 text-sm font-bold text-black outline-none transition placeholder:text-black/50 focus:border-green-600 dark:border-white dark:bg-black dark:text-white dark:placeholder:text-white/60 dark:focus:border-green-500"
+          />
+          {view === 'queue' ? (
+            <button
+              type="button"
+              onClick={() => {
+                setDueOnly((v) => !v);
+                setPage(0);
+              }}
+              className={`inline-flex items-center justify-center gap-2 rounded-2xl border-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition ${
+                dueOnly
+                  ? 'border-green-600 bg-green-50 text-green-700 dark:border-green-500 dark:bg-green-950 dark:text-green-400'
+                  : 'border-black bg-white text-black hover:border-green-600 hover:bg-green-50 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950'
+              }`}
+            >
+              <Clock size={14} /> {dueOnly ? t.dueOn : t.dueOff}
+            </button>
+          ) : (
+            <div className="hidden xl:block" />
+          )}
+          {view === 'queue' ? (
+            <button
+              type="button"
+              onClick={() => processMutation.mutate()}
+              disabled={processMutation.isPending}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border-2 border-green-600 bg-green-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white transition hover:bg-green-700 disabled:opacity-50"
+            >
+              <Zap size={14} /> {t.processQueue}
+            </button>
+          ) : (
+            <div className="hidden xl:block" />
+          )}
+        </div>
+      </div>
 
       {view === 'queue' && summary?.queue ? (
         <div className="grid md:grid-cols-5 gap-3">
-          <div className="bg-white border border-stone-100 rounded-[2rem] p-5 shadow-sm">
-            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{statusLabel('queued')}</div>
-            <div className="mt-2 text-2xl font-black text-stone-900">{Number(summary.queue.queued || 0)}</div>
+          <div className="rounded-[2rem] border-2 border-black bg-white p-5 dark:border-white dark:bg-black">
+            <div className="text-[10px] font-black uppercase tracking-widest text-black/60 dark:text-white/60">{statusLabel('queued')}</div>
+            <div className="mt-2 text-2xl font-black text-black dark:text-white">{Number(summary.queue.queued || 0)}</div>
           </div>
-          <div className="bg-white border border-stone-100 rounded-[2rem] p-5 shadow-sm">
-            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{statusLabel('retry')}</div>
-            <div className="mt-2 text-2xl font-black text-stone-900">{Number(summary.queue.retry || 0)}</div>
+          <div className="rounded-[2rem] border-2 border-black bg-white p-5 dark:border-white dark:bg-black">
+            <div className="text-[10px] font-black uppercase tracking-widest text-black/60 dark:text-white/60">{statusLabel('retry')}</div>
+            <div className="mt-2 text-2xl font-black text-black dark:text-white">{Number(summary.queue.retry || 0)}</div>
           </div>
-          <div className="bg-white border border-stone-100 rounded-[2rem] p-5 shadow-sm">
-            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{statusLabel('processing')}</div>
-            <div className="mt-2 text-2xl font-black text-stone-900">{Number(summary.queue.processing || 0)}</div>
+          <div className="rounded-[2rem] border-2 border-black bg-white p-5 dark:border-white dark:bg-black">
+            <div className="text-[10px] font-black uppercase tracking-widest text-black/60 dark:text-white/60">{statusLabel('processing')}</div>
+            <div className="mt-2 text-2xl font-black text-black dark:text-white">{Number(summary.queue.processing || 0)}</div>
           </div>
-          <div className="bg-white border border-stone-100 rounded-[2rem] p-5 shadow-sm">
-            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{t.summaryDueNow}</div>
-            <div className="mt-2 text-2xl font-black text-stone-900">{Number(summary.queue.dueNow || 0)}</div>
+          <div className="rounded-[2rem] border-2 border-black bg-white p-5 dark:border-white dark:bg-black">
+            <div className="text-[10px] font-black uppercase tracking-widest text-black/60 dark:text-white/60">{t.summaryDueNow}</div>
+            <div className="mt-2 text-2xl font-black text-black dark:text-white">{Number(summary.queue.dueNow || 0)}</div>
           </div>
-          <div className="bg-white border border-stone-100 rounded-[2rem] p-5 shadow-sm">
-            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{t.summaryStuck}</div>
-            <div className="mt-2 text-2xl font-black text-stone-900">{Number(summary.queue.stuckProcessing || 0)}</div>
+          <div className="rounded-[2rem] border-2 border-black bg-white p-5 dark:border-white dark:bg-black">
+            <div className="text-[10px] font-black uppercase tracking-widest text-black/60 dark:text-white/60">{t.summaryStuck}</div>
+            <div className="mt-2 text-2xl font-black text-black dark:text-white">{Number(summary.queue.stuckProcessing || 0)}</div>
           </div>
         </div>
       ) : view === 'dead' && summary?.deadLetters ? (
         <div className="grid md:grid-cols-4 gap-3">
-          <div className="bg-white border border-stone-100 rounded-[2rem] p-5 shadow-sm">
-            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{String(t?.tabDead || 'Dead letters')}</div>
-            <div className="mt-2 text-2xl font-black text-stone-900">{Number(summary.deadLetters.total || 0)}</div>
+          <div className="rounded-[2rem] border-2 border-black bg-white p-5 dark:border-white dark:bg-black">
+            <div className="text-[10px] font-black uppercase tracking-widest text-black/60 dark:text-white/60">{String(t?.tabDead || 'Dead letters')}</div>
+            <div className="mt-2 text-2xl font-black text-black dark:text-white">{Number(summary.deadLetters.total || 0)}</div>
           </div>
         </div>
       ) : null}
@@ -346,24 +368,24 @@ export default function QueueTab({ dict }: { dict: Dictionary }) {
           description={t.emptyDescription}
         />
       ) : (
-        <div className="bg-white border border-stone-100 rounded-[2.5rem] shadow-sm overflow-hidden">
+        <div className="overflow-hidden rounded-[2.5rem] border-2 border-black bg-white dark:border-white dark:bg-black">
           <div className="overflow-x-auto">
             <table className="min-w-full text-left">
-              <thead className="bg-stone-50 border-b border-stone-100">
+              <thead className="border-b-2 border-black bg-white dark:border-white dark:bg-black">
                 <tr>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">Kind</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">{t.table.to}</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">{t.table.subject}</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">{t.table.status}</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">{t.table.attempts}</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-stone-400">{t.table.nextFailed}</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-black/60 dark:text-white/60">{queueLabels.kind}</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-black/60 dark:text-white/60">{t.table.to}</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-black/60 dark:text-white/60">{t.table.subject}</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-black/60 dark:text-white/60">{t.table.status}</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-black/60 dark:text-white/60">{t.table.attempts}</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-black/60 dark:text-white/60">{t.table.nextFailed}</th>
                 </tr>
               </thead>
               <tbody>
                 {items.map((it: any) => (
                   <tr
                     key={String(it.id)}
-                    className="border-b border-stone-100 hover:bg-stone-50 cursor-pointer"
+                    className="cursor-pointer border-b border-black/10 transition hover:bg-green-50 dark:border-white/10 dark:hover:bg-green-950"
                     onClick={() => {
                       setSelected(it);
                       if (view === 'queue') {
@@ -381,16 +403,16 @@ export default function QueueTab({ dict }: { dict: Dictionary }) {
                       }
                     }}
                   >
-                    <td className="px-6 py-4 text-xs font-black text-stone-500 max-w-[220px] truncate">{kindValue(it) || '—'}</td>
-                    <td className="px-6 py-4 text-sm font-bold text-stone-800 max-w-[260px] truncate">{String(it.to_email || '')}</td>
-                    <td className="px-6 py-4 text-sm font-bold text-stone-800 max-w-[460px] truncate">{String(it.subject || '')}</td>
+                    <td className="max-w-[220px] truncate px-6 py-4 text-xs font-black text-black/70 dark:text-white/70">{kindValue(it) || '—'}</td>
+                    <td className="max-w-[260px] truncate px-6 py-4 text-sm font-bold text-black dark:text-white">{String(it.to_email || '')}</td>
+                    <td className="max-w-[460px] truncate px-6 py-4 text-sm font-bold text-black dark:text-white">{String(it.subject || '')}</td>
                     <td className="px-6 py-4">
-                      <span className="inline-flex items-center rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-widest bg-stone-100 text-stone-700">
+                      <span className="inline-flex items-center rounded-full border-2 border-black px-3 py-1 text-[9px] font-black uppercase tracking-widest text-black dark:border-white dark:text-white">
                         {String(view === 'dead' ? statusLabel('dead') : statusLabel(String(it.status || '')))}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-xs font-black text-stone-500">{Number(it.attempt_count || 0)}/{Number(it.max_attempts || 0) || '—'}</td>
-                    <td className="px-6 py-4 text-xs font-bold text-stone-500">
+                    <td className="px-6 py-4 text-xs font-black text-black/70 dark:text-white/70">{Number(it.attempt_count || 0)}/{Number(it.max_attempts || 0) || '—'}</td>
+                    <td className="px-6 py-4 text-xs font-bold text-black/70 dark:text-white/70">
                       {view === 'dead'
                         ? (it.failed_at ? new Date(it.failed_at).toLocaleString(dateLocale) : '—')
                         : (it.next_attempt_at ? new Date(it.next_attempt_at).toLocaleString(dateLocale) : '—')}
@@ -401,8 +423,8 @@ export default function QueueTab({ dict }: { dict: Dictionary }) {
             </table>
           </div>
 
-          <div className="flex items-center justify-between px-6 py-4 bg-white">
-            <div className="text-xs font-bold text-stone-500">
+          <div className="flex items-center justify-between border-t-2 border-black px-6 py-4 dark:border-white">
+            <div className="text-xs font-bold text-black/70 dark:text-white/70">
               {t.pagination.showing} {items.length} {t.pagination.of} {total}
             </div>
             <div className="flex items-center gap-2">
@@ -410,7 +432,7 @@ export default function QueueTab({ dict }: { dict: Dictionary }) {
                 type="button"
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
                 disabled={!canPrev}
-                className="px-4 py-2 rounded-xl border border-stone-200 bg-white text-[10px] font-black uppercase tracking-widest text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
+                className="rounded-xl border-2 border-black bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest text-black transition hover:border-green-600 hover:bg-green-50 disabled:opacity-50 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950"
               >
                 {t.pagination.previous}
               </button>
@@ -418,7 +440,7 @@ export default function QueueTab({ dict }: { dict: Dictionary }) {
                 type="button"
                 onClick={() => setPage((p) => p + 1)}
                 disabled={!canNext}
-                className="px-4 py-2 rounded-xl border border-stone-200 bg-white text-[10px] font-black uppercase tracking-widest text-stone-700 hover:bg-stone-50 transition disabled:opacity-50"
+                className="rounded-xl border-2 border-black bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest text-black transition hover:border-green-600 hover:bg-green-50 disabled:opacity-50 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950"
               >
                 {t.pagination.next}
               </button>
@@ -431,18 +453,18 @@ export default function QueueTab({ dict }: { dict: Dictionary }) {
         <Dialog
           open={!!selected}
           onClose={() => setSelected(null)}
-          overlayClassName="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[30000] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-300"
-          panelClassName="bg-white w-full max-w-4xl max-h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col"
+          overlayClassName="fixed inset-0 z-[30000] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm sm:p-6 animate-in fade-in duration-300"
+          panelClassName="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-[3rem] border-2 border-black bg-white dark:border-white dark:bg-black"
         >
-          <div className="p-8 border-b border-stone-100 flex items-center justify-between bg-stone-50/40">
+          <div className="flex items-start justify-between border-b-2 border-black p-8 dark:border-white">
               <div>
-                <div className="text-[10px] font-black uppercase tracking-widest text-stone-400">{title}</div>
-                <div className="text-2xl font-black text-stone-900 tracking-tight truncate max-w-[52ch]">{String(detail?.subject || selected.subject || '')}</div>
+                <div className="text-[10px] font-black uppercase tracking-widest text-black/60 dark:text-white/60">{title}</div>
+                <div className="max-w-[52ch] text-2xl font-black tracking-tight text-black dark:text-white">{String(detail?.subject || selected.subject || '')}</div>
               </div>
               <button
                 type="button"
                 onClick={() => setSelected(null)}
-                className="p-3 hover:bg-stone-100 rounded-2xl transition text-stone-500"
+                className="rounded-2xl border-2 border-black p-3 text-black transition hover:border-green-600 hover:bg-green-50 dark:border-white dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950"
               >
                 <X size={20} />
               </button>
@@ -452,46 +474,46 @@ export default function QueueTab({ dict }: { dict: Dictionary }) {
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   {view === 'queue' ? (
-                    <div className="bg-stone-50 border border-stone-100 rounded-2xl p-5 space-y-4">
+                    <div className="space-y-4 rounded-[2rem] border-2 border-black bg-white p-5 dark:border-white dark:bg-black">
                       <div>
-                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">To</div>
+                        <div className="mb-1 text-[10px] font-black uppercase tracking-widest text-black/60 dark:text-white/60">{t.table.to}</div>
                         <input
                           value={String(edit?.to_email || '')}
                           onChange={(e) => setEdit((p: any) => ({ ...(p || {}), to_email: e.target.value }))}
-                          className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-white text-sm font-bold text-stone-800"
+                          className="w-full rounded-xl border-2 border-black bg-white px-4 py-3 text-sm font-bold text-black outline-none dark:border-white dark:bg-black dark:text-white"
                         />
                       </div>
                       <div>
-                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">From</div>
+                        <div className="mb-1 text-[10px] font-black uppercase tracking-widest text-black/60 dark:text-white/60">{queueLabels.from}</div>
                         <input
                           value={String(edit?.from_email || '')}
                           onChange={(e) => setEdit((p: any) => ({ ...(p || {}), from_email: e.target.value }))}
-                          className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-white text-sm font-bold text-stone-800"
+                          className="w-full rounded-xl border-2 border-black bg-white px-4 py-3 text-sm font-bold text-black outline-none dark:border-white dark:bg-black dark:text-white"
                         />
                       </div>
                       <div>
-                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">Reply-To</div>
+                        <div className="mb-1 text-[10px] font-black uppercase tracking-widest text-black/60 dark:text-white/60">{queueLabels.replyTo}</div>
                         <input
                           value={String(edit?.reply_to || '')}
                           onChange={(e) => setEdit((p: any) => ({ ...(p || {}), reply_to: e.target.value }))}
-                          className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-white text-sm font-bold text-stone-800"
+                          className="w-full rounded-xl border-2 border-black bg-white px-4 py-3 text-sm font-bold text-black outline-none dark:border-white dark:bg-black dark:text-white"
                         />
                       </div>
                       <div>
-                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">Subject</div>
+                        <div className="mb-1 text-[10px] font-black uppercase tracking-widest text-black/60 dark:text-white/60">{t.table.subject}</div>
                         <input
                           value={String(edit?.subject || '')}
                           onChange={(e) => setEdit((p: any) => ({ ...(p || {}), subject: e.target.value }))}
-                          className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-white text-sm font-bold text-stone-800"
+                          className="w-full rounded-xl border-2 border-black bg-white px-4 py-3 text-sm font-bold text-black outline-none dark:border-white dark:bg-black dark:text-white"
                         />
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">Status</div>
+                          <div className="mb-1 text-[10px] font-black uppercase tracking-widest text-black/60 dark:text-white/60">{t.table.status}</div>
                           <select
                             value={String(edit?.status || 'queued')}
                             onChange={(e) => setEdit((p: any) => ({ ...(p || {}), status: e.target.value }))}
-                            className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-white text-sm font-bold text-stone-800"
+                            className="w-full rounded-xl border-2 border-black bg-white px-4 py-3 text-sm font-bold text-black outline-none dark:border-white dark:bg-black dark:text-white"
                           >
                             <option value="queued">{statusLabel('queued')}</option>
                             <option value="retry">{statusLabel('retry')}</option>
@@ -499,65 +521,65 @@ export default function QueueTab({ dict }: { dict: Dictionary }) {
                           </select>
                         </div>
                         <div>
-                          <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">Max attempts</div>
+                          <div className="mb-1 text-[10px] font-black uppercase tracking-widest text-black/60 dark:text-white/60">{queueLabels.maxAttempts}</div>
                           <input
                             type="number"
                             min={1}
                             max={20}
                             value={Number(edit?.max_attempts || 5)}
                             onChange={(e) => setEdit((p: any) => ({ ...(p || {}), max_attempts: Number(e.target.value) }))}
-                            className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-white text-sm font-bold text-stone-800"
+                            className="w-full rounded-xl border-2 border-black bg-white px-4 py-3 text-sm font-bold text-black outline-none dark:border-white dark:bg-black dark:text-white"
                           />
                         </div>
                       </div>
                       <div>
-                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">Next attempt (ISO)</div>
+                        <div className="mb-1 text-[10px] font-black uppercase tracking-widest text-black/60 dark:text-white/60">{queueLabels.nextAttemptIso}</div>
                         <input
                           value={String(edit?.next_attempt_at || '')}
                           onChange={(e) => setEdit((p: any) => ({ ...(p || {}), next_attempt_at: e.target.value }))}
-                          className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-white text-xs font-bold text-stone-800"
+                          className="w-full rounded-xl border-2 border-black bg-white px-4 py-3 text-xs font-bold text-black outline-none dark:border-white dark:bg-black dark:text-white"
                         />
                       </div>
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <div className="bg-stone-50 border border-stone-100 rounded-2xl p-5">
-                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">To</div>
-                        <div className="text-sm font-black text-stone-900 break-all">{String(detail?.to_email || selected.to_email || '')}</div>
+                      <div className="rounded-[2rem] border-2 border-black bg-white p-5 dark:border-white dark:bg-black">
+                        <div className="mb-1 text-[10px] font-black uppercase tracking-widest text-black/60 dark:text-white/60">{t.table.to}</div>
+                        <div className="break-all text-sm font-black text-black dark:text-white">{String(detail?.to_email || selected.to_email || '')}</div>
                       </div>
-                      <div className="bg-stone-50 border border-stone-100 rounded-2xl p-5">
-                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">From</div>
-                        <div className="text-sm font-black text-stone-900 break-all">{String(detail?.from_email || selected.from_email || '')}</div>
+                      <div className="rounded-[2rem] border-2 border-black bg-white p-5 dark:border-white dark:bg-black">
+                        <div className="mb-1 text-[10px] font-black uppercase tracking-widest text-black/60 dark:text-white/60">{queueLabels.from}</div>
+                        <div className="break-all text-sm font-black text-black dark:text-white">{String(detail?.from_email || selected.from_email || '')}</div>
                       </div>
                     </div>
                   )}
-                  <div className="bg-stone-50 border border-stone-100 rounded-2xl p-5">
-                    <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-3">Akce</div>
+                  <div className="rounded-[2rem] border-2 border-black bg-white p-5 dark:border-white dark:bg-black">
+                    <div className="mb-3 text-[10px] font-black uppercase tracking-widest text-black/60 dark:text-white/60">{queueLabels.actions}</div>
                     <div className="flex flex-wrap gap-2">
                       <button
                         type="button"
                         onClick={() => retryMutation.mutate({ id: String(selected.id) })}
                         disabled={retryMutation.isPending}
-                        className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-green-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-green-700 transition disabled:opacity-50"
+                        className="inline-flex items-center gap-2 rounded-xl border-2 border-green-600 bg-green-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white transition hover:bg-green-700 disabled:opacity-50"
                       >
-                        <RefreshCw size={14} /> Retry
+                        <RefreshCw size={14} /> {queueLabels.retry}
                       </button>
                       <button
                         type="button"
                         onClick={() => deleteMutation.mutate({ id: String(selected.id), view })}
                         disabled={deleteMutation.isPending}
-                        className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-white border border-red-200 text-red-700 text-[10px] font-black uppercase tracking-widest hover:bg-red-50 transition disabled:opacity-50"
+                        className="inline-flex items-center gap-2 rounded-xl border-2 border-red-600 bg-white px-4 py-3 text-[10px] font-black uppercase tracking-widest text-red-700 transition hover:bg-red-50 disabled:opacity-50 dark:border-red-500 dark:bg-black dark:text-red-400 dark:hover:bg-red-950"
                       >
-                        <Trash2 size={14} /> Smazat
+                        <Trash2 size={14} /> {queueLabels.delete}
                       </button>
                       {view === 'queue' && String(detail?.status || selected.status || '') === 'processing' && (
                         <button
                           type="button"
                           onClick={() => unlockMutation.mutate({ id: String(selected.id) })}
                           disabled={unlockMutation.isPending}
-                          className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-white border border-amber-200 text-amber-800 text-[10px] font-black uppercase tracking-widest hover:bg-amber-50 transition disabled:opacity-50"
+                          className="inline-flex items-center gap-2 rounded-xl border-2 border-black bg-white px-4 py-3 text-[10px] font-black uppercase tracking-widest text-black transition hover:border-green-600 hover:bg-green-50 disabled:opacity-50 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950"
                         >
-                          <AlertTriangle size={14} /> Odemknout
+                          <AlertTriangle size={14} /> {queueLabels.unlock}
                         </button>
                       )}
                       {view === 'queue' && (
@@ -565,9 +587,9 @@ export default function QueueTab({ dict }: { dict: Dictionary }) {
                           type="button"
                           onClick={() => updateMutation.mutate({ id: String(selected.id), patch: edit || {} })}
                           disabled={updateMutation.isPending}
-                          className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-white border border-stone-200 text-stone-800 text-[10px] font-black uppercase tracking-widest hover:bg-stone-50 transition disabled:opacity-50"
+                          className="inline-flex items-center gap-2 rounded-xl border-2 border-black bg-white px-4 py-3 text-[10px] font-black uppercase tracking-widest text-black transition hover:border-green-600 hover:bg-green-50 disabled:opacity-50 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950"
                         >
-                          <Save size={14} /> Uložit
+                          <Save size={14} /> {queueLabels.save}
                         </button>
                       )}
                     </div>
@@ -575,29 +597,29 @@ export default function QueueTab({ dict }: { dict: Dictionary }) {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="bg-stone-50 border border-stone-100 rounded-2xl p-5">
-                    <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">Status</div>
-                    <div className="text-sm font-black text-stone-900">
+                  <div className="rounded-[2rem] border-2 border-black bg-white p-5 dark:border-white dark:bg-black">
+                    <div className="mb-1 text-[10px] font-black uppercase tracking-widest text-black/60 dark:text-white/60">{t.table.status}</div>
+                    <div className="text-sm font-black text-black dark:text-white">
                       {String(view === 'dead' ? 'dead' : statusLabel(String(detail?.status || selected.status || '')))}
                     </div>
                   </div>
-                  <div className="bg-stone-50 border border-stone-100 rounded-2xl p-5">
-                    <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">Last error</div>
-                    <div className="text-xs font-bold text-stone-700 break-words">{String(detail?.last_error || detail?.final_error || selected.last_error || selected.final_error || '—')}</div>
-                    {errorHint ? <div className="mt-2 text-[10px] font-black uppercase tracking-widest text-stone-400">{errorHint}</div> : null}
+                  <div className="rounded-[2rem] border-2 border-black bg-white p-5 dark:border-white dark:bg-black">
+                    <div className="mb-1 text-[10px] font-black uppercase tracking-widest text-black/60 dark:text-white/60">{queueLabels.lastError}</div>
+                    <div className="break-words text-xs font-bold text-black/80 dark:text-white/80">{String(detail?.last_error || detail?.final_error || selected.last_error || selected.final_error || '—')}</div>
+                    {errorHint ? <div className="mt-2 text-[10px] font-black uppercase tracking-widest text-black/60 dark:text-white/60">{errorHint}</div> : null}
                   </div>
                   {errorInfo ? (
-                    <div className="bg-stone-50 border border-stone-100 rounded-2xl p-5">
-                      <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">Diagnostika</div>
-                      <div className="text-xs font-mono text-stone-700 whitespace-pre-wrap break-words rounded-xl bg-white border border-stone-100 p-4">
+                    <div className="rounded-[2rem] border-2 border-black bg-white p-5 dark:border-white dark:bg-black">
+                      <div className="mb-2 text-[10px] font-black uppercase tracking-widest text-black/60 dark:text-white/60">{queueLabels.diagnostics}</div>
+                      <div className="whitespace-pre-wrap break-words rounded-xl border-2 border-black bg-white p-4 font-mono text-xs text-black/80 dark:border-white dark:bg-black dark:text-white/80">
                         {JSON.stringify(errorInfo, null, 2)}
                       </div>
                     </div>
                   ) : null}
-                  <div className="bg-stone-50 border border-stone-100 rounded-2xl p-5">
-                    <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">HTML (preview)</div>
-                    <div className="text-xs font-mono text-stone-700 whitespace-pre-wrap max-h-48 overflow-auto rounded-xl bg-white border border-stone-100 p-4">
-                      {detail ? String(detail.html || '').slice(0, 1600) || '—' : 'Načítám…'}
+                  <div className="rounded-[2rem] border-2 border-black bg-white p-5 dark:border-white dark:bg-black">
+                    <div className="mb-2 text-[10px] font-black uppercase tracking-widest text-black/60 dark:text-white/60">{queueLabels.htmlPreview}</div>
+                    <div className="max-h-48 overflow-auto whitespace-pre-wrap rounded-xl border-2 border-black bg-white p-4 font-mono text-xs text-black/80 dark:border-white dark:bg-black dark:text-white/80">
+                      {detail ? String(detail.html || '').slice(0, 1600) || '—' : queueLabels.loading}
                     </div>
                   </div>
                 </div>

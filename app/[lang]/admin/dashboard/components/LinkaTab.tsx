@@ -379,8 +379,6 @@ export default function LinkaTab() {
         return;
       }
       const merged = [...contacts];
-      const idMap = new Map<number, number>();
-      for (const c of merged) idMap.set(Number(c.id), Number(c.id));
       let added = 0;
       let updated = 0;
       for (const c of imported) {
@@ -396,14 +394,19 @@ export default function LinkaTab() {
           telefon: String(c.telefon || '').trim(),
           email: String(c.email || '').trim().toLowerCase(),
         };
-        if (Number.isFinite(id) && id > 0) {
-          const idx = merged.findIndex((m) => m.id === id);
-          if (idx >= 0) {
-            merged[idx] = { ...base, id };
-            updated++;
-            continue;
-          }
-          idMap.set(id, id);
+
+        const idxById = Number.isFinite(id) && id > 0 ? merged.findIndex((m) => m.id === id) : -1;
+        const idxByExtension = idxById < 0 ? merged.findIndex((m) => m.klapka === base.klapka) : -1;
+        const idxByEmail = idxById < 0 && idxByExtension < 0 ? merged.findIndex((m) => m.email === base.email) : -1;
+        const matchedIdx = idxById >= 0 ? idxById : idxByExtension >= 0 ? idxByExtension : idxByEmail;
+
+        if (matchedIdx >= 0) {
+          merged[matchedIdx] = { ...base, id: merged[matchedIdx].id };
+          updated++;
+          continue;
+        }
+
+        if (Number.isFinite(id) && id > 0 && !merged.some((m) => m.id === id)) {
           merged.push({ ...base, id });
           added++;
           continue;

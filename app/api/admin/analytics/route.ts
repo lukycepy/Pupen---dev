@@ -13,6 +13,7 @@ interface AnalyticsContentRow {
   id?: string | null;
   title?: string | null;
   views?: number | null;
+  published_at?: string | null;
 }
 
 interface AnalyticsAdminLogRow {
@@ -34,6 +35,38 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Error';
 }
 
+function isMissingColumn(error: unknown, table: string, column: string) {
+  const message = getErrorMessage(error);
+  return new RegExp(table, 'i').test(message) && new RegExp(column, 'i').test(message) && /(schema cache|column|does not exist)/i.test(message);
+}
+
+async function fetchTopContentWithFallback(
+  supabase: ReturnType<typeof getServerSupabase>,
+  table: 'events' | 'posts',
+) {
+  try {
+    const res = await withSchemaCacheRetry(supabase, () =>
+      supabase.from(table).select('id, title, views').order('views', { ascending: false }).limit(5),
+    );
+    const typedRes = res as RetryResult<AnalyticsContentRow[]>;
+    if (typedRes.error) throw typedRes.error;
+    return typedRes.data || [];
+  } catch (error: unknown) {
+    if (!isMissingColumn(error, table, 'views')) throw error;
+
+    const fallbackRes = await withSchemaCacheRetry(supabase, () =>
+      supabase.from(table).select('id, title, published_at').order('published_at', { ascending: false }).limit(5),
+    );
+    const typedFallbackRes = fallbackRes as RetryResult<AnalyticsContentRow[]>;
+    if (typedFallbackRes.error) throw typedFallbackRes.error;
+
+    return (typedFallbackRes.data || []).map((item) => ({
+      ...item,
+      views: 0,
+    }));
+  }
+}
+
 export async function GET(req: Request) {
   try {
     const user = await requireUser(req);
@@ -52,13 +85,9 @@ export async function GET(req: Request) {
     if (!profile?.is_admin && !profile?.can_manage_admins) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     if (!profile?.can_manage_admins && !profile?.can_view_analytics) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const [eventsRes, postsRes, rsvpCountRes, recentActivityRes, pendingAppsRes, recentLogsRes] = await Promise.all([
-      withSchemaCacheRetry(supabase, () =>
-        supabase.from('events').select('id, title, views').order('views', { ascending: false }).limit(5),
-      ),
-      withSchemaCacheRetry(supabase, () =>
-        supabase.from('posts').select('id, title, views').order('views', { ascending: false }).limit(5),
-      ),
+    const [topEvents, topPosts, rsvpCountRes, recentActivityRes, pendingAppsRes, recentLogsRes] = await Promise.all([
+      fetchTopContentWithFallback(supabase, 'events'),
+      fetchTopContentWithFallback(supabase, 'posts'),
       withSchemaCacheRetry(supabase, () => supabase.from('rsvp').select('id', { count: 'exact', head: true })),
       withSchemaCacheRetry(supabase, () =>
         supabase.from('admin_logs').select('id', { count: 'exact', head: true }).gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
@@ -75,19 +104,15 @@ export async function GET(req: Request) {
       ),
     ]);
 
-    const typedEventsRes = eventsRes as RetryResult<AnalyticsContentRow[]>;
-    const typedPostsRes = postsRes as RetryResult<AnalyticsContentRow[]>;
     const typedRsvpCountRes = rsvpCountRes as RetryResult<null>;
     const typedRecentActivityRes = recentActivityRes as RetryResult<null>;
     const typedPendingAppsRes = pendingAppsRes as RetryResult<null>;
     const typedRecentLogsRes = recentLogsRes as RetryResult<AnalyticsAdminLogRow[]>;
 
-    for (const result of [typedEventsRes, typedPostsRes, typedRsvpCountRes, typedRecentActivityRes, typedPendingAppsRes, typedRecentLogsRes]) {
+    for (const result of [typedRsvpCountRes, typedRecentActivityRes, typedPendingAppsRes, typedRecentLogsRes]) {
       if (result.error) throw result.error;
     }
 
-    const topEvents = typedEventsRes.data || [];
-    const topPosts = typedPostsRes.data || [];
     const totalEventViews = topEvents.reduce((acc, curr) => acc + Number(curr.views || 0), 0);
     const totalPostViews = topPosts.reduce((acc, curr) => acc + Number(curr.views || 0), 0);
 
