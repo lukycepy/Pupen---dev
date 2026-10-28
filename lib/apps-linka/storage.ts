@@ -4,10 +4,24 @@ import crypto from 'node:crypto';
 import { DEFAULT_LINKA_DATA, LinkaPayload, LinkaPayloadSchema } from './types';
 
 export function getAppsDataDir(): string {
-  const explicit = process.env.APPS_DATA_DIR;
+  const explicit = process.env.APPS_DATA_DIR || process.env.APP_DATA_DIR;
   if (explicit) return path.resolve(explicit);
   const repoRoot = process.cwd();
+  const rootAppsDir = path.join(repoRoot, 'apps');
+  if (fs.existsSync(rootAppsDir)) return rootAppsDir;
   return path.join(repoRoot, 'public', 'apps');
+}
+
+function getAppsDataDirCandidates(): string[] {
+  const repoRoot = process.cwd();
+  const explicit = process.env.APPS_DATA_DIR || process.env.APP_DATA_DIR;
+  const candidates = [
+    explicit ? path.resolve(explicit) : '',
+    path.join(repoRoot, 'apps'),
+    path.join(repoRoot, 'public', 'apps'),
+  ].filter(Boolean);
+
+  return Array.from(new Set(candidates));
 }
 
 export function getKontaktyJsonPath(): string {
@@ -47,22 +61,24 @@ export function sanitizeJsonOutput(payload: LinkaPayload): LinkaPayload {
 }
 
 export function readKontaktyJson(): { payload: LinkaPayload; source: 'file' | 'default'; pathUsed: string } {
-  const filePath = getKontaktyJsonPath();
-  try {
-    if (fs.existsSync(filePath)) {
-      const raw = stripBomAndTrim(fs.readFileSync(filePath, 'utf8'));
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        const validated = LinkaPayloadSchema.safeParse(parsed);
-        if (validated.success) {
-          return { payload: sanitizeJsonOutput(validated.data), source: 'file', pathUsed: filePath };
+  const filePaths = getAppsDataDirCandidates().map((dir) => path.join(dir, 'kontakty.json'));
+  for (const filePath of filePaths) {
+    try {
+      if (fs.existsSync(filePath)) {
+        const raw = stripBomAndTrim(fs.readFileSync(filePath, 'utf8'));
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          const validated = LinkaPayloadSchema.safeParse(parsed);
+          if (validated.success) {
+            return { payload: sanitizeJsonOutput(validated.data), source: 'file', pathUsed: filePath };
+          }
         }
       }
+    } catch {
+      // try next candidate
     }
-  } catch {
-    // fall through to default
   }
-  return { payload: structuredClone(DEFAULT_LINKA_DATA), source: 'default', pathUsed: filePath };
+  return { payload: structuredClone(DEFAULT_LINKA_DATA), source: 'default', pathUsed: filePaths[0] || getKontaktyJsonPath() };
 }
 
 export function writeKontaktyJsonAtomically(payload: LinkaPayload): { path: string; version: number } {
@@ -92,6 +108,17 @@ export function writeKontaktyJsonAtomically(payload: LinkaPayload): { path: stri
       if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath);
     } catch {
       // ignore
+    }
+  }
+
+  for (const mirrorDir of getAppsDataDirCandidates()) {
+    const mirrorPath = path.join(mirrorDir, 'kontakty.json');
+    if (path.resolve(mirrorPath) === path.resolve(filePath)) continue;
+    try {
+      ensureDir(path.dirname(mirrorPath));
+      fs.writeFileSync(mirrorPath, json, { encoding: 'utf8', flag: 'w' });
+    } catch {
+      // Ignore mirror failures and keep the primary write authoritative.
     }
   }
 
