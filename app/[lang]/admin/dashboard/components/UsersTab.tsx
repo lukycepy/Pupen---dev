@@ -1094,46 +1094,46 @@ export default function UsersTab({ dict }: UsersTabProps) {
                 </div>
               </div>
 
-              <div className="bg-stone-900 text-white p-6 rounded-[2rem] space-y-4 shadow-xl">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-stone-500">{dict.admin.globalRoles || 'Globální Role'}</h3>
+              <div className="rounded-[2rem] border-2 border-white/15 bg-black p-6 text-white space-y-4 shadow-xl">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-stone-300">{dict.admin.globalRoles || 'Globální Role'}</h3>
                 <div className="space-y-3">
                   <label className="flex items-center gap-3 cursor-pointer group">
-                    <input type="checkbox" {...register('is_admin')} className="w-5 h-5 rounded-lg border-stone-700 bg-stone-800 text-green-500 focus:ring-green-500" />
+                    <input type="checkbox" {...register('is_admin')} className="w-5 h-5 rounded-lg border-white/30 bg-black text-green-500 focus:ring-green-500" />
                     <div className="flex flex-col">
-                      <span className="text-sm font-bold text-stone-200 group-hover:text-white transition">{dict.admin.roleAdmin || 'Administrátor'}</span>
-                      <span className="text-[10px] text-stone-500 font-medium">{dict.admin.roleAdminDesc}</span>
+                      <span className="text-sm font-bold text-white group-hover:text-green-400 transition">{dict.admin.roleAdmin || 'Administrátor'}</span>
+                      <span className="text-[10px] text-stone-300 font-medium">{dict.admin.roleAdminDesc}</span>
                     </div>
                   </label>
                   <label className="flex items-center gap-3 cursor-pointer group">
-                    <input type="checkbox" {...register('is_member')} className="w-5 h-5 rounded-lg border-stone-700 bg-stone-800 text-green-600 focus:ring-green-500" />
+                    <input type="checkbox" {...register('is_member')} className="w-5 h-5 rounded-lg border-white/30 bg-black text-green-600 focus:ring-green-500" />
                     <div className="flex flex-col">
-                      <span className="text-sm font-bold text-stone-200 group-hover:text-white transition">{dict.admin.roleMember || 'Člen spolku'}</span>
-                      <span className="text-[10px] text-stone-500 font-medium">{dict.admin.roleMemberDesc}</span>
+                      <span className="text-sm font-bold text-white group-hover:text-green-400 transition">{dict.admin.roleMember || 'Člen spolku'}</span>
+                      <span className="text-[10px] text-stone-300 font-medium">{dict.admin.roleMemberDesc}</span>
                     </div>
                   </label>
                   {watch('is_member') ? (
-                    <div className="grid grid-cols-2 gap-3 pt-2 border-t border-stone-800">
+                    <div className="grid grid-cols-2 gap-3 pt-2 border-t border-white/10">
                       <div className="space-y-1">
-                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-500 px-1">Členem od</div>
+                        <div className="px-1 text-[10px] font-black uppercase tracking-widest text-stone-300">Členem od</div>
                         <input
                           {...register('member_since')}
                           type="date"
-                          className="w-full bg-stone-800 border border-stone-700 rounded-2xl px-4 py-3 text-xs font-bold text-stone-100 outline-none focus:ring-2 focus:ring-green-500 transition"
+                          className="w-full rounded-2xl border-2 border-white/15 bg-white/10 px-4 py-3 text-xs font-bold text-white outline-none transition [color-scheme:dark] focus:border-green-500 focus:ring-2 focus:ring-green-500"
                         />
                       </div>
                       <div className="space-y-1">
-                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-500 px-1">Platnost do</div>
+                        <div className="px-1 text-[10px] font-black uppercase tracking-widest text-stone-300">Platnost do</div>
                         <input
                           {...register('member_expires_at')}
                           type="date"
-                          className="w-full bg-stone-800 border border-stone-700 rounded-2xl px-4 py-3 text-xs font-bold text-stone-100 outline-none focus:ring-2 focus:ring-green-500 transition"
+                          className="w-full rounded-2xl border-2 border-white/15 bg-white/10 px-4 py-3 text-xs font-bold text-white outline-none transition [color-scheme:dark] focus:border-green-500 focus:ring-2 focus:ring-green-500"
                         />
                       </div>
                     </div>
                   ) : null}
-                  <label className="flex items-center gap-3 cursor-pointer group pt-2 border-t border-stone-800">
-                    <input type="checkbox" {...register('can_manage_admins')} className="w-5 h-5 rounded-lg border-stone-700 bg-stone-800 text-green-600 focus:ring-green-500" />
-                    <span className="text-sm font-bold text-stone-200 group-hover:text-white transition">{dict.admin.superAdmin || 'SuperAdmin'}</span>
+                  <label className="flex items-center gap-3 cursor-pointer group pt-2 border-t border-white/10">
+                    <input type="checkbox" {...register('can_manage_admins')} className="w-5 h-5 rounded-lg border-white/30 bg-black text-green-600 focus:ring-green-500" />
+                    <span className="text-sm font-bold text-white group-hover:text-green-400 transition">{dict.admin.superAdmin || 'SuperAdmin'}</span>
                   </label>
                 </div>
               </div>

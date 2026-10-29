@@ -1,25 +1,42 @@
 'use client';
 
 import React from 'react';
-import { LogOut, Settings } from 'lucide-react';
+import { LogOut, Settings, SlidersHorizontal, UserCog, Undo2 } from 'lucide-react';
 import Popover from '@/app/components/ui/Popover';
+import type { ImpersonationState } from '@/lib/impersonation-client';
 
 export default function AppUserMenu({
   profile,
   onOpenProfile,
+  onOpenCustomize,
+  onOpenImpersonation,
+  onStopImpersonation,
   onLogout,
+  impersonation,
   labels,
 }: {
   profile: any;
   onOpenProfile?: () => void;
+  onOpenCustomize?: () => void;
+  onOpenImpersonation?: () => void;
+  onStopImpersonation?: () => void;
   onLogout: () => void;
-  labels?: { profile?: string; logout?: string };
+  impersonation?: ImpersonationState | null;
+  labels?: {
+    profile?: string;
+    customize?: string;
+    impersonate?: string;
+    stopImpersonation?: string;
+    logout?: string;
+    impersonatingAs?: string;
+  };
 }) {
   const ref = React.useRef<HTMLDivElement>(null);
   const [open, setOpen] = React.useState(false);
   const initial = String(profile?.first_name?.[0] || profile?.email?.[0] || 'U').toUpperCase();
   const name = `${String(profile?.first_name || '').trim()} ${String(profile?.last_name || '').trim()}`.trim();
   const email = String(profile?.email || '').trim();
+  const impersonatingTarget = String(impersonation?.targetEmail || '').trim();
   return (
     <div ref={ref} className="relative">
       <button
@@ -47,6 +64,14 @@ export default function AppUserMenu({
         panelClassName="w-64 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 shadow-2xl rounded-[2rem] p-2"
       >
         <div className="p-2">
+          {impersonation && onStopImpersonation ? (
+            <div className="mb-2 rounded-[1.5rem] border-2 border-amber-500 bg-amber-50 p-3 dark:bg-amber-950/20 dark:text-amber-300">
+              <div className="text-[10px] font-black uppercase tracking-widest text-amber-700 dark:text-amber-300">
+                {labels?.impersonatingAs || 'Převzatá identita'}
+              </div>
+              <div className="mt-1 truncate text-sm font-black text-black dark:text-white">{impersonatingTarget || '—'}</div>
+            </div>
+          ) : null}
           {onOpenProfile ? (
             <button
               type="button"
@@ -58,6 +83,45 @@ export default function AppUserMenu({
             >
               <Settings size={18} className="text-stone-500 dark:text-stone-400" />
               <span>{labels?.profile || 'Profil'}</span>
+            </button>
+          ) : null}
+          {onOpenCustomize ? (
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onOpenCustomize();
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-stone-50 dark:hover:bg-stone-800 transition text-stone-700 dark:text-stone-200 font-bold"
+            >
+              <SlidersHorizontal size={18} className="text-stone-500 dark:text-stone-400" />
+              <span>{labels?.customize || 'Přizpůsobit rozhraní'}</span>
+            </button>
+          ) : null}
+          {onOpenImpersonation ? (
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onOpenImpersonation();
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-stone-50 dark:hover:bg-stone-800 transition text-stone-700 dark:text-stone-200 font-bold"
+            >
+              <UserCog size={18} className="text-stone-500 dark:text-stone-400" />
+              <span>{labels?.impersonate || 'Přihlásit se jako'}</span>
+            </button>
+          ) : null}
+          {impersonation && onStopImpersonation ? (
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onStopImpersonation();
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-amber-50 dark:hover:bg-amber-950/40 transition text-amber-800 dark:text-amber-300 font-bold"
+            >
+              <Undo2 size={18} className="text-amber-700 dark:text-amber-300" />
+              <span>{labels?.stopImpersonation || 'Vrátit se na Váš účet'}</span>
             </button>
           ) : null}
           <button

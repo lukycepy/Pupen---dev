@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { getMailerWithSettings } from '@/lib/email/mailer';
+import { requireCronRequest } from '@/lib/cron-auth';
 
 export const runtime = 'nodejs';
 
@@ -80,11 +81,9 @@ function hasVerify(transporter: VerifiableTransporter): transporter is Verifiabl
 }
 
 export async function GET(req: Request) {
-  const url = new URL(req.url);
-  const secret = url.searchParams.get('secret') || '';
-  const expected = process.env.CRON_SECRET || '';
-  if (!expected || secret !== expected) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!(await requireCronRequest(req))) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
+  const url = new URL(req.url);
   const limit = Math.min(200, Math.max(1, Number(url.searchParams.get('limit') || 25)));
   const workerId = `cron:${Math.random().toString(36).slice(2)}:${Date.now().toString(36)}`;
   const supabase = getServerSupabase();

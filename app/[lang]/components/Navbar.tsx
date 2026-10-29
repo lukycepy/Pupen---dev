@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
   Menu, X, Search, Calendar, FileText, 
-  ChevronDown, BookOpen, ShieldCheck, Users, Tag, Clock, PenTool, BrainCircuit, Briefcase, HelpCircle, KeyRound, Siren, Archive, LifeBuoy, Image as ImageIcon, HeartHandshake, Handshake
+  ChevronDown, BookOpen, ShieldCheck, Users, Tag, Clock, PenTool, BrainCircuit, Briefcase, HelpCircle, KeyRound, Siren, Archive, LifeBuoy, Image as ImageIcon, HeartHandshake, Handshake, Map
 } from 'lucide-react';
 import Image from 'next/image';
 import InlinePulse from '@/app/components/InlinePulse';
@@ -15,6 +15,7 @@ import ThemeToggleButton from '@/app/components/ThemeToggleButton';
 import type { Dictionary } from '@/lib/dictionary-types';
 import type { SearchResponse, SearchResults, SitePageVisibilityConfig } from '@/types/search';
 import { getCachedPublicSiteConfig } from '@/lib/site/public-config-client';
+import { SITE_PAGES } from '@/lib/site/pages-registry';
 
 interface NavbarProps {
   lang: string;
@@ -114,25 +115,65 @@ export default function Navbar({ lang, dict }: NavbarProps) {
     return () => clearTimeout(timer);
   }, [lang, searchQuery]);
 
-  const TOOLS = [
-    { href: '/ztraty-a-nalezy', slug: 'ztraty-a-nalezy', icon: <KeyRound size={18} />, key: 'lostFound' },
-    { href: '/sos', slug: 'sos', icon: <Siren size={18} />, key: 'sos' },
-    { href: '/schranka-duvery', slug: 'schranka-duvery', icon: <LifeBuoy size={18} />, key: 'trustbox' },
-    { href: '/predmety', slug: 'predmety', icon: <BookOpen size={18} />, key: 'subjects' },
-    { href: '/harmonogram', slug: 'harmonogram', icon: <Calendar size={18} />, key: 'schedule' },
-    { href: '/pruvodce', slug: 'pruvodce', icon: <ShieldCheck size={18} />, key: 'guide' },
-    { href: '/partaci', slug: 'partaci', icon: <Users size={18} />, key: 'partners' },
-    { href: '/archiv', slug: 'archiv', icon: <Archive size={18} />, key: 'archive' },
-    { href: '/galerie', slug: 'galerie', icon: <ImageIcon size={18} />, key: 'gallery' },
-    { href: '/daruj', slug: 'daruj', icon: <HeartHandshake size={18} />, key: 'donate' },
-    { href: '/partnerstvi', slug: 'partnerstvi', icon: <Handshake size={18} />, key: 'partnership' },
-    { href: '/slevy', slug: 'slevy', icon: <Tag size={18} />, key: 'discounts' },
-    { href: '/oteviraci-doba', slug: 'oteviraci-doba', icon: <Clock size={18} />, key: 'hours' },
-    { href: '/blog', slug: 'blog', icon: <PenTool size={18} />, key: 'blog' },
-    { href: '/kvizy', slug: 'kvizy', icon: <BrainCircuit size={18} />, key: 'quizzes' },
-    { href: '/kariera', slug: 'kariera', icon: <Briefcase size={18} />, key: 'jobs' },
-    { href: '/faq', slug: 'faq', icon: <HelpCircle size={18} />, key: 'faq' },
-  ];
+  const TOOL_ICON_BY_SLUG: Record<string, React.ReactNode> = {
+    'ztraty-a-nalezy': <KeyRound size={18} />,
+    sos: <Siren size={18} />,
+    'schranka-duvery': <LifeBuoy size={18} />,
+    predmety: <BookOpen size={18} />,
+    harmonogram: <Calendar size={18} />,
+    pruvodce: <ShieldCheck size={18} />,
+    partaci: <Users size={18} />,
+    archiv: <Archive size={18} />,
+    galerie: <ImageIcon size={18} />,
+    daruj: <HeartHandshake size={18} />,
+    partnerstvi: <Handshake size={18} />,
+    slevy: <Tag size={18} />,
+    'oteviraci-doba': <Clock size={18} />,
+    blog: <PenTool size={18} />,
+    kvizy: <BrainCircuit size={18} />,
+    kariera: <Briefcase size={18} />,
+    faq: <HelpCircle size={18} />,
+    changelog: <FileText size={18} />,
+    support: <LifeBuoy size={18} />,
+    roadmap: <Map size={18} />,
+    'prvni-pomoc': <ShieldCheck size={18} />,
+    bezpecnost: <ShieldCheck size={18} />,
+    'vyrocni-zpravy': <FileText size={18} />,
+  };
+
+  const TOOL_KEY_BY_SLUG: Record<string, string> = {
+    'ztraty-a-nalezy': 'lostFound',
+    sos: 'sos',
+    'schranka-duvery': 'trustbox',
+    predmety: 'subjects',
+    harmonogram: 'schedule',
+    pruvodce: 'guide',
+    partaci: 'partners',
+    archiv: 'archive',
+    galerie: 'gallery',
+    daruj: 'donate',
+    partnerstvi: 'partnership',
+    slevy: 'discounts',
+    'oteviraci-doba': 'hours',
+    blog: 'blog',
+    kvizy: 'quizzes',
+    kariera: 'jobs',
+    faq: 'faq',
+  };
+
+  const TOOLS = SITE_PAGES
+    .filter((page) => page.group === 'Nástroje')
+    .map((page) => ({
+      href: `/${page.slug}`,
+      slug: page.slug,
+      icon: TOOL_ICON_BY_SLUG[page.slug] || <FileText size={18} />,
+      key: page.toolKey || TOOL_KEY_BY_SLUG[page.slug] || page.slug,
+    }));
+
+  const isToolPathActive = (slug: string) =>
+    pathname === `/${lang}/${slug}` || pathname?.startsWith(`/${lang}/${slug}/`) || false;
+
+  const isToolsSectionActive = TOOLS.some((tool) => isToolPathActive(tool.slug));
 
   const isPageEnabled = (slug: string) => {
     const cfg = sitePages?.[slug];
@@ -220,13 +261,13 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                 aria-haspopup="menu"
                 aria-expanded={isToolsOpen}
                 className={`relative group flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.2em] transition-all duration-300 py-2 whitespace-nowrap ${
-                  isToolsOpen ? 'text-green-600' : 'text-black hover:text-green-600 dark:text-white dark:hover:text-green-500'
+                  isToolsOpen || isToolsSectionActive ? 'text-green-600' : 'text-black hover:text-green-600 dark:text-white dark:hover:text-green-500'
                 }`}
               >
                 {toolsTitle}
                 <ChevronDown size={14} className={`transition-transform duration-300 ${isToolsOpen ? 'rotate-180' : ''}`} />
                 <span className={`absolute bottom-0 left-0 w-full h-0.5 bg-green-600 transition-all duration-300 transform origin-left ${
-                  isToolsOpen ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+                  isToolsOpen || isToolsSectionActive ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
                 }`} />
               </button>
               
@@ -245,10 +286,18 @@ export default function Navbar({ lang, dict }: NavbarProps) {
                       <Link 
                         key={tool.href}
                         href={`/${lang}${tool.href}`} 
-                        className="flex items-center gap-4 rounded-2xl border-2 border-transparent p-4 transition group/tool hover:border-green-600 hover:bg-green-50 dark:hover:border-green-500 dark:hover:bg-green-950"
+                        className={`flex items-center gap-4 rounded-2xl border-2 p-4 transition group/tool ${
+                          isToolPathActive(tool.slug)
+                            ? 'border-green-600 bg-green-50 dark:border-green-500 dark:bg-green-950'
+                            : 'border-transparent hover:border-green-600 hover:bg-green-50 dark:hover:border-green-500 dark:hover:bg-green-950'
+                        }`}
                         onClick={() => setIsToolsOpen(false)}
                       >
-                        <div className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-black bg-white text-black transition-all duration-300 group-hover/tool:border-green-600 group-hover/tool:bg-green-600 group-hover/tool:text-white dark:border-white dark:bg-black dark:text-white dark:group-hover/tool:border-green-500 dark:group-hover/tool:bg-green-500 dark:group-hover/tool:text-black">
+                        <div className={`flex h-12 w-12 items-center justify-center rounded-xl border-2 transition-all duration-300 ${
+                          isToolPathActive(tool.slug)
+                            ? 'border-green-600 bg-green-600 text-white dark:border-green-500 dark:bg-green-500 dark:text-black'
+                            : 'border-black bg-white text-black group-hover/tool:border-green-600 group-hover/tool:bg-green-600 group-hover/tool:text-white dark:border-white dark:bg-black dark:text-white dark:group-hover/tool:border-green-500 dark:group-hover/tool:bg-green-500 dark:group-hover/tool:text-black'
+                        }`}>
                           {tool.icon}
                         </div>
                         <div className="flex flex-col">

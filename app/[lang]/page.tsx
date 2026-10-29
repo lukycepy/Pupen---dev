@@ -35,7 +35,7 @@ export default async function PupenWeb({
     const windowAllows = (!startAt || now >= startAt) && (!endAt || now < endAt);
     const home = row?.home && typeof row.home === 'object' ? row.home : {};
     const publicMode = normalizePublicMode((home as { public_mode?: unknown }).public_mode, !!row?.maintenance_enabled);
-    const isActive = publicMode !== 'default' && !!row?.maintenance_enabled && !ended && windowAllows;
+    const isActive = publicMode !== 'default' && !ended && windowAllows;
 
     if (isActive) {
       redirect(publicMode === 'maintenance' ? `/${locale}/odstavka` : `/${locale}/info`);

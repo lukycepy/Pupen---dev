@@ -6,9 +6,12 @@ import AppShell from '@/app/[lang]/components/appshell/AppShell';
 import AppLanguageSwitch from '@/app/[lang]/components/appshell/AppLanguageSwitch';
 import AppThemeToggle from '@/app/[lang]/components/appshell/AppThemeToggle';
 import AppUserMenu from '@/app/[lang]/components/appshell/AppUserMenu';
+import ImpersonationDialog from '@/app/[lang]/components/appshell/ImpersonationDialog';
 import { useAppTheme } from '@/app/[lang]/components/appshell/useAppTheme';
 import type { AppTheme } from '@/app/[lang]/components/appshell/theme';
 import { useDictionary } from '@/app/context/DictionaryContext';
+import type { ImpersonationState } from '@/lib/impersonation-client';
+import { clearImpersonationState, isImpersonatingAs, readImpersonationState } from '@/lib/impersonation-client';
 import { supabase } from '@/lib/supabase';
 import MemberSidebar from './MemberSidebar';
 
@@ -19,6 +22,7 @@ export default function MemberShell({
   activeTab,
   onTabChange,
   profile,
+  onOpenProfile,
   onLogout,
   sidebarHiddenTabs,
   sidebarPinnedTabs,
@@ -31,6 +35,7 @@ export default function MemberShell({
   activeTab: string;
   onTabChange: (tab: string) => void;
   profile: any;
+  onOpenProfile?: () => void;
   onLogout: () => void;
   sidebarHiddenTabs?: string[];
   sidebarPinnedTabs?: string[];
@@ -39,8 +44,12 @@ export default function MemberShell({
 }) {
   const dict = useDictionary();
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [impersonationOpen, setImpersonationOpen] = React.useState(false);
+  const [impersonationState, setImpersonationState] = React.useState<ImpersonationState | null>(null);
   const initialTheme = (profile?.ui_prefs && typeof profile.ui_prefs === 'object' ? profile.ui_prefs.theme : null) as any;
   const { theme, resolvedTheme, setTheme } = useAppTheme(initialTheme);
+  const currentEmail = String(profile?.email || '').trim().toLowerCase();
+  const canImpersonate = currentEmail === 'cepelak@pupen.org' && !!profile?.can_manage_admins;
 
   const persistTheme = async (next: AppTheme) => {
     const id = String(profile?.id || '').trim();
@@ -48,6 +57,26 @@ export default function MemberShell({
     const ui = profile?.ui_prefs && typeof profile.ui_prefs === 'object' ? profile.ui_prefs : {};
     const nextUi = { ...ui, theme: next === 'dark' ? 'dark' : 'light' };
     await supabase.from('profiles').update({ ui_prefs: nextUi }).eq('id', id);
+  };
+
+  React.useEffect(() => {
+    const state = readImpersonationState();
+    if (!state) {
+      setImpersonationState(null);
+      return;
+    }
+    if (currentEmail && currentEmail === state.originalEmail) {
+      clearImpersonationState();
+      setImpersonationState(null);
+      return;
+    }
+    setImpersonationState(state);
+  }, [currentEmail]);
+
+  const stopImpersonation = () => {
+    const state = readImpersonationState();
+    if (!state?.restoreUrl) return;
+    window.location.assign(state.restoreUrl);
   };
 
   return (
@@ -97,8 +126,18 @@ export default function MemberShell({
             />
             <AppUserMenu
               profile={profile}
+              onOpenProfile={onOpenProfile}
+              onOpenCustomize={onOpenTabPersonalization}
+              onOpenImpersonation={canImpersonate ? () => setImpersonationOpen(true) : undefined}
+              onStopImpersonation={isImpersonatingAs(currentEmail, impersonationState) ? stopImpersonation : undefined}
               onLogout={onLogout}
+              impersonation={isImpersonatingAs(currentEmail, impersonationState) ? impersonationState : null}
               labels={{
+                profile: dict.common.profile,
+                customize: dict.common.customize,
+                impersonate: lang === 'cs' ? 'Přihlásit se jako' : 'Sign in as',
+                stopImpersonation: lang === 'cs' ? 'Vrátit se na Váš účet' : 'Return to your account',
+                impersonatingAs: lang === 'cs' ? 'Převzatá identita' : 'Impersonating',
                 logout: dict.common.logout,
               }}
             />
@@ -107,6 +146,12 @@ export default function MemberShell({
       >
         {children}
       </AppShell>
+      <ImpersonationDialog
+        open={impersonationOpen}
+        onClose={() => setImpersonationOpen(false)}
+        lang={lang === 'en' ? 'en' : 'cs'}
+        currentEmail={currentEmail}
+      />
     </div>
   );
 }

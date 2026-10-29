@@ -549,7 +549,7 @@ export default function AdminDashboard() {
         )}
 
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {activeTab === 'analytics' && canView('logs') && (
+            {activeTab === 'analytics' && canView('analytics') && (
               <AnalyticsTab />
             )}
 

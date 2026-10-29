@@ -30,6 +30,15 @@ import {
 import { supabase } from '@/lib/supabase';
 
 type FormState = Omit<LinkaContact, 'id'> & { id?: number | '' };
+type BulkEditableField = 'oddeleni' | 'fakulta' | 'budova' | 'mistnost' | 'telefon';
+type BulkValues = Record<BulkEditableField, string>;
+type BulkApply = Record<BulkEditableField, boolean>;
+type BulkEditState = {
+  open: boolean;
+  apply: BulkApply;
+  values: BulkValues;
+  errors: Partial<Record<BulkEditableField, string>>;
+};
 
 const FIELD_LABELS: Record<keyof LinkaContact, string> = {
   id: 'ID',
@@ -66,6 +75,39 @@ const EMPTY_FORM: FormState = {
   email: '',
 };
 
+const BULK_FIELDS: BulkEditableField[] = ['oddeleni', 'fakulta', 'budova', 'mistnost', 'telefon'];
+
+const BULK_FIELD_LABELS: Record<BulkEditableField, string> = {
+  oddeleni: 'Oddělení / katedra',
+  fakulta: 'Fakulta / orgán',
+  budova: 'Budova / lokace',
+  mistnost: 'Místnost',
+  telefon: 'Telefon',
+};
+
+const EMPTY_BULK_VALUES: BulkValues = {
+  oddeleni: '',
+  fakulta: '',
+  budova: '',
+  mistnost: '',
+  telefon: '',
+};
+
+function createEmptyBulkEditState(): BulkEditState {
+  return {
+    open: false,
+    apply: {
+      oddeleni: false,
+      fakulta: false,
+      budova: false,
+      mistnost: false,
+      telefon: false,
+    },
+    values: { ...EMPTY_BULK_VALUES },
+    errors: {},
+  };
+}
+
 export default function LinkaTab() {
   const { showToast } = useToast();
 
@@ -81,6 +123,8 @@ export default function LinkaTab() {
 
   const [search, setSearch] = useState('');
   const [editOpen, setEditOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [bulkEdit, setBulkEdit] = useState<BulkEditState>(createEmptyBulkEditState);
 
   const [editing, setEditing] = useState<{ dirty: boolean; idx: number | null; form: FormState; errors: Record<string, string> }>({
     dirty: false,
@@ -93,6 +137,7 @@ export default function LinkaTab() {
   const [warnedEmpty, setWarnedEmpty] = useState(false);
 
   const importFileRef = useRef<HTMLInputElement | null>(null);
+  const selectAllRef = useRef<HTMLInputElement | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -109,6 +154,8 @@ export default function LinkaTab() {
       setVersion(Number(payload.version) || 0);
       setLastUpdated(String(payload.lastUpdated || ''));
       setSourcePath(String(json.meta?.path || ''));
+      setSelectedIds([]);
+      setBulkEdit(createEmptyBulkEditState());
     } catch (e: any) {
       showToast(e?.message || 'Chyba', 'error');
     } finally {
@@ -130,6 +177,18 @@ export default function LinkaTab() {
     if (!search.trim()) return base;
     return base.filter((c) => contactMatches(c, search));
   }, [contacts, search]);
+
+  const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const filteredIds = useMemo(() => filtered.map((contact) => contact.id), [filtered]);
+  const selectedCount = selectedIds.length;
+  const allFilteredSelected = filteredIds.length > 0 && filteredIds.every((id) => selectedIdSet.has(id));
+  const someFilteredSelected = filteredIds.some((id) => selectedIdSet.has(id));
+
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = someFilteredSelected && !allFilteredSelected;
+    }
+  }, [allFilteredSelected, someFilteredSelected]);
 
   const validateField = (field: keyof LinkaContact, value: any, excludeId?: number): string => {
     const v = String(value || '').trim();
@@ -261,6 +320,7 @@ export default function LinkaTab() {
   const deleteContact = (id: number) => {
     if (!confirm('Opravdu smazat tento kontakt?')) return;
     setContacts((prev) => prev.filter((c) => c.id !== id));
+    setSelectedIds((prev) => prev.filter((selectedId) => selectedId !== id));
     showToast('Kontakt odstraněn z paměti, nezapomeň vše dohromady ULOŽIT', 'info');
   };
 
@@ -293,6 +353,8 @@ export default function LinkaTab() {
         setContacts(json.data.contacts);
       }
       if (json.warnedEmpty) setWarnedEmpty(true);
+      setSelectedIds([]);
+      setBulkEdit(createEmptyBulkEditState());
       showToast('Data uložena', 'success');
     } catch (e: any) {
       showToast(e?.message || 'Chyba', 'error');
@@ -427,6 +489,107 @@ export default function LinkaTab() {
 
   const openPreview = () => {
     window.open('/apps/kontakty.json', '_blank', 'noopener,noreferrer');
+  };
+
+  const toggleContactSelection = (id: number) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
+  };
+
+  const toggleFilteredSelection = () => {
+    if (filteredIds.length === 0) return;
+    setSelectedIds((prev) => {
+      if (allFilteredSelected) {
+        return prev.filter((id) => !filteredIds.includes(id));
+      }
+      const next = new Set(prev);
+      for (const id of filteredIds) next.add(id);
+      return Array.from(next);
+    });
+  };
+
+  const clearSelection = () => {
+    setSelectedIds([]);
+    setBulkEdit(createEmptyBulkEditState());
+  };
+
+  const openBulkEdit = () => {
+    if (selectedCount === 0) {
+      showToast('Nejdřív vyberte kontakty v tabulce', 'error');
+      return;
+    }
+    setBulkEdit((prev) => ({ ...prev, open: true }));
+  };
+
+  const closeBulkEdit = () => {
+    setBulkEdit(createEmptyBulkEditState());
+  };
+
+  const setBulkFieldEnabled = (field: BulkEditableField, enabled: boolean) => {
+    setBulkEdit((prev) => ({
+      ...prev,
+      apply: { ...prev.apply, [field]: enabled },
+      errors: { ...prev.errors, [field]: '' },
+    }));
+  };
+
+  const setBulkFieldValue = (field: BulkEditableField, value: string) => {
+    setBulkEdit((prev) => ({
+      ...prev,
+      values: { ...prev.values, [field]: value },
+      errors: { ...prev.errors, [field]: '' },
+    }));
+  };
+
+  const applyBulkEdit = () => {
+    if (selectedCount === 0) {
+      showToast('Nejdřív vyberte kontakty v tabulce', 'error');
+      return;
+    }
+
+    const enabledFields = BULK_FIELDS.filter((field) => bulkEdit.apply[field]);
+    if (enabledFields.length === 0) {
+      showToast('Vyberte alespoň jedno pole pro hromadnou změnu', 'error');
+      return;
+    }
+
+    const errors: Partial<Record<BulkEditableField, string>> = {};
+    for (const field of enabledFields) {
+      const nextValue = String(bulkEdit.values[field] || '').trim();
+      const error = validateField(field, nextValue);
+      if (error) errors[field] = error;
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setBulkEdit((prev) => ({ ...prev, errors }));
+      showToast('Opravte chyby v hromadné úpravě', 'error');
+      return;
+    }
+
+    setContacts((prev) =>
+      prev.map((contact) => {
+        if (!selectedIdSet.has(contact.id)) return contact;
+        const nextContact = { ...contact };
+        for (const field of enabledFields) {
+          nextContact[field] = String(bulkEdit.values[field] || '').trim();
+        }
+        return nextContact;
+      }),
+    );
+
+    showToast(`Hromadně upraveno ${selectedCount} kontaktů v paměti. Prosím proveďte ULOŽIT.`, 'success');
+    closeBulkEdit();
+  };
+
+  const deleteSelectedContacts = () => {
+    if (selectedCount === 0) {
+      showToast('Nejdřív vyberte kontakty v tabulce', 'error');
+      return;
+    }
+    const confirmed = confirm(`Opravdu smazat ${selectedCount} vybraných kontaktů?`);
+    if (!confirmed) return;
+    setContacts((prev) => prev.filter((contact) => !selectedIdSet.has(contact.id)));
+    showToast(`Odstraněno ${selectedCount} kontaktů z paměti. Prosím proveďte ULOŽIT.`, 'info');
+    clearSelection();
   };
 
   const hasAny = contacts.length > 0;
@@ -573,8 +736,47 @@ export default function LinkaTab() {
         </div>
 
         <div className="space-y-3">
-          <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500">
-            Seznam kontaktů · {countFiltered} z {contacts.length}
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500">
+              Seznam kontaktů · {countFiltered} z {contacts.length}
+            </div>
+            <div className="flex flex-wrap items-center gap-3 rounded-[1.75rem] border-2 border-black bg-white px-4 py-3 dark:border-white dark:bg-black">
+              <div className="text-sm font-black text-black dark:text-white">
+                Vybráno: {selectedCount}
+              </div>
+              <button
+                type="button"
+                onClick={toggleFilteredSelection}
+                disabled={countFiltered === 0}
+                className="rounded-2xl border-2 border-black bg-white px-4 py-2 text-sm font-black text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 disabled:opacity-50 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
+              >
+                {allFilteredSelected ? 'Odebrat filtrované' : 'Vybrat filtrované'}
+              </button>
+              <button
+                type="button"
+                onClick={openBulkEdit}
+                disabled={selectedCount === 0}
+                className="rounded-2xl border-2 border-blue-600 bg-blue-50 px-4 py-2 text-sm font-black text-blue-700 transition hover:bg-blue-100 disabled:opacity-50 dark:border-blue-500 dark:bg-blue-950 dark:text-blue-400 dark:hover:bg-blue-900"
+              >
+                Hromadně upravit
+              </button>
+              <button
+                type="button"
+                onClick={deleteSelectedContacts}
+                disabled={selectedCount === 0}
+                className="rounded-2xl border-2 border-red-600 bg-red-50 px-4 py-2 text-sm font-black text-red-700 transition hover:bg-red-100 disabled:opacity-50 dark:border-red-500 dark:bg-red-950 dark:text-red-400 dark:hover:bg-red-900"
+              >
+                Hromadně smazat
+              </button>
+              <button
+                type="button"
+                onClick={clearSelection}
+                disabled={selectedCount === 0}
+                className="rounded-2xl border-2 border-black bg-white px-4 py-2 text-sm font-black text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 disabled:opacity-50 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
+              >
+                Zrušit výběr
+              </button>
+            </div>
           </div>
           {editOpen && (
             <AdminPanel className="rounded-[2.5rem] border-2 border-black bg-white p-6 sm:p-8 dark:border-white dark:bg-black">
@@ -654,6 +856,85 @@ export default function LinkaTab() {
               </div>
             </AdminPanel>
           )}
+          {bulkEdit.open && (
+            <AdminPanel className="rounded-[2.5rem] border-2 border-black bg-white p-6 sm:p-8 dark:border-white dark:bg-black">
+              <div className="space-y-6">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="text-xl font-black text-black dark:text-white">Hromadná úprava kontaktů</div>
+                    <div className="text-sm font-bold text-stone-500 dark:text-stone-400">
+                      Změny se použijí na {selectedCount} vybraných kontaktů a uloží se společně hlavním tlačítkem nahoře.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={closeBulkEdit}
+                    className="inline-flex items-center gap-2 rounded-2xl border-2 border-black bg-white px-4 py-3 font-bold text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
+                  >
+                    <X size={16} /> Zavřít
+                  </button>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  {BULK_FIELDS.map((field) => {
+                    const error = bulkEdit.errors[field];
+                    return (
+                      <div key={field} className={field === 'telefon' ? 'md:col-span-2' : ''}>
+                        <label className="mb-2 flex items-center justify-between gap-3 px-1">
+                          <span className="flex items-center gap-3">
+                            <input
+                              type="checkbox"
+                              checked={bulkEdit.apply[field]}
+                              onChange={(e) => setBulkFieldEnabled(field, e.target.checked)}
+                              className="h-5 w-5 rounded border-2 border-black bg-white text-green-600 focus:ring-2 focus:ring-green-500 dark:border-white dark:bg-black dark:text-green-500"
+                              aria-label={`Použít pole ${BULK_FIELD_LABELS[field]} pro hromadnou úpravu`}
+                            />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500">
+                              {BULK_FIELD_LABELS[field]}
+                              {field !== 'telefon' && <span className="ml-1 text-red-500">*</span>}
+                            </span>
+                          </span>
+                          {error ? <span className="text-xs font-bold text-red-600 dark:text-red-400">{error}</span> : null}
+                        </label>
+                        <input
+                          type={field === 'telefon' ? 'tel' : 'text'}
+                          inputMode={field === 'telefon' ? 'tel' : undefined}
+                          maxLength={field === 'mistnost' ? 100 : field === 'telefon' ? 40 : 200}
+                          value={bulkEdit.values[field]}
+                          onChange={(e) => setBulkFieldValue(field, e.target.value)}
+                          placeholder={FIELD_PLACEHOLDERS[field]}
+                          disabled={!bulkEdit.apply[field]}
+                          className={`w-full rounded-2xl border-2 px-5 py-4 font-bold outline-none transition ${
+                            error
+                              ? 'border-red-600 bg-red-50/30 text-black focus:ring-2 focus:ring-red-500 dark:border-red-500 dark:bg-red-950/30 dark:text-white dark:focus:ring-red-400'
+                              : 'border-black bg-white text-black placeholder:text-stone-400 focus:ring-2 focus:ring-green-500 dark:border-white dark:bg-black dark:text-white dark:placeholder:text-stone-500'
+                          } disabled:cursor-not-allowed disabled:opacity-50`}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="flex flex-wrap justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={closeBulkEdit}
+                    className="rounded-2xl border-2 border-black bg-white px-6 py-3 font-black text-black transition hover:border-green-600 hover:bg-green-50 hover:text-green-600 dark:border-white dark:bg-black dark:text-white dark:hover:border-green-500 dark:hover:bg-green-950 dark:hover:text-green-500"
+                  >
+                    Zrušit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={applyBulkEdit}
+                    className="flex items-center gap-2 rounded-2xl border-2 border-green-700 bg-green-600 px-8 py-3 font-black text-white transition hover:bg-green-700 dark:border-green-500 dark:bg-green-500 dark:text-black dark:hover:bg-green-400"
+                  >
+                    <Check size={18} />
+                    Použít na vybrané
+                  </button>
+                </div>
+              </div>
+            </AdminPanel>
+          )}
           {loading ? (
             <div className="p-10 rounded-[2rem] bg-green-50/30 dark:bg-green-950/30 border-2 border-black dark:border-white flex items-center gap-3 text-stone-600 dark:text-stone-400 font-bold">
               <InlinePulse className="bg-green-500 dark:bg-green-400" size={20} /> Načítám data…
@@ -667,6 +948,16 @@ export default function LinkaTab() {
               <table className="min-w-full border-separate border-spacing-0">
                 <thead>
                   <tr className="text-left text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500">
+                    <th className="py-3 px-3 md:px-4 w-12">
+                      <input
+                        ref={selectAllRef}
+                        type="checkbox"
+                        checked={allFilteredSelected}
+                        onChange={toggleFilteredSelection}
+                        className="h-5 w-5 rounded border-2 border-black bg-white text-green-600 focus:ring-2 focus:ring-green-500 dark:border-white dark:bg-black dark:text-green-500"
+                        aria-label="Vybrat všechny filtrované kontakty"
+                      />
+                    </th>
                     <th className="py-3 px-3 md:px-4">Jméno</th>
                     <th className="py-3 px-3 md:px-4">Oddělení</th>
                     <th className="py-3 px-3 md:px-4">Fakulta</th>
@@ -680,7 +971,16 @@ export default function LinkaTab() {
                 </thead>
                 <tbody>
                   {filtered.map((c) => (
-                    <tr key={c.id} className="hover:bg-green-50 dark:hover:bg-green-950/30 transition">
+                    <tr key={c.id} className={`${selectedIdSet.has(c.id) ? 'bg-green-50/70 dark:bg-green-950/20' : ''} hover:bg-green-50 dark:hover:bg-green-950/30 transition`}>
+                      <td className="py-3 px-3 md:px-4 border-t border-black/10 dark:border-white/10 align-top">
+                        <input
+                          type="checkbox"
+                          checked={selectedIdSet.has(c.id)}
+                          onChange={() => toggleContactSelection(c.id)}
+                          className="mt-1 h-5 w-5 rounded border-2 border-black bg-white text-green-600 focus:ring-2 focus:ring-green-500 dark:border-white dark:bg-black dark:text-green-500"
+                          aria-label={`Vybrat kontakt ${c.jmeno}`}
+                        />
+                      </td>
                       <td className="py-3 px-3 md:px-4 border-t border-black/10 dark:border-white/10 align-top">
                         <div className="font-black text-black dark:text-white">{c.jmeno}</div>
                         <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500">#{c.id}</div>

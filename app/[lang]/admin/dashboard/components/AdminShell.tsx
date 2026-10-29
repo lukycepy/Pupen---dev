@@ -8,8 +8,11 @@ import AppShell from '@/app/[lang]/components/appshell/AppShell';
 import AppLanguageSwitch from '@/app/[lang]/components/appshell/AppLanguageSwitch';
 import AppThemeToggle from '@/app/[lang]/components/appshell/AppThemeToggle';
 import AppUserMenu from '@/app/[lang]/components/appshell/AppUserMenu';
+import ImpersonationDialog from '@/app/[lang]/components/appshell/ImpersonationDialog';
 import type { AppTheme } from '@/app/[lang]/components/appshell/theme';
 import { useAppTheme } from '@/app/[lang]/components/appshell/useAppTheme';
+import type { ImpersonationState } from '@/lib/impersonation-client';
+import { clearImpersonationState, isImpersonatingAs, readImpersonationState } from '@/lib/impersonation-client';
 import { supabase } from '@/lib/supabase';
 
 export default function AdminShell({
@@ -47,6 +50,8 @@ export default function AdminShell({
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
+  const [impersonationOpen, setImpersonationOpen] = useState(false);
+  const [impersonationState, setImpersonationState] = useState<ImpersonationState | null>(null);
   const storageKey = useMemo(() => 'pupen_admin_shell_desktop_collapsed_v1', []);
 
   const initialTheme = (userProfile?.ui_prefs && typeof userProfile.ui_prefs === 'object' ? userProfile.ui_prefs.theme : null) as any;
@@ -78,6 +83,28 @@ export default function AdminShell({
   };
 
   const sidebarWidth = desktopCollapsed ? 72 : 260;
+  const currentEmail = String(userProfile?.email || '').trim().toLowerCase();
+  const canImpersonate = currentEmail === 'cepelak@pupen.org' && !!userProfile?.can_manage_admins;
+
+  useEffect(() => {
+    const state = readImpersonationState();
+    if (!state) {
+      setImpersonationState(null);
+      return;
+    }
+    if (currentEmail && currentEmail === state.originalEmail) {
+      clearImpersonationState();
+      setImpersonationState(null);
+      return;
+    }
+    setImpersonationState(state);
+  }, [currentEmail]);
+
+  const stopImpersonation = () => {
+    const state = readImpersonationState();
+    if (!state?.restoreUrl) return;
+    window.location.assign(state.restoreUrl);
+  };
 
   return (
     <div style={{ ['--app-sidebar-w' as any]: `${sidebarWidth}px` }}>
@@ -151,9 +178,17 @@ export default function AdminShell({
             <AppUserMenu
               profile={userProfile}
               onOpenProfile={onOpenProfile}
+              onOpenCustomize={onOpenTabPersonalization}
+              onOpenImpersonation={canImpersonate ? () => setImpersonationOpen(true) : undefined}
+              onStopImpersonation={isImpersonatingAs(currentEmail, impersonationState) ? stopImpersonation : undefined}
               onLogout={onLogout}
+              impersonation={isImpersonatingAs(currentEmail, impersonationState) ? impersonationState : null}
               labels={{
                 profile: dict.common.profile,
+                customize: dict.common.customize,
+                impersonate: lang === 'cs' ? 'Přihlásit se jako' : 'Sign in as',
+                stopImpersonation: lang === 'cs' ? 'Vrátit se na Váš účet' : 'Return to your account',
+                impersonatingAs: lang === 'cs' ? 'Převzatá identita' : 'Impersonating',
                 logout: dict.common.logout,
               }}
             />
@@ -174,6 +209,12 @@ export default function AdminShell({
         </div>
         {children}
       </AppShell>
+      <ImpersonationDialog
+        open={impersonationOpen}
+        onClose={() => setImpersonationOpen(false)}
+        lang={lang === 'en' ? 'en' : 'cs'}
+        currentEmail={currentEmail}
+      />
     </div>
   );
 }

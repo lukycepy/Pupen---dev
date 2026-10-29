@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireUser } from '@/lib/server-auth';
+import { getBearerToken, getEffectiveProfileByToken } from '@/lib/server-auth';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { withSchemaCacheRetry } from '@/lib/schema-cache-retry';
 
@@ -7,6 +7,8 @@ interface AnalyticsProfileRow {
   is_admin?: boolean | null;
   can_manage_admins?: boolean | null;
   can_view_analytics?: boolean | null;
+  can_edit_analytics?: boolean | null;
+  has_admin_access?: boolean | null;
 }
 
 interface AnalyticsContentRow {
@@ -40,6 +42,11 @@ function isMissingColumn(error: unknown, table: string, column: string) {
   return new RegExp(table, 'i').test(message) && new RegExp(column, 'i').test(message) && /(schema cache|column|does not exist)/i.test(message);
 }
 
+function isMissingRelation(error: unknown, relation: string) {
+  const message = getErrorMessage(error);
+  return new RegExp(relation, 'i').test(message) && /(schema cache|does not exist|relation|table)/i.test(message);
+}
+
 async function fetchTopContentWithFallback(
   supabase: ReturnType<typeof getServerSupabase>,
   table: 'events' | 'posts',
@@ -52,66 +59,110 @@ async function fetchTopContentWithFallback(
     if (typedRes.error) throw typedRes.error;
     return typedRes.data || [];
   } catch (error: unknown) {
+    if (isMissingRelation(error, table)) return [];
     if (!isMissingColumn(error, table, 'views')) throw error;
 
-    const fallbackRes = await withSchemaCacheRetry(supabase, () =>
-      supabase.from(table).select('id, title, published_at').order('published_at', { ascending: false }).limit(5),
-    );
-    const typedFallbackRes = fallbackRes as RetryResult<AnalyticsContentRow[]>;
-    if (typedFallbackRes.error) throw typedFallbackRes.error;
+    try {
+      const fallbackRes = await withSchemaCacheRetry(supabase, () =>
+        supabase.from(table).select('id, title, published_at').order('published_at', { ascending: false }).limit(5),
+      );
+      const typedFallbackRes = fallbackRes as RetryResult<AnalyticsContentRow[]>;
+      if (typedFallbackRes.error) throw typedFallbackRes.error;
 
-    return (typedFallbackRes.data || []).map((item) => ({
-      ...item,
-      views: 0,
+      return (typedFallbackRes.data || []).map((item) => ({
+        ...item,
+        views: 0,
+      }));
+    } catch (fallbackError: unknown) {
+      if (isMissingRelation(fallbackError, table)) return [];
+      throw fallbackError;
+    }
+  }
+}
+
+async function fetchCountOrZero(
+  supabase: ReturnType<typeof getServerSupabase>,
+  relation: string,
+  query: () => Promise<RetryResult<null>>,
+) {
+  try {
+    const res = await query();
+    if (res.error) throw res.error;
+    return Number(res.count || 0);
+  } catch (error: unknown) {
+    if (isMissingRelation(error, relation)) return 0;
+    throw error;
+  }
+}
+
+async function fetchRecentLogsOrEmpty(supabase: ReturnType<typeof getServerSupabase>) {
+  try {
+    const res = await withSchemaCacheRetry(supabase, () =>
+      supabase
+        .from('admin_logs')
+        .select('id, created_at, admin_email, admin_name, action, target_id')
+        .order('created_at', { ascending: false })
+        .limit(8),
+    );
+    const typedRes = res as RetryResult<AnalyticsAdminLogRow[]>;
+    if (typedRes.error) throw typedRes.error;
+    return typedRes.data || [];
+  } catch (error: unknown) {
+    if (isMissingRelation(error, 'admin_logs')) return [];
+    if (!isMissingColumn(error, 'admin_logs', 'admin_email') && !isMissingColumn(error, 'admin_logs', 'admin_name')) throw error;
+
+    const fallbackRes = await withSchemaCacheRetry(supabase, () =>
+      supabase
+        .from('admin_logs')
+        .select('id, created_at, action, target_id')
+        .order('created_at', { ascending: false })
+        .limit(8),
+    );
+    const typedFallbackRes = fallbackRes as RetryResult<AnalyticsAdminLogRow[]>;
+    if (typedFallbackRes.error) throw typedFallbackRes.error;
+    return (typedFallbackRes.data || []).map((row) => ({
+      ...row,
+      admin_email: row.admin_email || null,
+      admin_name: row.admin_name || null,
     }));
   }
 }
 
 export async function GET(req: Request) {
   try {
-    const user = await requireUser(req);
+    const token = getBearerToken(req);
+    if (!token) throw new Error('Unauthorized');
+
+    const { user, profile } = await getEffectiveProfileByToken(token);
     const supabase = getServerSupabase();
 
-    const profRes = await withSchemaCacheRetry(supabase, () =>
-      supabase
-        .from('profiles')
-        .select('is_admin, can_manage_admins, can_view_analytics')
-        .eq('id', user.id)
-        .maybeSingle(),
+    const effectiveProfile = profile as AnalyticsProfileRow | null;
+    const hasAdminAccess = !!(effectiveProfile?.has_admin_access || effectiveProfile?.is_admin || effectiveProfile?.can_manage_admins);
+    const hasAnalyticsAccess = !!(
+      effectiveProfile?.can_manage_admins ||
+      effectiveProfile?.can_view_analytics ||
+      effectiveProfile?.can_edit_analytics
     );
-    const profileResult = profRes as RetryResult<AnalyticsProfileRow>;
-    if (profileResult.error) throw profileResult.error;
-    const profile = profileResult.data;
-    if (!profile?.is_admin && !profile?.can_manage_admins) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    if (!profile?.can_manage_admins && !profile?.can_view_analytics) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (!hasAdminAccess || !hasAnalyticsAccess) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const [topEvents, topPosts, rsvpCountRes, recentActivityRes, pendingAppsRes, recentLogsRes] = await Promise.all([
+    const [topEvents, topPosts, totalRSVPs, recentActivity, pendingApplications, recentLogs] = await Promise.all([
       fetchTopContentWithFallback(supabase, 'events'),
       fetchTopContentWithFallback(supabase, 'posts'),
-      withSchemaCacheRetry(supabase, () => supabase.from('rsvp').select('id', { count: 'exact', head: true })),
-      withSchemaCacheRetry(supabase, () =>
-        supabase.from('admin_logs').select('id', { count: 'exact', head: true }).gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
+      fetchCountOrZero(supabase, 'rsvp', () =>
+        withSchemaCacheRetry(supabase, () => supabase.from('rsvp').select('id', { count: 'exact', head: true })) as Promise<RetryResult<null>>,
       ),
-      withSchemaCacheRetry(supabase, () =>
-        supabase.from('membership_applications_v2').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+      fetchCountOrZero(supabase, 'admin_logs', () =>
+        withSchemaCacheRetry(supabase, () =>
+          supabase.from('admin_logs').select('id', { count: 'exact', head: true }).gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
+        ) as Promise<RetryResult<null>>,
       ),
-      withSchemaCacheRetry(supabase, () =>
-        supabase
-          .from('admin_logs')
-          .select('id, created_at, admin_email, admin_name, action, target_id')
-          .order('created_at', { ascending: false })
-          .limit(8),
+      fetchCountOrZero(supabase, 'membership_applications_v2', () =>
+        withSchemaCacheRetry(supabase, () =>
+          supabase.from('membership_applications_v2').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+        ) as Promise<RetryResult<null>>,
       ),
+      fetchRecentLogsOrEmpty(supabase),
     ]);
-
-    const typedRsvpCountRes = rsvpCountRes as RetryResult<null>;
-    const typedRecentActivityRes = recentActivityRes as RetryResult<null>;
-    const typedPendingAppsRes = pendingAppsRes as RetryResult<null>;
-    const typedRecentLogsRes = recentLogsRes as RetryResult<AnalyticsAdminLogRow[]>;
-
-    for (const result of [typedRsvpCountRes, typedRecentActivityRes, typedPendingAppsRes, typedRecentLogsRes]) {
-      if (result.error) throw result.error;
-    }
 
     const totalEventViews = topEvents.reduce((acc, curr) => acc + Number(curr.views || 0), 0);
     const totalPostViews = topPosts.reduce((acc, curr) => acc + Number(curr.views || 0), 0);
@@ -120,11 +171,11 @@ export async function GET(req: Request) {
       ok: true,
       topEvents,
       topPosts,
-      totalRSVPs: Number(typedRsvpCountRes.count || 0),
+      totalRSVPs,
       totalViews: totalEventViews + totalPostViews,
-      recentActivity: Number(typedRecentActivityRes.count || 0),
-      pendingApplications: Number(typedPendingAppsRes.count || 0),
-      recentLogs: typedRecentLogsRes.data || [],
+      recentActivity,
+      pendingApplications,
+      recentLogs,
     });
   } catch (error: unknown) {
     const message = getErrorMessage(error);

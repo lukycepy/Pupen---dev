@@ -1001,6 +1001,7 @@ export default function ClenskaSekcePage() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         profile={profile}
+        onOpenProfile={() => setActiveTab('settings')}
         onLogout={handleLogout}
         sidebarHiddenTabs={effectiveHiddenTabs}
         sidebarPinnedTabs={effectivePinnedTabs}
